@@ -1,0 +1,52 @@
+<mat-list>
+  <mat-action-list *ngFor="let event of events; let i= index"
+    (click)="setClickedRow(i); openDetails($event, event);
+    setSelectedEventId(event.id)"
+    (contextmenu)="setClickedRow(i); openDetails($event, event);
+    $event.preventDefault(); setSelectedEventId(event.id)">
+    <mat-list-item>
+      <div [class]="'event ' + event.color"
+        [class.active]="i == selectedRow && selection"><span matLine>{{event.title}}</span></div>
+    </mat-list-item>
+  </mat-action-list>
+</mat-list>
+
+<ng-template #details let-event>
+  <section class="details">
+    <div id="event-title">{{event.title}}
+      <sup><span id="idno">ID {{event.id}} </span>
+        <span id="recurrence" *ngIf="event.daily">Daily </span>
+        <span id="recurrence" *ngIf="event.weekly">Weekly </span>
+        <span id="recurrence" *ngIf="event.monthly">Monthly </span>
+        <span id="recurrence" *ngIf="event.annually">Annually </span>
+        <span *ngIf="event.allday==1" id="all-day">All day </span>
+      </sup>
+    </div>
+    <div><mat-icon>date_range</mat-icon><span>{{dt.getFormattedDate(event.datefrom)}}
+        {{event.timefrom}} - {{dt.getFormattedDate(event.dateto)}}
+        {{event.timeto}} </span></div>
+    <div *ngIf="event.location"><mat-icon>location_on</mat-icon>{{event.location}}</div>
+    <div *ngIf="event.description"><mat-icon>description</mat-icon><span
+        *ngIf="event.description.length<=50">{{event.description}}</span><span
+        *ngIf="event.description.length>50">{{event.description.substring(0,50)}}...
+        <a href="#" (click)="openCreateEventDialog(event.id)">more</a></span></div>
+    <div><button mat-icon-button
+        (click)="openCreateEventDialog(event.id)" matTooltip="Edit event"><mat-icon
+          id="button-icon">event</mat-icon></button><span>&nbsp;&nbsp;</span>
+      <button mat-icon-button
+        (click)="updateSingleEvent(event.id)" *ngIf="event.daily ||
+        event.weekly || event.monthly || event.annually" matTooltip="Edit this
+        occurence"><mat-icon id="button-icon">edit</mat-icon></button><span>&nbsp;&nbsp;</span>
+      <button mat-icon-button
+        (click)="deleteEvent(event.id,0)" matTooltip="Delete this event"><mat-icon
+          id="button-icon">delete</mat-icon></button><span
+        *ngIf="event.daily ||
+        event.weekly || event.monthly || event.annually">&nbsp;&nbsp;</span>
+      <button
+        mat-icon-button
+        (click)="deleteEvent(event.id,1)" *ngIf="event.daily ||
+        event.weekly || event.monthly || event.annually" matTooltip="Delete all
+        events"><mat-icon id="button-icon">delete_forever</mat-icon></button>
+    </div>
+  </section>
+</ng-template>

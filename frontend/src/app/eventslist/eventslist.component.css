@@ -1,0 +1,198 @@
+.mat-list-base .mat-list-item,
+.mat-list-base .mat-list-option {
+    height: auto;
+
+}
+
+.mat-button-wrapper {
+    padding-right: 5px;
+}
+
+.mat-list-base .mat-list-item .mat-line {
+    padding: 2px;
+}
+
+.mat-icon {
+    font-size: small;
+}
+
+.mat-icon#button-icon {
+    font-size: large;
+}
+
+#event-title {
+    font-size: large;
+    font-weight: bold;
+    color: black;
+    padding: 0;
+    padding-right: 20px;
+}
+
+#all-day {
+    color: green;
+    font-weight: normal;
+    font-size: small;
+    padding-right: 10px;
+}
+
+#recurrence {
+    color: red;
+    font-weight: normal;
+    font-size: small;
+    padding-right: 10px;
+}
+
+#idno {
+    color: blue;
+    font-weight: normal;
+    font-size: small;
+    padding-right: 10px;
+    padding-left: 5px;
+}
+
+.event {
+    height: auto;
+    border-radius: 5px;
+    color: white;
+    opacity: 0.65;
+    width: 100%;
+    font-size: medium;
+    padding-left: 10px;
+}
+
+.event:hover {
+    opacity: 1;
+}
+
+.event.active {
+    opacity: 1;
+    padding: 4pt;
+    z-index: 1000;
+    box-shadow: 0 0 12pt rgba(0, 0, 0, 0.25);
+    display: block;
+}
+
+.red {
+    background-color: red;
+}
+
+.orange {
+    background-color: orange;
+}
+
+.yellow {
+    background-color: yellow;
+    color: black !important;
+}
+
+.green {
+    background-color: green;
+}
+
+.blue {
+    background-color: blue;
+}
+
+.purple {
+    background-color: purple;
+}
+
+.brown {
+    background-color: brown;
+}
+
+.black {
+    background-color: black;
+}
+
+.details {
+    background-color: #fafafa;
+    padding: 4pt;
+    font-size: 10pt;
+    z-index: 1000;
+    box-shadow: 0 0 12pt rgba(0, 0, 0, 0.25);
+    border-radius: 4pt;
+    padding: 0.5em 0 0.5em 0;
+    animation: fadeIn 0.1s ease-out;
+    opacity: 1.0;
+    display: block;
+}
+
+.details hr {
+    border: none;
+    border-bottom: 1px solid #eee;
+}
+
+.details div {
+    display: block;
+    text-decoration: none;
+    color: #333;
+    padding: 0.5em 2em 0.5em 0.75em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.details div::before {
+    content: '';
+    float: left;
+    width: 0.5em;
+    height: 1em;
+    display: inline-block;
+}
+
+
+
+/* Animatinons */
+@-webkit-keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1.0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1.0;
+    }
+}
+
+@-webkit-keyframes fadeOut {
+    from {
+        opacity: 1.0;
+    }
+
+    to {
+        opacity: 0.0;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1.0;
+    }
+
+    to {
+        opacity: 0.0;
+    }
+}
+
+.is-fadingIn {
+    -webkit-animation: fadeIn 0.1s ease-out;
+    animation: fadeIn 0.1s ease-out;
+    opacity: 1.0;
+    display: block;
+}
+
+.is-fadingOut {
+    -webkit-animation: fadeOut 0.1s ease-out;
+    animation: fadeOut 0.1s ease-out;
+    opacity: 0.0;
+    display: block;
+}

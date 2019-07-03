@@ -1,0 +1,40 @@
+<div>
+  <ng-container #outlet>
+  </ng-container>
+</div>
+
+<ng-template #content>
+  <div>
+    <mat-calendar #calendar [selected]="dt.getCurrentDate()"
+      [startAt]="dt.getCurrentDate()"
+      (selectedChange)="dt.setCurrentDate($event)"></mat-calendar>
+  </div>
+</ng-template>
+<div><span> <button mat-icon-button matTooltip="Previous day"
+      (click)="previousDay()">
+      <mat-icon>arrow_left</mat-icon>
+    </button></span>
+  <span> <button mat-icon-button matTooltip="Next day"
+      (click)="nextDay()">
+      <mat-icon>arrow_right</mat-icon>
+    </button></span></div>
+<div class="sidenav-button">
+  <button mat-raised-button
+    (click)="openCreateEventDialog()" matTooltip="New event"
+    matTooltipPosition="right"><mat-icon color="primary">add_box</mat-icon></button>
+</div>
+<div class="sidenav-button">
+  <button mat-raised-button (click)="today()" matTooltip="Today"
+    matTooltipPosition="right"><mat-icon color="primary">today</mat-icon></button>
+</div>
+<div class="sidenav-button">
+  <button mat-raised-button (click)="openTrashDialog()" matTooltip="Trash"
+    matTooltipPosition="right"><mat-icon color="primary">delete_outline</mat-icon></button>
+</div>
+<div class="sidenav-button">
+  <button mat-raised-button (click)="openHelpDialog()" matTooltip="Help"
+    matTooltipPosition="right"><mat-icon color="primary">help</mat-icon></button>
+</div>
+<div *ngIf="expiredEventsCount!==0" class="expired-event">
+  {{expiredEventsCount}} expired {{expiredEventsCount===1?'event':'events'}}!
+</div>

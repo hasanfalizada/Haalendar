@@ -1,0 +1,11 @@
+<div class="fullscreen-sidebar">
+  <app-header></app-header>
+  <mat-sidenav-container>
+    <mat-sidenav #sidenav mode="side" [(opened)]="sideNavOpened">
+      <app-sidenav></app-sidenav>
+    </mat-sidenav>
+    <mat-sidenav-content>
+      <app-eventslist></app-eventslist>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

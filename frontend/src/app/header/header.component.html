@@ -1,0 +1,23 @@
+<mat-toolbar color="primary">
+  <mat-toolbar-row>
+    <span><button mat-button (click)="toggleSidenav()"><mat-icon>calendar_today</mat-icon>
+      </button></span>
+    <span class="header-name">Haalendar</span>
+    <mat-icon>search</mat-icon>
+    <mat-form-field>
+      <input matInput placeholder="Search" [matAutocomplete]="auto"
+        [formControl]="searchControl" (click)="checkForClear()" #searchInput
+        (keyup.enter)="search()">
+      <mat-autocomplete #auto="matAutocomplete">
+        <mat-option *ngFor="let event of searchItems | async"
+          [value]="event.datefrom" (click)="search()">
+          <span> ID {{event.id}} -
+            {{event.title}}</span>
+        </mat-option>
+      </mat-autocomplete>
+    </mat-form-field>
+    <span class="row-space"></span>
+    <span class="current-date-time">Events for {{dt.getCurrentFormattedDate()}}</span>
+    <span class="date-time">{{dt.now}} <sup>Week: {{dt.getWeekNumber()}}</sup></span>
+  </mat-toolbar-row>
+</mat-toolbar>
