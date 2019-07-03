@@ -2,7 +2,7 @@
 * Simple light-weight self-hosted desktop web-calendar for single person.
 * No installation, full control over DB, open-source.
 * SQLite support for PHP must be enabled on Windows machines (https://php.net/manual/en/sqlite3.installation.php).
-* Demo: http://haalendar.demo.alizada.xyz (database is being cleaned every 30 minutes).
+* Demo: <a href="http://haalendar.demo.alizada.xyz" target="_blank">http://haalendar.demo.alizada.xyz</a> (database is being cleaned every 30 minutes).
     
 Build instructions:
 1. Go to `frontend` folder and build Angular side: `ng build --prod --baseHref /haalendar/`
