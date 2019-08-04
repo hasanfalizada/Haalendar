@@ -12,7 +12,7 @@ export class DataproviderService {
   constructor(private http: HttpClient, private dt: DateproviderService) {
   }
 
-  endpoint = 'http://localhost/haalendar/backend/rest.php?op=';
+  endpoint = 'http://localhost/dev_backend/rest.php?op=';
 
   currentEvent: number;
 
