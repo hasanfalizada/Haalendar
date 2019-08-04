@@ -1,7 +1,8 @@
 import { Component, OnInit, ViewChild, ViewContainerRef, TemplateRef, HostListener } from '@angular/core';
 import { DateproviderService } from '../dateprovider.service';
 import { DataproviderService } from '../dataprovider.service';
-import { DateAdapter, MatDialog } from '@angular/material';
+import { DateAdapter } from '@angular/material/core';
+import { MatDialog } from '@angular/material/dialog';
 import { CreateEventDialogComponent } from '../create-event-dialog/create-event-dialog.component';
 import { HelpDialogComponent } from '../help-dialog/help-dialog.component';
 import { TrashDialogComponent } from '../trash-dialog/trash-dialog.component';
@@ -13,8 +14,8 @@ import { TrashDialogComponent } from '../trash-dialog/trash-dialog.component';
 })
 export class SidenavComponent implements OnInit {
 
-  @ViewChild('outlet', { read: ViewContainerRef }) outletRef: ViewContainerRef;
-  @ViewChild('content', { read: TemplateRef }) contentRef: TemplateRef<any>;
+  @ViewChild('outlet', { read: ViewContainerRef, static: true }) outletRef: ViewContainerRef;
+  @ViewChild('content', { read: TemplateRef, static: true }) contentRef: TemplateRef<any>;
 
   dialogRef: any;
   expiredEventsCount: number;

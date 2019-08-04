@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { DataproviderService } from '../dataprovider.service';
-import { MatListOption } from '@angular/material';
+import { MatListOption } from '@angular/material/list';
 
 @Component({
   selector: 'app-trash-dialog',

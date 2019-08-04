@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
-import { MatSidenav } from '@angular/material';
+import { MatSidenav } from '@angular/material/sidenav';
 
 @Component({
   selector: 'app-root',
@@ -10,7 +10,7 @@ export class AppComponent {
   title = 'Haalendar';
   sideNavOpened = true;
 
-  @ViewChild('sidenav') sidenav: MatSidenav;
+  @ViewChild('sidenav', { static: false }) sidenav: MatSidenav;
 
   toggleSidenav(): void {
     this.sidenav.toggle();
