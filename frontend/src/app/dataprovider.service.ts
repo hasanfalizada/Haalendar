@@ -28,7 +28,7 @@ export class DataproviderService {
   }
 
   today(): Observable<any> {
-    const result = interval(500).pipe(
+    const result = interval(1000).pipe(
       switchMap(() => this.http.get(this.endpoint + 'today&daterequested=' + this.dt.getDateRequestedString())),
       map(this.extractData));
     return result;
