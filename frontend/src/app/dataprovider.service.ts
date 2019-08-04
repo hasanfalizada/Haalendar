@@ -138,6 +138,7 @@ export class DataproviderService {
       .replace(/</g, '%3C')
       .replace(/>/g, '%3E')
       .replace(/\+/g, '%2B')
+      .replace(/#/g, '%23')
       .replace(/\n/g, '%0A');
   }
 
