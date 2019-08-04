@@ -320,7 +320,7 @@ function trash()
   $db->busyTimeout(2000);
   $results =
     $db->query(
-      'select id, title, datefrom, timefrom, dateto, timeto, allday, location, (select color from colors c where c.id = t.color) color, description, deleted, create_ts, daily, weekly, monthly, annually, last_update_ts FROM events t where deleted = 1 order by 2'
+      'select id, title, datefrom, timefrom, dateto, timeto, allday, location, (select color from colors c where c.id = t.color) color, description, deleted, create_ts, daily, weekly, monthly, annually, last_update_ts FROM events t where deleted = 1 order by 12 desc'
     );
   $rows = array();
   while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
