@@ -17,7 +17,7 @@ export class HeaderComponent implements OnInit {
   searchItems: Observable<any>;
   events: any = [];
   sub: Subscription;
-  @ViewChild('searchInput') searchInput: ElementRef;
+  @ViewChild('searchInput', {static: false}) searchInput: ElementRef;
 
   constructor(
     public sideNav: AppComponent,

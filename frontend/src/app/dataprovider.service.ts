@@ -28,7 +28,7 @@ export class DataproviderService {
   }
 
   today(): Observable<any> {
-    const result = interval(500).pipe(
+    const result = interval(1000).pipe(
       switchMap(() => this.http.get(this.endpoint + 'today&daterequested=' + this.dt.getDateRequestedString())),
       map(this.extractData));
     return result;
@@ -138,6 +138,7 @@ export class DataproviderService {
       .replace(/</g, '%3C')
       .replace(/>/g, '%3E')
       .replace(/\+/g, '%2B')
+      .replace(/#/g, '%23')
       .replace(/\n/g, '%0A');
   }
 

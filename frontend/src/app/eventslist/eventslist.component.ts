@@ -5,7 +5,8 @@ import { OverlayRef, Overlay } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import { Subscription, fromEvent } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
-import { MatSnackBar, MatDialog } from '@angular/material';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { CreateEventDialogComponent } from '../create-event-dialog/create-event-dialog.component';
 import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
 
@@ -22,8 +23,8 @@ export class EventslistComponent implements OnInit {
   selectedEventId: string;
   selection: boolean;
 
-  @ViewChild('details') details: TemplateRef<any>;
-  @ViewChild('list-item') listItem: ElementRef;
+  @ViewChild('details', {static: false}) details: TemplateRef<any>;
+  @ViewChild('list-item', {static: false}) listItem: ElementRef;
 
   overlayRef: OverlayRef | null;
 
