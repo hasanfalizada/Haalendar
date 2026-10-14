@@ -1,2 +1,42 @@
-# +++===+++ 2026-10-14 — Hasan Alizada — IDE-specific settings are not shared; shared conventions go to .editorconfig and linter configs (HAAL-006).
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-006. Repository-wide ignore rules. Stack-specific rules are extended in the skeleton tasks (HAAL-016, HAAL-017).
+
+# IDE / editors — personal settings are not shared; shared conventions live in .editorconfig and linter configs
 .idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets and local environment — never commit; keep a documented .env.example instead
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
+
+# Node.js / frontend
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.cache/
+
+# Python / backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
