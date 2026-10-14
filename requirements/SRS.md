@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Version | 1.3 |
+| Version | 1.4 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -242,7 +242,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-ACC-08 | Profile: display name, avatar, time zone, locale (English only in v1.0). | HAAL-166 |
 | FR-ACC-09 | Settings per user: week start day, 12/24-hour time, theme, default color, Week A/B (FR-CAL-23). Settings sync across devices. | HAAL-045 |
 | FR-ACC-10 | Sharing: owner can share a calendar, note or board with other users of the instance with view or edit right; revoke at any time. | HAAL-167 (Should) |
-| FR-ACC-11 | Time handling: timed events stored in UTC and shown in the user's time zone; all-day events are date-only and do not shift between time zones. | HAAL-169 |
+| FR-ACC-11 | Time handling: timed events are stored as local date/time with an IANA time zone (UTC instant derived) and shown in the user's time zone; recurring events keep their wall-clock time across DST changes; all-day events are date-only and do not shift between time zones. | HAAL-169 |
 | FR-ACC-12 | Optional OpenID Connect login. | HAAL-168 (Could) |
 
 ### 3.7 Offline-first and synchronisation
@@ -467,6 +467,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-22 | Gap analysis | All recommendations approved: 21 items into v1.0, rest per `requirements/gap-analysis.md` | 8.4 |
 | D-23 | Technology stack | ADR-0003 accepted: React + Vite SPA, uv + pnpm, SQLAlchemy + Alembic instead of Next.js, Pants, Prisma/SQLModel | 2.5 |
 | D-24 | Auth | ADR-0005 accepted: server sessions, password ≥ 15, admins without content access, export of owned items, RLS, logout wipes device data | FR-ACC-02, FR-X-14 |
+| D-25 | Domain model | Item supertype, local time + IANA zone, delete batch id, default colors calendar blue / event brown | FR-ACC-11 |
 
 ### 9.2 Open issues
 | # | Issue | Status |
