@@ -53,7 +53,7 @@
 |---|---|---|---|---|
 | `db` | `postgres:18` (official, multi-arch) | Data, FTS, job queue | `unless-stopped` | `pg_isready` |
 | `migrate` | `ghcr.io/hasanfalizada/haalendar:<ver>` | `alembic upgrade head`, then exit | `no` | — |
-| `app` | same image | API, SSE, static SPA, attachment download/upload | `unless-stopped` | `GET /health/ready` |
+| `app` | same image | API, SSE, static SPA, attachment download/upload | `unless-stopped` | `GET /api/v1/health/ready` |
 | `worker` | same image | Procrastinate worker + periodic tasks | `unless-stopped` | worker heartbeat in DB |
 | `proxy` (profile `proxy`) | `caddy:2` | TLS termination, HTTP/2-3, compression | `unless-stopped` | — |
 

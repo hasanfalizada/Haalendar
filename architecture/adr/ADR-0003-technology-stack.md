@@ -86,7 +86,7 @@ Decision: **React + Vite SPA** with TanStack Router (type-safe routing) and TanS
 ## 5. Consequences
 - Deployment = 2 required services (app, PostgreSQL) + optional worker/proxy — fits 2 GB RAM.
 - Frontend is static: served by the reverse proxy or by FastAPI; no Node.js in production.
-- One OpenAPI spec generated from Pydantic is the single source for the TS client.
+- The hand-written OpenAPI contract (`api/openapi.yaml`) is the single source for the TS client; the FastAPI implementation is verified against it in CI (refined by ADR-0007).
 - All versions are pinned in lockfiles (`uv.lock`, `pnpm-lock.yaml`); Renovate/Dependabot updates in HAAL-151.
 - Re-check before v1.0: Python 3.15, PostgreSQL 19, Node 26 LTS, TypeScript 7 tooling support.
 - All dependencies are Apache-2.0 compatible (MIT/BSD/Apache/PostgreSQL licence); licence gate in CI (ADR-0001).
