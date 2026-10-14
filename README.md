@@ -6,10 +6,10 @@
 
 Open-source, self-hosted productivity suite: **Calendar**, **To-Do** and **Kanban** in one web application — multi-user, offline-first, responsive.
 
-> **Status: complete rewrite in progress** on the `revamp` branch. Nothing is runnable here yet.
+> **Status: complete rewrite in progress** on the `revamp` branch. A development build runs locally (see the development guide); it is not ready for real use yet.
 > The previous version (single-user calendar, Angular + PHP + SQLite) remains available on the `master` branch until v1.0.
 
-- [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md)
+- [Development guide](DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md)
 
 ## License
 

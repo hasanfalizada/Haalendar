@@ -1,0 +1,56 @@
+{
+  "app": {
+    "name": "Haalendar",
+    "skipToContent": "Skip to content"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "calendar": "Calendar",
+    "todo": "To-Do",
+    "kanban": "Kanban",
+    "trash": "Trash",
+    "settings": "Settings",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "shortcut": "Shortcut: {{keys}}"
+  },
+  "status": {
+    "online": "Connected",
+    "offline": "Offline — changes stay on this device",
+    "serverUnreachable": "Server unreachable",
+    "checking": "Checking connection"
+  },
+  "pages": {
+    "calendar": {
+      "title": "Calendar",
+      "emptyTitle": "Plan your first day",
+      "emptyBody": "Events, recurring plans and reminders will appear here."
+    },
+    "todo": {
+      "title": "To-Do",
+      "emptyTitle": "Write your first note",
+      "emptyBody": "Notes and checklists you create will appear here."
+    },
+    "kanban": {
+      "title": "Kanban",
+      "emptyTitle": "Create your first board",
+      "emptyBody": "Boards with columns and cards will appear here."
+    },
+    "trash": {
+      "title": "Trash",
+      "emptyTitle": "Trash is empty",
+      "emptyBody": "Deleted items are kept here forever and can be restored."
+    },
+    "settings": {
+      "title": "Settings",
+      "theme": "Theme",
+      "themeSystem": "System",
+      "themeLight": "Light",
+      "themeDark": "Dark"
+    },
+    "notFound": {
+      "title": "Page not found",
+      "back": "Go to Calendar"
+    }
+  }
+}

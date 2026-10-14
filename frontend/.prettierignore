@@ -1,0 +1,5 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Generated or third-party files are not formatted.
+dist
+src/api/generated
+src/routeTree.gen.ts
+public

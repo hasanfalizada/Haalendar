@@ -1,0 +1,111 @@
+/* +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Design tokens from docs: design/design-system.md v1.0 (light/dark),
+   exposed to Tailwind v4 via @theme. Dark mode follows the resolved data-theme attribute set by src/theme/theme.ts. */
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #ffffff;
+  --surface: #f5f8f8;
+  --surface-2: #eaf0f0;
+  --line: #d9e2e2;
+  --fg: #111827;
+  --muted: #56636f;
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-ink: #ffffff;
+  --primary-tint: #e6f6f3;
+  --accent: #f59e0b;
+  --danger: #b42318;
+  --ok: #15803d;
+  --warn-bg: #fef3c7;
+  --warn-fg: #78350f;
+  --ev-red: #dc2626;
+  --ev-orange: #ea580c;
+  --ev-yellow: #eab308;
+  --ev-green: #16a34a;
+  --ev-blue: #2563eb;
+  --ev-purple: #9333ea;
+  --ev-brown: #92400e;
+  --ev-black: #1f2937;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --surface: #111a27;
+  --surface-2: #18232f;
+  --line: #253243;
+  --fg: #eef2f6;
+  --muted: #9aa7b4;
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-ink: #0b1220;
+  --primary-tint: #0f2e2b;
+  --accent: #fbbf24;
+  --danger: #f97066;
+  --ok: #4ade80;
+  --warn-bg: #3a2a08;
+  --warn-fg: #fde68a;
+  --ev-black: #9ca3af;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-tint: var(--primary-tint);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-fg: var(--warn-fg);
+  --color-ev-red: var(--ev-red);
+  --color-ev-orange: var(--ev-orange);
+  --color-ev-yellow: var(--ev-yellow);
+  --color-ev-green: var(--ev-green);
+  --color-ev-blue: var(--ev-blue);
+  --color-ev-purple: var(--ev-purple);
+  --color-ev-brown: var(--ev-brown);
+  --color-ev-black: var(--ev-black);
+  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

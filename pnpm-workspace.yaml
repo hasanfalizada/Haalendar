@@ -1,0 +1,10 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. pnpm workspace (ADR-0003: uv + pnpm, no Pants). JS packages are members.
+packages:
+  - frontend
+
+# Supply-chain protection (instructions Section K): never install a version published less than 7 days ago.
+minimumReleaseAge: 10080
+
+# Install scripts are blocked by default; @scarf/scarf is install telemetry pulled in by Prism — never allowed to run.
+allowBuilds:
+  '@scarf/scarf': false

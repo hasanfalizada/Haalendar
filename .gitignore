@@ -40,3 +40,6 @@ venv/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Generated API client (ADR-0007: regenerated from api/openapi.yaml on every dev/build/check)
+frontend/src/api/generated/

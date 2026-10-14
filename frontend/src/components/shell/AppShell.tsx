@@ -1,0 +1,116 @@
+// +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Application shell (wireframes D1/M2): icon rail on ≥ md screens,
+// top bar + slide-out drawer on phones. Active route is exposed with aria-current for assistive technology.
+import { Link, Outlet } from "@tanstack/react-router";
+import { Menu } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+import { ConnectionStatus } from "./ConnectionStatus";
+import { MODULE_ITEMS, SECONDARY_ITEMS, type NavItem } from "./nav-items";
+import { useModuleShortcuts } from "./useModuleShortcuts";
+
+const LOGO_SRC = "/icon.svg";
+
+function RailLink({ item }: { item: NavItem }) {
+  const { t } = useTranslation();
+  const label = t(item.labelKey);
+  const title = item.shortcutDigit ? `${label} · ${t("nav.shortcut", { keys: `Alt+${item.shortcutDigit}` })}` : label;
+  return (
+    <Link
+      to={item.to}
+      aria-label={label}
+      title={title}
+      className="flex size-10 items-center justify-center rounded-sm text-muted hover:bg-surface-2 hover:text-fg"
+      activeProps={{ className: "bg-primary-tint !text-primary", "aria-current": "page" }}
+    >
+      <item.icon className="size-5" aria-hidden />
+    </Link>
+  );
+}
+
+function DrawerLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      className="flex h-11 items-center gap-3 rounded-sm px-3 font-medium text-fg hover:bg-surface"
+      activeProps={{ className: "bg-primary-tint !text-primary", "aria-current": "page" }}
+    >
+      <item.icon className="size-5" aria-hidden />
+      {t(item.labelKey)}
+    </Link>
+  );
+}
+
+export function AppShell() {
+  const { t } = useTranslation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useModuleShortcuts();
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+  };
+
+  return (
+    <div className="flex h-full flex-col md:flex-row">
+      <a
+        href="#main"
+        className="sr-only z-50 rounded-sm bg-primary px-3 py-2 text-primary-ink focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+      >
+        {t("app.skipToContent")}
+      </a>
+
+      {/* Desktop / tablet: icon rail */}
+      <nav
+        aria-label={t("nav.label")}
+        className="hidden w-14 shrink-0 flex-col items-center gap-1.5 border-r border-line bg-surface py-3 md:flex"
+      >
+        <img src={LOGO_SRC} alt={t("app.name")} width={32} height={32} className="mb-2 size-8" />
+        {MODULE_ITEMS.map((item) => (
+          <RailLink key={item.to} item={item} />
+        ))}
+        <div className="flex-1" />
+        {SECONDARY_ITEMS.map((item) => (
+          <RailLink key={item.to} item={item} />
+        ))}
+        <div className="mt-2">
+          <ConnectionStatus compact />
+        </div>
+      </nav>
+
+      {/* Phone: top bar with drawer */}
+      <header className="flex items-center gap-2 border-b border-line px-2 pt-[env(safe-area-inset-top)] md:hidden">
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label={t("nav.openMenu")} className="size-11">
+              <Menu className="size-5" aria-hidden />
+            </Button>
+          </SheetTrigger>
+          <SheetContent title={t("app.name")} closeLabel={t("nav.closeMenu")}>
+            <nav aria-label={t("nav.label")} className="flex flex-col gap-1">
+              {MODULE_ITEMS.map((item) => (
+                <DrawerLink key={item.to} item={item} onNavigate={closeDrawer} />
+              ))}
+              <div className="my-2 border-t border-line" />
+              {SECONDARY_ITEMS.map((item) => (
+                <DrawerLink key={item.to} item={item} onNavigate={closeDrawer} />
+              ))}
+            </nav>
+            <div className="mt-auto">
+              <ConnectionStatus />
+            </div>
+          </SheetContent>
+        </Sheet>
+        <img src={LOGO_SRC} alt="" width={24} height={24} className="size-6" />
+        <span className="font-semibold">{t("app.name")}</span>
+      </header>
+
+      <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
