@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Version | 1.2 |
+| Version | 1.3 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -142,7 +142,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-X-11 | Attachments on events, notes and cards: images added by file picker, drag-and-drop or clipboard paste (screenshots). Allowed types PNG, JPEG, WebP, GIF; max 10 MB per file. Thumbnail in item, full preview on click. Attachments are soft-deleted like other items. | U#9, HAAL-040 |
 | FR-X-12 | Priority on events, notes and cards: Low, Medium, High; default Medium. Visible indicator; sorting and filtering by priority. | U#13, HAAL-041 |
 | FR-X-13 | Shared color palette of at least the 8 legacy colors (red, orange, yellow, green, blue, purple, brown, black); default brown; text contrast meets WCAG AA in light and dark theme. | F-12, HAAL-042 |
-| FR-X-14 | Export from the user menu: one JSON file containing all items of the user from all three modules, including soft-deleted items with their `deleted_at`, timestamps, links and attachment metadata (file name, type, size, timestamps). All item data is exported; attachment binaries (images) are not embedded. The JSON schema is versioned and documented. | U#1, HAAL-043 |
+| FR-X-14 | Export from the user menu: one JSON file containing all items owned by the user from all three modules, including soft-deleted items with their `deleted_at`, timestamps, links and attachment metadata (file name, type, size, timestamps). All item data is exported; attachment binaries (images) are not embedded. The JSON schema is versioned and documented. | U#1, HAAL-043 |
 | FR-X-15 | User menu available in every module: profile, settings, export, help, about (free/open source, author and repository links), logout. | F-34, HAAL-044 |
 | FR-X-16 | Light and dark theme; follows system preference unless set in settings. | HAAL-017 |
 | FR-X-17 | Layout is responsive from 360 px: on phones the module navigation collapses into a slide-out drawer menu; all features usable by touch. | Owner 2026-10-14, HAAL-170 |
@@ -233,7 +233,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | ID | Requirement | Source |
 |---|---|---|
 | FR-ACC-01 | Registration with e-mail and password; e-mail verification. Registration mode set by admin: open or invite-only (default invite-only). | HAAL-160 |
-| FR-ACC-02 | Login/logout; password hashing with Argon2id. | HAAL-160 |
+| FR-ACC-02 | Login/logout with server-side sessions (idle 30 days, absolute 90 days, list and revoke sessions); password hashing with Argon2id; minimum password length 15, checked against a common-password list; logout wipes local device data (ADR-0005). | HAAL-160 |
 | FR-ACC-03 | Password reset by e-mail link (single use, expires in 1 hour); admin can reset manually when SMTP is absent. | HAAL-161 |
 | FR-ACC-04 | Brute-force protection: progressive delay / temporary lockout after 5 failed attempts; optional TOTP 2FA (Should). | HAAL-162 |
 | FR-ACC-05 | First start runs a setup wizard creating the first admin. | HAAL-163 |
@@ -466,6 +466,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-21 | Licence | Apache-2.0 with NOTICE | 5 |
 | D-22 | Gap analysis | All recommendations approved: 21 items into v1.0, rest per `requirements/gap-analysis.md` | 8.4 |
 | D-23 | Technology stack | ADR-0003 accepted: React + Vite SPA, uv + pnpm, SQLAlchemy + Alembic instead of Next.js, Pants, Prisma/SQLModel | 2.5 |
+| D-24 | Auth | ADR-0005 accepted: server sessions, password ≥ 15, admins without content access, export of owned items, RLS, logout wipes device data | FR-ACC-02, FR-X-14 |
 
 ### 9.2 Open issues
 | # | Issue | Status |
