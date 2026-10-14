@@ -1,0 +1,107 @@
+"""Database engine, sessions and readiness checks (PostgreSQL 18 via psycopg 3, SQLAlchemy 2.1 async).
+
++++===+++ 2026-10-14 — Hasan Alizada — HAAL-016. One async engine per process with a bounded pool (backend
+performance checklist: connection pooling, timeouts). Readiness = database reachable and migrations at head.
+"""
+
+from __future__ import annotations
+
+import time
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+from pathlib import Path
+
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+
+from haalendar.config import Settings
+from haalendar.logging import get_logger
+
+log = get_logger(__name__)
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+ALEMBIC_INI = BACKEND_ROOT / "alembic.ini"
+
+
+def create_engine(settings: Settings) -> AsyncEngine:
+    """Create the async engine; the URL is never logged (it contains the password)."""
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(),
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=settings.db_pool_timeout_seconds,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": settings.db_connect_timeout_seconds},
+    )
+    log.info(
+        "db_engine_created",
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout_seconds=settings.db_pool_timeout_seconds,
+    )
+    return engine
+
+
+def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(engine, expire_on_commit=False)
+
+
+async def session_scope(factory: async_sessionmaker[AsyncSession]) -> AsyncIterator[AsyncSession]:
+    """One session per request; rollback on error, always closed."""
+    async with factory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+
+
+def migration_head() -> str | None:
+    """Head revision of the Alembic script directory (what the code expects)."""
+    script = ScriptDirectory.from_config(Config(str(ALEMBIC_INI)))
+    return script.get_current_head()
+
+
+@dataclass(frozen=True, slots=True)
+class ReadinessResult:
+    ready: bool
+    database: bool
+    migrations: bool
+    current_revision: str | None
+    expected_revision: str | None
+    latency_ms: float
+    error: str | None = None
+
+
+async def check_readiness(engine: AsyncEngine) -> ReadinessResult:
+    """Ping the database and compare the applied migration with the expected head."""
+    started = time.perf_counter()
+    expected = migration_head()
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+            has_table = (
+                await conn.execute(text("SELECT to_regclass('public.alembic_version') IS NOT NULL"))
+            ).scalar_one()
+            current = (
+                (await conn.execute(text("SELECT version_num FROM alembic_version"))).scalar_one_or_none()
+                if has_table
+                else None
+            )
+    except Exception as exc:  # noqa: BLE001 — readiness must report, never crash
+        latency = round((time.perf_counter() - started) * 1000, 1)
+        log.warning("readiness_db_unreachable", error_type=type(exc).__name__, latency_ms=latency)
+        return ReadinessResult(False, False, False, None, expected, latency, type(exc).__name__)
+    latency = round((time.perf_counter() - started) * 1000, 1)
+    migrations_ok = current == expected
+    result = ReadinessResult(migrations_ok, True, migrations_ok, current, expected, latency)
+    log.info(
+        "readiness_checked",
+        ready=result.ready,
+        current_revision=current,
+        expected_revision=expected,
+        latency_ms=latency,
+    )
+    return result

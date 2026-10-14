@@ -53,4 +53,31 @@ Haalendar is licensed under the [Apache License 2.0](LICENSE). Unless you explic
 
 ## Development setup
 
-Instructions will be added here once the new application skeleton is available.
+Supported development environment: Linux or WSL 2 (Ubuntu 24.04 tested) with Docker.
+
+### Backend (Python 3.14, uv)
+
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (0.13 or newer); uv installs Python 3.14 itself (`uv python install 3.14`).
+2. Install dependencies from the repository root:
+   ```
+   uv sync --package haalendar-backend
+   ```
+3. Start PostgreSQL 18 for development:
+   ```
+   docker run -d --name haalendar-db -e POSTGRES_USER=haalendar -e POSTGRES_PASSWORD=haalendar -e POSTGRES_DB=haalendar -p 5432:5432 -v haalendar-db:/var/lib/postgresql postgres:18
+   ```
+4. Copy `.env.example` to `.env`, adjust it and load it into the shell, then from `backend/`:
+   ```
+   set -a; source ../.env; set +a
+   uv run alembic upgrade head
+   uv run haalendar-api
+   ```
+   The API listens on `http://localhost:8080/api/v1`; interactive docs at `/api/v1/docs` (development only).
+5. Checks (all must pass before a pull request), from `backend/`:
+   ```
+   uv run ruff check . && uv run ruff format --check . && uv run mypy src tests && uv run pytest
+   ```
+
+### API contract
+
+See [api/README.md](api/README.md) for linting the OpenAPI contract and running the mock server.
