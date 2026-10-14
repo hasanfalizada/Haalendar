@@ -1,11 +1,11 @@
 # SOFTWARE REQUIREMENTS SPECIFICATION (SRS) — Haalendar
 
-+++===+++ 2026-10-14 — Hasan Alizada — HAAL-002. Draft v0.1. Values marked **[PROPOSED]** are not yet approved by the owner and are collected in section 9.
++++===+++ 2026-10-14 — Hasan Alizada — HAAL-002. v1.0 approved by owner; decisions logged in section 9.
 
 | Field | Value |
 |---|---|
-| Version | 0.1 (draft) |
-| Status | Awaiting owner approval |
+| Version | 1.0 |
+| Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
 
@@ -98,16 +98,16 @@ Standalone product; replaces the legacy Haalendar (Angular + PHP + SQLite, singl
 | Operator (outside the app) | Installs, upgrades, backs up | Server/Docker access, no in-app role required |
 
 ### 2.4 Operating Environment
-- **Client:** current and previous major version of Chrome, Edge, Firefox, Safari (desktop); Safari on iOS and Chrome on Android, current and previous major OS version. **[PROPOSED]**
+- **Client:** current and previous major version of Chrome, Edge, Firefox, Safari (desktop); Safari on iOS and Chrome on Android, current and previous major OS version.
 - **Viewport:** 360 px wide and up; layouts for phone, tablet, desktop.
-- **Server:** Linux host with Docker Engine and Docker Compose; x86_64 and arm64 images. **[PROPOSED]**
-- **Minimum server for reference load (4.2):** 2 vCPU, 2 GB RAM, 10 GB disk + attachments. **[PROPOSED]**
+- **Server:** Linux host with Docker Engine and Docker Compose; x86_64 and arm64 images.
+- **Minimum server for reference load (4.2):** 2 vCPU, 2 GB RAM, 10 GB disk + attachments.
 - TLS terminated by operator's reverse proxy or the bundled proxy.
 
 ### 2.5 Design and Implementation Constraints
 - Default architecture: LLM-native atomic architecture with central Project Manifest (`project.manifest.json`), contract-first API.
 - Stack baseline per instructions (to be confirmed by ADR HAAL-010): Python FastAPI + Pydantic, PostgreSQL, Next.js + Tailwind + shadcn, Pytest.
-- Only open-source dependencies with licences compatible with the project licence (HAAL-004).
+- Only open-source dependencies with licences compatible with the project licence Apache-2.0.
 - No physical deletion of business data (FR-X-01).
 - English UI and documentation for v1.0; code must be i18n-ready.
 - No telemetry or external calls without operator opt-in.
@@ -133,18 +133,18 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-X-03 | Every mutation (create, update, delete, restore, move, share) writes an audit record: actor, timestamp, item, action, before/after snapshot. Item history is viewable by users with access to the item. | F-33, HAAL-032 |
 | FR-X-04 | Trash lists all soft-deleted items of the user across modules, newest `deleted_at` first, filterable by module, with multi-select restore. Trash keeps items forever; no purge in v1.0. Restore returns the item to its original place (date, board/column, position). | F-31, HAAL-033 |
 | FR-X-05 | Every interaction with persistence shows exactly one result notification: success, failure (human-readable reason), queued (offline), synced. Failures are never silent. | U#14, HAAL-034 |
-| FR-X-06 | Undo (Ctrl/Cmd+Z) and Redo (Ctrl/Cmd+Shift+Z) for create, update, delete, restore, move, color change, priority change and bulk actions. A bulk action is one undo step. Undo is also offered in the result notification. History depth 50 steps per browser session. **[PROPOSED depth/scope]** | U#16, HAAL-035 |
+| FR-X-06 | Undo (Ctrl/Cmd+Z) and Redo (Ctrl/Cmd+Shift+Z) for create, update, delete, restore, move, color change, priority change and bulk actions. A bulk action is one undo step. Undo is also offered in the result notification. History depth 50 steps per browser session. | U#16, HAAL-035 |
 | FR-X-07 | Multi-select with Ctrl/Cmd+click, Shift+click (range), Ctrl/Cmd+A; on touch: long-press enters selection mode. Bulk actions: delete, restore, change color, set priority, move to next day (events). | U#17, HAAL-036 |
 | FR-X-08 | All primary actions are reachable by keyboard: switch module, navigate days, move focus between items, open, create, edit, delete (Delete key), search focus, select. A shortcut overlay (`?`) lists all shortcuts. | U#4, F-16, HAAL-037 |
 | FR-X-09 | Any editor with unsaved changes asks for confirmation before closing via Esc, backdrop click, close button, route change, module switch or browser tab close. No confirmation when there are no changes. | U#6, HAAL-038 |
 | FR-X-10 | Full-text search over titles, descriptions/bodies, locations, checklist items and card comments of all accessible items; results grouped by module, ranked, with highlighted matches; works offline on locally stored data. Typing a date `YYYY-MM-DD` and pressing Enter opens that day in Calendar. Selecting an event result opens its date. | U#5, F-06, F-30, HAAL-039 |
-| FR-X-11 | Attachments on events, notes and cards: images added by file picker, drag-and-drop or clipboard paste (screenshots). Allowed types PNG, JPEG, WebP, GIF; max 10 MB per file. **[PROPOSED limits]** Thumbnail in item, full preview on click. Attachments are soft-deleted like other items. | U#9, HAAL-040 |
-| FR-X-12 | Priority on events, notes and cards: Low, Medium, High; default Medium **[PROPOSED default]**. Visible indicator; sorting and filtering by priority. | U#13, HAAL-041 |
+| FR-X-11 | Attachments on events, notes and cards: images added by file picker, drag-and-drop or clipboard paste (screenshots). Allowed types PNG, JPEG, WebP, GIF; max 10 MB per file. Thumbnail in item, full preview on click. Attachments are soft-deleted like other items. | U#9, HAAL-040 |
+| FR-X-12 | Priority on events, notes and cards: Low, Medium, High; default Medium. Visible indicator; sorting and filtering by priority. | U#13, HAAL-041 |
 | FR-X-13 | Shared color palette of at least the 8 legacy colors (red, orange, yellow, green, blue, purple, brown, black); default brown; text contrast meets WCAG AA in light and dark theme. | F-12, HAAL-042 |
-| FR-X-14 | Export from the user menu: one JSON file containing all items of the user from all three modules, including soft-deleted items with their `deleted_at`, timestamps, links and attachment metadata. The JSON schema is versioned and documented. Attachment binaries are not embedded. **[PROPOSED]** | U#1, HAAL-043 |
+| FR-X-14 | Export from the user menu: one JSON file containing all items of the user from all three modules, including soft-deleted items with their `deleted_at`, timestamps, links and attachment metadata (file name, type, size, timestamps). All item data is exported; attachment binaries (images) are not embedded. The JSON schema is versioned and documented. | U#1, HAAL-043 |
 | FR-X-15 | User menu available in every module: profile, settings, export, help, about (free/open source, author and repository links), logout. | F-34, HAAL-044 |
 | FR-X-16 | Light and dark theme; follows system preference unless set in settings. | HAAL-017 |
-| FR-X-17 | Layout is responsive from 360 px: on phones the module navigation collapses to a bottom bar or drawer **[PROPOSED]**; all features usable by touch. | Owner 2026-10-14, HAAL-170 |
+| FR-X-17 | Layout is responsive from 360 px: on phones the module navigation collapses into a slide-out drawer menu; all features usable by touch. | Owner 2026-10-14, HAAL-170 |
 | FR-X-18 | Changes made in one tab, device or by a sharing user appear in other open sessions without manual reload and without per-second polling. | F-18, HAAL-055 |
 
 ### 3.2 Calendar
@@ -166,8 +166,8 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-CAL-13 | Edit this occurrence: creates a separate one-off event for that date with the series' data and an exception in the series; editor opens on it. Cancel discards both (legacy saved on cancel — intentionally changed). | F-22, HAAL-067 |
 | FR-CAL-14 | When the first occurrences of a series are removed by exceptions, the series' effective start moves to the first remaining occurrence. | F-23, HAAL-067 |
 | FR-CAL-15 | Editor can be open only once; a second open attempt focuses it and shows a notice. | F-19, HAAL-069 |
-| FR-CAL-16 | Duplicate-title warning: on creating an event, if an active event of the same user has the same title (exact match, case-insensitive), a warning with a link to the existing event is shown; the user may proceed or cancel. | U#2, HAAL-080 |
-| FR-CAL-17 | Overdue counter in sidebar: number of active one-off events whose start date is before today, plus active recurring series whose effective start (FR-CAL-14) is before today. Hidden when zero. Text: "N overdue event(s)". **[PROPOSED wording; logic = legacy]** | F-32, HAAL-068 |
+| FR-CAL-16 | Duplicate-title warning: on creating an event and on changing the title of an existing event, if another active event of the same user has the same title (exact match, case-insensitive), a warning with a link to the existing event is shown; the user may proceed or cancel. | U#2, HAAL-080 |
+| FR-CAL-17 | Overdue counter in sidebar: number of active one-off events whose start date is before today, plus active recurring series whose effective start (FR-CAL-14) is before today. Hidden when zero. Text: "N overdue event(s)". | F-32, HAAL-068 |
 | FR-CAL-18 | Color can be changed directly in the details popover; change is saved immediately and undoable. | U#3, HAAL-081 |
 | FR-CAL-19 | Event row in the day list shows an icon when the description is not empty, and an icon when attachments exist. | U#10, HAAL-083 |
 | FR-CAL-20 | Move to next day: shifts start and end by +1 calendar day keeping times; for an occurrence of a series it creates an exception plus a one-off event on the next day. Available in popover and as bulk action. | U#11, HAAL-084 |
@@ -210,10 +210,10 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 
 | ID | Requirement | Source |
 |---|---|---|
-| FR-ACC-01 | Registration with e-mail and password; e-mail verification. Registration mode set by admin: open or invite-only (default invite-only). **[PROPOSED default]** | HAAL-160 |
+| FR-ACC-01 | Registration with e-mail and password; e-mail verification. Registration mode set by admin: open or invite-only (default invite-only). | HAAL-160 |
 | FR-ACC-02 | Login/logout; password hashing with Argon2id. | HAAL-160 |
-| FR-ACC-03 | Password reset by e-mail link (single use, expires in 1 hour **[PROPOSED]**); admin can reset manually when SMTP is absent. | HAAL-161 |
-| FR-ACC-04 | Brute-force protection: progressive delay / temporary lockout after 5 failed attempts **[PROPOSED]**; optional TOTP 2FA (Should). | HAAL-162 |
+| FR-ACC-03 | Password reset by e-mail link (single use, expires in 1 hour); admin can reset manually when SMTP is absent. | HAAL-161 |
+| FR-ACC-04 | Brute-force protection: progressive delay / temporary lockout after 5 failed attempts; optional TOTP 2FA (Should). | HAAL-162 |
 | FR-ACC-05 | First start runs a setup wizard creating the first admin. | HAAL-163 |
 | FR-ACC-06 | Roles: admin, user. Admin panel: list users, invite, deactivate (soft), reactivate, reset password, change role. An admin cannot deactivate the last admin. | HAAL-163, HAAL-164 |
 | FR-ACC-07 | Data isolation: a user can access only own items and items explicitly shared with them. Enforced on the server for every request; covered by automated tests. | HAAL-165 |
@@ -238,7 +238,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 
 | ID | Requirement | Source |
 |---|---|---|
-| FR-OPS-01 | Legacy import: an admin imports a legacy `db.db` into a chosen user. Mapping: events → events; daily/weekly/monthly/annually → RRULE; exclusions → exceptions; color ids → palette; `deleted=1` → soft-deleted with `deleted_at` = import time (legacy has no deletion time) **[PROPOSED]**; legacy `create_ts`/`last_update_ts` (format `m/d/Y H:i:s TZ`) → timestamps; log → audit history. Dry-run produces a report (counts per table, unmapped values) without writing. | HAAL-130 |
+| FR-OPS-01 | Legacy import: an admin imports a legacy `db.db` into a chosen user. Mapping: events → events; daily/weekly/monthly/annually → RRULE; exclusions → exceptions; color ids → palette; `deleted=1` → soft-deleted with `deleted_at` = import time (legacy has no deletion time); legacy `create_ts`/`last_update_ts` (format `m/d/Y H:i:s TZ`) → timestamps; log → audit history. Dry-run produces a report (counts per table, unmapped values) without writing. | HAAL-130 |
 | FR-OPS-02 | After import, every legacy event appears on exactly the same dates as in the legacy app (verified by automated comparison). | HAAL-130, HAAL-141 |
 | FR-OPS-03 | Demo mode: seeded demo accounts and data; full reset to seed every 30 minutes; visible banner with time until next reset; stricter upload limits. | HAAL-154 |
 | FR-OPS-04 | Backup and restore of database and attachments by documented commands. | HAAL-155 |
@@ -247,19 +247,19 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 
 ## 4. NON-FUNCTIONAL REQUIREMENTS
 
-### 4.1 Performance **[PROPOSED values]**
+### 4.1 Performance
 - API: p95 ≤ 200 ms, p99 ≤ 500 ms for item CRUD and day view at reference load (4.2), server-side.
 - Local (offline store) operations reflected in UI ≤ 100 ms.
 - Search: results ≤ 300 ms for 100 000 items per user.
 - Web: Core Web Vitals at p75 — LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1; initial JS ≤ 300 KB gzip.
 - Sync of 1 000 queued changes ≤ 10 s on a 10 Mbit/s link.
 
-### 4.2 Scalability / capacity **[PROPOSED values]**
+### 4.2 Scalability / capacity
 - Reference install: up to 100 registered users, 50 concurrent, 100 000 items per user, 10 GB attachments.
 - Stateless application containers; horizontal scaling behind a load balancer possible without code changes.
 
 ### 4.3 Security
-- Target OWASP ASVS 5.0 Level 2 **[PROPOSED]**; OWASP Top 10 and OWASP API Security Top 10 checklists pass.
+- Target OWASP ASVS 5.0 Level 2; OWASP Top 10 and OWASP API Security Top 10 checklists pass.
 - Authentication per FR-ACC-02..04; session cookies HttpOnly, Secure, SameSite; CSRF protection on state-changing requests.
 - Authorization checked server-side on every request (FR-ACC-07); UUIDs for all public IDs.
 - Input validation on server (schema-based); output encoding; strict Content-Security-Policy; security headers.
@@ -273,12 +273,12 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 - Audit log of all mutations (FR-X-03).
 - Data portability: user JSON export (FR-X-14).
 - No external telemetry by default.
-- **Open issue:** "never delete" (FR-X-01) conflicts with the GDPR right to erasure for operators in the EU. Resolution deferred to the later "trash cleanup" decision (owner, 2026-10-14). See section 9.
+- **Open issue:** "never delete" (FR-X-01) conflicts with the GDPR right to erasure for operators in the EU. Resolution deferred to the later "trash cleanup" decision (owner, 2026-10-14). Accepted by owner as a known open issue for v1.0 (section 9).
 
 ### 4.5 Availability and reliability
 - Server availability is the operator's responsibility; the app provides health/readiness endpoints, graceful shutdown and automatic restart policy in Compose.
 - Client continues to work during server or network outage (FR-OFF-01).
-- Backup: documented daily backup procedure; RPO ≤ 24 h, RTO ≤ 1 h with documented restore **[PROPOSED]**.
+- Backup: documented daily backup procedure; RPO ≤ 24 h, RTO ≤ 1 h with documented restore.
 - Database migrations are forward-only, automatic on start, and tested on a copy of production-like data.
 - Optimistic concurrency (item `version`) prevents lost updates.
 
@@ -289,11 +289,11 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 
 ### 4.7 Maintainability and testability
 - Project Manifest kept current after every change; ADR for every significant decision.
-- Automated tests for every feature; backend line coverage ≥ 80 % **[PROPOSED]**; E2E scenario for every F-xx (HAAL-141).
+- Automated tests for every feature; backend line coverage ≥ 80 %; E2E scenario for every F-xx (HAAL-141).
 - Code comments include the `+++===+++` author/date marker.
 
 ### 4.8 Portability and compatibility
-- Deployable with one `docker compose up` on Linux x86_64 and arm64 **[PROPOSED]**.
+- Deployable with one `docker compose up` on Linux x86_64 and arm64.
 - Configuration by environment variables (Twelve-Factor).
 - Standards: RFC 5545 (recurrence), ISO 8601 (dates/weeks), RFC 9457 (API errors), OpenAPI 3.1+ (API contract).
 
@@ -310,7 +310,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 - Data stays in the operator's database and storage.
 - Soft delete only; trash kept forever in v1.0.
 - Product name: Haalendar.
-- Licence: to be decided (HAAL-004).
+- Licence: Apache License 2.0 with NOTICE file (author attribution, no warranty/liability).
 
 ## 6. THIRD-PARTY INTEGRATIONS AND DEPENDENCIES
 | Integration | Required | Purpose |
@@ -391,20 +391,35 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 
 ---
 
-## 9. ITEMS AWAITING OWNER APPROVAL
-1. Supported browsers and OS versions (2.4).
-2. Server architectures and minimum hardware (2.4).
-3. Undo depth 50 and per-session scope (FR-X-06).
-4. Attachment types and 10 MB limit (FR-X-11).
-5. Default priority Medium (FR-X-12).
-6. Export without embedded attachment binaries (FR-X-14).
-7. Mobile navigation pattern: bottom bar or drawer (FR-X-17).
-8. "Overdue" wording instead of "expired" (FR-CAL-17).
-9. Duplicate warning only on create, or also on title change in edit (FR-CAL-16).
-10. Registration default invite-only (FR-ACC-01); reset link 1 h (FR-ACC-03); lockout after 5 attempts (FR-ACC-04).
-11. Deleted legacy events get `deleted_at` = import time (FR-OPS-01).
-12. Performance and capacity targets (4.1, 4.2).
-13. ASVS 5.0 Level 2 target (4.3).
-14. RPO/RTO (4.5); coverage 80 % (4.7).
-15. GDPR erasure vs "never delete" — accept as known open issue for v1.0 (4.4).
-16. Licence (HAAL-004).
+## 9. DECISION LOG AND OPEN ISSUES
+
+### 9.1 Owner decisions (2026-10-14)
+| # | Topic | Decision | Requirement |
+|---|---|---|---|
+| D-01 | Users | Multi-user | FR-ACC-* |
+| D-02 | Week A/B | Fully configured by user in settings | FR-CAL-23 |
+| D-03 | Day Number | Day of year 1..366 | FR-CAL-22 |
+| D-04 | Priority | Low / Medium / High, default Medium | FR-X-12 |
+| D-05 | Export | JSON, all 3 modules, incl. soft-deleted, all data, no image binaries | FR-X-14 |
+| D-06 | Duplicate warning | Exact, case-insensitive, active events only; on create and on title change | FR-CAL-16 |
+| D-07 | Trash | Keeps everything forever, no purge in v1.0 | FR-X-04 |
+| D-08 | Demo | Reset every 30 minutes | FR-OPS-03 |
+| D-09 | Name | Haalendar | 5 |
+| D-10 | Mobile | Responsive out of the box; slide-out drawer navigation | FR-X-17 |
+| D-11 | Browsers | Two latest versions of Chrome, Edge, Firefox, Safari, iOS Safari, Android Chrome | 2.4 |
+| D-12 | Server | x86_64 + arm64 images; min 2 vCPU, 2 GB RAM, 10 GB disk | 2.4 |
+| D-13 | Undo | 50 steps per browser session | FR-X-06 |
+| D-14 | Attachments | PNG, JPEG, WebP, GIF; max 10 MB per file | FR-X-11 |
+| D-15 | Counter wording | Overdue | FR-CAL-17 |
+| D-16 | Accounts | Invite-only by default; reset link 1 h; lockout after 5 failed attempts | FR-ACC-01, 03, 04 |
+| D-17 | Legacy import | Deleted legacy events get `deleted_at` = import time | FR-OPS-01 |
+| D-18 | Performance / capacity | API p95 ≤ 200 ms; 100 users, 50 concurrent; 100 000 items per user | 4.1, 4.2 |
+| D-19 | Security | OWASP ASVS 5.0 Level 2 | 4.3 |
+| D-20 | Reliability / quality | RPO ≤ 24 h, RTO ≤ 1 h; backend coverage ≥ 80 % | 4.5, 4.7 |
+| D-21 | Licence | Apache-2.0 with NOTICE | 5 |
+
+### 9.2 Open issues
+| # | Issue | Status |
+|---|---|---|
+| O-01 | GDPR right to erasure vs "never delete" (FR-X-01) | Accepted as known open issue for v1.0; revisit with trash cleanup design |
+| O-02 | Gap-analysis features (U#7) | Pending HAAL-003 |
