@@ -95,3 +95,16 @@ Decision: **React + Vite SPA** with TanStack Router (type-safe routing) and TanS
 1. Next.js → React + Vite SPA — approved.
 2. Pants → uv + pnpm workspaces — approved.
 3. Prisma/SQLModel → SQLAlchemy 2.1 + Alembic — approved.
+
+## 7. Addendum — frontend tooling decisions (HAAL-017, 2026-10-14)
+Open items from section 4 resolved while building the frontend shell:
+| Item | Decision | Reason |
+|---|---|---|
+| Lint / format | ESLint 10 + typescript-eslint (strict, type-aware) + Prettier 3 | Default in section 4; Biome not needed |
+| i18n | i18next + react-i18next, type-safe keys from `locales/en.json` | Most widespread React i18n stack, MIT |
+| API client | @hey-api/openapi-ts (fetch client + SDK), generated on every dev/build/check, not committed | ADR-0007: contract is the source of truth |
+| Routing | TanStack Router file routes with code splitting; `routeTree.gen.ts` committed so type-checking works without running Vite | Router plugin regenerates it |
+| Fonts | Inter self-hosted via @fontsource-variable (no Google Fonts requests) | On-prem / offline / privacy |
+| Supply chain | pnpm `minimumReleaseAge: 10080` (7 days), install scripts blocked by default, `@scarf/scarf` telemetry denied | Instructions Section K |
+| Versions | All direct dependencies pinned to the newest release that is at least 7 days old (e.g. React 19.3.0, Vite 8.3.3, TypeScript 6.0.3, Tailwind 4.3.3, TanStack Router 1.170.41) | Policy above |
+| Strictness | `strict`, `noUncheckedIndexedAccess`; `exactOptionalPropertyTypes` not used because generated client code is incompatible | Keep generated code untouched |
