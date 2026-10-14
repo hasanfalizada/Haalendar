@@ -1,10 +1,10 @@
 # SOFTWARE REQUIREMENTS SPECIFICATION (SRS) — Haalendar
 
-+++===+++ 2026-10-14 — Hasan Alizada — HAAL-002. v1.0 approved by owner; decisions logged in section 9.
++++===+++ 2026-10-14 — Hasan Alizada — HAAL-002 v1.0 approved by owner; HAAL-003 v1.1 adds approved gap-analysis scope. Decisions logged in section 9.
 
 | Field | Value |
 |---|---|
-| Version | 1.0 |
+| Version | 1.1 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -36,7 +36,7 @@ Out of scope for v1.0 (may be added later):
 - Native mobile apps (iOS/Android store apps).
 - Hosted SaaS operated by the project.
 - Physical purge of data (trash keeps everything forever, owner decision 2026-10-14).
-- Features from the gap analysis (HAAL-003) until approved.
+- Gap-analysis items marked v1.1, Later or Reject in `requirements/gap-analysis.md` (approved by owner 2026-10-14).
 
 ### 1.3 Intended Audience and Reading Suggestions
 | Reader | Read first |
@@ -57,6 +57,7 @@ Out of scope for v1.0 (may be added later):
 | Occurrence | One concrete date of a recurring event |
 | Exception | A date removed from, or overridden in, a recurring series |
 | Overdue (legacy: "expired") | See FR-CAL-17 |
+| Calendar (collection) | Named set of events owned by a user, with own color and visibility; unit of sharing (FR-CAL-32) |
 | Week A/B | User-configured alternating week label (FR-CAL-23) |
 | Day Number | Ordinal day of the year, 1..366 |
 | Owner | Hasan Alizada, product owner |
@@ -146,6 +147,9 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-X-16 | Light and dark theme; follows system preference unless set in settings. | HAAL-017 |
 | FR-X-17 | Layout is responsive from 360 px: on phones the module navigation collapses into a slide-out drawer menu; all features usable by touch. | Owner 2026-10-14, HAAL-170 |
 | FR-X-18 | Changes made in one tab, device or by a sharing user appear in other open sessions without manual reload and without per-second polling. | F-18, HAAL-055 |
+| FR-X-19 | Search filters: date range, module, calendar, color, priority, label. | C-14, HAAL-046 |
+| FR-X-20 | Markdown (CommonMark) in event descriptions, note bodies, card descriptions and comments; rendered output is sanitised (no scripts, no raw HTML). | T-02, HAAL-047 |
+| FR-X-21 | In-app notification center listing reminders, shares received and sync errors; unread counter; mark read. | G-01, HAAL-048 |
 
 ### 3.2 Calendar
 
@@ -175,6 +179,18 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-CAL-22 | Day Number = ordinal day of the selected date in its year (1..365/366). | U#8, HAAL-082 |
 | FR-CAL-23 | Week A/B (user settings): enable/disable; anchor week (any week the user marks as "A"); custom labels (default "A"/"B"). Label = first label when the number of whole weeks between the anchor week and the selected week is even, otherwise second label. Calculation must be correct across year boundaries and 53-week years. | U#12, HAAL-085 |
 | FR-CAL-24 | Note and card due dates can be shown in the calendar as separate toggleable layers; clicking opens the source item. | HAAL-121 |
+| FR-CAL-25 | Week view: 7 day columns starting on the configured week start, all-day row on top, timed events placed by time with overlapping events side by side, current-time line. | C-01, HAAL-087 |
+| FR-CAL-26 | Month view: grid of weeks, events listed per day with "+N more" overflow; clicking a day opens its day view. | C-02, HAAL-088 |
+| FR-CAL-27 | Agenda view: chronological list of upcoming events grouped by day, default range 30 days, configurable in settings. | C-03, HAAL-089 |
+| FR-CAL-28 | Drag-and-drop rescheduling in week and month views (mouse and touch), keeping duration; for a recurring occurrence asks "this / this and following / all". Undoable. | C-04, HAAL-090 |
+| FR-CAL-29 | Reminders: an event may have zero or more reminders (offset before start; for all-day events a time on the day or days before). Delivered as in-app notification (FR-X-21) and as browser notification when permission is granted, including when the app is closed (Web Push). | C-05, HAAL-091 |
+| FR-CAL-30 | Extended recurrence: end never / on date / after N occurrences; interval every N days/weeks/months/years; weekly on selected weekdays; monthly by day of month, by Nth weekday (1st..4th, last) or on the last day of month. Stored as RRULE. | C-06, HAAL-092 |
+| FR-CAL-31 | Edit and delete "this and following" occurrences: the series is split at the selected occurrence. | C-07, HAAL-093 |
+| FR-CAL-32 | Multiple calendars per user: a default calendar is created for every user; calendars can be created, renamed, colored, hidden/shown and archived; each event belongs to one calendar; calendar is the unit of sharing (FR-ACC-10). | C-08, HAAL-094 |
+| FR-CAL-33 | ICS (RFC 5545) import into a chosen calendar, including RRULE and EXDATE, with a report of imported and skipped items; export of a calendar to an .ics file. | C-09, HAAL-095 |
+| FR-CAL-34 | Duplicate an event to another date (copy of all fields and attachments metadata). | C-10, HAAL-096 |
+| FR-CAL-35 | ISO week numbers shown in the mini month calendar. | C-12, HAAL-097 |
+| FR-CAL-36 | On touch devices, swiping left/right in day, week and month views moves to the next/previous period. | C-13, HAAL-098 |
 
 ### 3.3 To-Do (Keep-like)
 
@@ -186,6 +202,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-TODO-04 | Labels: create, rename, assign; filter notes by label. | HAAL-102 |
 | FR-TODO-05 | Grid and list layout; manual order by drag-and-drop and keyboard; order persists across devices. | HAAL-103 |
 | FR-TODO-06 | A note with a due date appears in the calendar layer (FR-CAL-24). | HAAL-104 |
+| FR-TODO-07 | Reminders on notes, same behaviour as FR-CAL-29. | T-01, HAAL-105 |
 
 ### 3.4 Kanban (Trello / Kanboard-like)
 
@@ -197,6 +214,10 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-KAN-04 | Cards are moved within and between columns by drag-and-drop (mouse, touch) and keyboard; order is stable and synced; move is undoable. | HAAL-113 |
 | FR-KAN-05 | Card activity shows its audit history; users can add comments. | HAAL-114 (Should) |
 | FR-KAN-06 | Swimlanes. | HAAL-115 (Could) |
+| FR-KAN-07 | Due-date reminders on cards, same behaviour as FR-CAL-29. | K-01, HAAL-116 |
+| FR-KAN-08 | Badges on cards: overdue (due date passed) and due soon (within 24 hours). | K-02, HAAL-117 |
+| FR-KAN-09 | Board filters: label, priority, due date (overdue / today / this week / none), assignee, text. | K-03, HAAL-118 |
+| FR-KAN-10 | Assignees: on a shared board, cards can be assigned to one or more board members; filter "assigned to me". | K-04, HAAL-119 |
 
 ### 3.5 Integration between modules
 
@@ -205,6 +226,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-INT-01 | Any two items (event, note, card) can be linked; both sides show the link (backlink). Links survive soft delete and restore. | HAAL-120 |
 | FR-INT-02 | Convert note ↔ card ↔ event keeping content, attachments and links. | HAAL-122 (Should) |
 | FR-INT-03 | Command palette (Ctrl/Cmd+K): navigate, search, quick-create in any module. | HAAL-123 (Should) |
+| FR-INT-04 | Time-blocking: dragging a note or card onto the day or week view creates an event for that time slot linked to the source item (FR-INT-01). | C-11, HAAL-124 |
 
 ### 3.6 Accounts, roles, sharing
 
@@ -391,6 +413,31 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 
 ---
 
+### 8.4 Gap analysis (v1.0 scope) → requirements
+| Gap item | Requirement |
+|---|---|
+| C-01 | FR-CAL-25 |
+| C-02 | FR-CAL-26 |
+| C-03 | FR-CAL-27 |
+| C-04 | FR-CAL-28 |
+| C-05 | FR-CAL-29 |
+| C-06 | FR-CAL-30 |
+| C-07 | FR-CAL-31 |
+| C-08 | FR-CAL-32 |
+| C-09 | FR-CAL-33 |
+| C-10 | FR-CAL-34 |
+| C-11 | FR-INT-04 |
+| C-12 | FR-CAL-35 |
+| C-13 | FR-CAL-36 |
+| C-14 | FR-X-19 |
+| T-01 | FR-TODO-07 |
+| T-02 | FR-X-20 |
+| K-01 | FR-KAN-07 |
+| K-02 | FR-KAN-08 |
+| K-03 | FR-KAN-09 |
+| K-04 | FR-KAN-10 |
+| G-01 | FR-X-21 |
+
 ## 9. DECISION LOG AND OPEN ISSUES
 
 ### 9.1 Owner decisions (2026-10-14)
@@ -417,9 +464,10 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-19 | Security | OWASP ASVS 5.0 Level 2 | 4.3 |
 | D-20 | Reliability / quality | RPO ≤ 24 h, RTO ≤ 1 h; backend coverage ≥ 80 % | 4.5, 4.7 |
 | D-21 | Licence | Apache-2.0 with NOTICE | 5 |
+| D-22 | Gap analysis | All recommendations approved: 21 items into v1.0, rest per `requirements/gap-analysis.md` | 8.4 |
 
 ### 9.2 Open issues
 | # | Issue | Status |
 |---|---|---|
 | O-01 | GDPR right to erasure vs "never delete" (FR-X-01) | Accepted as known open issue for v1.0; revisit with trash cleanup design |
-| O-02 | Gap-analysis features (U#7) | Pending HAAL-003 |
+| O-02 | Gap-analysis features (U#7) | Closed — approved (D-22) |
