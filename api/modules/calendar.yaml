@@ -1,0 +1,396 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Calendars, events, occurrences and recurrence scopes, ICS, duplicate check, overdue counter (FR-CAL-*).
+paths:
+  calendars:
+    get:
+      tags: [calendar]
+      operationId: listCalendars
+      summary: Own and shared calendars with per-user visibility
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IncludeDeleted'
+      responses:
+        '200':
+          description: Calendars
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Calendar' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [calendar]
+      operationId: createCalendar
+      summary: Create a calendar (FR-CAL-32)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CalendarInput' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Calendar' } } } }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  calendar:
+    get:
+      tags: [calendar]
+      operationId: getCalendar
+      summary: Get calendar
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200': { description: Calendar, content: { application/json: { schema: { $ref: '#/components/schemas/Calendar' } } } }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+    patch:
+      tags: [calendar]
+      operationId: updateCalendar
+      summary: Rename, recolor, archive (owner only)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content: { application/merge-patch+json: { schema: { $ref: '#/components/schemas/CalendarPatch' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Calendar' } } } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+    delete:
+      tags: [calendar]
+      operationId: deleteCalendar
+      summary: Soft-delete calendar with its events (one delete batch); default calendar cannot be deleted
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      responses:
+        '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+  calendar_pref:
+    put:
+      tags: [calendar]
+      operationId: setCalendarPreference
+      summary: Show or hide a calendar for the current user
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hidden]
+              properties:
+                hidden: { type: boolean }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  calendar_ics_import:
+    post:
+      tags: [calendar]
+      operationId: importIcs
+      summary: Import an .ics file (VEVENT, RRULE, EXDATE) into the calendar — FR-CAL-33
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, contentMediaType: text/calendar }
+      responses:
+        '200':
+          description: Import report
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [imported, skipped]
+                properties:
+                  imported: { type: integer }
+                  skipped: { type: integer }
+                  warnings: { type: array, items: { type: string } }
+        '413': { $ref: '../components/common.yaml#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '../components/common.yaml#/components/responses/UnsupportedMediaType' }
+  calendar_ics_export:
+    get:
+      tags: [calendar]
+      operationId: exportIcs
+      summary: Export the calendar as .ics (RFC 5545)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200': { description: iCalendar file, content: { text/calendar: { schema: { type: string } } } }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+
+  events:
+    post:
+      tags: [calendar]
+      operationId: createEvent
+      summary: Create an event; client may supply a UUIDv7 `id` (idempotent create for offline sync)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EventInput' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Event' } } } }
+        '200': { description: Same id already exists with identical content (idempotent replay), content: { application/json: { schema: { $ref: '#/components/schemas/Event' } } } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  event:
+    get:
+      tags: [calendar]
+      operationId: getEvent
+      summary: Get event
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200': { description: Event, headers: { ETag: { $ref: '../components/common.yaml#/components/headers/ETag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/Event' } } } }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+    patch:
+      tags: [calendar]
+      operationId: updateEvent
+      summary: Update an event; for recurring events choose scope this / following / all (FR-CAL-13, FR-CAL-31)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/OccurrenceDate'
+        - $ref: '#/components/parameters/Scope'
+      requestBody:
+        required: true
+        content: { application/merge-patch+json: { schema: { $ref: '#/components/schemas/EventPatch' } } }
+      responses:
+        '200': { description: Changes applied, content: { application/json: { schema: { $ref: '#/components/schemas/EventChangeResult' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+    delete:
+      tags: [calendar]
+      operationId: deleteEvent
+      summary: Soft-delete; for recurring events scope this (exception) / following (series ends) / all (FR-CAL-11, FR-CAL-12, FR-CAL-31)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/OccurrenceDate'
+        - $ref: '#/components/parameters/Scope'
+      responses:
+        '200': { description: Deleted / exception created, content: { application/json: { schema: { $ref: '#/components/schemas/EventChangeResult' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+  event_move_next_day:
+    post:
+      tags: [calendar]
+      operationId: moveEventToNextDay
+      summary: Shift by +1 day keeping times; an occurrence becomes exception + one-off (FR-CAL-20)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/OccurrenceDate'
+      responses:
+        '200': { description: Moved, content: { application/json: { schema: { $ref: '#/components/schemas/EventChangeResult' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+  event_duplicate:
+    post:
+      tags: [calendar]
+      operationId: duplicateEvent
+      summary: Copy an event to another date (FR-CAL-34)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_date]
+              properties:
+                id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                target_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+      responses:
+        '201': { description: Copy created, content: { application/json: { schema: { $ref: '#/components/schemas/Event' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  event_title_check:
+    get:
+      tags: [calendar]
+      operationId: checkDuplicateTitle
+      summary: Active events of the user with the same title, exact and case-insensitive (FR-CAL-16)
+      parameters:
+        - { name: title, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 150 } }
+        - { name: exclude_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' }, description: The event being edited }
+      responses:
+        '200':
+          description: Possible duplicates (empty when none)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title, start_date]
+                      properties:
+                        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                        title: { type: string }
+                        start_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  occurrences:
+    get:
+      tags: [calendar]
+      operationId: listOccurrences
+      summary: Expanded occurrences in a date range for day, week, month and agenda views (FR-CAL-01, 25-27)
+      parameters:
+        - { name: from, in: query, required: true, schema: { $ref: '../components/common.yaml#/components/schemas/Date' } }
+        - { name: to, in: query, required: true, schema: { $ref: '../components/common.yaml#/components/schemas/Date' }, description: Inclusive; max range 366 days }
+        - { name: calendar_id, in: query, schema: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }, style: form, explode: true, description: Default all visible calendars }
+        - { name: layers, in: query, schema: { type: array, items: { type: string, enum: [note_due, card_due] } }, style: form, explode: true, description: Extra layers (FR-CAL-24) }
+      responses:
+        '200':
+          description: Occurrences ordered all-day first, then start time, then title
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Occurrence' } }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  overdue_count:
+    get:
+      tags: [calendar]
+      operationId: getOverdueCount
+      summary: Overdue counter per legacy rule (FR-CAL-17)
+      parameters:
+        - { name: today, in: query, required: true, schema: { $ref: '../components/common.yaml#/components/schemas/Date' }, description: Client's local date }
+      responses:
+        '200': { description: Count, content: { application/json: { schema: { type: object, required: [count], properties: { count: { type: integer, minimum: 0 } } } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+components:
+  parameters:
+    OccurrenceDate:
+      name: occurrence_date
+      in: query
+      description: Required for scope `this` and `following` on recurring events.
+      schema: { $ref: '../components/common.yaml#/components/schemas/Date' }
+    Scope:
+      name: scope
+      in: query
+      schema: { type: string, enum: [this, following, all], default: all }
+  schemas:
+    Calendar:
+      allOf:
+        - $ref: '../components/common.yaml#/components/schemas/Meta'
+        - type: object
+          required: [id, owner_id, name, color, is_default, hidden, permission]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            name: { type: string, minLength: 1, maxLength: 100 }
+            color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+            is_default: { type: boolean }
+            archived_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+            hidden: { type: boolean, description: Current user's preference }
+            permission: { type: string, enum: [owner, edit, view], description: Current user's access }
+    CalendarInput:
+      type: object
+      required: [name]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+    CalendarPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        archived: { type: boolean }
+        is_default: { type: boolean, enum: [true], description: Make this the default calendar }
+    EventFields:
+      type: object
+      properties:
+        calendar_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        title: { type: string, maxLength: 150, description: Empty → "(No title)" }
+        body: { $ref: '../components/common.yaml#/components/schemas/Markdown' }
+        location: { type: string, maxLength: 500 }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        priority: { $ref: '../components/common.yaml#/components/schemas/Priority' }
+        all_day: { type: boolean }
+        start_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        start_time: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/LocalTime' }, { type: 'null' }] }
+        end_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        end_time: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/LocalTime' }, { type: 'null' }] }
+        tzid: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
+        rrule:
+          oneOf: [{ type: string, maxLength: 500 }, { type: 'null' }]
+          description: RFC 5545 RRULE value without the "RRULE:" prefix, e.g. FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20271231
+    EventInput:
+      allOf:
+        - $ref: '#/components/schemas/EventFields'
+        - type: object
+          required: [calendar_id, all_day, start_date, end_date]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+    EventPatch:
+      allOf:
+        - $ref: '#/components/schemas/EventFields'
+      description: Merge patch of EventFields; validation of the resulting event applies (end ≥ start).
+    Event:
+      allOf:
+        - $ref: '../components/common.yaml#/components/schemas/Meta'
+        - $ref: '#/components/schemas/EventFields'
+        - type: object
+          required: [id, owner_id, calendar_id, title, color, priority, all_day, start_date, end_date, tzid]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            recurrence_parent_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+            split_from_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+            exceptions:
+              type: array
+              items: { $ref: '#/components/schemas/RecurrenceException' }
+            attachment_count: { type: integer, minimum: 0 }
+            reminder_count: { type: integer, minimum: 0 }
+    RecurrenceException:
+      type: object
+      required: [id, occurrence_date, kind]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        occurrence_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        kind: { type: string, enum: [cancelled, overridden] }
+        override_event_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+    EventChangeResult:
+      type: object
+      description: Every entity created or changed by the operation, so the client can update its store and build an undo step.
+      properties:
+        updated: { type: array, items: { $ref: '#/components/schemas/Event' } }
+        created: { type: array, items: { $ref: '#/components/schemas/Event' } }
+        exceptions: { type: array, items: { $ref: '#/components/schemas/RecurrenceException' } }
+        delete_batch_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+    Occurrence:
+      type: object
+      required: [event_id, occurrence_date, calendar_id, title, color, priority, all_day, start_date, end_date, is_recurring, has_description, attachment_count]
+      properties:
+        kind: { type: string, enum: [event, note_due, card_due], default: event }
+        event_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        occurrence_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        calendar_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        title: { type: string }
+        location: { type: string }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        priority: { $ref: '../components/common.yaml#/components/schemas/Priority' }
+        all_day: { type: boolean }
+        start_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        start_time: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/LocalTime' }, { type: 'null' }] }
+        end_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        end_time: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/LocalTime' }, { type: 'null' }] }
+        tzid: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
+        is_recurring: { type: boolean }
+        has_description: { type: boolean, description: FR-CAL-19 }
+        attachment_count: { type: integer }

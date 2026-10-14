@@ -1,0 +1,475 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Auth, setup, current user, sessions, 2FA, push subscriptions, settings (FR-ACC-*, ADR-0005).
+paths:
+  setup_status:
+    get:
+      tags: [setup]
+      operationId: getSetupStatus
+      summary: Whether the first-run admin wizard is still required
+      security: []
+      responses:
+        '200':
+          description: Setup state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [setup_required, registration_mode, demo_mode]
+                properties:
+                  setup_required: { type: boolean }
+                  registration_mode: { type: string, enum: [invite, open] }
+                  demo_mode: { type: boolean }
+  setup_admin:
+    post:
+      tags: [setup]
+      operationId: createFirstAdmin
+      summary: Create the first admin (only while setup is required) — FR-ACC-05
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RegistrationInput' } } }
+      responses:
+        '201': { description: Admin created and logged in, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+
+  auth_login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Log in with e-mail and password (and TOTP when enabled)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, minLength: 1, maxLength: 1024 }
+                totp_code: { type: string, pattern: '^\d{6}$' }
+                recovery_code: { type: string, maxLength: 32 }
+      responses:
+        '200':
+          description: Logged in; session cookie set (Set-Cookie). Body contains the CSRF token.
+          content: { application/json: { schema: { $ref: '#/components/schemas/LoginResult' } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
+  auth_logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Revoke the current session; client then wipes local data (ADR-0005)
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  auth_register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Register with an invite token (invite mode) or freely (open mode); sends verification e-mail
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/RegistrationInput'
+                - type: object
+                  properties:
+                    invite_token: { type: string, maxLength: 128 }
+      responses:
+        '202': { description: 'Accepted; generic response, no account enumeration' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
+  auth_verify_email:
+    post:
+      tags: [auth]
+      operationId: verifyEmail
+      summary: Confirm e-mail with the single-use token (24 h)
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/TokenInput' } } }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+  auth_password_reset_request:
+    post:
+      tags: [auth]
+      operationId: requestPasswordReset
+      summary: Send a reset link (1 h) if the account exists — always 202
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+      responses:
+        '202': { description: Accepted }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
+  auth_password_reset_confirm:
+    post:
+      tags: [auth]
+      operationId: confirmPasswordReset
+      summary: Set a new password with the reset token; all sessions are revoked
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string, maxLength: 128 }
+                new_password: { $ref: '#/components/schemas/NewPassword' }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  auth_reauth:
+    post:
+      tags: [auth]
+      operationId: reauthenticate
+      summary: Confirm identity for sensitive actions (valid 15 min)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password: { type: string, maxLength: 1024 }
+                totp_code: { type: string, pattern: '^\d{6}$' }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
+  auth_oidc_start:
+    get:
+      tags: [auth]
+      operationId: startOidcLogin
+      summary: Redirect to the configured OIDC provider (Authorization Code + PKCE) — Could, HAAL-168
+      security: []
+      responses:
+        '302': { description: Redirect to provider }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+  auth_oidc_callback:
+    get:
+      tags: [auth]
+      operationId: oidcCallback
+      summary: OIDC callback; validates state/nonce and issues the session cookie
+      security: []
+      parameters:
+        - { name: code, in: query, required: true, schema: { type: string } }
+        - { name: state, in: query, required: true, schema: { type: string } }
+      responses:
+        '302': { description: Redirect into the app }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+
+  me:
+    get:
+      tags: [account]
+      operationId: getMe
+      summary: Current user, role and CSRF token
+      responses:
+        '200': { description: Current user, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    patch:
+      tags: [account]
+      operationId: updateProfile
+      summary: Update display name, time zone, locale (FR-ACC-08)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content: { application/merge-patch+json: { schema: { $ref: '#/components/schemas/ProfilePatch' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  me_avatar:
+    put:
+      tags: [account]
+      operationId: uploadAvatar
+      summary: Upload avatar image (PNG/JPEG/WebP, ≤ 2 MB)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, contentMediaType: application/octet-stream }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '413': { $ref: '../components/common.yaml#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '../components/common.yaml#/components/responses/UnsupportedMediaType' }
+  me_password:
+    post:
+      tags: [account]
+      operationId: changePassword
+      summary: Change password (requires re-auth); other sessions revoked
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_password]
+              properties:
+                new_password: { $ref: '#/components/schemas/NewPassword' }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  me_settings:
+    get:
+      tags: [account]
+      operationId: getSettings
+      summary: User settings (FR-ACC-09)
+      responses:
+        '200': { description: Settings, content: { application/json: { schema: { $ref: '#/components/schemas/Settings' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    patch:
+      tags: [account]
+      operationId: updateSettings
+      summary: Update settings (merge patch)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content: { application/merge-patch+json: { schema: { $ref: '#/components/schemas/SettingsPatch' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Settings' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  me_sessions:
+    get:
+      tags: [account]
+      operationId: listSessions
+      summary: Active sessions of the current user
+      responses:
+        '200':
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Session' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  me_session:
+    delete:
+      tags: [account]
+      operationId: revokeSession
+      summary: Revoke one session
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+  me_sessions_revoke_others:
+    post:
+      tags: [account]
+      operationId: revokeOtherSessions
+      summary: Log out all other sessions
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  me_totp_setup:
+    post:
+      tags: [account]
+      operationId: startTotpSetup
+      summary: Generate TOTP secret (requires re-auth)
+      responses:
+        '200':
+          description: Secret and otpauth URI for QR code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [otpauth_uri, secret]
+                properties:
+                  otpauth_uri: { type: string }
+                  secret: { type: string }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+  me_totp_enable:
+    post:
+      tags: [account]
+      operationId: enableTotp
+      summary: Confirm TOTP with a code; returns 10 recovery codes (shown once)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totp_code]
+              properties:
+                totp_code: { type: string, pattern: '^\d{6}$' }
+      responses:
+        '200':
+          description: Enabled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recovery_codes]
+                properties:
+                  recovery_codes: { type: array, items: { type: string }, minItems: 10, maxItems: 10 }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  me_totp_disable:
+    post:
+      tags: [account]
+      operationId: disableTotp
+      summary: Disable TOTP (requires re-auth; blocked if instance requires admin 2FA)
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+  me_push_subscriptions:
+    post:
+      tags: [account]
+      operationId: addPushSubscription
+      summary: Register a Web Push subscription for this device (FR-CAL-29)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint: { type: string, format: uri, maxLength: 2048 }
+                keys:
+                  type: object
+                  required: [p256dh, auth]
+                  properties:
+                    p256dh: { type: string }
+                    auth: { type: string }
+      responses:
+        '201': { description: Registered, content: { application/json: { schema: { type: object, properties: { id: { $ref: '../components/common.yaml#/components/schemas/Uuid' } } } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  me_push_subscription:
+    delete:
+      tags: [account]
+      operationId: removePushSubscription
+      summary: Remove a Web Push subscription
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  push_vapid_key:
+    get:
+      tags: [account]
+      operationId: getVapidPublicKey
+      summary: Public VAPID key for subscribing
+      responses:
+        '200': { description: Key, content: { application/json: { schema: { type: object, required: [public_key], properties: { public_key: { type: string } } } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+components:
+  schemas:
+    NewPassword:
+      type: string
+      minLength: 15
+      maxLength: 128
+      description: Any Unicode; checked against the common-password list (ADR-0005).
+    RegistrationInput:
+      type: object
+      required: [email, password, display_name, time_zone]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { $ref: '#/components/schemas/NewPassword' }
+        display_name: { type: string, minLength: 1, maxLength: 80 }
+        time_zone: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
+    TokenInput:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, maxLength: 128 }
+    LoginResult:
+      type: object
+      required: [me, csrf_token]
+      properties:
+        me: { $ref: '#/components/schemas/Me' }
+        csrf_token: { type: string }
+    Me:
+      type: object
+      required: [id, email, display_name, role, time_zone, locale, totp_enabled, version]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        avatar_url: { oneOf: [{ type: string, format: uri-reference }, { type: 'null' }] }
+        role: { type: string, enum: [admin, user] }
+        time_zone: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
+        locale: { type: string, enum: [en] }
+        totp_enabled: { type: boolean }
+        must_change_password: { type: boolean }
+        csrf_token: { type: string, description: Present on GET /me. }
+        version: { type: integer }
+    ProfilePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name: { type: string, minLength: 1, maxLength: 80 }
+        time_zone: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
+        locale: { type: string, enum: [en] }
+    Settings:
+      type: object
+      required: [week_start, time_format, theme, default_color, agenda_days, week_ab, version]
+      properties:
+        week_start: { type: integer, minimum: 0, maximum: 6, default: 1, description: 0 = Sunday … 6 = Saturday }
+        time_format: { type: string, enum: ['24h', '12h'] }
+        theme: { type: string, enum: [system, light, dark] }
+        default_color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        agenda_days: { type: integer, minimum: 1, maximum: 365, default: 30 }
+        week_ab:
+          type: object
+          required: [enabled]
+          properties:
+            enabled: { type: boolean }
+            anchor: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Date' }, { type: 'null' }] }
+            labels:
+              type: array
+              items: { type: string, minLength: 1, maxLength: 10 }
+              minItems: 2
+              maxItems: 2
+        version: { type: integer }
+    SettingsPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        week_start: { type: integer, minimum: 0, maximum: 6 }
+        time_format: { type: string, enum: ['24h', '12h'] }
+        theme: { type: string, enum: [system, light, dark] }
+        default_color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        agenda_days: { type: integer, minimum: 1, maximum: 365 }
+        week_ab:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            anchor: { $ref: '../components/common.yaml#/components/schemas/Date' }
+            labels: { type: array, items: { type: string, minLength: 1, maxLength: 10 }, minItems: 2, maxItems: 2 }
+    Session:
+      type: object
+      required: [id, created_at, last_seen_at, current]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        last_seen_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        device: { type: string, description: User-agent summary }
+        ip_prefix: { type: string }
+        current: { type: boolean }

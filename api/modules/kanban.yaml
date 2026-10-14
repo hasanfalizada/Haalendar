@@ -1,0 +1,330 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Kanban module: boards, columns, cards, moves, assignees, board labels (FR-KAN-*).
+paths:
+  boards:
+    get:
+      tags: [kanban]
+      operationId: listBoards
+      summary: List boards
+      parameters:
+        - { name: view, in: query, schema: { type: string, enum: [active, archived], default: active } }
+      responses:
+        '200': { description: Boards, content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Board' } } } } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [kanban]
+      operationId: createBoard
+      summary: Create board
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, position]
+              properties:
+                id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                name: { type: string, minLength: 1, maxLength: 100 }
+                position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Board' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  board:
+    get:
+      tags: [kanban]
+      operationId: getBoard
+      summary: Board with columns and cards (card filters FR-KAN-09)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - { name: label_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+        - { name: priority, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Priority' } }
+        - { name: due, in: query, schema: { type: string, enum: [overdue, today, this_week, none] } }
+        - { name: assignee, in: query, schema: { type: string, description: 'user id or "me"' } }
+        - { name: q, in: query, schema: { type: string, maxLength: 200 } }
+      responses:
+        '200': { description: Board, content: { application/json: { schema: { $ref: '#/components/schemas/BoardDetail' } } } }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+    patch:
+      tags: [kanban]
+      operationId: updateBoard
+      summary: Rename, reorder, archive (owner only)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+                archived: { type: boolean }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Board' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+    delete:
+      tags: [kanban]
+      operationId: deleteBoard
+      summary: Soft-delete board with columns and cards (one delete batch)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      responses:
+        '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  board_columns:
+    post:
+      tags: [kanban]
+      operationId: createColumn
+      summary: Create column
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, position]
+              properties:
+                id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                name: { type: string, minLength: 1, maxLength: 60 }
+                position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+                wip_limit: { oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }] }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Column' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  column:
+    patch:
+      tags: [kanban]
+      operationId: updateColumn
+      summary: Update column
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+                wip_limit: { oneOf: [{ type: integer, minimum: 1 }, { type: 'null' }] }
+                archived: { type: boolean }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Column' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+    delete:
+      tags: [kanban]
+      operationId: deleteColumn
+      summary: Delete column
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      responses:
+        '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  board_cards:
+    post:
+      tags: [kanban]
+      operationId: createCard
+      summary: Create card
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CardInput' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Card' } } } }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  card:
+    get:
+      tags: [kanban]
+      operationId: getCard
+      summary: Get card
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200': { description: Card, content: { application/json: { schema: { $ref: '#/components/schemas/Card' } } } }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+    patch:
+      tags: [kanban]
+      operationId: updateCard
+      summary: Edit fields or move (column_id + position) — FR-KAN-04; WIP limit exceeded is a warning, not an error
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content: { application/merge-patch+json: { schema: { $ref: '#/components/schemas/CardFields' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Card' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+    delete:
+      tags: [kanban]
+      operationId: deleteCard
+      summary: Delete card
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      responses:
+        '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  card_assignees:
+    put:
+      tags: [kanban]
+      operationId: setCardAssignees
+      summary: Replace assignees; each must have access to the board (FR-KAN-10)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_ids]
+              properties:
+                user_ids: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' }, maxItems: 20, uniqueItems: true }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  board_labels:
+    get:
+      tags: [kanban]
+      operationId: listBoardLabels
+      summary: List board labels
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200': { description: Labels, content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: './items.yaml#/components/schemas/Label' } } } } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [kanban]
+      operationId: createBoardLabel
+      summary: Create board label
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: './items.yaml#/components/schemas/LabelInput' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: './items.yaml#/components/schemas/Label' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  board_members:
+    get:
+      tags: [kanban]
+      operationId: listBoardMembers
+      summary: Owner and users with a share — candidates for assignment
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200':
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [user_id, display_name, permission]
+                      properties:
+                        user_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                        display_name: { type: string }
+                        permission: { type: string, enum: [owner, edit, view] }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+components:
+  schemas:
+    Board:
+      allOf:
+        - $ref: '../components/common.yaml#/components/schemas/Meta'
+        - type: object
+          required: [id, owner_id, name, position, permission]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            name: { type: string }
+            position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+            archived_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+            permission: { type: string, enum: [owner, edit, view] }
+    BoardDetail:
+      allOf:
+        - $ref: '#/components/schemas/Board'
+        - type: object
+          required: [columns]
+          properties:
+            columns:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/Column'
+                  - type: object
+                    required: [cards]
+                    properties:
+                      cards: { type: array, items: { $ref: '#/components/schemas/Card' } }
+    Column:
+      allOf:
+        - $ref: '../components/common.yaml#/components/schemas/Meta'
+        - type: object
+          required: [id, board_id, name, position]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            board_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            name: { type: string }
+            position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+            wip_limit: { oneOf: [{ type: integer }, { type: 'null' }] }
+            card_count: { type: integer }
+            archived_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+    CardFields:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200 }
+        body: { $ref: '../components/common.yaml#/components/schemas/Markdown' }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        priority: { $ref: '../components/common.yaml#/components/schemas/Priority' }
+        column_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+        due_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+        archived: { type: boolean }
+    CardInput:
+      allOf:
+        - $ref: '#/components/schemas/CardFields'
+        - type: object
+          required: [title, column_id, position]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+    Card:
+      allOf:
+        - $ref: '../components/common.yaml#/components/schemas/Meta'
+        - $ref: '#/components/schemas/CardFields'
+        - type: object
+          required: [id, owner_id, board_id, column_id, title, color, priority, position]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            board_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            archived_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+            label_ids: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+            assignee_ids: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+            due_state: { type: string, enum: [none, ok, due_soon, overdue], description: FR-KAN-08 }
+            checklist_total: { type: integer }
+            checklist_checked: { type: integer }
+            attachment_count: { type: integer }
+            comment_count: { type: integer }
+            wip_exceeded: { type: boolean, description: Set when the move put the target column over its WIP limit }

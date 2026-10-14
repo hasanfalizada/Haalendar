@@ -1,0 +1,101 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Offline sync and live updates (FR-OFF-03/04, FR-X-18). PROVISIONAL: payload semantics are finalised by the offline/sync ADR (HAAL-050) and implemented in HAAL-053/055.
+paths:
+  sync_pull:
+    get:
+      tags: [sync]
+      operationId: syncPull
+      summary: Changes visible to the user since a cursor (including soft deletes and revoked-share tombstones)
+      x-status: provisional
+      parameters:
+        - { name: since, in: query, schema: { type: string, maxLength: 128 }, description: Opaque cursor; omit for initial sync }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
+      responses:
+        '200':
+          description: Change batch
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [changes, cursor, has_more]
+                properties:
+                  changes: { type: array, items: { $ref: '#/components/schemas/Change' } }
+                  cursor: { type: string }
+                  has_more: { type: boolean }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  sync_push:
+    post:
+      tags: [sync]
+      operationId: syncPush
+      summary: Apply queued offline mutations in order; each mutation is idempotent by its id
+      x-status: provisional
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mutations]
+              properties:
+                mutations:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items: { $ref: '#/components/schemas/Mutation' }
+      responses:
+        '200':
+          description: Per-mutation results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [mutation_id, status]
+                      properties:
+                        mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                        status: { type: string, enum: [applied, duplicate, conflict, rejected] }
+                        problem: { $ref: '../components/common.yaml#/components/schemas/Problem' }
+                        current: { type: object, description: Server state on conflict }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  stream:
+    get:
+      tags: [sync]
+      operationId: openEventStream
+      summary: Server-Sent Events with change notifications for open sessions (no per-second polling)
+      x-status: provisional
+      parameters:
+        - { name: Last-Event-ID, in: header, schema: { type: string } }
+      responses:
+        '200':
+          description: 'text/event-stream; events: `changes` (data: {"cursor": "..."}), `notification`, `demo_reset`, `ping`'
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+components:
+  schemas:
+    Change:
+      type: object
+      required: [entity_type, entity_id, op, version]
+      properties:
+        entity_type: { type: string, description: 'Table/resource name, e.g. event, note, card, share' }
+        entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        op: { type: string, enum: [upsert, delete, tombstone] }
+        version: { type: integer }
+        data: { type: object, description: Full resource for upsert/delete }
+    Mutation:
+      type: object
+      required: [mutation_id, entity_type, entity_id, op]
+      properties:
+        mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        entity_type: { type: string }
+        entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        op: { type: string, enum: [create, update, delete, restore, move] }
+        base_version: { type: integer, description: Version the client edited (conflict detection) }
+        data: { type: object }
+        client_time: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }

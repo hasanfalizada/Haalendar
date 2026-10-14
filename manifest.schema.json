@@ -4,70 +4,206 @@
   "$comment": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Schema of project.manifest.json: the central registry of atoms (contracts, tests, implementations) for humans and LLM agents.",
   "title": "Haalendar Project Manifest",
   "type": "object",
-  "required": ["project", "manifest_version", "updated_at", "conventions", "atoms", "flows"],
+  "required": [
+    "project",
+    "manifest_version",
+    "updated_at",
+    "conventions",
+    "api_contract",
+    "atoms",
+    "flows"
+  ],
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
-    "project": { "const": "haalendar" },
-    "manifest_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "updated_at": { "type": "string", "format": "date" },
-    "description": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
+    "project": {
+      "const": "haalendar"
+    },
+    "manifest_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date"
+    },
+    "description": {
+      "type": "string"
+    },
     "conventions": {
       "type": "object",
-      "required": ["atoms_dir", "id_pattern", "contract_format", "hash_algorithm", "hash_input"],
+      "required": [
+        "atoms_dir",
+        "id_pattern",
+        "contract_format",
+        "hash_algorithm",
+        "hash_input"
+      ],
       "additionalProperties": false,
       "properties": {
-        "atoms_dir": { "type": "string" },
-        "id_pattern": { "type": "string" },
-        "contract_format": { "type": "string" },
-        "hash_algorithm": { "const": "blake3" },
-        "hash_input": { "type": "string" },
-        "implementations": { "type": "object", "additionalProperties": { "type": "string" } }
+        "atoms_dir": {
+          "type": "string"
+        },
+        "id_pattern": {
+          "type": "string"
+        },
+        "contract_format": {
+          "type": "string"
+        },
+        "hash_algorithm": {
+          "const": "blake3"
+        },
+        "hash_input": {
+          "type": "string"
+        },
+        "implementations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
       }
     },
-    "atoms": { "type": "array", "items": { "$ref": "#/$defs/atom" } },
-    "flows": { "type": "array", "items": { "$ref": "#/$defs/flow" } }
+    "api_contract": {
+      "type": "string",
+      "description": "Path to the root of the HTTP API contract (OpenAPI 3.1)."
+    },
+    "atoms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/atom"
+      }
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/flow"
+      }
+    }
   },
   "$defs": {
-    "atomId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+\\.v[1-9][0-9]*$" },
-    "path": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+$" },
+    "atomId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+\\.v[1-9][0-9]*$"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_./-]+$"
+    },
     "langRefs": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "python": { "$ref": "#/$defs/path" },
-        "typescript": { "$ref": "#/$defs/path" }
+        "python": {
+          "$ref": "#/$defs/path"
+        },
+        "typescript": {
+          "$ref": "#/$defs/path"
+        }
       }
     },
     "atom": {
       "type": "object",
-      "required": ["id", "status", "purpose", "contract", "vectors", "capabilities", "tests_ref", "impl_ref", "hash", "deps", "requirements"],
+      "required": [
+        "id",
+        "status",
+        "purpose",
+        "contract",
+        "vectors",
+        "capabilities",
+        "tests_ref",
+        "impl_ref",
+        "hash",
+        "deps",
+        "requirements"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/atomId" },
-        "status": { "enum": ["contract", "implemented", "deprecated"] },
-        "purpose": { "type": "string", "minLength": 10, "maxLength": 300 },
-        "contract": { "$ref": "#/$defs/path" },
-        "examples": { "$ref": "#/$defs/path" },
-        "vectors": { "$ref": "#/$defs/path" },
-        "capabilities": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-        "tests_ref": { "$ref": "#/$defs/langRefs" },
-        "impl_ref": { "$ref": "#/$defs/langRefs" },
-        "hash": { "type": "string", "pattern": "^b3:[0-9a-f]{64}$" },
-        "deps": { "type": "array", "items": { "$ref": "#/$defs/atomId" } },
-        "requirements": { "type": "array", "items": { "type": "string" } },
-        "notes": { "type": "string" },
-        "embedding_ref": { "$ref": "#/$defs/path" }
+        "id": {
+          "$ref": "#/$defs/atomId"
+        },
+        "status": {
+          "enum": [
+            "contract",
+            "implemented",
+            "deprecated"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 300
+        },
+        "contract": {
+          "$ref": "#/$defs/path"
+        },
+        "examples": {
+          "$ref": "#/$defs/path"
+        },
+        "vectors": {
+          "$ref": "#/$defs/path"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "tests_ref": {
+          "$ref": "#/$defs/langRefs"
+        },
+        "impl_ref": {
+          "$ref": "#/$defs/langRefs"
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^b3:[0-9a-f]{64}$"
+        },
+        "deps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/atomId"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string"
+        },
+        "embedding_ref": {
+          "$ref": "#/$defs/path"
+        }
       }
     },
     "flow": {
       "type": "object",
-      "required": ["id", "purpose", "steps"],
+      "required": [
+        "id",
+        "purpose",
+        "steps"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
-        "purpose": { "type": "string" },
-        "steps": { "type": "array", "items": { "$ref": "#/$defs/atomId" }, "minItems": 1 }
+        "id": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/atomId"
+          },
+          "minItems": 1
+        }
       }
     }
   }

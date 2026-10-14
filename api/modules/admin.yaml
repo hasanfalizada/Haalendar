@@ -1,0 +1,253 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Administration, instance settings, legacy import, demo status, health (FR-ACC-06, FR-OPS-01/03, SRS 4.5). Admins manage accounts, never content (ADR-0005).
+paths:
+  admin_users:
+    get:
+      tags: [admin]
+      operationId: adminListUsers
+      summary: List users (no content data)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+        - { name: q, in: query, schema: { type: string, maxLength: 100 }, description: Filter by e-mail or name }
+        - { name: status, in: query, schema: { type: string, enum: [active, deactivated, locked, unverified] } }
+      responses:
+        '200':
+          description: Page of users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/AdminUser' } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+  admin_invites:
+    post:
+      tags: [admin]
+      operationId: adminInviteUser
+      summary: Invite a user by e-mail; without SMTP returns a one-time password instead
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                role: { type: string, enum: [admin, user], default: user }
+                display_name: { type: string, maxLength: 80 }
+      responses:
+        '201':
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [delivery]
+                properties:
+                  delivery: { type: string, enum: [email, one_time_password] }
+                  one_time_password: { type: string, description: Only when SMTP is not configured; shown once. }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+  admin_user:
+    patch:
+      tags: [admin]
+      operationId: adminUpdateUser
+      summary: Change role (last active admin cannot be downgraded)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                role: { type: string, enum: [admin, user] }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/AdminUser' } } } }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+  admin_user_action:
+    post:
+      tags: [admin]
+      operationId: adminUserAction
+      summary: Deactivate, reactivate, unlock or reset password of a user (requires re-auth)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - name: action
+          in: path
+          required: true
+          schema: { type: string, enum: [deactivate, reactivate, unlock, reset-password] }
+      responses:
+        '200':
+          description: Done; for reset-password without SMTP a one-time password is returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  one_time_password: { type: string }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+  admin_settings:
+    get:
+      tags: [admin]
+      operationId: adminGetInstanceSettings
+      summary: Instance settings
+      responses:
+        '200': { description: Settings, content: { application/json: { schema: { $ref: '#/components/schemas/InstanceSettings' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    patch:
+      tags: [admin]
+      operationId: adminUpdateInstanceSettings
+      summary: Update instance settings (requires re-auth)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                registration_mode: { type: string, enum: [invite, open] }
+                require_admin_2fa: { type: boolean }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/InstanceSettings' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+  admin_imports:
+    get:
+      tags: [admin]
+      operationId: adminListImports
+      summary: Legacy import runs
+      responses:
+        '200':
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ImportRun' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [admin]
+      operationId: adminStartLegacyImport
+      summary: Import a legacy Haalendar db.db into a user's default calendar (dry run by default) — FR-OPS-01
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, target_user_id]
+              properties:
+                file: { type: string, contentMediaType: application/octet-stream }
+                target_user_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                dry_run: { type: boolean, default: true }
+      responses:
+        '202': { description: Started, content: { application/json: { schema: { $ref: '#/components/schemas/ImportRun' } } } }
+        '413': { $ref: '../components/common.yaml#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  admin_import:
+    get:
+      tags: [admin]
+      operationId: adminGetImport
+      summary: Import run with report
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200': { description: Run, content: { application/json: { schema: { $ref: '#/components/schemas/ImportRun' } } } }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+
+  demo_status:
+    get:
+      tags: [system]
+      operationId: getDemoStatus
+      summary: Demo mode and next reset time (FR-OPS-03)
+      security: []
+      responses:
+        '200':
+          description: Demo state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [demo_mode]
+                properties:
+                  demo_mode: { type: boolean }
+                  next_reset_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+  health_live:
+    get:
+      tags: [system]
+      operationId: healthLive
+      summary: Liveness probe
+      security: []
+      responses:
+        '200': { description: Process alive }
+  health_ready:
+    get:
+      tags: [system]
+      operationId: healthReady
+      summary: Readiness probe (database reachable, migrations applied)
+      security: []
+      responses:
+        '200': { description: Ready }
+        '503': { description: Not ready }
+
+components:
+  schemas:
+    AdminUser:
+      type: object
+      required: [id, email, display_name, role, status, created_at, version]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        role: { type: string, enum: [admin, user] }
+        status: { type: string, enum: [active, deactivated, locked, unverified] }
+        totp_enabled: { type: boolean }
+        last_login_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        version: { type: integer }
+    InstanceSettings:
+      type: object
+      required: [registration_mode, require_admin_2fa, demo_mode, smtp_configured, version]
+      properties:
+        registration_mode: { type: string, enum: [invite, open] }
+        require_admin_2fa: { type: boolean }
+        demo_mode: { type: boolean, readOnly: true, description: 'Set by deployment (environment), not via API.' }
+        smtp_configured: { type: boolean, readOnly: true }
+        version: { type: integer }
+    ImportRun:
+      type: object
+      required: [id, target_user_id, dry_run, status, started_at]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        target_user_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        dry_run: { type: boolean }
+        status: { type: string, enum: [running, succeeded, failed] }
+        started_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        finished_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+        report:
+          type: object
+          description: Counts per legacy table, created/skipped items, unmapped values, warnings.
+          properties:
+            events_total: { type: integer }
+            events_imported: { type: integer }
+            events_deleted: { type: integer }
+            exclusions_imported: { type: integer }
+            log_entries_imported: { type: integer }
+            warnings: { type: array, items: { type: string } }

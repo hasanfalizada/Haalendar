@@ -1,0 +1,110 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. To-Do module: Keep-like notes (FR-TODO-*). Checklist, labels, reminders and attachments via items.yaml.
+paths:
+  notes:
+    get:
+      tags: [todo]
+      operationId: listNotes
+      summary: Own and shared notes; pinned first, then position
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+        - { name: view, in: query, schema: { type: string, enum: [active, archived], default: active } }
+        - { name: label_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+        - { name: priority, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Priority' } }
+      responses:
+        '200':
+          description: Page of notes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Note' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [todo]
+      operationId: createNote
+      summary: Create note
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/NoteInput' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } } }
+        '200': { description: Idempotent replay of the same id, content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } } }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  note:
+    get:
+      tags: [todo]
+      operationId: getNote
+      summary: Get note
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200': { description: Note, content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } } }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+    patch:
+      tags: [todo]
+      operationId: updateNote
+      summary: Edit, pin, archive, reorder, set due date
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content: { application/merge-patch+json: { schema: { $ref: '#/components/schemas/NoteFields' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Note' } } } }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+    delete:
+      tags: [todo]
+      operationId: deleteNote
+      summary: Delete note
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      responses:
+        '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+
+components:
+  schemas:
+    NoteFields:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200 }
+        body: { $ref: '../components/common.yaml#/components/schemas/Markdown' }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        priority: { $ref: '../components/common.yaml#/components/schemas/Priority' }
+        pinned: { type: boolean }
+        archived: { type: boolean }
+        is_checklist: { type: boolean }
+        position: { $ref: '../components/common.yaml#/components/schemas/Position' }
+        due_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+    NoteInput:
+      allOf:
+        - $ref: '#/components/schemas/NoteFields'
+        - type: object
+          required: [position]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+    Note:
+      allOf:
+        - $ref: '../components/common.yaml#/components/schemas/Meta'
+        - $ref: '#/components/schemas/NoteFields'
+        - type: object
+          required: [id, owner_id, title, color, priority, pinned, is_checklist, position, permission]
+          properties:
+            id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+            archived_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+            label_ids: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+            checklist_total: { type: integer }
+            checklist_checked: { type: integer }
+            attachment_count: { type: integer }
+            permission: { type: string, enum: [owner, edit, view] }

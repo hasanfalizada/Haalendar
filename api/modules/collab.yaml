@@ -1,0 +1,331 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Cross-module endpoints: sharing, search, trash, export, notifications, bulk operations (FR-ACC-10, FR-X-04/07/10/14/19/21).
+paths:
+  shares:
+    get:
+      tags: [sharing]
+      operationId: listShares
+      summary: Shares granted by me or received by me
+      parameters:
+        - { name: direction, in: query, schema: { type: string, enum: [granted, received], default: granted } }
+        - { name: container_kind, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' } }
+        - { name: container_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+      responses:
+        '200': { description: Shares, content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Share' } } } } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [sharing]
+      operationId: createShare
+      summary: Share a container with another user of the instance (owner only)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [container_kind, container_id, grantee_email, permission]
+              properties:
+                container_kind: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' }
+                container_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                grantee_email: { type: string, format: email }
+                permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
+      responses:
+        '201': { description: Shared, content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  share:
+    patch:
+      tags: [sharing]
+      operationId: updateShare
+      summary: Change permission
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [permission]
+              properties:
+                permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    delete:
+      tags: [sharing]
+      operationId: revokeShare
+      summary: Revoke (soft, `revoked_at`); grantee's local copies are removed on next sync
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+  search:
+    get:
+      tags: [search]
+      operationId: search
+      summary: Full-text search over all readable items with filters and highlights (FR-X-10, FR-X-19)
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+        - { name: module, in: query, schema: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/ItemKind' } }, style: form, explode: true }
+        - { name: from, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Date' } }
+        - { name: to, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Date' } }
+        - { name: calendar_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+        - { name: color, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Color' } }
+        - { name: priority, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Priority' } }
+        - { name: label_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Ranked results grouped client-side by `kind`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/SearchHit' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+  trash:
+    get:
+      tags: [trash]
+      operationId: listTrash
+      summary: Soft-deleted items and containers of the user, newest deletion first; kept forever (FR-X-04)
+      parameters:
+        - { name: module, in: query, schema: { type: string, enum: [event, note, card, calendar, board, column] } }
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Trash entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/TrashEntry' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  trash_restore:
+    post:
+      tags: [trash]
+      operationId: restoreFromTrash
+      summary: Restore entries (with children of the same delete batch) to their original place
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entries]
+              properties:
+                entries:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [type, id]
+                    properties:
+                      type: { type: string, enum: [event, note, card, calendar, board, column, attachment, checklist_item, comment, label, link, reminder] }
+                      id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+      responses:
+        '200':
+          description: Restored entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [restored]
+                properties:
+                  restored: { type: integer }
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                        code: { type: string }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+  export:
+    get:
+      tags: [export]
+      operationId: exportData
+      summary: Download all items owned by the user (3 modules) as JSON, including soft-deleted with deleted_at; attachment metadata only (FR-X-14)
+      responses:
+        '200':
+          description: Export file (Content-Disposition attachment)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportFile' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+  notifications:
+    get:
+      tags: [notifications]
+      operationId: listNotifications
+      summary: List notifications
+      parameters:
+        - { name: unread, in: query, schema: { type: boolean } }
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Notifications, newest first; `unread_count` for the badge
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data, unread_count]
+                    properties:
+                      unread_count: { type: integer }
+                      data: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  notifications_read:
+    post:
+      tags: [notifications]
+      operationId: markNotificationsRead
+      summary: Mark notifications read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' }, maxItems: 500 }
+                all: { type: boolean }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+  bulk:
+    post:
+      tags: [bulk]
+      operationId: bulkOperation
+      summary: Apply one action to many items atomically — one undo step (FR-X-07)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, targets]
+              properties:
+                action: { type: string, enum: [delete, restore, set_color, set_priority, move_next_day] }
+                targets:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [item_id, version]
+                    properties:
+                      item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                      version: { type: integer }
+                      occurrence_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+                color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+                priority: { $ref: '../components/common.yaml#/components/schemas/Priority' }
+      responses:
+        '200':
+          description: All applied (all-or-nothing)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applied]
+                properties:
+                  applied: { type: integer }
+                  delete_batch_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+
+components:
+  schemas:
+    Share:
+      type: object
+      required: [id, container_kind, container_id, grantee_id, permission, created_at, version]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        container_kind: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' }
+        container_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        container_name: { type: string }
+        grantee_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        grantee_name: { type: string }
+        grantee_email: { type: string, format: email }
+        permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
+        granted_by: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        revoked_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+        version: { type: integer }
+    SearchHit:
+      type: object
+      required: [item_id, kind, title, score]
+      properties:
+        item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        kind: { $ref: '../components/common.yaml#/components/schemas/ItemKind' }
+        title: { type: string }
+        snippet: { type: string, description: Excerpt with matches wrapped in <mark>; HTML-escaped otherwise }
+        container_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        date: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Date' }, { type: 'null' }], description: Event start date or due date }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        score: { type: number }
+    TrashEntry:
+      type: object
+      required: [type, id, title, deleted_at, delete_batch_id]
+      properties:
+        type: { type: string }
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        title: { type: string }
+        container_name: { type: string }
+        deleted_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        deleted_by: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        delete_batch_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+    Notification:
+      type: object
+      required: [id, kind, created_at, payload]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        kind: { type: string, enum: [reminder, share_received, share_revoked, sync_error, assigned, comment] }
+        item_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+        payload: { type: object }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        read_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+    ExportFile:
+      type: object
+      required: [format, schema_version, exported_at, user, calendars, events, notes, boards]
+      properties:
+        format: { const: haalendar-export }
+        schema_version: { type: string, example: '1.0' }
+        exported_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        user: { type: object, properties: { id: { type: string }, email: { type: string }, display_name: { type: string } } }
+        calendars: { type: array, items: { $ref: './calendar.yaml#/components/schemas/Calendar' } }
+        events: { type: array, items: { $ref: './calendar.yaml#/components/schemas/Event' } }
+        notes: { type: array, items: { $ref: './notes.yaml#/components/schemas/Note' } }
+        boards:
+          type: array
+          items: { $ref: './kanban.yaml#/components/schemas/BoardDetail' }
+        labels: { type: array, items: { $ref: './items.yaml#/components/schemas/Label' } }
+        checklist_items: { type: array, items: { $ref: './items.yaml#/components/schemas/ChecklistItem' } }
+        comments: { type: array, items: { $ref: './items.yaml#/components/schemas/Comment' } }
+        links: { type: array, items: { $ref: './items.yaml#/components/schemas/Link' } }
+        reminders: { type: array, items: { $ref: './items.yaml#/components/schemas/Reminder' } }
+        attachments: { type: array, items: { $ref: './items.yaml#/components/schemas/Attachment' }, description: 'Metadata only, no binaries' }

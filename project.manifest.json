@@ -15,6 +15,7 @@
       "typescript": "frontend/src/atoms/<domain>/<name>.ts — client-side implementation (offline)"
     }
   },
+  "api_contract": "api/openapi.yaml",
   "atoms": [
     {
       "id": "calendar.week_ab_label.v1",
@@ -23,12 +24,18 @@
       "contract": "atoms/calendar.week_ab_label.v1/contract.json",
       "examples": "atoms/calendar.week_ab_label.v1/examples.md",
       "vectors": "atoms/calendar.week_ab_label.v1/vectors.json",
-      "capabilities": ["labelWeek"],
+      "capabilities": [
+        "labelWeek"
+      ],
       "tests_ref": {},
       "impl_ref": {},
       "hash": "b3:633e7c0950699140910d8dd9d76b0c62cb31a15631c81f3ca0076473cdabedc3",
       "deps": [],
-      "requirements": ["FR-CAL-23", "FR-CAL-05", "U#12"],
+      "requirements": [
+        "FR-CAL-23",
+        "FR-CAL-05",
+        "U#12"
+      ],
       "notes": "Pure function. Never use ISO week number parity. Implementations follow in HAAL-085 (Python and TypeScript, both must pass vectors.json)."
     }
   ],
@@ -36,7 +43,9 @@
     {
       "id": "calendar.header_week_label",
       "purpose": "Header shows the Week A/B label of the selected date (FR-CAL-05).",
-      "steps": ["calendar.week_ab_label.v1"]
+      "steps": [
+        "calendar.week_ab_label.v1"
+      ]
     }
   ]
 }
