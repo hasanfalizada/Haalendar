@@ -1,14 +1,16 @@
-# Haalendar
-* Simple light-weight self-hosted desktop web-calendar for single person.
-* No installation, full control over DB, open-source.
-* SQLite support for PHP must be enabled on Windows machines (https://php.net/manual/en/sqlite3.installation.php).
-* Demo: <a href="http://haalendar.demo.alizada.xyz" target="_blank">http://haalendar.demo.alizada.xyz</a> (database is being cleaned every 30 minutes).
-    
-Build instructions:
-1. Go to `frontend` folder and build Angular side: `ng build --prod --baseHref /haalendar/`
-2. Copy `frontend/dist/haalendar/` folder to the `<root of your web-server>`.
-3. Copy `backend` folder to the `<root of your web-server>/haalendar/`.
+<!-- +++===+++ 2026-10-14 — Hasan Alizada — HAAL-007. Temporary README for the rewrite branch; replaced by the full English README in HAAL-152. -->
 
-Update instructions:
-1. Frontend: clean `<root of your web-server>/haalendar/` (except `backend` folder) and copy from `fronted/dist/haalendar`.
-2. Backend: overwrite `backend/rest.php` with new one.
+<p align="center"><img src="branding/logo-wordmark.svg" alt="Haalendar" width="360"></p>
+
+# Haalendar
+
+Open-source, self-hosted productivity suite: **Calendar**, **To-Do** and **Kanban** in one web application — multi-user, offline-first, responsive.
+
+> **Status: complete rewrite in progress** on the `revamp` branch. Nothing is runnable here yet.
+> The previous version (single-user calendar, Angular + PHP + SQLite) remains available on the `master` branch until v1.0.
+
+- [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md)
+
+## License
+
+[Apache License 2.0](LICENSE) — see [NOTICE](NOTICE). Copyright 2019-2026 Hasan Alizada.
