@@ -1,0 +1,56 @@
+{
+  "$comment": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Test vectors for calendar.week_ab_label.v1. 2026 is an ISO 53-week year: weeks 53/2026 and 1/2027 are both odd, yet they must get different labels.",
+  "atom": "calendar.week_ab_label.v1",
+  "cases": [
+    {
+      "name": "anchor day itself is A",
+      "input": { "date": "2026-12-28", "anchor": "2026-12-28", "week_start": 1, "labels": ["A", "B"] },
+      "output": { "label": "A", "index": 0, "weeks_from_anchor": 0 }
+    },
+    {
+      "name": "same week, anchor given as a mid-week day",
+      "input": { "date": "2026-12-31", "anchor": "2026-12-30", "week_start": 1, "labels": ["A", "B"] },
+      "output": { "label": "A", "index": 0, "weeks_from_anchor": 0 }
+    },
+    {
+      "name": "year boundary after ISO week 53 switches to B",
+      "input": { "date": "2027-01-06", "anchor": "2026-12-28", "week_start": 1, "labels": ["A", "B"] },
+      "output": { "label": "B", "index": 1, "weeks_from_anchor": 1 }
+    },
+    {
+      "name": "two weeks later is A again",
+      "input": { "date": "2027-01-11", "anchor": "2026-12-28", "week_start": 1, "labels": ["A", "B"] },
+      "output": { "label": "A", "index": 0, "weeks_from_anchor": 2 }
+    },
+    {
+      "name": "week before the anchor is B (negative modulo)",
+      "input": { "date": "2026-12-21", "anchor": "2026-12-28", "week_start": 1, "labels": ["A", "B"] },
+      "output": { "label": "B", "index": 1, "weeks_from_anchor": -1 }
+    },
+    {
+      "name": "Sunday belongs to the previous Monday-week",
+      "input": { "date": "2026-12-27", "anchor": "2026-12-28", "week_start": 1, "labels": ["A", "B"] },
+      "output": { "label": "B", "index": 1, "weeks_from_anchor": -1 }
+    },
+    {
+      "name": "with Sunday week start the same Sunday opens the anchor week",
+      "input": { "date": "2026-12-27", "anchor": "2026-12-28", "week_start": 0, "labels": ["A", "B"] },
+      "output": { "label": "A", "index": 0, "weeks_from_anchor": 0 }
+    },
+    {
+      "name": "custom labels",
+      "input": { "date": "2027-01-04", "anchor": "2026-12-28", "week_start": 1, "labels": ["Odd", "Even"] },
+      "output": { "label": "Even", "index": 1, "weeks_from_anchor": 1 }
+    },
+    {
+      "name": "far future across leap year 2028",
+      "input": { "date": "2028-03-01", "anchor": "2026-12-28", "week_start": 1, "labels": ["A", "B"] },
+      "output": { "label": "B", "index": 1, "weeks_from_anchor": 61 }
+    },
+    {
+      "name": "identical labels rejected",
+      "input": { "date": "2027-01-04", "anchor": "2026-12-28", "week_start": 1, "labels": ["A", "a"] },
+      "error": "LABELS_NOT_DISTINCT"
+    }
+  ]
+}

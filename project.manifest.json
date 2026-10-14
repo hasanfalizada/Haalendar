@@ -1,0 +1,42 @@
+{
+  "$schema": "./manifest.schema.json",
+  "project": "haalendar",
+  "manifest_version": "1.0.0",
+  "updated_at": "2026-10-14",
+  "description": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Central registry of Haalendar atoms. Read this file first; then load only the contract, vectors and implementation of the atoms involved. Update it after every change.",
+  "conventions": {
+    "atoms_dir": "atoms",
+    "id_pattern": "<domain>.<name>.v<major> — folder atoms/<id>/ holds contract.json, vectors.json, examples.md",
+    "contract_format": "JSON with input/output as JSON Schema 2020-12, errors, events, invariants, requirements",
+    "hash_algorithm": "blake3",
+    "hash_input": "UTF-8 bytes of contract.json followed by vectors.json, line endings normalized to LF; stored as b3:<hex>",
+    "implementations": {
+      "python": "backend/src/haalendar/atoms/<domain>/<name>.py — server-side implementation",
+      "typescript": "frontend/src/atoms/<domain>/<name>.ts — client-side implementation (offline)"
+    }
+  },
+  "atoms": [
+    {
+      "id": "calendar.week_ab_label.v1",
+      "status": "contract",
+      "purpose": "Returns the Week A/B label of a date counted from a user-chosen anchor week; correct across year boundaries and 53-week years.",
+      "contract": "atoms/calendar.week_ab_label.v1/contract.json",
+      "examples": "atoms/calendar.week_ab_label.v1/examples.md",
+      "vectors": "atoms/calendar.week_ab_label.v1/vectors.json",
+      "capabilities": ["labelWeek"],
+      "tests_ref": {},
+      "impl_ref": {},
+      "hash": "b3:633e7c0950699140910d8dd9d76b0c62cb31a15631c81f3ca0076473cdabedc3",
+      "deps": [],
+      "requirements": ["FR-CAL-23", "FR-CAL-05", "U#12"],
+      "notes": "Pure function. Never use ISO week number parity. Implementations follow in HAAL-085 (Python and TypeScript, both must pass vectors.json)."
+    }
+  ],
+  "flows": [
+    {
+      "id": "calendar.header_week_label",
+      "purpose": "Header shows the Week A/B label of the selected date (FR-CAL-05).",
+      "steps": ["calendar.week_ab_label.v1"]
+    }
+  ]
+}
