@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Version | 1.1 |
+| Version | 1.2 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -107,7 +107,7 @@ Standalone product; replaces the legacy Haalendar (Angular + PHP + SQLite, singl
 
 ### 2.5 Design and Implementation Constraints
 - Default architecture: LLM-native atomic architecture with central Project Manifest (`project.manifest.json`), contract-first API.
-- Stack baseline per instructions (to be confirmed by ADR HAAL-010): Python FastAPI + Pydantic, PostgreSQL, Next.js + Tailwind + shadcn, Pytest.
+- Stack per ADR-0003 (accepted 2026-10-14): Python 3.14 + FastAPI + Pydantic + SQLAlchemy/Alembic, PostgreSQL 18, React + Vite SPA (TypeScript, TanStack, Tailwind + shadcn/ui, PWA), Pytest / Vitest / Playwright, uv + pnpm workspaces.
 - Only open-source dependencies with licences compatible with the project licence Apache-2.0.
 - No physical deletion of business data (FR-X-01).
 - English UI and documentation for v1.0; code must be i18n-ready.
@@ -465,6 +465,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-20 | Reliability / quality | RPO ≤ 24 h, RTO ≤ 1 h; backend coverage ≥ 80 % | 4.5, 4.7 |
 | D-21 | Licence | Apache-2.0 with NOTICE | 5 |
 | D-22 | Gap analysis | All recommendations approved: 21 items into v1.0, rest per `requirements/gap-analysis.md` | 8.4 |
+| D-23 | Technology stack | ADR-0003 accepted: React + Vite SPA, uv + pnpm, SQLAlchemy + Alembic instead of Next.js, Pants, Prisma/SQLModel | 2.5 |
 
 ### 9.2 Open issues
 | # | Issue | Status |
