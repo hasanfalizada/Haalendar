@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts import crypto, service
@@ -23,6 +24,7 @@ from haalendar.security.guards import UNSAFE_METHODS
 
 SESSION_COOKIE = "__Host-haalendar_session"
 CSRF_HEADER = "x-csrf-token"
+USER_ID_SETTING = "app.user_id"
 
 
 async def get_db(request: Request) -> AsyncIterator[AsyncSession]:
@@ -70,6 +72,9 @@ async def current_auth(request: Request, db: DbSession, settings: AppSettings) -
     # before anything else is possible (ASVS 5.0 V6).
     if user.must_change_password and request.url.path not in PASSWORD_CHANGE_ALLOWED_PATHS:
         raise ProblemError(403, ProblemCode.PASSWORD_CHANGE_REQUIRED, "Set a new password to continue")
+    # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Row-level security context for the rest of this transaction:
+    # policies only show rows of this user (transaction-local, so a pooled connection never keeps it).
+    await db.execute(select(func.set_config(USER_ID_SETTING, str(user.id), True)))
     return CurrentAuth(session=session, user=user)
 
 

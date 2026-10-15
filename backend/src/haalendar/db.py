@@ -2,6 +2,8 @@
 
 +++===+++ 2026-10-14 — Hasan Alizada — HAAL-016. One async engine per process with a bounded pool (backend
 performance checklist: connection pooling, timeouts). Readiness = database reachable and migrations at head.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. The application role must not bypass row-level security (superuser or
+BYPASSRLS): production refuses to start / reports not ready in that case; other environments log a warning.
 """
 
 from __future__ import annotations
@@ -73,10 +75,24 @@ class ReadinessResult:
     expected_revision: str | None
     latency_ms: float
     error: str | None = None
+    rls_enforced: bool | None = None
 
 
-async def check_readiness(engine: AsyncEngine) -> ReadinessResult:
-    """Ping the database and compare the applied migration with the expected head."""
+ROLE_BYPASS_QUERY = text("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user")
+
+
+async def role_bypasses_rls(engine: AsyncEngine) -> bool | None:
+    """True when the connected role ignores row-level security; None when the database is unreachable."""
+    try:
+        async with engine.connect() as conn:
+            return bool((await conn.execute(ROLE_BYPASS_QUERY)).scalar_one())
+    except Exception as exc:  # noqa: BLE001 — a startup probe must not crash on an unreachable database
+        log.warning("db_role_check_unavailable", error_type=type(exc).__name__)
+        return None
+
+
+async def check_readiness(engine: AsyncEngine, *, require_rls: bool = False) -> ReadinessResult:
+    """Ping the database, compare the applied migration with the expected head and check the role (RLS)."""
     started = time.perf_counter()
     expected = migration_head()
     try:
@@ -90,18 +106,21 @@ async def check_readiness(engine: AsyncEngine) -> ReadinessResult:
                 if has_table
                 else None
             )
+            bypass = bool((await conn.execute(ROLE_BYPASS_QUERY)).scalar_one())
     except Exception as exc:  # noqa: BLE001 — readiness must report, never crash
         latency = round((time.perf_counter() - started) * 1000, 1)
         log.warning("readiness_db_unreachable", error_type=type(exc).__name__, latency_ms=latency)
         return ReadinessResult(False, False, False, None, expected, latency, type(exc).__name__)
     latency = round((time.perf_counter() - started) * 1000, 1)
     migrations_ok = current == expected
-    result = ReadinessResult(migrations_ok, True, migrations_ok, current, expected, latency)
+    ready = migrations_ok and (not bypass or not require_rls)
+    result = ReadinessResult(ready, True, migrations_ok, current, expected, latency, rls_enforced=not bypass)
     log.info(
         "readiness_checked",
         ready=result.ready,
         current_revision=current,
         expected_revision=expected,
+        rls_enforced=not bypass,
         latency_ms=latency,
     )
     return result

@@ -32,6 +32,7 @@ dev = [
 
 [project.scripts]
 haalendar-api = "haalendar.main:run"
+haalendar-db-bootstrap = "haalendar.dbroles:main"
 
 [build-system]
 requires = ["hatchling"]

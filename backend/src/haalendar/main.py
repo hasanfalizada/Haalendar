@@ -21,7 +21,7 @@ from haalendar.accounts.api import admin_router, auth_router, me_router, setup_r
 from haalendar.accounts.mailer import create_mailer
 from haalendar.api import health
 from haalendar.config import Environment, Settings, get_settings
-from haalendar.db import create_engine, create_session_factory
+from haalendar.db import create_engine, create_session_factory, role_bypasses_rls
 from haalendar.errors import install_error_handlers
 from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
@@ -45,6 +45,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.session_factory = create_session_factory(engine)
         metrics.register_pool(engine)
         attach_slow_query_logging(engine, settings.db_slow_query_ms, metrics)
+        # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Refuse to serve production data through a role that ignores
+        # row-level security; elsewhere warn (the database may also be unreachable at startup: readiness reports it).
+        if await role_bypasses_rls(engine):
+            if settings.env is Environment.PRODUCTION:
+                await engine.dispose()
+                log.error("db_role_bypasses_rls")
+                raise RuntimeError(
+                    "HAALENDAR_DATABASE_URL uses a superuser or BYPASSRLS role; run haalendar-db-bootstrap and "
+                    "connect as the application role"
+                )
+            log.warning("db_role_bypasses_rls")
         log.info(
             "app_started",
             version=__version__,

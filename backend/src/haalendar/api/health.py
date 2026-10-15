@@ -12,6 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from haalendar import __version__
+from haalendar.config import Environment
 from haalendar.db import check_readiness
 
 router = APIRouter(prefix="/health", tags=["system"])
@@ -26,7 +27,9 @@ async def live() -> dict[str, Any]:
     "/ready", operation_id="healthReady", summary="Readiness probe (database reachable, migrations applied)"
 )
 async def ready(request: Request) -> JSONResponse:
-    result = await check_readiness(request.app.state.engine)
+    result = await check_readiness(
+        request.app.state.engine, require_rls=request.app.state.settings.env is Environment.PRODUCTION
+    )
     body = {
         "status": "ready" if result.ready else "not_ready",
         "version": __version__,
@@ -35,6 +38,7 @@ async def ready(request: Request) -> JSONResponse:
             "migrations": result.migrations,
             "current_revision": result.current_revision,
             "expected_revision": result.expected_revision,
+            "rls_enforced": result.rls_enforced,
         },
         "latency_ms": result.latency_ms,
     }

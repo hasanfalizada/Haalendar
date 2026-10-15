@@ -66,6 +66,33 @@
         "ADR-0005"
       ],
       "notes": "Common list bundled in backend/src/haalendar/accounts/data/common_passwords.txt (SecLists, MIT); the TypeScript implementation imports the same file. TypeScript gives live hints in forms; the server result is authoritative."
+    },
+    {
+      "id": "authz.check.v1",
+      "status": "implemented",
+      "purpose": "Decides whether a user may read, write items of, manage or share a container (calendar, board, note) from ownership and an active share; default deny, admins get no content access; maps refusals to 404 (not readable) or 403.",
+      "contract": "atoms/authz.check.v1/contract.json",
+      "examples": "atoms/authz.check.v1/examples.md",
+      "vectors": "atoms/authz.check.v1/vectors.json",
+      "capabilities": [
+        "check"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_authz_atom.py",
+        "typescript": "frontend/src/atoms/authz/check.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/authz/check.py",
+        "typescript": "frontend/src/atoms/authz/check.ts"
+      },
+      "hash": "b3:e3b110b62bd09fb27b4d931cb19b4f1056801ec06bc52deb73b8c8819ec4f573",
+      "deps": [],
+      "requirements": [
+        "FR-ACC-07",
+        "FR-ACC-10",
+        "ADR-0005"
+      ],
+      "notes": "Server entry point: haalendar.authz.require (loads owner and share under row-level security). PostgreSQL RLS (haalendar.security.rls) enforces the same rules as a second layer; the isolation suite is backend/tests/test_isolation.py."
     }
   ],
   "flows": [
@@ -95,6 +122,13 @@
       "purpose": "Invitation page: the invited address is shown from the token, the password is checked live with the policy atom and again on registration, then the invitee is signed in (FR-ACC-06).",
       "steps": [
         "accounts.password_policy.v1"
+      ]
+    },
+    {
+      "id": "planning.authorize",
+      "purpose": "Every content request: session resolved → app.user_id set for the transaction (RLS) → container facts loaded → authz.check decides → 404/403 or the action runs (FR-ACC-07).",
+      "steps": [
+        "authz.check.v1"
       ]
     }
   ]

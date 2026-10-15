@@ -86,13 +86,16 @@ docker run -d --name haalendar-db \
 
 The volume is mounted at `/var/lib/postgresql` (required since the PostgreSQL 18 image; the old `/var/lib/postgresql/data` path does not persist correctly).
 
-Apply migrations:
+Create the application role and apply migrations:
 
 ```bash
 cd backend
 set -a; source ../.env; set +a
-uv run alembic upgrade head
+uv run haalendar-db-bootstrap   # once: creates the role from HAALENDAR_DATABASE_URL (haalendar_app)
+uv run alembic upgrade head     # every schema change; refreshes the role's table privileges
 ```
+
+Two database roles are used, as in production: migrations run as the owner (`HAALENDAR_MIGRATION_DATABASE_URL`, the container's `haalendar` user), the app connects as `haalendar_app` — no superuser, no `BYPASSRLS`, and no `DELETE` privilege, so row-level security applies and rows can never be removed physically. If `/api/v1/health/ready` shows `"rls_enforced": false`, the app is connected as the owner; production refuses to start in that case.
 
 ## 4. Running the app
 
@@ -167,10 +170,11 @@ pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnp
 | `uv run ruff check .` | Lint |
 | `uv run ruff format .` | Format (use `--check` in CI) |
 | `uv run mypy src tests` | Static types (strict) |
-| `uv run alembic upgrade head` | Apply migrations to the database in `HAALENDAR_DATABASE_URL` |
+| `uv run haalendar-db-bootstrap` | Create/update the application role from `HAALENDAR_DATABASE_URL` and grant its privileges (needs the owner URL) |
+| `uv run alembic upgrade head` | Apply migrations as the owner (`HAALENDAR_MIGRATION_DATABASE_URL`) and refresh the app role's privileges |
 | `uv run alembic upgrade head --sql` | Print migration SQL without a database |
 
-Database tests (accounts, sessions — marker `db`) create a throw-away database on a PostgreSQL 18 server and drop it afterwards:
+Database tests (accounts, sessions, data isolation — marker `db`) create a throw-away database and application role on a PostgreSQL 18 server, run as that least-privilege role and drop both afterwards:
 
 ```bash
 docker run -d --name haalendar-db-tests -e POSTGRES_USER=haalendar -e POSTGRES_PASSWORD=haalendar   -e POSTGRES_DB=postgres -p 55433:5432 postgres:18
@@ -184,8 +188,9 @@ Database-backed verification (migrations + readiness against a real PostgreSQL 1
 ```bash
 docker run -d --name haalendar-db-test -e POSTGRES_USER=haalendar -e POSTGRES_PASSWORD=haalendar \
   -e POSTGRES_DB=haalendar -p 55432:5432 postgres:18
-export HAALENDAR_DATABASE_URL=postgresql+psycopg://haalendar:haalendar@127.0.0.1:55432/haalendar
-uv run alembic upgrade head
+export HAALENDAR_MIGRATION_DATABASE_URL=postgresql+psycopg://haalendar:haalendar@127.0.0.1:55432/haalendar
+export HAALENDAR_DATABASE_URL=postgresql+psycopg://haalendar_app:haalendar_app@127.0.0.1:55432/haalendar
+uv run haalendar-db-bootstrap && uv run alembic upgrade head
 uv run haalendar-api &                        # then:
 curl -s http://127.0.0.1:8080/api/v1/health/ready   # expect "status":"ready"
 kill %1; docker rm -f haalendar-db-test
@@ -282,7 +287,8 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | Variable | Default | Notes |
 |---|---|---|
 | `HAALENDAR_ENV` | `development` | `development` / `test` / `production` |
-| `HAALENDAR_DATABASE_URL` | `postgresql+psycopg://haalendar:haalendar@localhost:5432/haalendar` | Secret; or `HAALENDAR_DATABASE_URL_FILE` |
+| `HAALENDAR_DATABASE_URL` | `postgresql+psycopg://haalendar_app:haalendar_app@localhost:5432/haalendar` | Application role (least privilege); secret, or `HAALENDAR_DATABASE_URL_FILE`; must be set in production |
+| `HAALENDAR_MIGRATION_DATABASE_URL` | `postgresql+psycopg://haalendar:haalendar@localhost:5432/haalendar` | Owner role for migrations and `haalendar-db-bootstrap` only; not needed by the running app |
 | `HAALENDAR_SECRET_KEY` | development placeholder | Required in production |
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | `https://` in production |
 | `HAALENDAR_SETUP_TOKEN` | — | Token for the first-run admin wizard; mandatory in production, optional in development |
@@ -306,6 +312,8 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | 403 `csrf_failed` on POST/PATCH/DELETE | The request came from an origin other than the public URL (or the Vite dev server in development). Add it to `HAALENDAR_EXTRA_ALLOWED_ORIGINS` if it is legitimate. |
 | 429 `account_locked` on login | 5 consecutive failed logins lock the account (15 min, doubling up to 24 h). Wait for `Retry-After`, or an admin unlocks the account. In development: `UPDATE user_account SET failed_login_count = 0, locked_until = NULL`. |
 | 429 `rate_limited` | Too many requests from one client; wait for `Retry-After` seconds or raise the limit for local load tests. |
+| Backend refuses to start: "superuser or BYPASSRLS role" | `HAALENDAR_DATABASE_URL` points to the owner/superuser. Run `uv run haalendar-db-bootstrap` and connect as the application role. |
+| `permission denied for table …` | The app role lacks privileges on a new table: run `uv run alembic upgrade head` (it refreshes grants) or `uv run haalendar-db-bootstrap`. |
 | 403 `forbidden` on the setup page | Production requires `HAALENDAR_SETUP_TOKEN` to be set on the server and entered in the wizard; check both values. |
 | `/api/v1/health/ready` returns 503 with `"database": false` | PostgreSQL is not running or `HAALENDAR_DATABASE_URL` is wrong. Check `docker ps`. |
 | 503 with `"migrations": false` | Run `uv run alembic upgrade head` in `backend/`. |

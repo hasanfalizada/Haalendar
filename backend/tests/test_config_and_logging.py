@@ -58,10 +58,23 @@ def test_production_accepts_safe_configuration() -> None:
             "HAALENDAR_ENV": "production",
             "HAALENDAR_SECRET_KEY": "x" * 40,
             "HAALENDAR_PUBLIC_URL": "https://cal.example.org",
+            "HAALENDAR_DATABASE_URL": "postgresql+psycopg://haalendar_app:s3cret@db/haalendar",
         }
     )
     assert settings.https is True
     assert settings.secret_key.get_secret_value() != DEV_SECRET_KEY
+
+
+def test_production_requires_an_explicit_database_url() -> None:
+    # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. The development application-role URL is refused in production.
+    with pytest.raises(ValueError, match="HAALENDAR_DATABASE_URL"):
+        load_settings(
+            {
+                "HAALENDAR_ENV": "production",
+                "HAALENDAR_SECRET_KEY": "x" * 40,
+                "HAALENDAR_PUBLIC_URL": "https://cal.example.org",
+            }
+        )
 
 
 def test_secrets_are_hidden_in_repr() -> None:

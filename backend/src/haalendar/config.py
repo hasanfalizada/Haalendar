@@ -18,6 +18,10 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 
 ENV_PREFIX = "HAALENDAR_"
 
+# Development defaults: application role and owner (migration) role on the local PostgreSQL container.
+DEV_DATABASE_URL = "postgresql+psycopg://haalendar_app:haalendar_app@localhost:5432/haalendar"
+DEV_MIGRATION_DATABASE_URL = "postgresql+psycopg://haalendar:haalendar@localhost:5432/haalendar"
+
 # Placeholder used only outside production; production startup fails if it is still set.
 DEV_SECRET_KEY = "dev-insecure-secret-key-change-me-0000000000000000"  # noqa: S105 — dev placeholder, rejected in production
 
@@ -56,7 +60,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix=ENV_PREFIX, extra="ignore", frozen=True)
 
     env: Environment = Environment.DEVELOPMENT
-    database_url: SecretStr = SecretStr("postgresql+psycopg://haalendar:haalendar@localhost:5432/haalendar")
+    # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Two database roles (ADR-0005 defense in depth): the application
+    # connects as a least-privilege role (no superuser, no BYPASSRLS, no DELETE) so row-level security applies;
+    # migrations and haalendar-db-bootstrap use the owner role from MIGRATION_DATABASE_URL.
+    database_url: SecretStr = SecretStr(DEV_DATABASE_URL)
+    migration_database_url: SecretStr = SecretStr(DEV_MIGRATION_DATABASE_URL)
     db_pool_size: int = Field(default=5, ge=1, le=100)
     db_max_overflow: int = Field(default=5, ge=0, le=100)
     db_pool_timeout_seconds: float = Field(default=5.0, gt=0)
@@ -125,6 +133,10 @@ class Settings(BaseSettings):
                 )
             if not self.public_url.startswith("https://"):
                 raise ValueError("HAALENDAR_PUBLIC_URL must use https:// in production")
+            if self.database_url.get_secret_value() == DEV_DATABASE_URL:
+                raise ValueError(
+                    "HAALENDAR_DATABASE_URL must be set (the development default is not allowed)"
+                )
         return self
 
     @property

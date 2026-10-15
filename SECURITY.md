@@ -42,6 +42,7 @@ Haalendar targets **OWASP ASVS 5.0 Level 2** and is reviewed against the OWASP T
 - Image uploads validated by file signature (no SVG or other active content), size-limited, with sanitised file names.
 - Production refuses insecure configuration (default secret key, plain HTTP); secrets can be supplied as files.
 - The first-run admin wizard is open only while no administrator exists; in production it additionally requires a setup token from the server configuration, so nobody can claim a freshly deployed instance first.
+- Every user sees only their own data and data explicitly shared with them: one authorization policy decides every request, and PostgreSQL row-level security enforces the same rules in the database. The application connects with a least-privilege role that cannot bypass these rules and cannot delete rows.
 - Administrators manage accounts, never content. Every admin change requires a recent password confirmation, admins cannot change their own account in the admin panel, deactivation is soft (data kept, all sessions ended), and one active administrator always remains.
 - Logs are structured and never contain passwords, tokens or cookies; metrics are off by default and token-protected.
 - Supply chain: exact version pins and lockfiles, packages younger than 7 days are refused, install scripts are blocked, dependencies are audited (`pnpm security:audit`).

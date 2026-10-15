@@ -33,6 +33,9 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
       css: false,
+      // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. At most 4 parallel workers: on WSL /mnt drives starting one
+      // fork per core made late workers miss Vitest's fixed 60 s start timeout.
+      maxWorkers: 4,
     },
   };
 });

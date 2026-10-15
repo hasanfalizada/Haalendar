@@ -5,11 +5,15 @@ developer's real one). The database URL points to a closed port so readiness can
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. Database-backed tests (marker `db`) use a throw-away database on the
 server given by HAALENDAR_TEST_DATABASE_URL (a PostgreSQL 18 URL with rights to CREATE/DROP DATABASE). The database
 is created and migrated once per test session and dropped afterwards. Without the variable the tests are skipped.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Like production, the app under test connects as a least-privilege
+application role (created by haalendar-db-bootstrap, granted by the migrations), so row-level security and the
+missing DELETE privilege are exercised by every database test. Fixtures that clean up use the owner role.
 """
 
 from __future__ import annotations
 
 import os
+import secrets
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -24,6 +28,7 @@ from sqlalchemy.engine import make_url
 
 from haalendar.config import Settings, load_settings
 from haalendar.db import ALEMBIC_INI
+from haalendar.dbroles import bootstrap
 from haalendar.main import create_app
 
 UNREACHABLE_DB = "postgresql+psycopg://user:pw@127.0.0.1:1/none"
@@ -68,35 +73,54 @@ def _libpq_url(sqlalchemy_url: str, database: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def db_url() -> Iterator[str]:
-    """SQLAlchemy URL of a freshly created and migrated database; dropped at the end of the session."""
+def owner_db_url() -> Iterator[str]:
+    """Owner (migration) URL of a freshly created database; the app role is bootstrapped and the schema migrated.
+    Database and role are dropped at the end of the session."""
     server_url = os.environ.get(TEST_DB_ENV)
     if not server_url:
         pytest.skip(f"{TEST_DB_ENV} is not set; database tests skipped")
-    name = f"haalendar_test_{uuid.uuid4().hex[:12]}"
+    suffix = uuid.uuid4().hex[:12]
+    name, role, password = f"haalendar_test_{suffix}", f"haalendar_app_{suffix}", secrets.token_urlsafe(18)
     admin_dsn = _libpq_url(server_url, "postgres")
     with psycopg.connect(admin_dsn, autocommit=True) as conn:
         conn.execute(f'CREATE DATABASE "{name}"')
-    url = make_url(server_url).set(database=name).render_as_string(hide_password=False)
-    previous = os.environ.get("HAALENDAR_DATABASE_URL")
-    os.environ["HAALENDAR_DATABASE_URL"] = url
+    owner_url = make_url(server_url).set(database=name)
+    app_url = owner_url.set(username=role, password=password)
+    environment = {
+        "HAALENDAR_MIGRATION_DATABASE_URL": owner_url.render_as_string(hide_password=False),
+        "HAALENDAR_DATABASE_URL": app_url.render_as_string(hide_password=False),
+    }
+    previous = {key: os.environ.get(key) for key in environment}
+    os.environ.update(environment)
     try:
+        bootstrap(load_settings({**environment, "HAALENDAR_ENV": "test"}))
         command.upgrade(Config(str(ALEMBIC_INI)), "head")
-        yield url
+        yield environment["HAALENDAR_MIGRATION_DATABASE_URL"]
     finally:
-        if previous is None:
-            os.environ.pop("HAALENDAR_DATABASE_URL", None)
-        else:
-            os.environ["HAALENDAR_DATABASE_URL"] = previous
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         with psycopg.connect(admin_dsn, autocommit=True) as conn:
             conn.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+            conn.execute(f'DROP ROLE IF EXISTS "{role}"')
+
+
+@pytest.fixture(scope="session")
+def db_url(owner_db_url: str) -> str:
+    """Application-role URL of the test database (what the app under test uses)."""
+    return os.environ["HAALENDAR_DATABASE_URL"]
 
 
 @pytest.fixture
-def clean_db(db_url: str) -> Iterator[str]:
-    """Empty account tables and default instance settings before each database test."""
-    with psycopg.connect(_libpq_url(db_url, make_url(db_url).database or ""), autocommit=True) as conn:
-        conn.execute("TRUNCATE session, auth_token, recovery_code RESTART IDENTITY")
+def clean_db(owner_db_url: str, db_url: str) -> Iterator[str]:
+    """Empty account and planning tables and default instance settings before each database test (owner role:
+    the application role cannot delete). Yields the application-role URL."""
+    with psycopg.connect(
+        _libpq_url(owner_db_url, make_url(owner_db_url).database or ""), autocommit=True
+    ) as conn:
+        conn.execute("TRUNCATE session, auth_token, recovery_code, share, calendar RESTART IDENTITY")
         conn.execute(
             "UPDATE instance_settings SET updated_by = NULL, registration_mode = 'invite', require_admin_2fa = false"
         )
