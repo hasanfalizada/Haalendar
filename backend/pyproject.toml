@@ -14,6 +14,7 @@ dependencies = [
   "psycopg[binary]==3.3.6",
   "uvicorn[standard]==0.54.0",
   "structlog==26.1.0",
+  "prometheus-client==0.26.0",
 ]
 
 [dependency-groups]
@@ -48,6 +49,10 @@ src = ["src", "tests"]
 select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "BLE", "SIM", "RUF"]
 # E501: line length is enforced by `ruff format`; long marker comments are allowed (ruff docs recommendation).
 ignore = ["S101", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use fake credentials on purpose to prove they never reach logs or responses.
+"tests/**" = ["S105", "S106"]
 
 [tool.mypy]
 python_version = "3.14"

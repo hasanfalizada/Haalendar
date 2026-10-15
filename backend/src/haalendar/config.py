@@ -72,10 +72,21 @@ class Settings(BaseSettings):
     demo_mode: bool = False
     # HSTS is only meaningful behind HTTPS; enabled automatically when public_url uses https.
     hsts_max_age_seconds: int = Field(default=31_536_000, ge=0)
+    # Observability (HAAL-019): /metrics is off by default; when on, it requires this bearer token.
+    metrics_enabled: bool = False
+    metrics_token: SecretStr | None = None
+    # SQL statements slower than this are logged (0 disables); default matches the p95 API target (SRS 4.1).
+    db_slow_query_ms: int = Field(default=200, ge=0)
 
     @model_validator(mode="after")
     def _forbid_insecure_production(self) -> Settings:
         """Fail fast instead of running production with development defaults (Security first)."""
+        if self.metrics_enabled and (
+            self.metrics_token is None or len(self.metrics_token.get_secret_value()) < 24
+        ):
+            raise ValueError(
+                "HAALENDAR_METRICS_TOKEN (at least 24 characters) is required when metrics are enabled"
+            )
         if self.env is Environment.PRODUCTION:
             secret = self.secret_key.get_secret_value()
             if secret == DEV_SECRET_KEY or len(secret) < 32:

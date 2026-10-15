@@ -222,6 +222,18 @@ The environment is selected with `HAALENDAR_ENV`.
 - **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. The planned deployment is Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS) as described in the architecture decisions; it arrives with HAAL-150.
 - **demo** — production settings plus `HAALENDAR_DEMO_MODE=true`; data reset every 30 minutes (HAAL-154).
 
+### Observability
+
+- **Logs:** one JSON line per event on stdout (`HAALENDAR_LOG_FORMAT=console` for reading). Every request line has `request_id`, `method`, `route`, `status`, `duration_ms`. Passwords, tokens, cookies and the database URL are always redacted.
+- **Correlation:** the web app sends an `X-Request-ID` with every API call and logs it in the browser console for failed calls; the same id appears in the server log line and in error responses (`request_id`).
+- **Metrics:** enable and scrape locally:
+  ```bash
+  export HAALENDAR_METRICS_ENABLED=true HAALENDAR_METRICS_TOKEN=$(openssl rand -hex 24)
+  uv run haalendar-api &
+  curl -s -H "Authorization: Bearer $HAALENDAR_METRICS_TOKEN" http://localhost:8080/metrics | grep ^haalendar_
+  ```
+  Exposed: `haalendar_http_requests_total`, `haalendar_http_request_duration_seconds` (labelled by route template, never by raw URL), `haalendar_http_requests_in_progress`, `haalendar_db_pool_*`, `haalendar_db_slow_queries_total`, `haalendar_build_info`.
+
 ## 7. Configuration reference
 
 All variables, defaults and comments are in [`.env.example`](.env.example). The most important ones:
@@ -234,6 +246,8 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | `https://` in production |
 | `HAALENDAR_PORT` | `8080` | API port |
 | `HAALENDAR_LOG_LEVEL` / `HAALENDAR_LOG_FORMAT` | `INFO` / `json` | `console` for local reading |
+| `HAALENDAR_DB_SLOW_QUERY_MS` | `200` | Log SQL slower than this (0 = off) |
+| `HAALENDAR_METRICS_ENABLED` / `HAALENDAR_METRICS_TOKEN` | `false` / — | Prometheus metrics at `/metrics`, bearer token ≥ 24 chars required |
 | `VITE_API_TARGET` | `http://localhost:8080` | Frontend dev proxy target (`http://localhost:4010` for the mock) |
 
 ## 8. Troubleshooting

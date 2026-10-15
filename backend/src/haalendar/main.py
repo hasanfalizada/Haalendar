@@ -2,6 +2,8 @@
 
 +++===+++ 2026-10-14 — Hasan Alizada — HAAL-016. create_app() wires settings, logging, database engine (lifespan),
 error handlers, middleware and routers. run() starts uvicorn without the Server header and with trusted proxies only.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-019. Metrics registry, DB pool gauges, slow-query logging and the
+token-protected /metrics endpoint are wired here.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from haalendar.db import create_engine, create_session_factory
 from haalendar.errors import install_error_handlers
 from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
+from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
 
 log = get_logger(__name__)
 
@@ -28,12 +31,15 @@ API_PREFIX = "/api/v1"
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings)
+    metrics = Metrics(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(settings)
         app.state.engine = engine
         app.state.session_factory = create_session_factory(engine)
+        metrics.register_pool(engine)
+        attach_slow_query_logging(engine, settings.db_slow_query_ms, metrics)
         log.info("app_started", version=__version__, env=settings.env.value, demo_mode=settings.demo_mode)
         try:
             yield
@@ -52,9 +58,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url=f"{API_PREFIX}/openapi.json" if is_dev else None,
     )
     app.state.settings = settings
+    app.state.metrics = metrics
     install_error_handlers(app)
-    app.add_middleware(RequestContextMiddleware, settings=settings)
+    app.add_middleware(RequestContextMiddleware, settings=settings, metrics=metrics)
     app.include_router(health.router, prefix=API_PREFIX)
+    install_metrics_endpoint(app, settings, metrics)
     return app
 
 

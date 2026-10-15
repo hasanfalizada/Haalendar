@@ -18,6 +18,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from haalendar.config import Settings
 from haalendar.logging import get_logger
+from haalendar.observability import Metrics, route_template
 
 log = get_logger(__name__)
 
@@ -49,9 +50,10 @@ def security_headers(path: str, settings: Settings) -> list[tuple[bytes, bytes]]
 class RequestContextMiddleware:
     """Assign/propagate X-Request-ID, log one line per request, harden headers, convert crashes to RFC 9457."""
 
-    def __init__(self, app: ASGIApp, settings: Settings) -> None:
+    def __init__(self, app: ASGIApp, settings: Settings, metrics: Metrics | None = None) -> None:
         self.app = app
         self.settings = settings
+        self.metrics = metrics
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -87,6 +89,8 @@ class RequestContextMiddleware:
                 message["headers"] = headers
             await send(message)
 
+        if self.metrics is not None:
+            self.metrics.in_progress.inc()
         try:
             await self.app(scope, receive, send_wrapper)
         except Exception as exc:
@@ -95,9 +99,14 @@ class RequestContextMiddleware:
                 raise
             await self._send_internal_error(send_wrapper, path, request_id)
         finally:
-            duration_ms = round((time.perf_counter() - started) * 1000, 1)
+            elapsed = time.perf_counter() - started
+            duration_ms = round(elapsed * 1000, 1)
             status = status_holder["status"]
-            fields: dict[str, Any] = {"status": status, "duration_ms": duration_ms}
+            route = route_template(scope)
+            if self.metrics is not None:
+                self.metrics.in_progress.dec()
+                self.metrics.observe_request(method, route, status, elapsed)
+            fields: dict[str, Any] = {"status": status, "duration_ms": duration_ms, "route": route}
             if status >= 500:
                 log.warning("request_completed", **fields)
             else:
