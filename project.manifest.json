@@ -2,7 +2,7 @@
   "$schema": "./manifest.schema.json",
   "project": "haalendar",
   "manifest_version": "1.0.0",
-  "updated_at": "2026-10-14",
+  "updated_at": "2026-10-15",
   "description": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Central registry of Haalendar atoms. Read this file first; then load only the contract, vectors and implementation of the atoms involved. Update it after every change.",
   "conventions": {
     "atoms_dir": "atoms",
@@ -37,6 +37,31 @@
         "U#12"
       ],
       "notes": "Pure function. Never use ISO week number parity. Implementations follow in HAAL-085 (Python and TypeScript, both must pass vectors.json)."
+    },
+    {
+      "id": "accounts.password_policy.v1",
+      "status": "implemented",
+      "purpose": "Checks a new password against the Haalendar password policy (15..128 chars, not common, no e-mail/name, enough variety) and returns every violated rule.",
+      "contract": "atoms/accounts.password_policy.v1/contract.json",
+      "examples": "atoms/accounts.password_policy.v1/examples.md",
+      "vectors": "atoms/accounts.password_policy.v1/vectors.json",
+      "capabilities": [
+        "checkPassword"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_password_policy_atom.py"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/accounts/password_policy.py"
+      },
+      "hash": "b3:2fc876b115cbddd407bc41939be9ab2e070a92d55f3274f2529bd8ba18d47233",
+      "deps": [],
+      "requirements": [
+        "FR-ACC-01",
+        "FR-ACC-02",
+        "ADR-0005"
+      ],
+      "notes": "Common list bundled in backend/src/haalendar/accounts/data/common_passwords.txt (SecLists, MIT). TypeScript implementation for live hints follows with the registration UI."
     }
   ],
   "flows": [
@@ -45,6 +70,13 @@
       "purpose": "Header shows the Week A/B label of the selected date (FR-CAL-05).",
       "steps": [
         "calendar.week_ab_label.v1"
+      ]
+    },
+    {
+      "id": "accounts.register",
+      "purpose": "Registration validates the password with the policy atom before hashing (FR-ACC-01).",
+      "steps": [
+        "accounts.password_policy.v1"
       ]
     }
   ]

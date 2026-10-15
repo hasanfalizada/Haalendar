@@ -162,13 +162,22 @@ pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnp
 
 | Command | Purpose |
 |---|---|
-| `uv run pytest` | Unit and API tests (no database needed) |
+| `uv run pytest` | Unit and API tests; database tests are skipped unless `HAALENDAR_TEST_DATABASE_URL` is set (see below) |
 | `uv run pytest -k health -v` | Run selected tests verbosely |
 | `uv run ruff check .` | Lint |
 | `uv run ruff format .` | Format (use `--check` in CI) |
 | `uv run mypy src tests` | Static types (strict) |
 | `uv run alembic upgrade head` | Apply migrations to the database in `HAALENDAR_DATABASE_URL` |
 | `uv run alembic upgrade head --sql` | Print migration SQL without a database |
+
+Database tests (accounts, sessions — marker `db`) create a throw-away database on a PostgreSQL 18 server and drop it afterwards:
+
+```bash
+docker run -d --name haalendar-db-tests -e POSTGRES_USER=haalendar -e POSTGRES_PASSWORD=haalendar   -e POSTGRES_DB=postgres -p 55433:5432 postgres:18
+export HAALENDAR_TEST_DATABASE_URL=postgresql+psycopg://haalendar:haalendar@127.0.0.1:55433/postgres
+uv run pytest            # all tests including database tests
+docker rm -f haalendar-db-tests
+```
 
 Database-backed verification (migrations + readiness against a real PostgreSQL 18):
 
@@ -222,6 +231,21 @@ The environment is selected with `HAALENDAR_ENV`.
 - **test** — used by the test suites; tests build their own settings and never read your `.env`.
 - **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. The planned deployment is Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS) as described in the architecture decisions; it arrives with HAAL-150.
 - **demo** — production settings plus `HAALENDAR_DEMO_MODE=true`; data reset every 30 minutes (HAAL-154).
+
+### Trying accounts locally
+
+Registration is invite-only by default; the admin wizard and invitations arrive with HAAL-163/164. Until then, enable open registration in the development database and use the interactive docs (`/api/v1/docs`) or `curl`:
+
+```bash
+docker exec -it haalendar-db psql -U haalendar -c "UPDATE instance_settings SET registration_mode = 'open'"
+```
+
+1. `POST /api/v1/auth/register` with e-mail, a password of at least 15 characters, display name and time zone → 202.
+2. Open the verification e-mail: without SMTP it is an `.eml` file in `HAALENDAR_MAIL_DIR` (default `/tmp/haalendar-mail`); copy the token from the link.
+3. `POST /api/v1/auth/verify-email` with `{"token": "..."}` → 204.
+4. `POST /api/v1/auth/login` → 200 with the session cookie and `csrf_token`; `GET /api/v1/me` returns the account.
+
+The session cookie is `__Host-` prefixed and `Secure`: browsers accept it on `https://` and on `http://localhost` only.
 
 ### Observability
 

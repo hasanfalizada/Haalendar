@@ -83,6 +83,8 @@ paths:
                     invite_token: { type: string, maxLength: 128 }
       responses:
         '202': { description: 'Accepted; generic response, no account enumeration' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
         '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
   auth_verify_email:

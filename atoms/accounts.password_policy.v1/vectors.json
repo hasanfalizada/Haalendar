@@ -1,0 +1,61 @@
+{
+  "$comment": "+++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. Test vectors for accounts.password_policy.v1 (Python and TypeScript implementations must pass all).",
+  "atom": "accounts.password_policy.v1",
+  "cases": [
+    {
+      "name": "passphrase is valid",
+      "input": { "password": "correct horse battery staple", "email": "hasan@example.org", "display_name": "Hasan Alizada" },
+      "output": { "valid": true, "violations": [] }
+    },
+    {
+      "name": "too short",
+      "input": { "password": "Tr0ub4dor&3" },
+      "output": { "valid": false, "violations": ["too_short"] }
+    },
+    {
+      "name": "exactly 15 characters is enough",
+      "input": { "password": "river-cloud-ink" },
+      "output": { "valid": true, "violations": [] }
+    },
+    {
+      "name": "too long",
+      "input": { "password": "ab1cd2ef3gh4ij5kl6mn7op8qr9st0uvwx-ab1cd2ef3gh4ij5kl6mn7op8qr9st0uvwx-ab1cd2ef3gh4ij5kl6mn7op8qr9st0uvwx-ab1cd2ef3gh4ij5kl6mn7op8qr9st0uvwx" },
+      "output": { "valid": false, "violations": ["too_long"] }
+    },
+    {
+      "name": "unicode counts code points after NFKC",
+      "input": { "password": "Ağ ağac kölgəsi altında" },
+      "output": { "valid": true, "violations": [] }
+    },
+    {
+      "name": "common password from the list, case-insensitive",
+      "input": { "password": "1Q2W3E4R5T6Y7U8I9O0P" },
+      "output": { "valid": false, "violations": ["common"] }
+    },
+    {
+      "name": "contains e-mail local part",
+      "input": { "password": "my name is hasanfalizada okay", "email": "hasanfalizada@example.org" },
+      "output": { "valid": false, "violations": ["contains_email"] }
+    },
+    {
+      "name": "short e-mail local part is ignored",
+      "input": { "password": "bob builds bridges daily", "email": "bob@example.org" },
+      "output": { "valid": true, "violations": [] }
+    },
+    {
+      "name": "contains display name word",
+      "input": { "password": "alizada-calendar-2026", "display_name": "Hasan Alizada" },
+      "output": { "valid": false, "violations": ["contains_name"] }
+    },
+    {
+      "name": "low variety repeated pattern",
+      "input": { "password": "abababababababab" },
+      "output": { "valid": false, "violations": ["low_variety"] }
+    },
+    {
+      "name": "several violations in fixed order",
+      "input": { "password": "aaaa", "email": "aaaa@example.org" },
+      "output": { "valid": false, "violations": ["too_short", "contains_email", "low_variety"] }
+    }
+  ]
+}

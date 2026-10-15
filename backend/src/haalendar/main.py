@@ -5,6 +5,7 @@ error handlers, middleware and routers. run() starts uvicorn without the Server 
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-019. Metrics registry, DB pool gauges, slow-query logging and the
 token-protected /metrics endpoint are wired here.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-020. Security guards (Host, rate limit, body/content-type, CSRF origin).
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. Accounts routers (register, verify e-mail, login, logout, me) and mailer.
 """
 
 from __future__ import annotations
@@ -16,6 +17,8 @@ import uvicorn
 from fastapi import FastAPI
 
 from haalendar import __version__
+from haalendar.accounts.api import auth_router, me_router
+from haalendar.accounts.mailer import create_mailer
 from haalendar.api import health
 from haalendar.config import Environment, Settings, get_settings
 from haalendar.db import create_engine, create_session_factory
@@ -61,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     app.state.metrics = metrics
+    app.state.mailer = create_mailer(settings)
     install_error_handlers(app)
     # Starlette runs the last added middleware first: request context (ids, headers, logging) wraps every guard,
     # so rejections still carry X-Request-ID, security headers and a log line.
@@ -72,6 +76,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(RequestContextMiddleware, settings=settings, metrics=metrics)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(auth_router, prefix=API_PREFIX)
+    app.include_router(me_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

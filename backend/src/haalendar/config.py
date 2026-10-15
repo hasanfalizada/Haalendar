@@ -86,6 +86,17 @@ class Settings(BaseSettings):
     rate_limit_burst: int = Field(default=120, ge=1)
     # Default request body limit; upload endpoints raise their own limit (10 MB images, FR-X-11).
     max_request_body_bytes: int = Field(default=1_048_576, ge=1024)
+    # Accounts (HAAL-160, ADR-0005): sliding idle and absolute session lifetime.
+    session_idle_days: int = Field(default=30, ge=1, le=365)
+    session_absolute_days: int = Field(default=90, ge=1, le=365)
+    # E-mail. Without SMTP: development/test write .eml files to mail_dir; production does not send.
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: SecretStr | None = None
+    smtp_security: str = Field(default="starttls", pattern="^(starttls|ssl|none)$")
+    mail_from: str = "Haalendar <no-reply@localhost>"
+    mail_dir: str = ""
 
     @model_validator(mode="after")
     def _forbid_insecure_production(self) -> Settings:

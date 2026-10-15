@@ -12,6 +12,7 @@ from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
+import haalendar.accounts.models  # noqa: F401 — registers account tables on Base.metadata
 from haalendar.config import load_settings
 from haalendar.logging import configure_logging, get_logger
 from haalendar.models import Base

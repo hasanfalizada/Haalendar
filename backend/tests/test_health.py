@@ -30,5 +30,5 @@ def test_ready_reports_unreachable_database_as_503(client: TestClient) -> None:
     assert "pw@" not in response.text
 
 
-def test_migration_head_is_baseline() -> None:
-    assert migration_head() == "0001"
+def test_migration_head_is_latest() -> None:
+    assert migration_head() == "0002"
