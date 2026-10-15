@@ -41,6 +41,7 @@ Haalendar targets **OWASP ASVS 5.0 Level 2** and is reviewed against the OWASP T
 - Strict input models (unknown fields rejected); errors as RFC 9457 problems without internal details.
 - Image uploads validated by file signature (no SVG or other active content), size-limited, with sanitised file names.
 - Production refuses insecure configuration (default secret key, plain HTTP); secrets can be supplied as files.
+- The first-run admin wizard is open only while no administrator exists; in production it additionally requires a setup token from the server configuration, so nobody can claim a freshly deployed instance first.
 - Logs are structured and never contain passwords, tokens or cookies; metrics are off by default and token-protected.
 - Supply chain: exact version pins and lockfiles, packages younger than 7 days are refused, install scripts are blocked, dependencies are audited (`pnpm security:audit`).
 

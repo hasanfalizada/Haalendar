@@ -5,6 +5,7 @@ auth_logout, me, auth_password_reset_request/confirm, auth_reauth, me_password; 
 SameSite=Lax, Path=/, no Domain, lifetime = absolute session expiry.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset, re-authentication, password change, admin reset.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Second factor at login, TOTP enrolment, admin unlock.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. First-run setup (setup_status, setup_admin).
 """
 
 from __future__ import annotations
@@ -26,6 +27,8 @@ from haalendar.accounts.schemas import (
     PasswordResetRequestIn,
     ReauthIn,
     RegistrationIn,
+    SetupAdminIn,
+    SetupStatusOut,
     TokenIn,
     TotpEnableIn,
     TotpEnableOut,
@@ -36,6 +39,7 @@ from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, Auth, 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 me_router = APIRouter(tags=["account"])
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
+setup_router = APIRouter(prefix="/setup", tags=["setup"])
 
 
 def to_me(user: UserAccount, csrf_token: str | None = None) -> MeOut:
@@ -175,3 +179,33 @@ async def admin_unlock(id: uuid.UUID, admin: Admin, db: DbSession) -> AdminUserA
     service.require_recent_reauth(admin.session)
     await service.admin_unlock(db, admin.user, id)
     return AdminUserActionOut()
+
+
+@setup_router.get("/status", operation_id="getSetupStatus")
+async def setup_status(db: DbSession, settings: AppSettings) -> SetupStatusOut:
+    mode = await service.get_registration_mode(db)
+    return SetupStatusOut(
+        setup_required=not await service.admin_exists(db),
+        setup_token_required=service.setup_token_required(settings),
+        registration_mode="open" if mode == "open" else "invite",
+        demo_mode=settings.demo_mode,
+    )
+
+
+@setup_router.post("/admin", status_code=status.HTTP_201_CREATED, operation_id="createFirstAdmin")
+async def setup_admin(
+    body: SetupAdminIn, request: Request, response: Response, db: DbSession, settings: AppSettings
+) -> MeOut:
+    result = await service.create_first_admin(
+        db,
+        settings,
+        email=str(body.email),
+        password=body.password,
+        display_name=body.display_name,
+        time_zone=body.time_zone,
+        setup_token=body.setup_token,
+        user_agent=request.headers.get("user-agent"),
+        client_ip=request.client.host if request.client else None,
+    )
+    _set_session_cookie(response, result.token, result.session)
+    return to_me(result.user, csrf_token=result.session.csrf_secret)

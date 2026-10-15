@@ -51,6 +51,34 @@
     "notFound": {
       "title": "Page not found",
       "back": "Go to Calendar"
+    },
+    "setup": {
+      "title": "Welcome to Haalendar",
+      "intro": "Create the administrator account. You can invite other people afterwards.",
+      "name": "Your name",
+      "email": "E-mail",
+      "password": "Password",
+      "passwordHint": "At least {{min}} characters. A passphrase of several words works well.",
+      "timeZone": "Time zone",
+      "setupToken": "Setup token",
+      "setupTokenHint": "The value of HAALENDAR_SETUP_TOKEN from the server configuration.",
+      "submit": "Create administrator",
+      "submitting": "Creating…",
+      "violations": {
+        "too_short": "Use at least {{min}} characters",
+        "too_long": "Use at most 128 characters",
+        "common": "This password is too common",
+        "contains_email": "Do not include your e-mail address",
+        "contains_name": "Do not include your name",
+        "low_variety": "Use more different characters"
+      },
+      "errors": {
+        "forbidden": "The setup token is missing or invalid.",
+        "alreadyDone": "Setup has already been completed. Please sign in.",
+        "duplicate": "An account with this e-mail already exists.",
+        "generic": "Could not create the administrator. Please try again.",
+        "offline": "The server is unreachable. Check the connection and try again."
+      }
     }
   }
 }

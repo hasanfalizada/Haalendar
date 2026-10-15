@@ -234,7 +234,9 @@ The environment is selected with `HAALENDAR_ENV`.
 
 ### Trying accounts locally
 
-Registration is invite-only by default; the admin wizard and invitations arrive with HAAL-163/164. Until then, enable open registration in the development database and use the interactive docs (`/api/v1/docs`) or `curl`:
+**First administrator.** On an empty database the web app redirects every page to `/setup` (`pnpm dev`, then open http://localhost:5173). Enter name, e-mail, a password of at least 15 characters (the rules are checked as you type) and the time zone; the account is created as `admin`, already verified, and signed in. If `HAALENDAR_SETUP_TOKEN` is set — always in production — the wizard also asks for it. Without the web app: `POST /api/v1/setup/admin` with the same fields (plus `setup_token`). Once an admin exists, `/setup` is closed (409). To start over in development, empty the accounts tables (`TRUNCATE user_account CASCADE` in `psql`).
+
+Registration is invite-only by default; invitations arrive with HAAL-164. Until then, enable open registration in the development database and use the interactive docs (`/api/v1/docs`) or `curl`:
 
 ```bash
 docker exec -it haalendar-db psql -U haalendar -c "UPDATE instance_settings SET registration_mode = 'open'"
@@ -277,6 +279,7 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | `HAALENDAR_DATABASE_URL` | `postgresql+psycopg://haalendar:haalendar@localhost:5432/haalendar` | Secret; or `HAALENDAR_DATABASE_URL_FILE` |
 | `HAALENDAR_SECRET_KEY` | development placeholder | Required in production |
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | `https://` in production |
+| `HAALENDAR_SETUP_TOKEN` | — | Token for the first-run admin wizard; mandatory in production, optional in development |
 | `HAALENDAR_PORT` | `8080` | API port |
 | `HAALENDAR_LOG_LEVEL` / `HAALENDAR_LOG_FORMAT` | `INFO` / `json` | `console` for local reading |
 | `HAALENDAR_DB_SLOW_QUERY_MS` | `200` | Log SQL slower than this (0 = off) |
@@ -297,6 +300,7 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | 403 `csrf_failed` on POST/PATCH/DELETE | The request came from an origin other than the public URL (or the Vite dev server in development). Add it to `HAALENDAR_EXTRA_ALLOWED_ORIGINS` if it is legitimate. |
 | 429 `account_locked` on login | 5 consecutive failed logins lock the account (15 min, doubling up to 24 h). Wait for `Retry-After`, or an admin unlocks the account. In development: `UPDATE user_account SET failed_login_count = 0, locked_until = NULL`. |
 | 429 `rate_limited` | Too many requests from one client; wait for `Retry-After` seconds or raise the limit for local load tests. |
+| 403 `forbidden` on the setup page | Production requires `HAALENDAR_SETUP_TOKEN` to be set on the server and entered in the wizard; check both values. |
 | `/api/v1/health/ready` returns 503 with `"database": false` | PostgreSQL is not running or `HAALENDAR_DATABASE_URL` is wrong. Check `docker ps`. |
 | 503 with `"migrations": false` | Run `uv run alembic upgrade head` in `backend/`. |
 | PostgreSQL container exits immediately | Old volume mounted at `/var/lib/postgresql/data`; use `/var/lib/postgresql` for PostgreSQL 18. |

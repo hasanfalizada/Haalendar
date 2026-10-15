@@ -17,7 +17,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from haalendar import __version__
-from haalendar.accounts.api import admin_router, auth_router, me_router
+from haalendar.accounts.api import admin_router, auth_router, me_router, setup_router
 from haalendar.accounts.mailer import create_mailer
 from haalendar.api import health
 from haalendar.config import Environment, Settings, get_settings
@@ -89,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_router, prefix=API_PREFIX)
     app.include_router(me_router, prefix=API_PREFIX)
     app.include_router(admin_router, prefix=API_PREFIX)
+    app.include_router(setup_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

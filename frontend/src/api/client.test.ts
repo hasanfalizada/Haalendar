@@ -1,10 +1,11 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-019. Correlation id on every API request and logging of failed responses.
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. CSRF token on state-changing requests only.
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { healthLive } from "@/api/generated/sdk.gen";
+import { healthLive, logout } from "@/api/generated/sdk.gen";
 import { log } from "@/lib/log";
 
-import { REQUEST_ID_HEADER } from "./client";
+import { CSRF_HEADER, REQUEST_ID_HEADER, setCsrfToken } from "./client";
 
 function captureFetch(status: number) {
   const requests: Request[] = [];
@@ -20,6 +21,7 @@ function captureFetch(status: number) {
 
 describe("API client", () => {
   afterEach(() => {
+    setCsrfToken(null);
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -45,5 +47,14 @@ describe("API client", () => {
       path: "/api/v1/health/live",
       request_id: requests[0]!.headers.get(REQUEST_ID_HEADER),
     });
+  });
+
+  it("sends the CSRF token on unsafe methods only, and nothing before a session exists", async () => {
+    const requests = captureFetch(200);
+    await logout();
+    setCsrfToken("csrf-secret");
+    await healthLive();
+    await logout();
+    expect(requests.map((request) => request.headers.get(CSRF_HEADER))).toEqual([null, null, "csrf-secret"]);
   });
 });

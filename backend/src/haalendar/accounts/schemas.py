@@ -92,3 +92,21 @@ class TotpEnableIn(ApiModel):
 
 class TotpEnableOut(BaseModel):
     recovery_codes: list[str]
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. First-run setup.
+
+
+class SetupStatusOut(BaseModel):
+    setup_required: bool
+    setup_token_required: bool
+    registration_mode: Literal["invite", "open"]
+    demo_mode: bool
+
+
+class SetupAdminIn(ApiModel):
+    email: EmailStr = Field(max_length=254)
+    password: str = Field(min_length=1, max_length=1024)
+    display_name: str = Field(min_length=1, max_length=80)
+    time_zone: str = Field(min_length=1, max_length=64)
+    setup_token: str | None = Field(default=None, max_length=256)

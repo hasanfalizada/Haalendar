@@ -20,7 +20,7 @@ from functools import lru_cache
 from typing import Literal
 
 import pyotp
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts import crypto
@@ -75,7 +75,7 @@ async def _find_user_by_email(db: AsyncSession, email: str) -> UserAccount | Non
     return result.scalar_one_or_none()
 
 
-async def _registration_mode(db: AsyncSession) -> str:
+async def get_registration_mode(db: AsyncSession) -> str:
     mode = await db.scalar(select(InstanceSettings.registration_mode).where(InstanceSettings.id == 1))
     return mode or "invite"
 
@@ -137,7 +137,7 @@ async def register(
         if invite is None or invite.email.lower() != email.lower():
             log.warning("register_invalid_invite")
             raise ProblemError(400, ProblemCode.BAD_REQUEST, "The invitation is invalid or has expired")
-    elif await _registration_mode(db) == "invite":
+    elif await get_registration_mode(db) == "invite":
         log.info("register_rejected_invite_only")
         raise ProblemError(403, ProblemCode.FORBIDDEN, "Registration requires an invitation")
 
@@ -673,3 +673,93 @@ async def admin_unlock(db: AsyncSession, admin: UserAccount, target_id: uuid.UUI
     user.failed_login_count = 0
     user.locked_until = None
     log.info("admin_unlock", admin_id=str(admin.id), user_id=str(user.id))
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. Roles and first-run setup.
+# - setup is pending while no admin account exists; the first admin is created through POST /setup/admin and is
+#   signed in immediately (e-mail treated as verified: the operator owns the instance);
+# - a setup token (HAALENDAR_SETUP_TOKEN) protects that window; it is mandatory in production so that nobody else
+#   can claim a freshly started instance;
+# - a transaction-level advisory lock serialises concurrent setup requests (exactly one admin is created);
+# - the last active admin can never lose the role or be deactivated (assert_not_last_admin, used by HAAL-164).
+# ---------------------------------------------------------------------------------------------------------------
+
+SETUP_LOCK_KEY = 0x48414C5345545550  # "HALSETUP"
+
+
+async def admin_exists(db: AsyncSession) -> bool:
+    found = await db.scalar(select(UserAccount.id).where(UserAccount.role == "admin").limit(1))
+    return found is not None
+
+
+def setup_token_required(settings: Settings) -> bool:
+    return settings.setup_token is not None or settings.env.value == "production"
+
+
+async def create_first_admin(
+    db: AsyncSession,
+    settings: Settings,
+    *,
+    email: str,
+    password: str,
+    display_name: str,
+    time_zone: str,
+    setup_token: str | None,
+    user_agent: str | None,
+    client_ip: str | None,
+) -> LoginResult:
+    if setup_token_required(settings):
+        expected = settings.setup_token.get_secret_value() if settings.setup_token else None
+        if expected is None:
+            log.warning("setup_blocked_no_token_configured")
+            raise ProblemError(
+                403,
+                ProblemCode.FORBIDDEN,
+                "Set HAALENDAR_SETUP_TOKEN on the server to create the first administrator",
+            )
+        if not setup_token or not crypto.constant_time_equals(setup_token, expected):
+            log.warning("setup_rejected_invalid_token")
+            raise ProblemError(403, ProblemCode.FORBIDDEN, "The setup token is invalid")
+    await db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": SETUP_LOCK_KEY})
+    if await admin_exists(db):
+        log.info("setup_rejected_already_done")
+        raise ProblemError(409, ProblemCode.INVALID_STATE, "Setup is already complete")
+    if time_zone not in _time_zones():
+        raise ProblemError(
+            422,
+            ProblemCode.VALIDATION_FAILED,
+            "Unknown time zone",
+            errors=[{"pointer": "/time_zone", "detail": "Use an IANA time zone, e.g. Europe/Berlin"}],
+        )
+    violations = check_password(password, email, display_name)
+    if violations:
+        raise _password_problem(list(violations))
+    if await _find_user_by_email(db, email) is not None:
+        raise ProblemError(409, ProblemCode.DUPLICATE, "An account with this e-mail already exists")
+    user = UserAccount(
+        email=email.strip(),
+        password_hash=crypto.hash_password(password),
+        display_name=display_name.strip(),
+        time_zone=time_zone,
+        role="admin",
+        email_verified_at=utcnow(),
+    )
+    db.add(user)
+    await db.flush()
+    log.info("first_admin_created", user_id=str(user.id))
+    return await login(
+        db, settings, email=user.email, password=password, user_agent=user_agent, client_ip=client_ip
+    )
+
+
+async def assert_not_last_admin(db: AsyncSession, user_id: uuid.UUID) -> None:
+    """Raise 409 if `user_id` is the only active admin (before a role downgrade or deactivation)."""
+    other_admin = await db.scalar(
+        select(UserAccount.id)
+        .where(UserAccount.role == "admin", UserAccount.deactivated_at.is_(None), UserAccount.id != user_id)
+        .limit(1)
+    )
+    if other_admin is None:
+        log.warning("last_admin_protected", user_id=str(user_id))
+        raise ProblemError(409, ProblemCode.INVALID_STATE, "The last active administrator cannot be changed")

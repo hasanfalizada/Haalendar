@@ -25,3 +25,14 @@ export const log = {
     write("error", event, fields);
   },
 };
+
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. Readable form of a thrown value: the generated API client throws
+// the parsed problem body (a plain object), which String() would render as "[object Object]".
+export function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}

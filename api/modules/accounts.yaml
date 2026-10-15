@@ -13,22 +13,31 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [setup_required, registration_mode, demo_mode]
+                required: [setup_required, setup_token_required, registration_mode, demo_mode]
                 properties:
                   setup_required: { type: boolean }
+                  setup_token_required: { type: boolean, description: 'HAALENDAR_SETUP_TOKEN must be entered (always in production)' }
                   registration_mode: { type: string, enum: [invite, open] }
                   demo_mode: { type: boolean }
   setup_admin:
     post:
       tags: [setup]
       operationId: createFirstAdmin
-      summary: Create the first admin (only while setup is required) — FR-ACC-05
+      summary: Create the first admin (only while setup is required) and sign in — FR-ACC-05
       security: []
       requestBody:
         required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/RegistrationInput' } } }
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/RegistrationInput'
+                - type: object
+                  properties:
+                    setup_token: { type: string, maxLength: 256, description: Required when setup_token_required }
       responses:
-        '201': { description: Admin created and logged in, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '201': { description: Admin created and logged in (session cookie set), content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
 

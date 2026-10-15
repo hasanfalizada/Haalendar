@@ -17,4 +17,4 @@ function KanbanPage() {
   );
 }
 
-export const Route = createFileRoute("/kanban")({ component: KanbanPage });
+export const Route = createFileRoute("/_app/kanban")({ component: KanbanPage });

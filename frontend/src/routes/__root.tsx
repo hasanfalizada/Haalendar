@@ -1,9 +1,12 @@
-// +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Root route: application shell + not-found page.
-import { createRootRouteWithContext, Link } from "@tanstack/react-router";
+// +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Root route: not-found page.
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. Setup gate: while no administrator exists every route leads to /setup;
+// afterwards /setup leads to the calendar. If the server is unreachable the gate does nothing (offline-first).
+import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
-import { AppShell } from "@/components/shell/AppShell";
+import { setupStatusQuery } from "@/api/setup";
+import { describeError, log } from "@/lib/log";
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -24,6 +27,20 @@ function NotFound() {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  component: AppShell,
+  beforeLoad: async ({ context, location }) => {
+    const status = await context.queryClient.query(setupStatusQuery).catch((error: unknown) => {
+      log.warn("setup_status_unavailable", { error: describeError(error) });
+      return null;
+    });
+    if (!status) return;
+    const onSetup = location.pathname === "/setup";
+    if (status.setup_required && !onSetup) {
+      throw redirect({ to: "/setup", replace: true });
+    }
+    if (!status.setup_required && onSetup) {
+      throw redirect({ to: "/calendar", replace: true });
+    }
+  },
+  component: Outlet,
   notFoundComponent: NotFound,
 });

@@ -49,19 +49,22 @@
         "checkPassword"
       ],
       "tests_ref": {
-        "python": "backend/tests/test_password_policy_atom.py"
+        "python": "backend/tests/test_password_policy_atom.py",
+        "typescript": "frontend/src/atoms/accounts/passwordPolicy.test.ts"
       },
       "impl_ref": {
-        "python": "backend/src/haalendar/atoms/accounts/password_policy.py"
+        "python": "backend/src/haalendar/atoms/accounts/password_policy.py",
+        "typescript": "frontend/src/atoms/accounts/passwordPolicy.ts"
       },
       "hash": "b3:2fc876b115cbddd407bc41939be9ab2e070a92d55f3274f2529bd8ba18d47233",
       "deps": [],
       "requirements": [
         "FR-ACC-01",
         "FR-ACC-02",
+        "FR-ACC-05",
         "ADR-0005"
       ],
-      "notes": "Common list bundled in backend/src/haalendar/accounts/data/common_passwords.txt (SecLists, MIT). TypeScript implementation for live hints follows with the registration UI."
+      "notes": "Common list bundled in backend/src/haalendar/accounts/data/common_passwords.txt (SecLists, MIT); the TypeScript implementation imports the same file. TypeScript gives live hints in forms; the server result is authoritative."
     }
   ],
   "flows": [
@@ -75,6 +78,13 @@
     {
       "id": "accounts.register",
       "purpose": "Registration validates the password with the policy atom before hashing (FR-ACC-01).",
+      "steps": [
+        "accounts.password_policy.v1"
+      ]
+    },
+    {
+      "id": "accounts.setup",
+      "purpose": "First-run wizard: while no administrator exists the SPA redirects to /setup; creating the first admin checks the setup token, validates the password with the policy atom (live in the browser, authoritative on the server) and signs in (FR-ACC-05).",
       "steps": [
         "accounts.password_policy.v1"
       ]

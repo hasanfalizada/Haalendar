@@ -17,4 +17,4 @@ function TodoPage() {
   );
 }
 
-export const Route = createFileRoute("/todo")({ component: TodoPage });
+export const Route = createFileRoute("/_app/todo")({ component: TodoPage });

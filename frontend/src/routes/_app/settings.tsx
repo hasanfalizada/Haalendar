@@ -56,4 +56,4 @@ function SettingsPage() {
   );
 }
 
-export const Route = createFileRoute("/settings")({ component: SettingsPage });
+export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });

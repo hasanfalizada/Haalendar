@@ -17,4 +17,4 @@ function TrashPage() {
   );
 }
 
-export const Route = createFileRoute("/trash")({ component: TrashPage });
+export const Route = createFileRoute("/_app/trash")({ component: TrashPage });

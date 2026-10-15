@@ -10,90 +10,106 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as KanbanRouteImport } from './routes/kanban'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as TodoRouteImport } from './routes/todo'
-import { Route as TrashRouteImport } from './routes/trash'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppKanbanRouteImport } from './routes/_app/kanban'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppTodoRouteImport } from './routes/_app/todo'
+import { Route as AppTrashRouteImport } from './routes/_app/trash'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CalendarRoute = CalendarRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const KanbanRoute = KanbanRouteImport.update({
+const AppKanbanRoute = AppKanbanRouteImport.update({
   id: '/kanban',
   path: '/kanban',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
+const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const TodoRoute = TodoRouteImport.update({
+const AppTodoRoute = AppTodoRouteImport.update({
   id: '/todo',
   path: '/todo',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const TrashRoute = TrashRouteImport.update({
+const AppTrashRoute = AppTrashRouteImport.update({
   id: '/trash',
   path: '/trash',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/calendar': typeof CalendarRoute
-  '/kanban': typeof KanbanRoute
-  '/settings': typeof SettingsRoute
-  '/todo': typeof TodoRoute
-  '/trash': typeof TrashRoute
+  '/setup': typeof SetupRoute
+  '/calendar': typeof AppCalendarRoute
+  '/kanban': typeof AppKanbanRoute
+  '/settings': typeof AppSettingsRoute
+  '/todo': typeof AppTodoRoute
+  '/trash': typeof AppTrashRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/calendar': typeof CalendarRoute
-  '/kanban': typeof KanbanRoute
-  '/settings': typeof SettingsRoute
-  '/todo': typeof TodoRoute
-  '/trash': typeof TrashRoute
+  '/setup': typeof SetupRoute
+  '/calendar': typeof AppCalendarRoute
+  '/kanban': typeof AppKanbanRoute
+  '/settings': typeof AppSettingsRoute
+  '/todo': typeof AppTodoRoute
+  '/trash': typeof AppTrashRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/calendar': typeof CalendarRoute
-  '/kanban': typeof KanbanRoute
-  '/settings': typeof SettingsRoute
-  '/todo': typeof TodoRoute
-  '/trash': typeof TrashRoute
+  '/_app': typeof AppRouteWithChildren
+  '/setup': typeof SetupRoute
+  '/_app/calendar': typeof AppCalendarRoute
+  '/_app/kanban': typeof AppKanbanRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/todo': typeof AppTodoRoute
+  '/_app/trash': typeof AppTrashRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/calendar' | '/kanban' | '/settings' | '/todo' | '/trash'
+  fullPaths:
+    '/' | '/setup' | '/calendar' | '/kanban' | '/settings' | '/todo' | '/trash'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/calendar' | '/kanban' | '/settings' | '/todo' | '/trash'
+  to:
+    '/' | '/setup' | '/calendar' | '/kanban' | '/settings' | '/todo' | '/trash'
   id:
     | '__root__'
     | '/'
-    | '/calendar'
-    | '/kanban'
-    | '/settings'
-    | '/todo'
-    | '/trash'
+    | '/_app'
+    | '/setup'
+    | '/_app/calendar'
+    | '/_app/kanban'
+    | '/_app/settings'
+    | '/_app/todo'
+    | '/_app/trash'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CalendarRoute: typeof CalendarRoute
-  KanbanRoute: typeof KanbanRoute
-  SettingsRoute: typeof SettingsRoute
-  TodoRoute: typeof TodoRoute
-  TrashRoute: typeof TrashRoute
+  AppRoute: typeof AppRouteWithChildren
+  SetupRoute: typeof SetupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -105,51 +121,80 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/calendar': {
-      id: '/calendar'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/calendar': {
+      id: '/_app/calendar'
       path: '/calendar'
       fullPath: '/calendar'
-      preLoaderRoute: typeof CalendarRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/kanban': {
-      id: '/kanban'
+    '/_app/kanban': {
+      id: '/_app/kanban'
       path: '/kanban'
       fullPath: '/kanban'
-      preLoaderRoute: typeof KanbanRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppKanbanRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/settings': {
-      id: '/settings'
+    '/_app/settings': {
+      id: '/_app/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/todo': {
-      id: '/todo'
+    '/_app/todo': {
+      id: '/_app/todo'
       path: '/todo'
       fullPath: '/todo'
-      preLoaderRoute: typeof TodoRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppTodoRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/trash': {
-      id: '/trash'
+    '/_app/trash': {
+      id: '/_app/trash'
       path: '/trash'
       fullPath: '/trash'
-      preLoaderRoute: typeof TrashRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppTrashRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppCalendarRoute: typeof AppCalendarRoute
+  AppKanbanRoute: typeof AppKanbanRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppTodoRoute: typeof AppTodoRoute
+  AppTrashRoute: typeof AppTrashRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppCalendarRoute: AppCalendarRoute,
+  AppKanbanRoute: AppKanbanRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppTodoRoute: AppTodoRoute,
+  AppTrashRoute: AppTrashRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CalendarRoute: CalendarRoute,
-  KanbanRoute: KanbanRoute,
-  SettingsRoute: SettingsRoute,
-  TodoRoute: TodoRoute,
-  TrashRoute: TrashRoute,
+  AppRoute: AppRouteWithChildren,
+  SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

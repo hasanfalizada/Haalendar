@@ -17,4 +17,4 @@ function CalendarPage() {
   );
 }
 
-export const Route = createFileRoute("/calendar")({ component: CalendarPage });
+export const Route = createFileRoute("/_app/calendar")({ component: CalendarPage });

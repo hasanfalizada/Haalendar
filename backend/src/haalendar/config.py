@@ -100,6 +100,8 @@ class Settings(BaseSettings):
     smtp_security: str = Field(default="starttls", pattern="^(starttls|ssl|none)$")
     mail_from: str = "Haalendar <no-reply@localhost>"
     mail_dir: str = ""
+    # First-run setup (HAAL-163): token required to create the first admin; mandatory in production.
+    setup_token: SecretStr | None = None
 
     @model_validator(mode="after")
     def _forbid_insecure_production(self) -> Settings:
