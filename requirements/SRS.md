@@ -6,10 +6,11 @@
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165 v1.7: decision D-28 (isolation: database roles, first protected tables) approved by owner.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166 v1.8: decision D-29 (profile and avatars) approved by owner.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167 v1.9: decision D-30 (sharing scope) approved by owner.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-169 v1.10: decisions D-31 (time handling) and D-32 (OIDC deferred to v1.1) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.9 |
+| Version | 1.10 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -478,6 +479,8 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-28 | Data isolation | Two PostgreSQL roles: the owner runs migrations and `haalendar-db-bootstrap`; the app connects as a least-privilege role (no superuser, no BYPASSRLS, SELECT/INSERT/UPDATE only — no DELETE/TRUNCATE, so physical deletes are impossible); production refuses a role that bypasses RLS. Isolation is proven on the first real protected tables `calendar` and `share` (created in HAAL-165, endpoints in HAAL-094/167); account tables stay outside RLS. Unreadable resources answer 404, read-only ones 403 | FR-ACC-07 |
 | D-29 | Profile and avatars | The ADR-0004 storage port with the local adapter is built now (content-addressed BLAKE3, per-user prefix, never deleted; `HAALENDAR_STORAGE_DIR`, required in production) and reused by attachments (HAAL-040). Avatars are uploaded as the raw request body (no multipart), re-encoded to a 256×256 WebP (EXIF/GPS stripped, 2 MB and 40 MP limits) and visible to every signed-in user of the instance. The profile is a section of Settings; the avatar links to it from the navigation | FR-ACC-08 |
 | D-30 | Sharing | Generic sharing API for all container kinds (calendar available now, board/note with their tables); reusable share dialog wired into containers by their tasks (calendars: HAAL-094) plus a Settings overview; an unknown e-mail is reported explicitly (instance-internal, signed-in users only); grantees may leave a share (soft revoke of their own share, RLS policy share_leave); no e-mail notification — in-app `share_received` comes with HAAL-048 | FR-ACC-10 |
+| D-31 | Time handling | The approved model stays: event wall-clock times + IANA tzid, UTC derived; "store UTC" in HAAL-169 means instants. Conversions are atoms time.local_to_utc.v1 (RFC 5545 gap/overlap rules) and time.event_days.v1 (viewer's days), TypeScript without dependencies on Intl; backend uses only the pinned tzdata; DB sessions in UTC; display in the profile zone with a device/profile mismatch notice. Details: architecture/time-handling.md | FR-ACC-11 |
+| D-32 | OIDC/SSO | HAAL-168 (Could) is deferred to v1.1; v1.0 ships local accounts, invitations and optional TOTP only | FR-ACC-12 |
 
 ### 9.2 Open issues
 | # | Issue | Status |
