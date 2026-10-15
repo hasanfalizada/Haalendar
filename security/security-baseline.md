@@ -35,8 +35,8 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V3 Web Frontend Security | 🟡 | CSP, headers, CSRF layer 1 ✅; SPA served with CSP ⏳ HAAL-150; per-session CSRF token ⏳ HAAL-160 |
 | V4 API and Web Service | 🟡 | Content-type/body limits, RFC 9457, merge-patch, If-Match ✅/contract; per-endpoint enforcement with features |
 | V5 File Handling | 🟡 | Signature check, limits, names ✅; storage outside web root, metadata stripping, download headers ⏳ HAAL-040 |
-| V6 Authentication | ⏳ | HAAL-160..162 (Argon2id, 15-char passwords, lockout, TOTP) per ADR-0005 |
-| V7 Session Management | ⏳ | HAAL-160 (server sessions, `__Host-` cookie, idle 30 d / abs 90 d, revoke) |
+| V6 Authentication | ✅ | Argon2id + rehash, 15-char policy atom with common-password list, invite-only registration, e-mail verification, generic responses, password reset (1 h single use), lockout 15 min doubling to 24 h, auth rate limit 20/min, optional TOTP with replay protection and recovery codes, admin 2FA policy (HAAL-160..162) |
+| V7 Session Management | ✅ | Server sessions, hashed tokens, `__Host-` cookie, idle 30 d / abs 90 d, revocation on password change/reset, re-auth window 15 min, CSRF token (HAAL-160..161); session list UI with HAAL-166 |
 | V8 Authorization | ⏳ | HAAL-165 (authz atom, permission matrix tests, PostgreSQL RLS) |
 | V9 Self-contained Tokens | — | No JWT in v1.0 (ADR-0005); personal API tokens v1.1 are opaque |
 | V10 OAuth and OIDC | ⏳ | HAAL-168 (Could): backend confidential client, PKCE, state/nonce |
@@ -58,7 +58,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | A04 Cryptographic Failures | 🟡 TLS + HSTS; Argon2id and token hashing with HAAL-160 |
 | A05 Injection | ✅ ORM parameters, no shell/eval; 🟡 Markdown sanitising (HAAL-047) |
 | A06 Insecure Design | ✅ threat-driven requirements, ADRs, contract-first, soft delete |
-| A07 Authentication Failures | ⏳ HAAL-160..162 |
+| A07 Authentication Failures | ✅ HAAL-160..162 (see V6/V7) |
 | A08 Software or Data Integrity Failures | 🟡 lockfile hashes; optimistic concurrency (If-Match) in contract; ⏳ image signing (HAAL-151) |
 | A09 Security Logging & Alerting Failures | ✅ security events logged with correlation; metrics for alerting |
 | A10 Mishandling of Exceptional Conditions | ✅ global handlers fail closed with generic 500, guards reject early, readiness reports not crashes |
@@ -68,7 +68,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | Risk | Mitigation |
 |---|---|
 | API1 Broken Object Level Authorization | ⏳ container-level authz on every request + RLS (HAAL-165); UUIDv7 IDs |
-| API2 Broken Authentication | ⏳ HAAL-160..162 |
+| API2 Broken Authentication | ✅ HAAL-160..162 |
 | API3 Broken Object Property Level Authorization | ✅ `ApiModel` forbids unknown fields; response schemas explicit in contract |
 | API4 Unrestricted Resource Consumption | ✅ rate limit, body limits, pagination ≤ 200, upload ≤ 10 MB, DB pool/timeouts |
 | API5 Broken Function Level Authorization | ⏳ admin/owner checks in authz atom (HAAL-164/165) |
