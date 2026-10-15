@@ -31,4 +31,4 @@ def test_ready_reports_unreachable_database_as_503(client: TestClient) -> None:
 
 
 def test_migration_head_is_latest() -> None:
-    assert migration_head() == "0002"
+    assert migration_head() == "0003"

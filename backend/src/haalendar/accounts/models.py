@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -49,6 +50,10 @@ class UserAccount(Base):
     role: Mapped[str] = mapped_column(String(10), default="user", server_default="user")
     totp_secret_enc: Mapped[str | None] = mapped_column(Text)
     totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Secret awaiting confirmation during enrolment; last accepted TOTP
+    # time step (replay protection: a code cannot be used twice).
+    totp_pending_secret_enc: Mapped[str | None] = mapped_column(Text)
+    totp_last_step: Mapped[int | None] = mapped_column(BigInteger)
     failed_login_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -115,3 +120,15 @@ class InstanceSettings(Base):
     )
     updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+
+
+class RecoveryCode(Base):
+    """+++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Single-use 2FA recovery codes, stored as SHA-256 hashes."""
+
+    __tablename__ = "recovery_code"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

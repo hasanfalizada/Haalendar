@@ -39,6 +39,7 @@ def make_settings(**overrides: str) -> Settings:
         # TestClient sends Host: testserver (HAAL-020 Host allow-list).
         "HAALENDAR_EXTRA_ALLOWED_HOSTS": "testserver",
         "HAALENDAR_RATE_LIMIT_PER_MINUTE": "0",
+        "HAALENDAR_AUTH_RATE_LIMIT_PER_MINUTE": "0",
     }
     env.update({f"HAALENDAR_{k.upper()}": v for k, v in overrides.items()})
     return load_settings(env)
@@ -95,8 +96,10 @@ def db_url() -> Iterator[str]:
 def clean_db(db_url: str) -> Iterator[str]:
     """Empty account tables and default instance settings before each database test."""
     with psycopg.connect(_libpq_url(db_url, make_url(db_url).database or ""), autocommit=True) as conn:
-        conn.execute("TRUNCATE session, auth_token RESTART IDENTITY")
-        conn.execute("UPDATE instance_settings SET updated_by = NULL, registration_mode = 'invite'")
+        conn.execute("TRUNCATE session, auth_token, recovery_code RESTART IDENTITY")
+        conn.execute(
+            "UPDATE instance_settings SET updated_by = NULL, registration_mode = 'invite', require_admin_2fa = false"
+        )
         conn.execute("DELETE FROM user_account")
     yield db_url
 

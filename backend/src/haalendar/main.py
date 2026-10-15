@@ -77,7 +77,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(CsrfOriginGuard, allowed_origins=settings.allowed_origins)
     app.add_middleware(BodyGuard, max_body_bytes=settings.max_request_body_bytes)
     app.add_middleware(
-        RateLimitGuard, per_minute=settings.rate_limit_per_minute, burst=settings.rate_limit_burst
+        RateLimitGuard,
+        per_minute=settings.rate_limit_per_minute,
+        burst=settings.rate_limit_burst,
+        auth_per_minute=settings.auth_rate_limit_per_minute,
+        auth_burst=settings.auth_rate_limit_burst,
     )
     app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(RequestContextMiddleware, settings=settings, metrics=metrics)

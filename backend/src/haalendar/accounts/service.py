@@ -19,12 +19,13 @@ from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Literal
 
+import pyotp
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts import crypto
 from haalendar.accounts.mailer import Mailer
-from haalendar.accounts.models import AuthSession, AuthToken, InstanceSettings, UserAccount
+from haalendar.accounts.models import AuthSession, AuthToken, InstanceSettings, RecoveryCode, UserAccount
 from haalendar.atoms.accounts.password_policy import check_password
 from haalendar.config import Settings
 from haalendar.errors import ProblemCode, ProblemError
@@ -228,27 +229,30 @@ async def login(
     password: str,
     user_agent: str | None,
     client_ip: str | None,
+    totp_code: str | None = None,
+    recovery_code: str | None = None,
 ) -> LoginResult:
     user = await _find_user_by_email(db, email)
     if user is None:
         crypto.burn_verification_time(password)
         log.info("login_failed", reason="unknown_email")
         raise ProblemError(401, ProblemCode.INVALID_CREDENTIALS, "E-mail or password is incorrect")
+    _raise_if_locked(user, password)
     if not crypto.verify_password(user.password_hash, password) or user.deactivated_at is not None:
-        user.failed_login_count += 1
-        # Persist the counter even though the request fails (input for the lockout in HAAL-162).
-        await db.commit()
-        log.info("login_failed", user_id=str(user.id), reason="password_or_deactivated")
+        await _register_failure(db, user, "password_or_deactivated")
         raise ProblemError(401, ProblemCode.INVALID_CREDENTIALS, "E-mail or password is incorrect")
     if user.email_verified_at is None:
         log.info("login_blocked_unverified", user_id=str(user.id))
         raise ProblemError(403, ProblemCode.EMAIL_NOT_VERIFIED, "Confirm your e-mail address first")
+    if user.totp_enabled_at is not None:
+        await _check_second_factor(db, settings, user, totp_code, recovery_code)
 
     if crypto.needs_rehash(user.password_hash):
         user.password_hash = crypto.hash_password(password)
         log.info("password_rehashed", user_id=str(user.id))
     now = utcnow()
     user.failed_login_count = 0
+    user.locked_until = None
     user.last_login_at = now
     token = crypto.new_token()
     session = AuthSession(
@@ -476,3 +480,196 @@ async def admin_reset_password(
         "admin_password_reset", admin_id=str(admin.id), user_id=str(user.id), delivery="one_time_password"
     )
     return AdminResetResult(delivery="one_time_password", one_time_password=one_time)
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Login protection (ADR-0005):
+# - every 5th consecutive failure locks the account: 15 min, doubling, at most 24 h; never permanent; while locked the
+#   password is not checked; success or an admin unlock resets the counter;
+# - optional TOTP (RFC 6238, 30 s, ±1 step) with replay protection and 10 single-use recovery codes;
+# - wrong second factors count as failures; a missing second factor does not (it is the normal two-step login).
+# ---------------------------------------------------------------------------------------------------------------
+
+LOCK_THRESHOLD = 5
+LOCK_BASE = timedelta(minutes=15)
+LOCK_MAX = timedelta(hours=24)
+TOTP_ISSUER = "Haalendar"
+
+
+def lock_duration(failed_count: int) -> timedelta | None:
+    """Lock length after `failed_count` consecutive failures (None = no new lock)."""
+    if failed_count < LOCK_THRESHOLD or failed_count % LOCK_THRESHOLD != 0:
+        return None
+    level = failed_count // LOCK_THRESHOLD - 1
+    return min(LOCK_BASE * (1 << level), LOCK_MAX)
+
+
+def _raise_if_locked(user: UserAccount, password: str) -> None:
+    now = utcnow()
+    if user.locked_until is not None and user.locked_until > now:
+        crypto.burn_verification_time(password)  # same work as a normal attempt
+        retry_after = int((user.locked_until - now).total_seconds()) + 1
+        log.info("login_rejected_locked", user_id=str(user.id), retry_after_seconds=retry_after)
+        raise ProblemError(
+            429,
+            ProblemCode.ACCOUNT_LOCKED,
+            "Too many failed attempts. Try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
+async def _register_failure(db: AsyncSession, user: UserAccount, reason: str) -> None:
+    user.failed_login_count += 1
+    duration = lock_duration(user.failed_login_count)
+    if duration is not None:
+        user.locked_until = utcnow() + duration
+        log.warning(
+            "account_locked",
+            user_id=str(user.id),
+            failed_count=user.failed_login_count,
+            lock_minutes=int(duration.total_seconds() // 60),
+        )
+    # Persist even though the request fails.
+    await db.commit()
+    log.info("login_failed", user_id=str(user.id), reason=reason, failed_count=user.failed_login_count)
+
+
+def _accepted_step(secret: str, code: str, last_step: int | None) -> int | None:
+    """Time step matching `code` within ±1 step and newer than the last accepted one (replay protection)."""
+    totp = pyotp.TOTP(secret)
+    current = totp.timecode(utcnow())
+    for step in (current - 1, current, current + 1):
+        if last_step is not None and step <= last_step:
+            continue
+        if crypto.constant_time_equals(totp.generate_otp(step), code):
+            return step
+    return None
+
+
+async def _check_second_factor(
+    db: AsyncSession,
+    settings: Settings,
+    user: UserAccount,
+    totp_code: str | None,
+    recovery_code: str | None,
+) -> None:
+    if not totp_code and not recovery_code:
+        log.info("login_totp_required", user_id=str(user.id))
+        raise ProblemError(401, ProblemCode.TOTP_REQUIRED, "Enter the code from your authenticator app")
+    if totp_code:
+        secret = crypto.decrypt_secret(user.totp_secret_enc or "", settings.secret_key.get_secret_value())
+        step = _accepted_step(secret, totp_code, user.totp_last_step)
+        if step is None:
+            await _register_failure(db, user, "totp_invalid")
+            raise ProblemError(401, ProblemCode.INVALID_CREDENTIALS, "The verification code is incorrect")
+        user.totp_last_step = step
+        return
+    digest = crypto.token_digest(crypto.normalize_recovery_code(recovery_code or ""))
+    code_row = await db.scalar(
+        select(RecoveryCode).where(
+            RecoveryCode.user_id == user.id, RecoveryCode.code_hash == digest, RecoveryCode.used_at.is_(None)
+        )
+    )
+    if code_row is None:
+        await _register_failure(db, user, "recovery_code_invalid")
+        raise ProblemError(401, ProblemCode.INVALID_CREDENTIALS, "The recovery code is incorrect")
+    code_row.used_at = utcnow()
+    log.info("recovery_code_used", user_id=str(user.id))
+
+
+async def totp_setup(settings: Settings, session: AuthSession, user: UserAccount) -> tuple[str, str]:
+    """Start enrolment: new pending secret; returns (otpauth URI for the QR code, secret for manual entry)."""
+    require_recent_reauth(session)
+    if user.totp_enabled_at is not None:
+        raise ProblemError(409, ProblemCode.INVALID_STATE, "Two-factor authentication is already enabled")
+    secret = pyotp.random_base32()
+    user.totp_pending_secret_enc = crypto.encrypt_secret(secret, settings.secret_key.get_secret_value())
+    log.info("totp_setup_started", user_id=str(user.id))
+    return pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name=TOTP_ISSUER), secret
+
+
+async def totp_enable(
+    db: AsyncSession, mailer: Mailer, settings: Settings, user: UserAccount, code: str
+) -> list[str]:
+    if user.totp_enabled_at is not None:
+        raise ProblemError(409, ProblemCode.INVALID_STATE, "Two-factor authentication is already enabled")
+    if user.totp_pending_secret_enc is None:
+        raise ProblemError(409, ProblemCode.INVALID_STATE, "Start the setup first")
+    secret = crypto.decrypt_secret(user.totp_pending_secret_enc, settings.secret_key.get_secret_value())
+    step = _accepted_step(secret, code, None)
+    if step is None:
+        raise ProblemError(
+            422,
+            ProblemCode.VALIDATION_FAILED,
+            "The verification code is incorrect",
+            errors=[{"pointer": "/totp_code", "detail": "Code does not match"}],
+        )
+    user.totp_secret_enc = user.totp_pending_secret_enc
+    user.totp_pending_secret_enc = None
+    user.totp_enabled_at = utcnow()
+    user.totp_last_step = step
+    user.version += 1
+    codes = await _replace_recovery_codes(db, user.id)
+    log.info("totp_enabled", user_id=str(user.id))
+    await mailer.send(
+        user.email,
+        "Haalendar: two-factor authentication enabled",
+        "Two-factor authentication was enabled for your Haalendar account.\n"
+        "If this was not you, reset your password immediately and contact your administrator.\n",
+    )
+    return codes
+
+
+async def _replace_recovery_codes(db: AsyncSession, user_id: uuid.UUID) -> list[str]:
+    await db.execute(
+        update(RecoveryCode)
+        .where(RecoveryCode.user_id == user_id, RecoveryCode.used_at.is_(None))
+        .values(used_at=utcnow())
+    )
+    codes = crypto.new_recovery_codes()
+    db.add_all(RecoveryCode(user_id=user_id, code_hash=crypto.token_digest(c)) for c in codes)
+    await db.flush()
+    return codes
+
+
+async def totp_disable(db: AsyncSession, mailer: Mailer, session: AuthSession, user: UserAccount) -> None:
+    require_recent_reauth(session)
+    if user.role == "admin" and await _admin_2fa_required(db):
+        raise ProblemError(
+            403, ProblemCode.FORBIDDEN, "Administrators must keep two-factor authentication enabled"
+        )
+    user.totp_secret_enc = None
+    user.totp_pending_secret_enc = None
+    user.totp_enabled_at = None
+    user.totp_last_step = None
+    user.version += 1
+    await db.execute(
+        update(RecoveryCode)
+        .where(RecoveryCode.user_id == user.id, RecoveryCode.used_at.is_(None))
+        .values(used_at=utcnow())
+    )
+    log.info("totp_disabled", user_id=str(user.id))
+    await mailer.send(
+        user.email,
+        "Haalendar: two-factor authentication disabled",
+        "Two-factor authentication was disabled for your Haalendar account.\n"
+        "If this was not you, reset your password immediately and contact your administrator.\n",
+    )
+
+
+async def _admin_2fa_required(db: AsyncSession) -> bool:
+    return bool(await db.scalar(select(InstanceSettings.require_admin_2fa).where(InstanceSettings.id == 1)))
+
+
+async def admin_2fa_missing(db: AsyncSession, user: UserAccount) -> bool:
+    """True when the instance requires 2FA for admins and this admin has not enabled it."""
+    return user.role == "admin" and user.totp_enabled_at is None and await _admin_2fa_required(db)
+
+
+async def admin_unlock(db: AsyncSession, admin: UserAccount, target_id: uuid.UUID) -> None:
+    user = await db.get(UserAccount, target_id)
+    if user is None:
+        raise ProblemError(404, ProblemCode.NOT_FOUND, "User not found")
+    user.failed_login_count = 0
+    user.locked_until = None
+    log.info("admin_unlock", admin_id=str(admin.id), user_id=str(user.id))

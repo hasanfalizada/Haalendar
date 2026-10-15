@@ -80,10 +80,15 @@ PASSWORD_CHANGE_ALLOWED_PATHS = frozenset(
 Auth = Annotated[CurrentAuth, Depends(current_auth)]
 
 
-async def current_admin(auth: Auth) -> CurrentAuth:
-    """Admin role required; admins manage accounts, never content (ADR-0005)."""
+async def current_admin(auth: Auth, db: DbSession) -> CurrentAuth:
+    """Admin role required; admins manage accounts, never content (ADR-0005). When the instance requires 2FA for
+    admins (HAAL-162), admin endpoints stay closed until the admin has enabled TOTP."""
     if auth.user.role != "admin":
         raise ProblemError(403, ProblemCode.FORBIDDEN, "Administrator role required")
+    if await service.admin_2fa_missing(db, auth.user):
+        raise ProblemError(
+            403, ProblemCode.TOTP_REQUIRED, "Enable two-factor authentication to use admin functions"
+        )
     return auth
 
 

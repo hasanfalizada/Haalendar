@@ -4,6 +4,7 @@ auth_logout, me, auth_password_reset_request/confirm, auth_reauth, me_password; 
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. The session cookie is `__Host-haalendar_session`: Secure, HttpOnly,
 SameSite=Lax, Path=/, no Domain, lifetime = absolute session expiry.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset, re-authentication, password change, admin reset.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Second factor at login, TOTP enrolment, admin unlock.
 """
 
 from __future__ import annotations
@@ -26,6 +27,9 @@ from haalendar.accounts.schemas import (
     ReauthIn,
     RegistrationIn,
     TokenIn,
+    TotpEnableIn,
+    TotpEnableOut,
+    TotpSetupOut,
 )
 from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, Auth, DbSession
 
@@ -94,6 +98,8 @@ async def login(
         password=body.password,
         user_agent=request.headers.get("user-agent"),
         client_ip=request.client.host if request.client else None,
+        totp_code=body.totp_code,
+        recovery_code=body.recovery_code,
     )
     _set_session_cookie(response, result.token, result.session)
     return LoginOut(me=to_me(result.user), csrf_token=result.session.csrf_secret)
@@ -143,3 +149,29 @@ async def admin_reset_password(
     service.require_recent_reauth(admin.session)
     result = await service.admin_reset_password(db, mailer, settings, admin.user, id)
     return AdminUserActionOut(delivery=result.delivery, one_time_password=result.one_time_password)
+
+
+@me_router.post("/me/totp/setup", operation_id="startTotpSetup")
+async def totp_setup(auth: Auth, settings: AppSettings) -> TotpSetupOut:
+    uri, secret = await service.totp_setup(settings, auth.session, auth.user)
+    return TotpSetupOut(otpauth_uri=uri, secret=secret)
+
+
+@me_router.post("/me/totp/enable", operation_id="enableTotp")
+async def totp_enable(
+    body: TotpEnableIn, auth: Auth, db: DbSession, mailer: AppMailer, settings: AppSettings
+) -> TotpEnableOut:
+    codes = await service.totp_enable(db, mailer, settings, auth.user, body.totp_code)
+    return TotpEnableOut(recovery_codes=codes)
+
+
+@me_router.post("/me/totp/disable", status_code=status.HTTP_204_NO_CONTENT, operation_id="disableTotp")
+async def totp_disable(auth: Auth, db: DbSession, mailer: AppMailer) -> None:
+    await service.totp_disable(db, mailer, auth.session, auth.user)
+
+
+@admin_router.post("/users/{id}/unlock", operation_id="adminUnlockUser")
+async def admin_unlock(id: uuid.UUID, admin: Admin, db: DbSession) -> AdminUserActionOut:
+    service.require_recent_reauth(admin.session)
+    await service.admin_unlock(db, admin.user, id)
+    return AdminUserActionOut()

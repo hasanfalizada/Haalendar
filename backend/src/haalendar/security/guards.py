@@ -25,6 +25,7 @@ log = get_logger(__name__)
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 ALLOWED_BODY_TYPES = ("application/json", "application/merge-patch+json", "multipart/form-data")
 RATE_LIMIT_EXEMPT_PREFIXES = ("/api/v1/health/",)
+AUTH_PREFIX = "/api/v1/auth/"
 
 
 def _header(scope: Scope, name: bytes) -> str:
@@ -122,20 +123,31 @@ class TokenBucketLimiter:
 class RateLimitGuard:
     """429 with Retry-After and IETF RateLimit/RateLimit-Policy headers when a client exceeds its budget."""
 
-    def __init__(self, app: ASGIApp, per_minute: int, burst: int) -> None:
+    def __init__(
+        self, app: ASGIApp, per_minute: int, burst: int, auth_per_minute: int = 0, auth_burst: int = 1
+    ) -> None:
         self.app = app
         self.enabled = per_minute > 0
         self.per_minute = per_minute
         self.limiter = TokenBucketLimiter(per_minute, burst) if self.enabled else None
+        # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Second, stricter bucket for authentication endpoints
+        # (credential stuffing, reset/registration abuse); consumed in addition to the general bucket.
+        self.auth_per_minute = auth_per_minute
+        self.auth_limiter = TokenBucketLimiter(auth_per_minute, auth_burst) if auth_per_minute > 0 else None
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         path: str = scope.get("path", "")
-        if scope["type"] != "http" or self.limiter is None or path.startswith(RATE_LIMIT_EXEMPT_PREFIXES):
+        if scope["type"] != "http" or path.startswith(RATE_LIMIT_EXEMPT_PREFIXES):
             await self.app(scope, receive, send)
             return
         client = scope.get("client")
         key = client[0] if client else "unknown"
-        allowed, retry_after = self.limiter.take(key)
+        allowed, retry_after, policy = True, 0.0, self.per_minute
+        if self.limiter is not None:
+            allowed, retry_after = self.limiter.take(key)
+        if allowed and self.auth_limiter is not None and path.startswith(AUTH_PREFIX):
+            allowed, retry_after = self.auth_limiter.take(key)
+            policy = self.auth_per_minute
         if not allowed:
             wait = max(1, math.ceil(retry_after))
             log.warning("rate_limited", client=key, retry_after_seconds=wait)
@@ -147,7 +159,7 @@ class RateLimitGuard:
                 "Too many requests. Try again later.",
                 [
                     (b"retry-after", str(wait).encode()),
-                    (b"ratelimit-policy", f'"default";q={self.per_minute};w=60'.encode()),
+                    (b"ratelimit-policy", f'"default";q={policy};w=60'.encode()),
                     (b"ratelimit", f'"default";r=0;t={wait}'.encode()),
                 ],
             )

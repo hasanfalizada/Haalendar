@@ -76,3 +76,19 @@ class ChangePasswordIn(ApiModel):
 class AdminUserActionOut(BaseModel):
     delivery: Literal["email", "one_time_password"] | None = None
     one_time_password: str | None = None
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Two-factor authentication (TOTP) enrolment.
+
+
+class TotpSetupOut(BaseModel):
+    otpauth_uri: str
+    secret: str
+
+
+class TotpEnableIn(ApiModel):
+    totp_code: str = Field(pattern=r"^\d{6}$")
+
+
+class TotpEnableOut(BaseModel):
+    recovery_codes: list[str]

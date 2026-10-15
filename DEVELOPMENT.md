@@ -249,6 +249,8 @@ docker exec -it haalendar-db psql -U haalendar -c "UPDATE instance_settings SET 
 
 The session cookie is `__Host-` prefixed and `Secure`: browsers accept it on `https://` and on `http://localhost` only.
 
+6. Two-factor authentication: `POST /api/v1/me/totp/setup` (returns `otpauth_uri` for the QR code and the secret) → `POST /api/v1/me/totp/enable` with a code from the app → 10 recovery codes (shown once). From then on `POST /api/v1/auth/login` needs `totp_code` or `recovery_code`.
+
 ### E-mail (SMTP)
 
 Set `HAALENDAR_SMTP_HOST`, `HAALENDAR_SMTP_PORT`, `HAALENDAR_SMTP_SECURITY` (`starttls` on 587 or `ssl` on 465), `HAALENDAR_SMTP_USERNAME`, `HAALENDAR_SMTP_PASSWORD` (or `HAALENDAR_SMTP_PASSWORD_FILE`) and `HAALENDAR_MAIL_FROM`. Credentials over an unencrypted connection are refused at startup. The active mode is logged at startup as `mail_mode` (`SmtpMailer`, `FileMailer` or `DisabledMailer`). Without SMTP in production, an admin resets passwords manually: the user receives a one-time password and must set a new one at the next login.
@@ -281,6 +283,7 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | `HAALENDAR_METRICS_ENABLED` / `HAALENDAR_METRICS_TOKEN` | `false` / — | Prometheus metrics at `/metrics`, bearer token ≥ 24 chars required |
 | `HAALENDAR_EXTRA_ALLOWED_HOSTS` / `HAALENDAR_EXTRA_ALLOWED_ORIGINS` | empty | Additional Host names / origins (public URL and loopback are always allowed) |
 | `HAALENDAR_RATE_LIMIT_PER_MINUTE` / `HAALENDAR_RATE_LIMIT_BURST` | `600` / `120` | Per-client rate limit (0 = off) |
+| `HAALENDAR_AUTH_RATE_LIMIT_PER_MINUTE` / `HAALENDAR_AUTH_RATE_LIMIT_BURST` | `20` / `10` | Additional per-client limit for `/api/v1/auth/*` |
 | `HAALENDAR_MAX_REQUEST_BODY_BYTES` | `1048576` | Request body limit |
 | `VITE_API_TARGET` | `http://localhost:8080` | Frontend dev proxy target (`http://localhost:4010` for the mock) |
 
@@ -292,6 +295,7 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | `ERR_PNPM_IGNORED_BUILDS` | A dependency wants to run an install script. Review it and allow or deny it with `pnpm approve-builds`; scripts are blocked by default. |
 | 400 `Host not allowed` | The request used a host name that is not the public URL host or loopback (for example a LAN IP). Add it to `HAALENDAR_EXTRA_ALLOWED_HOSTS`. |
 | 403 `csrf_failed` on POST/PATCH/DELETE | The request came from an origin other than the public URL (or the Vite dev server in development). Add it to `HAALENDAR_EXTRA_ALLOWED_ORIGINS` if it is legitimate. |
+| 429 `account_locked` on login | 5 consecutive failed logins lock the account (15 min, doubling up to 24 h). Wait for `Retry-After`, or an admin unlocks the account. In development: `UPDATE user_account SET failed_login_count = 0, locked_until = NULL`. |
 | 429 `rate_limited` | Too many requests from one client; wait for `Retry-After` seconds or raise the limit for local load tests. |
 | `/api/v1/health/ready` returns 503 with `"database": false` | PostgreSQL is not running or `HAALENDAR_DATABASE_URL` is wrong. Check `docker ps`. |
 | 503 with `"migrations": false` | Run `uv run alembic upgrade head` in `backend/`. |

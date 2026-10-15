@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     # Per-client token bucket: sustained requests per minute and burst size (0 disables the limiter).
     rate_limit_per_minute: int = Field(default=600, ge=0)
     rate_limit_burst: int = Field(default=120, ge=1)
+    # Stricter per-client budget for /api/v1/auth/* (login, registration, reset; HAAL-162).
+    auth_rate_limit_per_minute: int = Field(default=20, ge=0)
+    auth_rate_limit_burst: int = Field(default=10, ge=1)
     # Default request body limit; upload endpoints raise their own limit (10 MB images, FR-X-11).
     max_request_body_bytes: int = Field(default=1_048_576, ge=1024)
     # Accounts (HAAL-160, ADR-0005): sliding idle and absolute session lifetime.
