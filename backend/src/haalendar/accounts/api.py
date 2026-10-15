@@ -14,7 +14,6 @@ admin_invites, admin_invite) and the invitation page (auth_invite_info). Every a
 
 from __future__ import annotations
 
-import re
 import uuid
 from datetime import UTC
 from typing import Annotated, Literal
@@ -49,6 +48,7 @@ from haalendar.accounts.schemas import (
     TotpSetupOut,
     UserStatus,
 )
+from haalendar.api.preconditions import expected_version
 from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, AppStorage, Auth, DbSession
 from haalendar.errors import ProblemCode, ProblemError
 
@@ -201,18 +201,6 @@ async def setup_admin(
 
 # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin panel and invitation page.
 
-IF_MATCH = re.compile(r'^"(\d+)"$')
-
-
-def _expected_version(if_match: str | None) -> int:
-    """If-Match carries the resource version as a strong ETag (ADR-0007): missing → 428, malformed → 400."""
-    if if_match is None:
-        raise ProblemError(428, ProblemCode.PRECONDITION_REQUIRED, "Send the current version in If-Match")
-    found = IF_MATCH.match(if_match.strip())
-    if found is None:
-        raise ProblemError(400, ProblemCode.BAD_REQUEST, 'If-Match must look like "7"')
-    return int(found.group(1))
-
 
 @auth_router.post("/invite-info", operation_id="getInviteInfo")
 async def get_invite_info(body: TokenIn, db: DbSession) -> InviteInfoOut:
@@ -243,7 +231,7 @@ async def admin_update_user(
     if_match: Annotated[str | None, Header()] = None,
 ) -> AdminUserOut:
     service.require_recent_reauth(admin.session)
-    expected = _expected_version(if_match)
+    expected = expected_version(if_match)
     user = await service.admin_set_role(db, admin.user, id, body.role, expected)
     response.headers["ETag"] = f'"{user.version}"'
     return service.to_admin_user(user)
@@ -329,7 +317,7 @@ async def update_profile(
     user = await service.update_profile(
         db,
         auth.user,
-        expected_version=_expected_version(if_match),
+        expected_version=expected_version(if_match),
         display_name=body.display_name,
         time_zone=body.time_zone,
     )

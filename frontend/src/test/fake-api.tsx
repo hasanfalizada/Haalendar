@@ -1,9 +1,12 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Fake backend for page tests: routes like "POST /admin/users/*/deactivate"
 // map to handlers; every request is recorded (method, path, JSON body, headers) for assertions.
 import { createMemoryHistory } from "@tanstack/react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { vi } from "vitest";
 
+import "@/i18n";
 import { App } from "@/App";
 import type { Me } from "@/api/generated/types.gen";
 import { createAppRouter, createQueryClient } from "@/router";
@@ -49,6 +52,7 @@ const DEFAULTS: Record<string, Handler> = {
     json({ setup_required: false, setup_token_required: false, registration_mode: "invite", demo_mode: false }),
   "GET /health/live": () => json({ status: "ok", version: "0.1.0" }),
   "GET /health/ready": () => json({ status: "ok", version: "0.1.0" }),
+  "GET /shares": () => json({ data: [] }),
 };
 
 function matcher(pattern: string): RegExp {
@@ -85,4 +89,11 @@ export function renderApp(initialPath: string) {
   const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: [initialPath] }));
   render(<App queryClient={queryClient} router={router} />);
   return { router, queryClient };
+}
+
+/** A single component with the query client and translations (no router). */
+export function renderWithProviders(ui: ReactNode) {
+  const queryClient = createQueryClient();
+  render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return { queryClient };
 }

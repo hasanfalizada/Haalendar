@@ -251,5 +251,46 @@
     "avatarSize": "The image must not exceed 2 MB.",
     "avatarSaved": "Photo updated.",
     "avatarRemoved": "Photo removed."
+  },
+  "sharing": {
+    "title": "Sharing",
+    "sharedByMe": "Shared by me",
+    "sharedWithMe": "Shared with me",
+    "noneByMe": "You have not shared anything yet.",
+    "noneWithMe": "Nothing has been shared with you yet.",
+    "from": "{{kind}} from {{name}}",
+    "kind": {
+      "calendar": "Calendar",
+      "board": "Board",
+      "note": "Note"
+    },
+    "permission": {
+      "view": "Can view",
+      "edit": "Can edit"
+    },
+    "permissionLabel": "Permission",
+    "permissionFor": "Permission for {{name}}",
+    "remove": "Remove",
+    "confirmRemove": "Remove access",
+    "leave": "Leave",
+    "confirmLeave": "Leave",
+    "confirmGroup": "Confirm",
+    "dialogTitle": "Share “{{name}}”",
+    "dialogIntro": "People you share with see it in their app. Editors can change its contents but not rename, delete or share it.",
+    "share": "Share",
+    "shared": "Shared with {{email}}.",
+    "peopleWithAccess": "People with access",
+    "nobody": "Only you have access.",
+    "errors": {
+      "userNotFound": "There is no user with this e-mail address on this instance.",
+      "self": "You already own this.",
+      "duplicate": "This person already has access — change the permission below.",
+      "email": "Enter a valid e-mail address.",
+      "notFound": "This share no longer exists. The list has been refreshed.",
+      "ownerOnly": "Only the owner can change sharing.",
+      "changedMeanwhile": "The share was changed meanwhile. The list has been refreshed — please try again.",
+      "generic": "The change could not be saved. Please try again.",
+      "offline": "Sharing needs a connection to the server."
+    }
   }
 }

@@ -1,21 +1,29 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Cross-module endpoints: sharing, search, trash, export, notifications, bulk operations (FR-ACC-10, FR-X-04/07/10/14/19/21).
 paths:
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing (FR-ACC-10, ADR-0005): only the owner shares, changes and
+  # revokes; a grantee may leave (DELETE on the own share). Revocation is soft; at most one active share per grantee.
   shares:
     get:
       tags: [sharing]
       operationId: listShares
-      summary: Shares granted by me or received by me
+      summary: Active shares granted by me (as container owner) or received by me
       parameters:
         - { name: direction, in: query, schema: { type: string, enum: [granted, received], default: granted } }
         - { name: container_kind, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' } }
         - { name: container_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
       responses:
-        '200': { description: Shares, content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Share' } } } } } } }
+        '200': { description: 'Shares, oldest first', content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Share' } } } } } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
     post:
       tags: [sharing]
       operationId: createShare
       summary: Share a container with another user of the instance (owner only)
+      description: >-
+        422 with an error on /grantee_email when no active user has that address (code user_not_found) or it is the
+        owner's own address (code self); on /container_kind when the kind is not available yet (code unsupported).
+        404 when the container is not visible, 403 when it is visible but not owned. 409 duplicate when the user
+        already has access (change the permission instead). The Idempotency-Key header is accepted; generic replay
+        handling arrives with offline sync.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
       requestBody:
@@ -24,22 +32,25 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [container_kind, container_id, grantee_email, permission]
               properties:
                 container_kind: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' }
                 container_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                grantee_email: { type: string, format: email }
+                grantee_email: { type: string, format: email, maxLength: 254 }
                 permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
       responses:
         '201': { description: Shared, content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
         '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
   share:
     patch:
       tags: [sharing]
       operationId: updateShare
-      summary: Change permission
+      summary: Change the permission (owner only)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/IfMatch'
@@ -54,18 +65,27 @@ paths:
               properties:
                 permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
       responses:
-        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } } }
+        '200':
+          description: Updated
+          headers:
+            ETag: { $ref: '../components/common.yaml#/components/headers/ETag' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+        '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
     delete:
       tags: [sharing]
       operationId: revokeShare
-      summary: Revoke (soft, `revoked_at`); grantee's local copies are removed on next sync
+      summary: Revoke (owner) or leave (grantee); soft via `revoked_at`, the grantee's local copies are removed on next sync
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
-
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   search:
     get:
       tags: [search]
@@ -261,7 +281,7 @@ components:
   schemas:
     Share:
       type: object
-      required: [id, container_kind, container_id, grantee_id, permission, created_at, version]
+      required: [id, container_kind, container_id, container_name, grantee_id, grantee_name, grantee_email, owner_id, owner_name, permission, granted_by, created_at, revoked_at, version]
       properties:
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         container_kind: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' }
@@ -270,6 +290,8 @@ components:
         grantee_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         grantee_name: { type: string }
         grantee_email: { type: string, format: email }
+        owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        owner_name: { type: string }
         permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
         granted_by: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }

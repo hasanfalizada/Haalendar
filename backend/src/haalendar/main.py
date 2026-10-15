@@ -7,6 +7,7 @@ token-protected /metrics endpoint are wired here.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-020. Security guards (Host, rate limit, body/content-type, CSRF origin).
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. Accounts routers (register, verify e-mail, login, logout, me) and mailer.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. File storage (local adapter) and the users router (avatars).
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing router.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
 from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
 from haalendar.security.guards import BodyGuard, CsrfOriginGuard, HostGuard, RateLimitGuard
+from haalendar.sharing.api import router as sharing_router
 from haalendar.storage import create_storage
 
 log = get_logger(__name__)
@@ -105,6 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_router, prefix=API_PREFIX)
     app.include_router(setup_router, prefix=API_PREFIX)
     app.include_router(users_router, prefix=API_PREFIX)
+    app.include_router(sharing_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

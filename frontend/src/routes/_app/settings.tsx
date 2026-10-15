@@ -2,10 +2,12 @@
 // settings (week start, Week A/B, …) arrive in HAAL-045.
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Account section: who is signed in, sign out (wipes cached data).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The account section became the profile section (incl. sign-out).
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing overview (shared by me / with me).
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ProfileSection } from "@/components/profile/ProfileSection";
+import { SharingSection } from "@/components/sharing/SharingSection";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/ThemeProvider";
 import type { ThemePreference } from "@/theme/theme";
@@ -56,6 +58,7 @@ function SettingsPage() {
         </div>
       </div>
       <ProfileSection />
+      <SharingSection />
     </div>
   );
 }

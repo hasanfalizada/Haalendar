@@ -86,3 +86,13 @@ def share_policies() -> list[str]:
         f"CREATE POLICY share_insert ON share FOR INSERT WITH CHECK ({owns} AND granted_by = {me} AND grantee_id <> {me})",
         f"CREATE POLICY share_update ON share FOR UPDATE USING ({owns}) WITH CHECK ({owns} AND grantee_id <> {me})",
     ]
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. A grantee may leave a shared container: the only change allowed to
+# a grantee is revoking the own active share (permissive policies are OR-combined with share_update).
+def share_leave_policy() -> list[str]:
+    me = "haalendar_current_user_id()"
+    return [
+        f"CREATE POLICY share_leave ON share FOR UPDATE USING (grantee_id = {me} AND revoked_at IS NULL) "
+        f"WITH CHECK (grantee_id = {me} AND revoked_at IS NOT NULL)",
+    ]

@@ -92,7 +92,7 @@
         "FR-ACC-10",
         "ADR-0005"
       ],
-      "notes": "Server entry point: haalendar.authz.require (loads owner and share under row-level security). PostgreSQL RLS (haalendar.security.rls) enforces the same rules as a second layer; the isolation suite is backend/tests/test_isolation.py."
+      "notes": "Server entry point: haalendar.authz.require (loads owner and share under row-level security). PostgreSQL RLS (haalendar.security.rls) enforces the same rules as a second layer; the isolation suite is backend/tests/test_isolation.py. Sharing API: haalendar.sharing (HAAL-167)."
     }
   ],
   "flows": [
@@ -127,6 +127,13 @@
     {
       "id": "planning.authorize",
       "purpose": "Every content request: session resolved → app.user_id set for the transaction (RLS) → container facts loaded → authz.check decides → 404/403 or the action runs (FR-ACC-07).",
+      "steps": [
+        "authz.check.v1"
+      ]
+    },
+    {
+      "id": "planning.share",
+      "purpose": "Share / change / revoke: the container owner is checked with authz.check (action share) under row-level security; a grantee may only leave; revocation is soft (FR-ACC-10).",
       "steps": [
         "authz.check.v1"
       ]
