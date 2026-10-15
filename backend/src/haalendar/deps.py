@@ -66,7 +66,25 @@ async def current_auth(request: Request, db: DbSession, settings: AppSettings) -
         provided = request.headers.get(CSRF_HEADER, "")
         if not provided or not crypto.constant_time_equals(provided, session.csrf_secret):
             raise ProblemError(403, ProblemCode.CSRF_FAILED, "Missing or invalid CSRF token")
+    # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. After an admin reset the one-time password must be replaced
+    # before anything else is possible (ASVS 5.0 V6).
+    if user.must_change_password and request.url.path not in PASSWORD_CHANGE_ALLOWED_PATHS:
+        raise ProblemError(403, ProblemCode.PASSWORD_CHANGE_REQUIRED, "Set a new password to continue")
     return CurrentAuth(session=session, user=user)
 
 
+PASSWORD_CHANGE_ALLOWED_PATHS = frozenset(
+    {"/api/v1/me", "/api/v1/me/password", "/api/v1/auth/reauth", "/api/v1/auth/logout"}
+)
+
 Auth = Annotated[CurrentAuth, Depends(current_auth)]
+
+
+async def current_admin(auth: Auth) -> CurrentAuth:
+    """Admin role required; admins manage accounts, never content (ADR-0005)."""
+    if auth.user.role != "admin":
+        raise ProblemError(403, ProblemCode.FORBIDDEN, "Administrator role required")
+    return auth
+
+
+Admin = Annotated[CurrentAuth, Depends(current_admin)]

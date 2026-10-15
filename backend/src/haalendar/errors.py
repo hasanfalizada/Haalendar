@@ -31,6 +31,7 @@ class ProblemCode(StrEnum):
     ACCOUNT_LOCKED = "account_locked"
     EMAIL_NOT_VERIFIED = "email_not_verified"
     REAUTH_REQUIRED = "reauth_required"
+    PASSWORD_CHANGE_REQUIRED = "password_change_required"  # noqa: S105 — problem code, not a credential
     TOTP_REQUIRED = "totp_required"
     CSRF_FAILED = "csrf_failed"
     FORBIDDEN = "forbidden"

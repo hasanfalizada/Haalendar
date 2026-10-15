@@ -190,6 +190,7 @@ components:
             - account_locked
             - email_not_verified
             - reauth_required
+            - password_change_required
             - totp_required
             - csrf_failed
             - forbidden

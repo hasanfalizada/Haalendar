@@ -50,3 +50,29 @@ class MeOut(BaseModel):
 class LoginOut(BaseModel):
     me: MeOut
     csrf_token: str
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset, re-authentication, password change, admin reset.
+
+
+class PasswordResetRequestIn(ApiModel):
+    email: EmailStr = Field(max_length=254)
+
+
+class PasswordResetConfirmIn(ApiModel):
+    token: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=1, max_length=1024)
+
+
+class ReauthIn(ApiModel):
+    password: str = Field(min_length=1, max_length=1024)
+    totp_code: str | None = Field(default=None, pattern=r"^\d{6}$")
+
+
+class ChangePasswordIn(ApiModel):
+    new_password: str = Field(min_length=1, max_length=1024)
+
+
+class AdminUserActionOut(BaseModel):
+    delivery: Literal["email", "one_time_password"] | None = None
+    one_time_password: str | None = None

@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import Iterator
+from pathlib import Path
 
 import psycopg
 import pytest
@@ -98,3 +99,16 @@ def clean_db(db_url: str) -> Iterator[str]:
         conn.execute("UPDATE instance_settings SET updated_by = NULL, registration_mode = 'invite'")
         conn.execute("DELETE FROM user_account")
     yield db_url
+
+
+@pytest.fixture
+def mail_dir(tmp_path: Path) -> Path:
+    return tmp_path / "mail"
+
+
+@pytest.fixture
+def api(clean_db: str, mail_dir: Path) -> Iterator[TestClient]:
+    """App on a clean database; https base URL so the Secure __Host- session cookie round-trips (HAAL-160)."""
+    app = create_app(make_settings(database_url=clean_db, mail_dir=str(mail_dir)))
+    with TestClient(app, base_url="https://testserver", raise_server_exceptions=False) as test_client:
+        yield test_client

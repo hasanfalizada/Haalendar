@@ -17,6 +17,7 @@ import zoneinfo
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
+from typing import Literal
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -259,6 +260,8 @@ async def login(
         user_agent=(user_agent or "")[:200] or None,
         ip_prefix=ip_prefix(client_ip),
         csrf_secret=secrets.token_urlsafe(32),
+        # A fresh login counts as re-authentication for the next 15 minutes (ADR-0005).
+        reauth_at=now,
     )
     db.add(session)
     await db.flush()
@@ -298,3 +301,178 @@ async def resolve_session(
 async def logout(session: AuthSession) -> None:
     session.revoked_at = utcnow()
     log.info("logout", user_id=str(session.user_id), session_id=str(session.id))
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset (e-mail link, single use, 1 h), re-authentication,
+# password change and manual reset by an admin. Every password change revokes sessions; reset links supersede
+# older ones; requests are throttled per account to prevent e-mail bombing.
+# ---------------------------------------------------------------------------------------------------------------
+
+RESET_TOKEN_TTL = timedelta(hours=1)
+RESET_RESEND_INTERVAL = timedelta(minutes=5)
+REAUTH_WINDOW = timedelta(minutes=15)
+
+
+async def revoke_sessions(db: AsyncSession, user_id: uuid.UUID, keep: uuid.UUID | None = None) -> None:
+    statement = update(AuthSession).where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
+    if keep is not None:
+        statement = statement.where(AuthSession.id != keep)
+    await db.execute(statement.values(revoked_at=utcnow()))
+    log.info("sessions_revoked", user_id=str(user_id), kept=str(keep) if keep else None)
+
+
+async def _issue_reset_link(
+    db: AsyncSession, mailer: Mailer, settings: Settings, user: UserAccount, created_by: uuid.UUID | None
+) -> bool:
+    now = utcnow()
+    await db.execute(
+        update(AuthToken)
+        .where(
+            AuthToken.user_id == user.id, AuthToken.purpose == "password_reset", AuthToken.used_at.is_(None)
+        )
+        .values(used_at=now)
+    )
+    token = crypto.new_token()
+    db.add(
+        AuthToken(
+            user_id=user.id,
+            email=user.email,
+            purpose="password_reset",
+            token_hash=crypto.token_digest(token),
+            expires_at=now + RESET_TOKEN_TTL,
+            created_by=created_by,
+        )
+    )
+    await db.flush()
+    return await mailer.send(
+        user.email,
+        "Haalendar: reset your password",
+        f"Hello {user.display_name},\n\nuse this link to set a new password:\n"
+        f"{settings.public_url.rstrip('/')}/reset-password?token={token}\n\n"
+        "The link can be used once and is valid for 1 hour. If you did not request it, ignore this message;\n"
+        "your password stays unchanged.\n",
+    )
+
+
+async def request_password_reset(db: AsyncSession, mailer: Mailer, settings: Settings, email: str) -> None:
+    """Always succeeds from the caller's point of view (202); sends a link only to an existing active account."""
+    user = await _find_user_by_email(db, email)
+    if user is None or user.deactivated_at is not None:
+        log.info("password_reset_requested", known=False)
+        return
+    recent = await db.scalar(
+        select(AuthToken.id).where(
+            AuthToken.user_id == user.id,
+            AuthToken.purpose == "password_reset",
+            AuthToken.used_at.is_(None),
+            AuthToken.created_at > utcnow() - RESET_RESEND_INTERVAL,
+        )
+    )
+    if recent is not None:
+        log.info("password_reset_throttled", user_id=str(user.id))
+        return
+    await _issue_reset_link(db, mailer, settings, user, created_by=None)
+    log.info("password_reset_requested", known=True, user_id=str(user.id))
+
+
+async def _set_password(db: AsyncSession, user: UserAccount, new_password: str) -> None:
+    violations = check_password(new_password, user.email, user.display_name)
+    if violations:
+        raise ProblemError(
+            422,
+            ProblemCode.VALIDATION_FAILED,
+            "The password does not meet the password policy",
+            errors=[{"pointer": "/new_password", "detail": v, "code": v} for v in violations],
+        )
+    user.password_hash = crypto.hash_password(new_password)
+    user.must_change_password = False
+    user.failed_login_count = 0
+    user.version += 1
+
+
+async def confirm_password_reset(db: AsyncSession, mailer: Mailer, token: str, new_password: str) -> None:
+    record = await db.scalar(
+        select(AuthToken).where(
+            AuthToken.token_hash == crypto.token_digest(token),
+            AuthToken.purpose == "password_reset",
+            AuthToken.used_at.is_(None),
+            AuthToken.expires_at > utcnow(),
+        )
+    )
+    user = await db.get(UserAccount, record.user_id) if record is not None and record.user_id else None
+    if record is None or user is None or user.deactivated_at is not None:
+        log.warning("password_reset_invalid_token")
+        raise ProblemError(400, ProblemCode.BAD_REQUEST, "The link is invalid or has expired")
+    await _set_password(db, user, new_password)
+    now = utcnow()
+    record.used_at = now
+    if user.email_verified_at is None:
+        user.email_verified_at = now  # the link proved ownership of the address
+    await revoke_sessions(db, user.id)
+    log.info("password_reset_completed", user_id=str(user.id))
+    await mailer.send(
+        user.email,
+        "Haalendar: your password was changed",
+        "The password of your Haalendar account was changed and all sessions were signed out.\n"
+        "If this was not you, reset your password immediately and contact your administrator.\n",
+    )
+
+
+async def reauthenticate(db: AsyncSession, session: AuthSession, user: UserAccount, password: str) -> None:
+    if not crypto.verify_password(user.password_hash, password):
+        user.failed_login_count += 1
+        await db.commit()
+        log.info("reauth_failed", user_id=str(user.id))
+        raise ProblemError(401, ProblemCode.INVALID_CREDENTIALS, "The password is incorrect")
+    session.reauth_at = utcnow()
+    log.info("reauth_succeeded", user_id=str(user.id))
+
+
+def require_recent_reauth(session: AuthSession) -> None:
+    if session.reauth_at is None or utcnow() - session.reauth_at > REAUTH_WINDOW:
+        raise ProblemError(403, ProblemCode.REAUTH_REQUIRED, "Confirm your password to continue")
+
+
+async def change_password(
+    db: AsyncSession, mailer: Mailer, session: AuthSession, user: UserAccount, new_password: str
+) -> None:
+    require_recent_reauth(session)
+    await _set_password(db, user, new_password)
+    await revoke_sessions(db, user.id, keep=session.id)
+    log.info("password_changed", user_id=str(user.id))
+    await mailer.send(
+        user.email,
+        "Haalendar: your password was changed",
+        "The password of your Haalendar account was changed; other sessions were signed out.\n"
+        "If this was not you, reset your password immediately and contact your administrator.\n",
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class AdminResetResult:
+    delivery: Literal["email", "one_time_password"]
+    one_time_password: str | None
+
+
+async def admin_reset_password(
+    db: AsyncSession, mailer: Mailer, settings: Settings, admin: UserAccount, target_id: uuid.UUID
+) -> AdminResetResult:
+    """With SMTP: e-mail a reset link. Without SMTP: return a one-time password that must be changed at login."""
+    user = await db.get(UserAccount, target_id)
+    if user is None:
+        raise ProblemError(404, ProblemCode.NOT_FOUND, "User not found")
+    await revoke_sessions(db, user.id)
+    if settings.smtp_host:
+        await _issue_reset_link(db, mailer, settings, user, created_by=admin.id)
+        log.info("admin_password_reset", admin_id=str(admin.id), user_id=str(user.id), delivery="email")
+        return AdminResetResult(delivery="email", one_time_password=None)
+    one_time = secrets.token_urlsafe(15)
+    user.password_hash = crypto.hash_password(one_time)
+    user.must_change_password = True
+    user.failed_login_count = 0
+    user.version += 1
+    log.info(
+        "admin_password_reset", admin_id=str(admin.id), user_id=str(user.id), delivery="one_time_password"
+    )
+    return AdminResetResult(delivery="one_time_password", one_time_password=one_time)

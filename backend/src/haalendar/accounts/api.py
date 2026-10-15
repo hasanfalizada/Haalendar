@@ -1,23 +1,37 @@
 """Accounts HTTP endpoints (contract: api/modules/accounts.yaml — auth_register, auth_verify_email, auth_login,
-auth_logout, me).
+auth_logout, me, auth_password_reset_request/confirm, auth_reauth, me_password; admin.yaml admin_user_action).
 
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. The session cookie is `__Host-haalendar_session`: Secure, HttpOnly,
 SameSite=Lax, Path=/, no Domain, lifetime = absolute session expiry.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset, re-authentication, password change, admin reset.
 """
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC
 
 from fastapi import APIRouter, Request, Response, status
 
 from haalendar.accounts import service
 from haalendar.accounts.models import AuthSession, UserAccount
-from haalendar.accounts.schemas import LoginIn, LoginOut, MeOut, RegistrationIn, TokenIn
-from haalendar.deps import SESSION_COOKIE, AppMailer, AppSettings, Auth, DbSession
+from haalendar.accounts.schemas import (
+    AdminUserActionOut,
+    ChangePasswordIn,
+    LoginIn,
+    LoginOut,
+    MeOut,
+    PasswordResetConfirmIn,
+    PasswordResetRequestIn,
+    ReauthIn,
+    RegistrationIn,
+    TokenIn,
+)
+from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, Auth, DbSession
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 me_router = APIRouter(tags=["account"])
+admin_router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def to_me(user: UserAccount, csrf_token: str | None = None) -> MeOut:
@@ -94,3 +108,38 @@ async def logout(auth: Auth, response: Response) -> None:
 @me_router.get("/me", operation_id="getMe")
 async def get_me(auth: Auth) -> MeOut:
     return to_me(auth.user, csrf_token=auth.session.csrf_secret)
+
+
+@auth_router.post(
+    "/password-reset/request", status_code=status.HTTP_202_ACCEPTED, operation_id="requestPasswordReset"
+)
+async def request_password_reset(
+    body: PasswordResetRequestIn, db: DbSession, mailer: AppMailer, settings: AppSettings
+) -> None:
+    await service.request_password_reset(db, mailer, settings, str(body.email))
+
+
+@auth_router.post(
+    "/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT, operation_id="confirmPasswordReset"
+)
+async def confirm_password_reset(body: PasswordResetConfirmIn, db: DbSession, mailer: AppMailer) -> None:
+    await service.confirm_password_reset(db, mailer, body.token, body.new_password)
+
+
+@auth_router.post("/reauth", status_code=status.HTTP_204_NO_CONTENT, operation_id="reauthenticate")
+async def reauthenticate(body: ReauthIn, auth: Auth, db: DbSession) -> None:
+    await service.reauthenticate(db, auth.session, auth.user, body.password)
+
+
+@me_router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT, operation_id="changePassword")
+async def change_password(body: ChangePasswordIn, auth: Auth, db: DbSession, mailer: AppMailer) -> None:
+    await service.change_password(db, mailer, auth.session, auth.user, body.new_password)
+
+
+@admin_router.post("/users/{id}/reset-password", operation_id="adminUserAction")
+async def admin_reset_password(
+    id: uuid.UUID, admin: Admin, db: DbSession, mailer: AppMailer, settings: AppSettings
+) -> AdminUserActionOut:
+    service.require_recent_reauth(admin.session)
+    result = await service.admin_reset_password(db, mailer, settings, admin.user, id)
+    return AdminUserActionOut(delivery=result.delivery, one_time_password=result.one_time_password)

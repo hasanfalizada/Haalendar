@@ -245,7 +245,13 @@ docker exec -it haalendar-db psql -U haalendar -c "UPDATE instance_settings SET 
 3. `POST /api/v1/auth/verify-email` with `{"token": "..."}` → 204.
 4. `POST /api/v1/auth/login` → 200 with the session cookie and `csrf_token`; `GET /api/v1/me` returns the account.
 
+5. Password reset: `POST /api/v1/auth/password-reset/request` → a reset `.eml` (link valid 1 hour, single use) → `POST /api/v1/auth/password-reset/confirm` with `token` and `new_password`. All sessions of the account are signed out.
+
 The session cookie is `__Host-` prefixed and `Secure`: browsers accept it on `https://` and on `http://localhost` only.
+
+### E-mail (SMTP)
+
+Set `HAALENDAR_SMTP_HOST`, `HAALENDAR_SMTP_PORT`, `HAALENDAR_SMTP_SECURITY` (`starttls` on 587 or `ssl` on 465), `HAALENDAR_SMTP_USERNAME`, `HAALENDAR_SMTP_PASSWORD` (or `HAALENDAR_SMTP_PASSWORD_FILE`) and `HAALENDAR_MAIL_FROM`. Credentials over an unencrypted connection are refused at startup. The active mode is logged at startup as `mail_mode` (`SmtpMailer`, `FileMailer` or `DisabledMailer`). Without SMTP in production, an admin resets passwords manually: the user receives a one-time password and must set a new one at the next login.
 
 ### Observability
 

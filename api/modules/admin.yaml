@@ -88,12 +88,13 @@ paths:
           schema: { type: string, enum: [deactivate, reactivate, unlock, reset-password] }
       responses:
         '200':
-          description: Done; for reset-password without SMTP a one-time password is returned
+          description: 'Done; reset-password e-mails a reset link (delivery: email) or, without SMTP, returns a one-time password the user must change at login'
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  delivery: { type: string, enum: [email, one_time_password] }
                   one_time_password: { type: string }
         '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }

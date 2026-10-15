@@ -107,6 +107,11 @@ class Settings(BaseSettings):
             raise ValueError(
                 "HAALENDAR_METRICS_TOKEN (at least 24 characters) is required when metrics are enabled"
             )
+        # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. SMTP credentials are never sent over an unencrypted connection.
+        if self.smtp_host and self.smtp_username and self.smtp_security == "none":
+            raise ValueError(
+                "HAALENDAR_SMTP_SECURITY must be starttls or ssl when SMTP credentials are configured"
+            )
         if self.env is Environment.PRODUCTION:
             secret = self.secret_key.get_secret_value()
             if secret == DEV_SECRET_KEY or len(secret) < 32:

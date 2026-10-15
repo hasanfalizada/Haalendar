@@ -17,7 +17,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from haalendar import __version__
-from haalendar.accounts.api import auth_router, me_router
+from haalendar.accounts.api import admin_router, auth_router, me_router
 from haalendar.accounts.mailer import create_mailer
 from haalendar.api import health
 from haalendar.config import Environment, Settings, get_settings
@@ -45,7 +45,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.session_factory = create_session_factory(engine)
         metrics.register_pool(engine)
         attach_slow_query_logging(engine, settings.db_slow_query_ms, metrics)
-        log.info("app_started", version=__version__, env=settings.env.value, demo_mode=settings.demo_mode)
+        log.info(
+            "app_started",
+            version=__version__,
+            env=settings.env.value,
+            demo_mode=settings.demo_mode,
+            mail_mode=type(app.state.mailer).__name__,
+        )
         try:
             yield
         finally:
@@ -78,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(auth_router, prefix=API_PREFIX)
     app.include_router(me_router, prefix=API_PREFIX)
+    app.include_router(admin_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

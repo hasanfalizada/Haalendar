@@ -6,91 +6,22 @@ __Host- session cookie is sent back, exactly like a browser on an HTTPS instance
 
 from __future__ import annotations
 
-import asyncio
-import email
-import re
-from collections.abc import Iterator
 from pathlib import Path
 
-import psycopg
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from haalendar.accounts import service
 from haalendar.deps import SESSION_COOKIE
-from haalendar.main import create_app
 
-from .conftest import make_settings
+from .account_helpers import PASSWORD, TZ
+from .account_helpers import invite as _invite
+from .account_helpers import link_token as _link_token
+from .account_helpers import login as _login
+from .account_helpers import mails as _mails
+from .account_helpers import register as _register
+from .account_helpers import sql as _sql
 
 pytestmark = pytest.mark.db
-
-PASSWORD = "quiet-mountain-river-42"
-TZ = "Europe/Berlin"
-
-
-def _sql(db_url: str, statement: str, *params: object) -> list[tuple[object, ...]]:
-    url = make_url(db_url).set(drivername="postgresql").render_as_string(hide_password=False)
-    with psycopg.connect(url, autocommit=True) as conn:
-        cursor = conn.execute(statement, params or None)
-        return cursor.fetchall() if cursor.description else []
-
-
-def _invite(db_url: str, address: str, role: str = "user") -> str:
-    async def run() -> str:
-        engine = create_async_engine(db_url)
-        try:
-            async with async_sessionmaker(engine)() as db:
-                token = await service.create_invite(db, address, role)
-                await db.commit()
-                return token
-        finally:
-            await engine.dispose()
-
-    return asyncio.run(run())
-
-
-@pytest.fixture
-def mail_dir(tmp_path: Path) -> Path:
-    return tmp_path / "mail"
-
-
-@pytest.fixture
-def api(clean_db: str, mail_dir: Path) -> Iterator[TestClient]:
-    app = create_app(make_settings(database_url=clean_db, mail_dir=str(mail_dir)))
-    with TestClient(app, base_url="https://testserver", raise_server_exceptions=False) as client:
-        yield client
-
-
-def _register(api: TestClient, address: str, invite: str | None = None, **extra: object) -> int:
-    body: dict[str, object] = {
-        "email": address,
-        "password": PASSWORD,
-        "display_name": "Test User",
-        "time_zone": TZ,
-    }
-    if invite:
-        body["invite_token"] = invite
-    body.update(extra)
-    return api.post("/api/v1/auth/register", json=body).status_code
-
-
-def _login(api: TestClient, address: str, password: str = PASSWORD) -> tuple[int, dict[str, object]]:
-    response = api.post("/api/v1/auth/login", json={"email": address, "password": password})
-    return response.status_code, response.json() if response.content else {}
-
-
-def _mails(mail_dir: Path) -> list[email.message.Message]:
-    return [email.message_from_bytes(p.read_bytes()) for p in sorted(mail_dir.glob("*.eml"))]
-
-
-def _link_token(message: email.message.Message) -> str:
-    body = message.get_payload(decode=True)
-    assert isinstance(body, bytes)
-    found = re.search(r"token=([A-Za-z0-9_\-]+)", body.decode())
-    assert found, body
-    return found.group(1)
 
 
 # ---------- invite-only (default) ----------
