@@ -1,18 +1,25 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. First-run wizard (FR-ACC-05): creates the first administrator and signs
 // in. Full-screen, outside the app shell. Password rules are checked live with the shared policy atom; the server
 // stays authoritative and its field errors (RFC 9457 `errors[]`) are mapped back onto the form.
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Uses the shared auth card, password field and time-zone picker;
+// the new session is stored like any sign-in.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { type SubmitEvent, useMemo, useState } from "react";
+import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { setCsrfToken } from "@/api/client";
 import { createFirstAdmin } from "@/api/generated/sdk.gen";
 import type { Problem } from "@/api/generated/types.gen";
+import { fieldErrorsOf } from "@/api/problem";
+import { rememberSession } from "@/api/session";
 import { setupStatusQuery } from "@/api/setup";
-import { checkPassword, MIN_LENGTH, type PasswordViolation } from "@/atoms/accounts/passwordPolicy";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { isViolation, passwordViolations, useViolationText } from "@/components/auth/password";
+import { PasswordField } from "@/components/auth/PasswordField";
+import { browserTimeZone } from "@/components/auth/timezone";
+import { TimeZoneSelect } from "@/components/auth/TimeZoneSelect";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select } from "@/components/ui/input";
+import { Field, Input } from "@/components/ui/input";
 import { describeError, log } from "@/lib/log";
 
 export const Route = createFileRoute("/setup")({ component: SetupPage });
@@ -20,34 +27,14 @@ export const Route = createFileRoute("/setup")({ component: SetupPage });
 type FieldName = "display_name" | "email" | "password" | "time_zone" | "setup_token";
 type FieldErrors = Partial<Record<FieldName, string>>;
 
-const FIELD_NAMES: readonly FieldName[] = ["display_name", "email", "password", "time_zone", "setup_token"];
-const VIOLATIONS: readonly PasswordViolation[] = [
-  "too_short",
-  "too_long",
-  "common",
-  "contains_email",
-  "contains_name",
-  "low_variety",
-];
-
-function browserTimeZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
-function timeZoneOptions(current: string): string[] {
-  const zones = Intl.supportedValuesOf("timeZone");
-  return zones.includes(current) ? zones : [current, ...zones];
-}
-
-function isViolation(value: string | undefined): value is PasswordViolation {
-  return VIOLATIONS.includes(value as PasswordViolation);
-}
+const FIELD_NAMES: readonly string[] = ["display_name", "email", "password", "time_zone", "setup_token"];
 
 function SetupPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: status } = useQuery(setupStatusQuery);
+  const violationText = useViolationText();
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -58,18 +45,16 @@ function SetupPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const zones = useMemo(() => timeZoneOptions(timeZone), [timeZone]);
-  const violations = password ? checkPassword(password, email, displayName) : [];
+  const violations = passwordViolations(password, email, displayName);
   const tokenRequired = status?.setup_token_required ?? false;
-  const violationText = (v: PasswordViolation) => t(`pages.setup.violations.${v}`, { min: MIN_LENGTH });
 
   function applyProblem(problem: Problem) {
     if (problem.code === "validation_failed" && problem.errors?.length) {
       const next: FieldErrors = {};
-      for (const err of problem.errors) {
-        const name = err.pointer.slice(1) as FieldName;
-        if (!FIELD_NAMES.includes(name) || next[name]) continue;
-        next[name] = name === "password" && isViolation(err.code) ? violationText(err.code) : err.detail;
+      for (const err of fieldErrorsOf(problem)) {
+        if (!FIELD_NAMES.includes(err.field)) continue;
+        const name = err.field as FieldName;
+        next[name] ??= name === "password" && isViolation(err.code) ? violationText(err.code) : err.detail;
       }
       setFieldErrors(next);
       return;
@@ -105,7 +90,7 @@ function SetupPage() {
         applyProblem(error);
         return;
       }
-      setCsrfToken(data.csrf_token ?? null);
+      rememberSession(queryClient, data, data.csrf_token ?? "");
       log.info("setup_admin_created");
       if (status) queryClient.setQueryData(setupStatusQuery.queryKey, { ...status, setup_required: false });
       await queryClient.invalidateQueries({ queryKey: setupStatusQuery.queryKey });
@@ -119,133 +104,86 @@ function SetupPage() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-surface p-4">
-      <form
-        onSubmit={(e) => void onSubmit(e)}
-        noValidate
-        className="flex w-full max-w-md flex-col gap-4 rounded-md border border-line bg-bg p-6 shadow-sm"
-        aria-labelledby="setup-title"
-      >
-        <div className="flex flex-col gap-1">
-          <img src="/icon.svg" alt="" className="mb-2 size-10" />
-          <h1 id="setup-title" className="text-lg font-semibold">
-            {t("pages.setup.title")}
-          </h1>
-          <p className="text-muted">{t("pages.setup.intro")}</p>
-        </div>
+    <AuthCard
+      title={t("pages.setup.title")}
+      intro={t("pages.setup.intro")}
+      error={formError}
+      onSubmit={(e) => void onSubmit(e)}
+    >
+      <Field id="setup-name" label={t("auth.name")} error={fieldErrors.display_name}>
+        {(aria) => (
+          <Input
+            {...aria}
+            autoComplete="name"
+            maxLength={80}
+            required
+            value={displayName}
+            onChange={(e) => {
+              setDisplayName(e.target.value);
+            }}
+          />
+        )}
+      </Field>
 
-        {formError ? (
-          <p role="alert" className="rounded-sm bg-warn-bg px-3 py-2 text-[13px] text-warn-fg">
-            {formError}
-          </p>
-        ) : null}
+      <Field id="setup-email" label={t("auth.email")} error={fieldErrors.email}>
+        {(aria) => (
+          <Input
+            {...aria}
+            type="email"
+            autoComplete="email"
+            maxLength={254}
+            required
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+            }}
+          />
+        )}
+      </Field>
 
-        <Field id="setup-name" label={t("pages.setup.name")} error={fieldErrors.display_name}>
-          {(aria) => (
-            <Input
-              {...aria}
-              autoComplete="name"
-              maxLength={80}
-              required
-              value={displayName}
-              onChange={(e) => {
-                setDisplayName(e.target.value);
-              }}
-            />
-          )}
-        </Field>
+      <PasswordField
+        id="setup-password"
+        label={t("auth.password")}
+        value={password}
+        onChange={setPassword}
+        violations={violations}
+        error={fieldErrors.password}
+      />
 
-        <Field id="setup-email" label={t("pages.setup.email")} error={fieldErrors.email}>
-          {(aria) => (
-            <Input
-              {...aria}
-              type="email"
-              autoComplete="email"
-              maxLength={254}
-              required
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-              }}
-            />
-          )}
-        </Field>
+      <TimeZoneSelect
+        id="setup-tz"
+        label={t("auth.timeZone")}
+        value={timeZone}
+        onChange={setTimeZone}
+        error={fieldErrors.time_zone}
+      />
 
+      {tokenRequired ? (
         <Field
-          id="setup-password"
-          label={t("pages.setup.password")}
-          error={fieldErrors.password}
-          hint={
-            violations.length > 0 ? (
-              <ul className="list-inside list-disc" aria-live="polite">
-                {violations.map((v) => (
-                  <li key={v}>{violationText(v)}</li>
-                ))}
-              </ul>
-            ) : (
-              t("pages.setup.passwordHint", { min: MIN_LENGTH })
-            )
-          }
+          id="setup-token"
+          label={t("pages.setup.setupToken")}
+          hint={t("pages.setup.setupTokenHint")}
+          error={fieldErrors.setup_token}
         >
           {(aria) => (
             <Input
               {...aria}
               type="password"
-              autoComplete="new-password"
+              autoComplete="off"
+              maxLength={256}
               required
-              value={password}
+              value={setupToken}
               onChange={(e) => {
-                setPassword(e.target.value);
+                setSetupToken(e.target.value);
               }}
             />
           )}
         </Field>
+      ) : null}
 
-        <Field id="setup-tz" label={t("pages.setup.timeZone")} error={fieldErrors.time_zone}>
-          {(aria) => (
-            <Select
-              {...aria}
-              value={timeZone}
-              onChange={(e) => {
-                setTimeZone(e.target.value);
-              }}
-            >
-              {zones.map((zone) => (
-                <option key={zone} value={zone}>
-                  {zone}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-
-        {tokenRequired ? (
-          <Field
-            id="setup-token"
-            label={t("pages.setup.setupToken")}
-            hint={t("pages.setup.setupTokenHint")}
-            error={fieldErrors.setup_token}
-          >
-            {(aria) => (
-              <Input
-                {...aria}
-                type="password"
-                autoComplete="off"
-                maxLength={256}
-                required
-                value={setupToken}
-                onChange={(e) => {
-                  setSetupToken(e.target.value);
-                }}
-              />
-            )}
-          </Field>
-        ) : null}
-
-        <Button type="submit" variant="primary" size="touch" disabled={submitting}>
-          {submitting ? t("pages.setup.submitting") : t("pages.setup.submit")}
-        </Button>
-      </form>
-    </main>
+      <Button type="submit" variant="primary" size="touch" disabled={submitting}>
+        {submitting ? t("pages.setup.submitting") : t("pages.setup.submit")}
+      </Button>
+    </AuthCard>
   );
 }

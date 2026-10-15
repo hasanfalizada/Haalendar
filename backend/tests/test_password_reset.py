@@ -223,5 +223,7 @@ def test_admin_reset_with_smtp_sends_link(
             f"/api/v1/admin/users/{kay_id}/reset-password", headers={"X-CSRF-Token": _csrf(boss)}
         )
     assert response.status_code == 200
-    assert response.json() == {"delivery": "email", "one_time_password": None}
+    body = response.json()
+    assert body["delivery"] == "email" and "one_time_password" not in body
+    assert body["user"]["email"] == "kay@example.org"
     assert ("kay@example.org", "Haalendar: reset your password") in sent

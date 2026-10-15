@@ -45,6 +45,7 @@ paths:
   /auth/login: { $ref: './modules/accounts.yaml#/paths/auth_login' }
   /auth/logout: { $ref: './modules/accounts.yaml#/paths/auth_logout' }
   /auth/register: { $ref: './modules/accounts.yaml#/paths/auth_register' }
+  /auth/invite-info: { $ref: './modules/accounts.yaml#/paths/auth_invite_info' }
   /auth/verify-email: { $ref: './modules/accounts.yaml#/paths/auth_verify_email' }
   /auth/password-reset/request: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_request' }
   /auth/password-reset/confirm: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_confirm' }
@@ -69,6 +70,7 @@ paths:
   /admin/users/{id}: { $ref: './modules/admin.yaml#/paths/admin_user' }
   /admin/users/{id}/{action}: { $ref: './modules/admin.yaml#/paths/admin_user_action' }
   /admin/invites: { $ref: './modules/admin.yaml#/paths/admin_invites' }
+  /admin/invites/{id}: { $ref: './modules/admin.yaml#/paths/admin_invite' }
   /admin/settings: { $ref: './modules/admin.yaml#/paths/admin_settings' }
   /admin/imports: { $ref: './modules/admin.yaml#/paths/admin_imports' }
   /admin/imports/{id}: { $ref: './modules/admin.yaml#/paths/admin_import' }

@@ -1,10 +1,13 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Application shell (wireframes D1/M2): icon rail on ≥ md screens,
 // top bar + slide-out drawer on phones. Active route is exposed with aria-current for assistive technology.
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin-only items are shown to administrators only.
+import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { meQuery } from "@/api/session";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -49,6 +52,8 @@ function DrawerLink({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
 export function AppShell() {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: me } = useQuery(meQuery);
+  const secondaryItems = SECONDARY_ITEMS.filter((item) => !item.adminOnly || me?.role === "admin");
   useModuleShortcuts();
   const closeDrawer = () => {
     setDrawerOpen(false);
@@ -73,7 +78,7 @@ export function AppShell() {
           <RailLink key={item.to} item={item} />
         ))}
         <div className="flex-1" />
-        {SECONDARY_ITEMS.map((item) => (
+        {secondaryItems.map((item) => (
           <RailLink key={item.to} item={item} />
         ))}
         <div className="mt-2">
@@ -95,7 +100,7 @@ export function AppShell() {
                 <DrawerLink key={item.to} item={item} onNavigate={closeDrawer} />
               ))}
               <div className="my-2 border-t border-line" />
-              {SECONDARY_ITEMS.map((item) => (
+              {secondaryItems.map((item) => (
                 <DrawerLink key={item.to} item={item} onNavigate={closeDrawer} />
               ))}
             </nav>

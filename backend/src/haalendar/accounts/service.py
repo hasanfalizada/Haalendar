@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import base64
 import ipaddress
 import secrets
 import uuid
@@ -20,12 +21,14 @@ from functools import lru_cache
 from typing import Literal
 
 import pyotp
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, or_, select, text, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts import crypto
 from haalendar.accounts.mailer import Mailer
 from haalendar.accounts.models import AuthSession, AuthToken, InstanceSettings, RecoveryCode, UserAccount
+from haalendar.accounts.schemas import AdminInviteOut, AdminUserOut, UserStatus
 from haalendar.atoms.accounts.password_policy import check_password
 from haalendar.config import Settings
 from haalendar.errors import ProblemCode, ProblemError
@@ -83,21 +86,55 @@ async def get_registration_mode(db: AsyncSession) -> str:
 async def create_invite(
     db: AsyncSession, email: str, role: str = "user", created_by: uuid.UUID | None = None
 ) -> str:
-    """Create an invitation and return the raw token (sent by e-mail by the caller; HAAL-164 exposes it)."""
+    """Create an invitation and return the raw token (the admin panel e-mails it, see admin_invite)."""
+    token, _ = await _new_invite(db, email, role, created_by)
+    return token
+
+
+async def _new_invite(
+    db: AsyncSession, email: str, role: str, created_by: uuid.UUID | None
+) -> tuple[str, AuthToken]:
     token = crypto.new_token()
-    db.add(
-        AuthToken(
-            email=email.strip(),
-            purpose="invite",
-            role=role,
-            token_hash=crypto.token_digest(token),
-            expires_at=utcnow() + INVITE_TOKEN_TTL,
-            created_by=created_by,
+    record = AuthToken(
+        email=email.strip(),
+        purpose="invite",
+        role=role,
+        token_hash=crypto.token_digest(token),
+        expires_at=utcnow() + INVITE_TOKEN_TTL,
+        created_by=created_by,
+    )
+    db.add(record)
+    await db.flush()
+    log.info(
+        "invite_created",
+        invite_id=str(record.id),
+        role=role,
+        created_by=str(created_by) if created_by else None,
+    )
+    return token, record
+
+
+async def _pending_invite(db: AsyncSession, token: str) -> AuthToken | None:
+    """Unused, unrevoked, unexpired invitation for a raw token."""
+    result: AuthToken | None = await db.scalar(
+        select(AuthToken).where(
+            AuthToken.token_hash == crypto.token_digest(token),
+            AuthToken.purpose == "invite",
+            AuthToken.used_at.is_(None),
+            AuthToken.revoked_at.is_(None),
+            AuthToken.expires_at > utcnow(),
         )
     )
-    await db.flush()
-    log.info("invite_created", role=role, created_by=str(created_by) if created_by else None)
-    return token
+    return result
+
+
+async def invite_info(db: AsyncSession, token: str) -> AuthToken:
+    """Invitation page (HAAL-164): show the invited address before registration; 400 when not usable."""
+    invite = await _pending_invite(db, token)
+    if invite is None:
+        log.info("invite_info_invalid")
+        raise ProblemError(400, ProblemCode.BAD_REQUEST, "The invitation is invalid or has expired")
+    return invite
 
 
 async def register(
@@ -126,14 +163,7 @@ async def register(
 
     invite: AuthToken | None = None
     if invite_token:
-        invite = await db.scalar(
-            select(AuthToken).where(
-                AuthToken.token_hash == crypto.token_digest(invite_token),
-                AuthToken.purpose == "invite",
-                AuthToken.used_at.is_(None),
-                AuthToken.expires_at > utcnow(),
-            )
-        )
+        invite = await _pending_invite(db, invite_token)
         if invite is None or invite.email.lower() != email.lower():
             log.warning("register_invalid_invite")
             raise ProblemError(400, ProblemCode.BAD_REQUEST, "The invitation is invalid or has expired")
@@ -460,12 +490,13 @@ class AdminResetResult:
 
 
 async def admin_reset_password(
-    db: AsyncSession, mailer: Mailer, settings: Settings, admin: UserAccount, target_id: uuid.UUID
+    db: AsyncSession, mailer: Mailer, settings: Settings, admin: UserAccount, user: UserAccount
 ) -> AdminResetResult:
     """With SMTP: e-mail a reset link. Without SMTP: return a one-time password that must be changed at login."""
-    user = await db.get(UserAccount, target_id)
-    if user is None:
-        raise ProblemError(404, ProblemCode.NOT_FOUND, "User not found")
+    if user.deactivated_at is not None:
+        raise ProblemError(
+            409, ProblemCode.INVALID_STATE, "Reactivate the account before resetting its password"
+        )
     await revoke_sessions(db, user.id)
     if settings.smtp_host:
         await _issue_reset_link(db, mailer, settings, user, created_by=admin.id)
@@ -666,10 +697,7 @@ async def admin_2fa_missing(db: AsyncSession, user: UserAccount) -> bool:
     return user.role == "admin" and user.totp_enabled_at is None and await _admin_2fa_required(db)
 
 
-async def admin_unlock(db: AsyncSession, admin: UserAccount, target_id: uuid.UUID) -> None:
-    user = await db.get(UserAccount, target_id)
-    if user is None:
-        raise ProblemError(404, ProblemCode.NOT_FOUND, "User not found")
+async def admin_unlock(admin: UserAccount, user: UserAccount) -> None:
     user.failed_login_count = 0
     user.locked_until = None
     log.info("admin_unlock", admin_id=str(admin.id), user_id=str(user.id))
@@ -682,7 +710,7 @@ async def admin_unlock(db: AsyncSession, admin: UserAccount, target_id: uuid.UUI
 # - a setup token (HAALENDAR_SETUP_TOKEN) protects that window; it is mandatory in production so that nobody else
 #   can claim a freshly started instance;
 # - a transaction-level advisory lock serialises concurrent setup requests (exactly one admin is created);
-# - the last active admin can never lose the role or be deactivated (assert_not_last_admin, used by HAAL-164).
+# - the last active admin can never lose the role or be deactivated (assert_not_last_admin, see HAAL-164 below).
 # ---------------------------------------------------------------------------------------------------------------
 
 SETUP_LOCK_KEY = 0x48414C5345545550  # "HALSETUP"
@@ -763,3 +791,305 @@ async def assert_not_last_admin(db: AsyncSession, user_id: uuid.UUID) -> None:
     if other_admin is None:
         log.warning("last_admin_protected", user_id=str(user_id))
         raise ProblemError(409, ProblemCode.INVALID_STATE, "The last active administrator cannot be changed")
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin panel (FR-ACC-06, ADR-0005):
+# - admins manage accounts, never content; every mutation needs a recent re-authentication (checked by the API layer)
+#   and is logged with admin and target ids;
+# - "not on yourself": an admin cannot change the own role, deactivate, unlock or reset the own account here, so
+#   nobody locks themselves out by mistake (the own password is changed in the profile);
+# - deactivation is soft: deactivated_at is set, all sessions are revoked, every piece of data stays;
+# - role changes and deactivations run under one transaction-level advisory lock, so two admins demoting each
+#   other at the same moment cannot leave the instance without an active admin;
+# - invitations: with SMTP an e-mailed link (7 days; a new invitation revokes the previous one, revoked ones are
+#   kept); without SMTP the account is created at once with a one-time password that must be changed at login.
+# ---------------------------------------------------------------------------------------------------------------
+
+ADMIN_LOCK_KEY = 0x48414C41444D494E  # "HALADMIN"
+AdminAction = Literal["deactivate", "reactivate", "unlock", "reset-password"]
+
+
+def user_status(user: UserAccount, now: datetime | None = None) -> UserStatus:
+    """Derived status, most restrictive first: deactivated > locked > unverified > active."""
+    now = now or utcnow()
+    if user.deactivated_at is not None:
+        return "deactivated"
+    if user.locked_until is not None and user.locked_until > now:
+        return "locked"
+    if user.email_verified_at is None:
+        return "unverified"
+    return "active"
+
+
+def to_admin_user(user: UserAccount) -> AdminUserOut:
+    return AdminUserOut(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        role="admin" if user.role == "admin" else "user",
+        status=user_status(user),
+        totp_enabled=user.totp_enabled_at is not None,
+        last_login_at=user.last_login_at,
+        created_at=user.created_at,
+        version=user.version,
+    )
+
+
+def to_admin_invite(invite: AuthToken) -> AdminInviteOut:
+    return AdminInviteOut(
+        id=invite.id,
+        email=invite.email,
+        role="admin" if invite.role == "admin" else "user",
+        created_at=invite.created_at,
+        expires_at=invite.expires_at,
+    )
+
+
+def encode_cursor(last_id: uuid.UUID) -> str:
+    return base64.urlsafe_b64encode(last_id.bytes).decode().rstrip("=")
+
+
+def decode_cursor(cursor: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(bytes=base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)))
+    except ValueError:
+        raise ProblemError(400, ProblemCode.BAD_REQUEST, "Invalid cursor") from None
+
+
+def _like_pattern(term: str) -> str:
+    escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+@dataclass(frozen=True, slots=True)
+class UserPage:
+    users: list[UserAccount]
+    next_cursor: str | None
+
+
+async def admin_list_users(
+    db: AsyncSession, *, q: str | None, status: UserStatus | None, cursor: str | None, limit: int
+) -> UserPage:
+    """Users in creation order (UUIDv7), keyset-paginated; optional text and status filters."""
+    now = utcnow()
+    statement = select(UserAccount).order_by(UserAccount.id).limit(limit + 1)
+    if cursor:
+        statement = statement.where(UserAccount.id > decode_cursor(cursor))
+    if q and q.strip():
+        pattern = _like_pattern(q.strip())
+        statement = statement.where(
+            or_(
+                UserAccount.email.ilike(pattern, escape="\\"),
+                UserAccount.display_name.ilike(pattern, escape="\\"),
+            )
+        )
+    active = UserAccount.deactivated_at.is_(None)
+    unlocked = or_(UserAccount.locked_until.is_(None), UserAccount.locked_until <= now)
+    if status == "deactivated":
+        statement = statement.where(UserAccount.deactivated_at.is_not(None))
+    elif status == "locked":
+        statement = statement.where(active, UserAccount.locked_until > now)
+    elif status == "unverified":
+        statement = statement.where(active, unlocked, UserAccount.email_verified_at.is_(None))
+    elif status == "active":
+        statement = statement.where(active, unlocked, UserAccount.email_verified_at.is_not(None))
+    users = list((await db.scalars(statement)).all())
+    next_cursor = encode_cursor(users[limit - 1].id) if len(users) > limit else None
+    return UserPage(users=users[:limit], next_cursor=next_cursor)
+
+
+async def _lock_admin_changes(db: AsyncSession, admin: UserAccount) -> None:
+    """Serialise role/status changes; afterwards re-check the caller, who may have been demoted while waiting."""
+    await db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": ADMIN_LOCK_KEY})
+    await db.refresh(admin)
+    if admin.role != "admin" or admin.deactivated_at is not None:
+        log.warning("admin_lost_role_while_waiting", admin_id=str(admin.id))
+        raise ProblemError(403, ProblemCode.FORBIDDEN, "Administrator role required")
+
+
+async def _target(db: AsyncSession, admin: UserAccount, target_id: uuid.UUID) -> UserAccount:
+    user = await db.get(UserAccount, target_id, populate_existing=True)
+    if user is None:
+        raise ProblemError(404, ProblemCode.NOT_FOUND, "User not found")
+    if user.id == admin.id:
+        log.info("admin_self_action_refused", admin_id=str(admin.id))
+        raise ProblemError(409, ProblemCode.INVALID_STATE, "This cannot be done to your own account")
+    return user
+
+
+async def admin_set_role(
+    db: AsyncSession, admin: UserAccount, target_id: uuid.UUID, role: str | None, expected_version: int
+) -> UserAccount:
+    """Merge-patch of the role; an empty patch only checks the version (and returns the current state)."""
+    await _lock_admin_changes(db, admin)
+    user = await _target(db, admin, target_id)
+    if user.version != expected_version:
+        raise ProblemError(
+            412,
+            ProblemCode.VERSION_CONFLICT,
+            "The user was changed meanwhile",
+            current=to_admin_user(user).model_dump(mode="json"),
+        )
+    if role is None or user.role == role:
+        return user
+    if user.role == "admin":
+        await assert_not_last_admin(db, user.id)
+    previous, user.role = user.role, role
+    user.version += 1
+    log.info("admin_role_changed", admin_id=str(admin.id), user_id=str(user.id), previous=previous, role=role)
+    return user
+
+
+@dataclass(frozen=True, slots=True)
+class AdminActionResult:
+    user: UserAccount
+    delivery: Literal["email", "one_time_password"] | None = None
+    one_time_password: str | None = None
+
+
+async def admin_user_action(
+    db: AsyncSession,
+    mailer: Mailer,
+    settings: Settings,
+    admin: UserAccount,
+    target_id: uuid.UUID,
+    action: AdminAction,
+) -> AdminActionResult:
+    if action == "deactivate":
+        await _lock_admin_changes(db, admin)
+    user = await _target(db, admin, target_id)
+    if action == "deactivate":
+        if user.deactivated_at is None:
+            if user.role == "admin":
+                await assert_not_last_admin(db, user.id)
+            user.deactivated_at = utcnow()
+            user.version += 1
+            await revoke_sessions(db, user.id)
+            log.info("admin_user_deactivated", admin_id=str(admin.id), user_id=str(user.id))
+    elif action == "reactivate":
+        if user.deactivated_at is not None:
+            user.deactivated_at = None
+            user.version += 1
+            log.info("admin_user_reactivated", admin_id=str(admin.id), user_id=str(user.id))
+    elif action == "unlock":
+        await admin_unlock(admin, user)
+    else:
+        reset = await admin_reset_password(db, mailer, settings, admin, user)
+        return AdminActionResult(
+            user=user, delivery=reset.delivery, one_time_password=reset.one_time_password
+        )
+    return AdminActionResult(user=user)
+
+
+async def admin_list_invites(db: AsyncSession) -> list[AuthToken]:
+    return list(
+        (
+            await db.scalars(
+                select(AuthToken)
+                .where(
+                    AuthToken.purpose == "invite",
+                    AuthToken.used_at.is_(None),
+                    AuthToken.revoked_at.is_(None),
+                    AuthToken.expires_at > utcnow(),
+                )
+                .order_by(AuthToken.created_at.desc(), AuthToken.id.desc())
+            )
+        ).all()
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class InviteResult:
+    delivery: Literal["email", "one_time_password"]
+    invite: AuthToken | None = None
+    user: UserAccount | None = None
+    one_time_password: str | None = None
+
+
+async def admin_invite(
+    db: AsyncSession,
+    mailer: Mailer,
+    settings: Settings,
+    admin: UserAccount,
+    *,
+    email: str,
+    role: str,
+    display_name: str | None,
+) -> InviteResult:
+    email = email.strip()
+    if await _find_user_by_email(db, email) is not None:
+        raise ProblemError(409, ProblemCode.DUPLICATE, "An account with this e-mail already exists")
+    now = utcnow()
+    if not settings.smtp_host:
+        one_time = secrets.token_urlsafe(15)
+        user = UserAccount(
+            email=email,
+            password_hash=crypto.hash_password(one_time),
+            display_name=(display_name or email.split("@", 1)[0]).strip()[:80] or "User",
+            time_zone=admin.time_zone,
+            role=role,
+            email_verified_at=now,
+            must_change_password=True,
+        )
+        db.add(user)
+        try:
+            await db.flush()
+        except IntegrityError:
+            raise ProblemError(
+                409, ProblemCode.DUPLICATE, "An account with this e-mail already exists"
+            ) from None
+        await db.refresh(user)
+        log.info(
+            "admin_user_invited",
+            admin_id=str(admin.id),
+            user_id=str(user.id),
+            role=role,
+            delivery="one_time_password",
+        )
+        return InviteResult(delivery="one_time_password", user=user, one_time_password=one_time)
+
+    revoked = await db.execute(
+        update(AuthToken)
+        .where(
+            AuthToken.purpose == "invite",
+            func.lower(AuthToken.email) == email.lower(),
+            AuthToken.used_at.is_(None),
+            AuthToken.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+    )
+    token, record = await _new_invite(db, email, role, admin.id)
+    await db.refresh(record)
+    log.info(
+        "admin_user_invited",
+        admin_id=str(admin.id),
+        invite_id=str(record.id),
+        role=role,
+        delivery="email",
+        superseded=getattr(revoked, "rowcount", 0),
+    )
+    await mailer.send(
+        email,
+        "Haalendar: you are invited",
+        f"Hello,\n\n{admin.display_name} invited you to Haalendar"
+        f"{' as an administrator' if role == 'admin' else ''}.\n"
+        f"Create your account here:\n{settings.public_url.rstrip('/')}/invite?token={token}\n\n"
+        "The link is valid for 7 days and can be used once. If you did not expect this, ignore this message.\n",
+    )
+    return InviteResult(delivery="email", invite=record)
+
+
+async def admin_revoke_invite(db: AsyncSession, admin: UserAccount, invite_id: uuid.UUID) -> None:
+    invite = await db.scalar(
+        select(AuthToken).where(
+            AuthToken.id == invite_id,
+            AuthToken.purpose == "invite",
+            AuthToken.used_at.is_(None),
+            AuthToken.revoked_at.is_(None),
+        )
+    )
+    if invite is None:
+        raise ProblemError(404, ProblemCode.NOT_FOUND, "Invitation not found")
+    invite.revoked_at = utcnow()
+    log.info("admin_invite_revoked", admin_id=str(admin.id), invite_id=str(invite.id))

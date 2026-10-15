@@ -236,7 +236,13 @@ The environment is selected with `HAALENDAR_ENV`.
 
 **First administrator.** On an empty database the web app redirects every page to `/setup` (`pnpm dev`, then open http://localhost:5173). Enter name, e-mail, a password of at least 15 characters (the rules are checked as you type) and the time zone; the account is created as `admin`, already verified, and signed in. If `HAALENDAR_SETUP_TOKEN` is set — always in production — the wizard also asks for it. Without the web app: `POST /api/v1/setup/admin` with the same fields (plus `setup_token`). Once an admin exists, `/setup` is closed (409). To start over in development, empty the accounts tables (`TRUNCATE user_account CASCADE` in `psql`).
 
-Registration is invite-only by default; invitations arrive with HAAL-164. Until then, enable open registration in the development database and use the interactive docs (`/api/v1/docs`) or `curl`:
+**Signing in and managing users.** Sign in at `/login` (the code from the authenticator app is asked for when 2FA is on). Administrators see **Users** in the navigation (`/admin`):
+
+- **Invite** — with SMTP an invitation link (valid 7 days) is e-mailed and the invitee chooses a name and password on `/invite`; inviting the same address again revokes the previous link. Without SMTP (the development default) the account is created at once and a **one-time password** is shown once; the user must set a new password at the first sign-in. Pending invitations are listed above the users and can be revoked.
+- **Row actions** — make administrator / regular user, unlock, reset password (link by e-mail, or a one-time password without SMTP), deactivate (signs the user out everywhere, keeps all data) and reactivate. Your own row has no actions, and the last active administrator can never be demoted or deactivated.
+- Changes ask for your password again when the last sign-in or confirmation is older than 15 minutes.
+
+Open registration (without invitation) is an instance setting; to try it, enable it in the development database and use the interactive docs (`/api/v1/docs`) or `curl`:
 
 ```bash
 docker exec -it haalendar-db psql -U haalendar -c "UPDATE instance_settings SET registration_mode = 'open'"

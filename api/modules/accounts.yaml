@@ -146,6 +146,31 @@ paths:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Invitation page: shows the invited address before registration.
+  auth_invite_info:
+    post:
+      tags: [auth]
+      operationId: getInviteInfo
+      summary: Address and expiry of a pending invitation (token in the body, never in the URL path)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenInput' }
+      responses:
+        '200':
+          description: Pending invitation
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [email, expires_at]
+                properties:
+                  email: { type: string, format: email }
+                  expires_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
   auth_reauth:
     post:
       tags: [auth]

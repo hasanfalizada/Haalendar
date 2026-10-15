@@ -23,11 +23,33 @@ paths:
                     properties:
                       data: { type: array, items: { $ref: '#/components/schemas/AdminUser' } }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Invitations can be listed and revoked; every admin mutation
+  # requires a recent re-authentication (403 reauth_required); admins cannot change, deactivate or reset themselves.
   admin_invites:
+    get:
+      tags: [admin]
+      operationId: adminListInvites
+      summary: Pending invitations (not used, not revoked, not expired)
+      responses:
+        '200':
+          description: Pending invitations, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/AdminInvite' } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
     post:
       tags: [admin]
       operationId: adminInviteUser
-      summary: Invite a user by e-mail; without SMTP returns a one-time password instead
+      summary: Invite a user by e-mail; without SMTP creates the account with a one-time password instead (requires re-auth)
+      description: >-
+        With SMTP an invitation link (valid 7 days) is e-mailed; a new invitation for the same address revokes the
+        previous one, so repeating the request is safe. Without SMTP the account is created immediately (e-mail treated
+        as verified) and a one-time password is returned once; it must be changed at the first login.
+        The `Idempotency-Key` header is accepted; generic replay handling arrives with offline sync.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
       requestBody:
@@ -36,11 +58,12 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [email]
               properties:
                 email: { type: string, format: email, maxLength: 254 }
                 role: { type: string, enum: [admin, user], default: user }
-                display_name: { type: string, maxLength: 80 }
+                display_name: { type: string, minLength: 1, maxLength: 80, description: 'Used for the account created without SMTP; default: local part of the e-mail' }
       responses:
         '201':
           description: Invite created
@@ -51,14 +74,28 @@ paths:
                 required: [delivery]
                 properties:
                   delivery: { type: string, enum: [email, one_time_password] }
+                  invite: { $ref: '#/components/schemas/AdminInvite' }
+                  user: { $ref: '#/components/schemas/AdminUser' }
                   one_time_password: { type: string, description: Only when SMTP is not configured; shown once. }
-        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  admin_invite:
+    delete:
+      tags: [admin]
+      operationId: adminRevokeInvite
+      summary: Revoke a pending invitation (kept as revoked, never deleted; requires re-auth)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   admin_user:
     patch:
       tags: [admin]
       operationId: adminUpdateUser
-      summary: Change role (last active admin cannot be downgraded)
+      summary: Change role (last active admin cannot be downgraded; not on yourself; requires re-auth)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/IfMatch'
@@ -72,14 +109,25 @@ paths:
               properties:
                 role: { type: string, enum: [admin, user] }
       responses:
-        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/AdminUser' } } } }
+        '200':
+          description: Updated
+          headers:
+            ETag: { $ref: '../components/common.yaml#/components/headers/ETag' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminUser' } } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
         '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+        '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
   admin_user_action:
     post:
       tags: [admin]
       operationId: adminUserAction
-      summary: Deactivate, reactivate, unlock or reset password of a user (requires re-auth)
+      summary: Deactivate (soft), reactivate, unlock or reset password of a user (not on yourself; requires re-auth)
+      description: >-
+        deactivate keeps every piece of data and signs the user out everywhere; the last active admin cannot be
+        deactivated. deactivate/reactivate/unlock are idempotent. reset-password is refused for deactivated users.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - name: action
@@ -93,11 +141,14 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [user]
                 properties:
+                  user: { $ref: '#/components/schemas/AdminUser' }
                   delivery: { type: string, enum: [email, one_time_password] }
                   one_time_password: { type: string }
-        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
   admin_settings:
     get:
       tags: [admin]
@@ -210,6 +261,15 @@ paths:
 
 components:
   schemas:
+    AdminInvite:
+      type: object
+      required: [id, email, role, created_at, expires_at]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        email: { type: string, format: email }
+        role: { type: string, enum: [admin, user] }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        expires_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
     AdminUser:
       type: object
       required: [id, email, display_name, role, status, created_at, version]

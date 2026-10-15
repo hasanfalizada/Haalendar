@@ -23,6 +23,12 @@ export function stubMatchMedia(prefersDark: boolean): void {
 stubMatchMedia(false);
 // jsdom does not implement scrolling; the router's scroll restoration calls it on navigation.
 window.scrollTo = vi.fn();
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. jsdom lacks ResizeObserver, used by Radix popovers (dropdown menu).
+globalThis.ResizeObserver = class {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+};
 
 afterEach(() => {
   cleanup();

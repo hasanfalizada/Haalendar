@@ -62,6 +62,7 @@
         "FR-ACC-01",
         "FR-ACC-02",
         "FR-ACC-05",
+        "FR-ACC-06",
         "ADR-0005"
       ],
       "notes": "Common list bundled in backend/src/haalendar/accounts/data/common_passwords.txt (SecLists, MIT); the TypeScript implementation imports the same file. TypeScript gives live hints in forms; the server result is authoritative."
@@ -85,6 +86,13 @@
     {
       "id": "accounts.setup",
       "purpose": "First-run wizard: while no administrator exists the SPA redirects to /setup; creating the first admin checks the setup token, validates the password with the policy atom (live in the browser, authoritative on the server) and signs in (FR-ACC-05).",
+      "steps": [
+        "accounts.password_policy.v1"
+      ]
+    },
+    {
+      "id": "accounts.accept_invite",
+      "purpose": "Invitation page: the invited address is shown from the token, the password is checked live with the policy atom and again on registration, then the invitee is signed in (FR-ACC-06).",
       "steps": [
         "accounts.password_policy.v1"
       ]

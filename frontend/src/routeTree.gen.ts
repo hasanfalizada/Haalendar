@@ -11,7 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as ChangePasswordRouteImport } from './routes/change-password'
+import { Route as InviteRouteImport } from './routes/invite'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
 import { Route as AppKanbanRouteImport } from './routes/_app/kanban'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -27,10 +31,30 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChangePasswordRoute = ChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppCalendarRoute = AppCalendarRouteImport.update({
   id: '/calendar',
@@ -60,7 +84,11 @@ const AppTrashRoute = AppTrashRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/invite': typeof InviteRoute
+  '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/admin': typeof AppAdminRoute
   '/calendar': typeof AppCalendarRoute
   '/kanban': typeof AppKanbanRoute
   '/settings': typeof AppSettingsRoute
@@ -69,7 +97,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/invite': typeof InviteRoute
+  '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/admin': typeof AppAdminRoute
   '/calendar': typeof AppCalendarRoute
   '/kanban': typeof AppKanbanRoute
   '/settings': typeof AppSettingsRoute
@@ -80,7 +112,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/change-password': typeof ChangePasswordRoute
+  '/invite': typeof InviteRoute
+  '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/kanban': typeof AppKanbanRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -90,15 +126,39 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/setup' | '/calendar' | '/kanban' | '/settings' | '/todo' | '/trash'
+    | '/'
+    | '/change-password'
+    | '/invite'
+    | '/login'
+    | '/setup'
+    | '/admin'
+    | '/calendar'
+    | '/kanban'
+    | '/settings'
+    | '/todo'
+    | '/trash'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/setup' | '/calendar' | '/kanban' | '/settings' | '/todo' | '/trash'
+    | '/'
+    | '/change-password'
+    | '/invite'
+    | '/login'
+    | '/setup'
+    | '/admin'
+    | '/calendar'
+    | '/kanban'
+    | '/settings'
+    | '/todo'
+    | '/trash'
   id:
     | '__root__'
     | '/'
     | '/_app'
+    | '/change-password'
+    | '/invite'
+    | '/login'
     | '/setup'
+    | '/_app/admin'
     | '/_app/calendar'
     | '/_app/kanban'
     | '/_app/settings'
@@ -109,6 +169,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  ChangePasswordRoute: typeof ChangePasswordRoute
+  InviteRoute: typeof InviteRoute
+  LoginRoute: typeof LoginRoute
   SetupRoute: typeof SetupRoute
 }
 
@@ -128,12 +191,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/change-password': {
+      id: '/change-password'
+      path: '/change-password'
+      fullPath: '/change-password'
+      preLoaderRoute: typeof ChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup': {
       id: '/setup'
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/calendar': {
       id: '/_app/calendar'
@@ -174,6 +265,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppCalendarRoute: typeof AppCalendarRoute
   AppKanbanRoute: typeof AppKanbanRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -182,6 +274,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppCalendarRoute: AppCalendarRoute,
   AppKanbanRoute: AppKanbanRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -194,6 +287,9 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  ChangePasswordRoute: ChangePasswordRoute,
+  InviteRoute: InviteRoute,
+  LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport

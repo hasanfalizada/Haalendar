@@ -6,20 +6,31 @@ SameSite=Lax, Path=/, no Domain, lifetime = absolute session expiry.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset, re-authentication, password change, admin reset.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Second factor at login, TOTP enrolment, admin unlock.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. First-run setup (setup_status, setup_admin).
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin panel (admin.yaml admin_users, admin_user, admin_user_action,
+admin_invites, admin_invite) and the invitation page (auth_invite_info). Every admin mutation requires re-auth.
 """
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import UTC
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Request, Response, status
+from fastapi import APIRouter, Header, Query, Request, Response, status
 
 from haalendar.accounts import service
 from haalendar.accounts.models import AuthSession, UserAccount
 from haalendar.accounts.schemas import (
+    AdminInviteCreatedOut,
+    AdminInviteIn,
+    AdminInviteListOut,
     AdminUserActionOut,
+    AdminUserOut,
+    AdminUserPageOut,
+    AdminUserPatchIn,
     ChangePasswordIn,
+    InviteInfoOut,
     LoginIn,
     LoginOut,
     MeOut,
@@ -33,8 +44,10 @@ from haalendar.accounts.schemas import (
     TotpEnableIn,
     TotpEnableOut,
     TotpSetupOut,
+    UserStatus,
 )
 from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, Auth, DbSession
+from haalendar.errors import ProblemCode, ProblemError
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 me_router = APIRouter(tags=["account"])
@@ -146,15 +159,6 @@ async def change_password(body: ChangePasswordIn, auth: Auth, db: DbSession, mai
     await service.change_password(db, mailer, auth.session, auth.user, body.new_password)
 
 
-@admin_router.post("/users/{id}/reset-password", operation_id="adminUserAction")
-async def admin_reset_password(
-    id: uuid.UUID, admin: Admin, db: DbSession, mailer: AppMailer, settings: AppSettings
-) -> AdminUserActionOut:
-    service.require_recent_reauth(admin.session)
-    result = await service.admin_reset_password(db, mailer, settings, admin.user, id)
-    return AdminUserActionOut(delivery=result.delivery, one_time_password=result.one_time_password)
-
-
 @me_router.post("/me/totp/setup", operation_id="startTotpSetup")
 async def totp_setup(auth: Auth, settings: AppSettings) -> TotpSetupOut:
     uri, secret = await service.totp_setup(settings, auth.session, auth.user)
@@ -172,13 +176,6 @@ async def totp_enable(
 @me_router.post("/me/totp/disable", status_code=status.HTTP_204_NO_CONTENT, operation_id="disableTotp")
 async def totp_disable(auth: Auth, db: DbSession, mailer: AppMailer) -> None:
     await service.totp_disable(db, mailer, auth.session, auth.user)
-
-
-@admin_router.post("/users/{id}/unlock", operation_id="adminUnlockUser")
-async def admin_unlock(id: uuid.UUID, admin: Admin, db: DbSession) -> AdminUserActionOut:
-    service.require_recent_reauth(admin.session)
-    await service.admin_unlock(db, admin.user, id)
-    return AdminUserActionOut()
 
 
 @setup_router.get("/status", operation_id="getSetupStatus")
@@ -209,3 +206,117 @@ async def setup_admin(
     )
     _set_session_cookie(response, result.token, result.session)
     return to_me(result.user, csrf_token=result.session.csrf_secret)
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin panel and invitation page.
+
+IF_MATCH = re.compile(r'^"(\d+)"$')
+
+
+def _expected_version(if_match: str | None) -> int:
+    """If-Match carries the resource version as a strong ETag (ADR-0007): missing → 428, malformed → 400."""
+    if if_match is None:
+        raise ProblemError(428, ProblemCode.PRECONDITION_REQUIRED, "Send the current version in If-Match")
+    found = IF_MATCH.match(if_match.strip())
+    if found is None:
+        raise ProblemError(400, ProblemCode.BAD_REQUEST, 'If-Match must look like "7"')
+    return int(found.group(1))
+
+
+@auth_router.post("/invite-info", operation_id="getInviteInfo")
+async def get_invite_info(body: TokenIn, db: DbSession) -> InviteInfoOut:
+    invite = await service.invite_info(db, body.token)
+    return InviteInfoOut(email=invite.email, expires_at=invite.expires_at)
+
+
+@admin_router.get("/users", operation_id="adminListUsers")
+async def admin_list_users(
+    admin: Admin,
+    db: DbSession,
+    cursor: Annotated[str | None, Query(max_length=512)] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    status: Annotated[UserStatus | None, Query()] = None,
+) -> AdminUserPageOut:
+    page = await service.admin_list_users(db, q=q, status=status, cursor=cursor, limit=limit)
+    return AdminUserPageOut(data=[service.to_admin_user(u) for u in page.users], next_cursor=page.next_cursor)
+
+
+@admin_router.patch("/users/{id}", operation_id="adminUpdateUser")
+async def admin_update_user(
+    id: uuid.UUID,
+    body: AdminUserPatchIn,
+    response: Response,
+    admin: Admin,
+    db: DbSession,
+    if_match: Annotated[str | None, Header()] = None,
+) -> AdminUserOut:
+    service.require_recent_reauth(admin.session)
+    expected = _expected_version(if_match)
+    user = await service.admin_set_role(db, admin.user, id, body.role, expected)
+    response.headers["ETag"] = f'"{user.version}"'
+    return service.to_admin_user(user)
+
+
+@admin_router.post("/users/{id}/{action}", operation_id="adminUserAction", response_model_exclude_none=True)
+async def admin_user_action(
+    id: uuid.UUID,
+    action: Literal["deactivate", "reactivate", "unlock", "reset-password"],
+    admin: Admin,
+    db: DbSession,
+    mailer: AppMailer,
+    settings: AppSettings,
+) -> AdminUserActionOut:
+    service.require_recent_reauth(admin.session)
+    result = await service.admin_user_action(db, mailer, settings, admin.user, id, action)
+    return AdminUserActionOut(
+        user=service.to_admin_user(result.user),
+        delivery=result.delivery,
+        one_time_password=result.one_time_password,
+    )
+
+
+@admin_router.get("/invites", operation_id="adminListInvites")
+async def admin_list_invites(admin: Admin, db: DbSession) -> AdminInviteListOut:
+    return AdminInviteListOut(data=[service.to_admin_invite(i) for i in await service.admin_list_invites(db)])
+
+
+@admin_router.post(
+    "/invites",
+    status_code=status.HTTP_201_CREATED,
+    operation_id="adminInviteUser",
+    response_model_exclude_none=True,
+)
+async def admin_invite_user(
+    body: AdminInviteIn,
+    admin: Admin,
+    db: DbSession,
+    mailer: AppMailer,
+    settings: AppSettings,
+    idempotency_key: Annotated[uuid.UUID | None, Header()] = None,
+) -> AdminInviteCreatedOut:
+    # Idempotency-Key is accepted per contract; a repeated invitation is already safe (it supersedes the previous one).
+    service.require_recent_reauth(admin.session)
+    result = await service.admin_invite(
+        db,
+        mailer,
+        settings,
+        admin.user,
+        email=str(body.email),
+        role=body.role,
+        display_name=body.display_name,
+    )
+    return AdminInviteCreatedOut(
+        delivery=result.delivery,
+        invite=service.to_admin_invite(result.invite) if result.invite else None,
+        user=service.to_admin_user(result.user) if result.user else None,
+        one_time_password=result.one_time_password,
+    )
+
+
+@admin_router.delete(
+    "/invites/{id}", status_code=status.HTTP_204_NO_CONTENT, operation_id="adminRevokeInvite"
+)
+async def admin_revoke_invite(id: uuid.UUID, admin: Admin, db: DbSession) -> None:
+    service.require_recent_reauth(admin.session)
+    await service.admin_revoke_invite(db, admin.user, id)

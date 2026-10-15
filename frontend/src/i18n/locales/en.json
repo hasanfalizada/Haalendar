@@ -12,7 +12,8 @@
     "settings": "Settings",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "shortcut": "Shortcut: {{keys}}"
+    "shortcut": "Shortcut: {{keys}}",
+    "users": "Users"
   },
   "status": {
     "online": "Connected",
@@ -46,7 +47,9 @@
       "theme": "Theme",
       "themeSystem": "System",
       "themeLight": "Light",
-      "themeDark": "Dark"
+      "themeDark": "Dark",
+      "account": "Account",
+      "signedInAs": "Signed in as {{email}}"
     },
     "notFound": {
       "title": "Page not found",
@@ -55,23 +58,10 @@
     "setup": {
       "title": "Welcome to Haalendar",
       "intro": "Create the administrator account. You can invite other people afterwards.",
-      "name": "Your name",
-      "email": "E-mail",
-      "password": "Password",
-      "passwordHint": "At least {{min}} characters. A passphrase of several words works well.",
-      "timeZone": "Time zone",
       "setupToken": "Setup token",
       "setupTokenHint": "The value of HAALENDAR_SETUP_TOKEN from the server configuration.",
       "submit": "Create administrator",
       "submitting": "Creating…",
-      "violations": {
-        "too_short": "Use at least {{min}} characters",
-        "too_long": "Use at most 128 characters",
-        "common": "This password is too common",
-        "contains_email": "Do not include your e-mail address",
-        "contains_name": "Do not include your name",
-        "low_variety": "Use more different characters"
-      },
       "errors": {
         "forbidden": "The setup token is missing or invalid.",
         "alreadyDone": "Setup has already been completed. Please sign in.",
@@ -79,6 +69,168 @@
         "generic": "Could not create the administrator. Please try again.",
         "offline": "The server is unreachable. Check the connection and try again."
       }
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "retry": "Retry"
+  },
+  "auth": {
+    "name": "Your name",
+    "email": "E-mail",
+    "password": "Password",
+    "timeZone": "Time zone",
+    "required": "This field is required",
+    "passwordHint": "At least {{min}} characters. A passphrase of several words works well.",
+    "violations": {
+      "too_short": "Use at least {{min}} characters",
+      "too_long": "Use at most 128 characters",
+      "common": "This password is too common",
+      "contains_email": "Do not include your e-mail address",
+      "contains_name": "Do not include your name",
+      "low_variety": "Use more different characters"
+    },
+    "offline": "The server is unreachable. Check the connection and try again.",
+    "signOut": "Sign out",
+    "login": {
+      "title": "Sign in to Haalendar",
+      "intro": "Use the e-mail address and password of your account.",
+      "totpIntro": "Two-factor authentication is on for this account.",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "totpLabel": "Code from your authenticator app",
+      "recoveryLabel": "Recovery code",
+      "useRecovery": "Use a recovery code instead",
+      "useTotp": "Use the authenticator app instead",
+      "errors": {
+        "invalid": "E-mail or password is incorrect.",
+        "invalidCode": "The code is incorrect.",
+        "locked": "Too many failed attempts. Wait a few minutes and try again.",
+        "unverified": "Confirm your e-mail address first — check your inbox for the link.",
+        "generic": "Could not sign in. Please try again."
+      }
+    },
+    "invite": {
+      "title": "Join Haalendar",
+      "intro": "You were invited. Choose your name and a password to create your account.",
+      "checking": "Checking the invitation…",
+      "invalidTitle": "Invitation not valid",
+      "invalidBody": "This invitation link is invalid, was already used or has expired. Ask your administrator for a new one.",
+      "toLogin": "Go to sign-in",
+      "alreadyExists": "An account with this e-mail already exists. Sign in instead.",
+      "submit": "Create account",
+      "submitting": "Creating…"
+    },
+    "changePassword": {
+      "title": "Set a new password",
+      "intro": "You signed in with a one-time password. Choose your own password to continue.",
+      "newPassword": "New password",
+      "submit": "Save password",
+      "submitting": "Saving…",
+      "failed": "The password could not be changed. Please try again."
+    },
+    "reauth": {
+      "title": "Confirm it's you",
+      "description": "This action is protected. Enter your password to continue.",
+      "submit": "Confirm",
+      "wrong": "The password or code is incorrect.",
+      "rateLimited": "Too many attempts. Wait a moment and try again."
+    }
+  },
+  "admin": {
+    "title": "Users",
+    "search": "Search by name or e-mail",
+    "statusFilter": "Status",
+    "statusAll": "All statuses",
+    "status": {
+      "active": "Active",
+      "deactivated": "Deactivated",
+      "locked": "Locked",
+      "unverified": "Unverified"
+    },
+    "role": {
+      "admin": "Administrator",
+      "user": "User"
+    },
+    "columns": {
+      "user": "User",
+      "role": "Role",
+      "status": "Status",
+      "twoFactor": "2FA",
+      "lastLogin": "Last sign-in",
+      "actions": "Actions"
+    },
+    "you": "You",
+    "never": "Never",
+    "twoFactorOn": "On",
+    "twoFactorOff": "Off",
+    "loadMore": "Load more",
+    "empty": "No users match the filters.",
+    "actionsFor": "Actions for {{name}}",
+    "actions": {
+      "makeAdmin": "Make administrator",
+      "makeUser": "Make regular user",
+      "unlock": "Unlock",
+      "resetPassword": "Reset password",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    },
+    "confirm": {
+      "roleTitle": "Change the role of {{name}}?",
+      "makeAdminBody": "Administrators manage accounts and instance settings. They never see other people's calendars, notes or boards.",
+      "makeUserBody": "The account loses access to the admin panel immediately.",
+      "deactivateTitle": "Deactivate {{name}}?",
+      "deactivateBody": "The account is signed out everywhere and can no longer sign in. Nothing is deleted — you can reactivate it at any time.",
+      "resetTitle": "Reset the password of {{name}}?",
+      "resetBody": "The account is signed out everywhere. A reset link is e-mailed, or — without an e-mail server — you receive a one-time password to hand over."
+    },
+    "results": {
+      "role": "{{name}} is now: {{role}}.",
+      "deactivate": "{{name}} was deactivated and signed out. Their data is kept.",
+      "reactivate": "{{name}} can sign in again.",
+      "unlock": "{{name}} was unlocked.",
+      "resetEmail": "A password reset link was sent to {{email}}.",
+      "invited": "An invitation was sent to {{email}}."
+    },
+    "oneTime": {
+      "title": "One-time password",
+      "body": "Give this password to {{email}} over a safe channel.",
+      "label": "One-time password",
+      "copy": "Copy password",
+      "copied": "Copied",
+      "once": "It is shown only once and must be replaced at the first sign-in.",
+      "done": "Done"
+    },
+    "invite": {
+      "open": "Invite",
+      "title": "Invite a user",
+      "intro": "An invitation link valid for 7 days is e-mailed. Without an e-mail server the account is created at once with a one-time password.",
+      "name": "Name (optional)",
+      "nameHint": "Used when the account is created without an e-mail server.",
+      "submit": "Send invitation",
+      "submitting": "Sending…",
+      "duplicate": "An account with this e-mail already exists."
+    },
+    "invites": {
+      "title": "Pending invitations",
+      "expires": "expires {{date}}",
+      "revoke": "Revoke",
+      "revokeFor": "Revoke the invitation for {{email}}",
+      "confirmTitle": "Revoke this invitation?",
+      "confirmBody": "The link sent to {{email}} stops working.",
+      "revoked": "The invitation for {{email}} was revoked."
+    },
+    "errors": {
+      "generic": "The change could not be saved. Please try again.",
+      "lastAdmin": "Not possible: at least one active administrator must remain.",
+      "reactivateFirst": "Reactivate the account before resetting its password.",
+      "changedMeanwhile": "The user was changed meanwhile. The list has been refreshed — please try again.",
+      "notFound": "This user no longer exists. The list has been refreshed.",
+      "totpRequired": "This instance requires two-factor authentication for administrators. Enable it in your account first.",
+      "forbidden": "Administrator role required.",
+      "reauthFailed": "Your identity could not be confirmed.",
+      "loadFailed": "Users could not be loaded."
     }
   }
 }

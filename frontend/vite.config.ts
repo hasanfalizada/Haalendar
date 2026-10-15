@@ -14,7 +14,9 @@ export default defineConfig(({ mode }) => {
   const isMock = apiTarget.includes(":4010");
 
   return {
-    plugins: [tanstackRouter({ target: "react", autoCodeSplitting: true }), react(), tailwindcss()],
+    // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Route code splitting is off under Vitest: tests then do not
+    // depend on lazy chunk loading (slow on WSL /mnt file systems); production builds keep per-route chunks.
+    plugins: [tanstackRouter({ target: "react", autoCodeSplitting: mode !== "test" }), react(), tailwindcss()],
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
     server: {
       port: 5173,
