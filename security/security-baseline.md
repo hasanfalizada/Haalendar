@@ -37,7 +37,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V5 File Handling | 🟡 | Signature check, limits, names ✅; storage outside web root, metadata stripping, download headers ⏳ HAAL-040 |
 | V6 Authentication | ✅ | Argon2id + rehash, 15-char policy atom with common-password list, invite-only registration, e-mail verification, generic responses, password reset (1 h single use), lockout 15 min doubling to 24 h, auth rate limit 20/min, optional TOTP with replay protection and recovery codes, admin 2FA policy (HAAL-160..162) |
 | V7 Session Management | ✅ | Server sessions, hashed tokens, `__Host-` cookie, idle 30 d / abs 90 d, revocation on password change/reset, re-auth window 15 min, CSRF token (HAAL-160..161); session list UI with HAAL-166 |
-| V8 Authorization | ⏳ | HAAL-165 (authz atom, permission matrix tests, PostgreSQL RLS) |
+| V8 Authorization | 🟡 | Function level ✅ (admin role on every admin endpoint, re-auth for admin mutations, no self-changes, last active admin kept under an advisory lock — HAAL-164); data level ⏳ HAAL-165 (authz atom, permission matrix tests, PostgreSQL RLS) |
 | V9 Self-contained Tokens | — | No JWT in v1.0 (ADR-0005); personal API tokens v1.1 are opaque |
 | V10 OAuth and OIDC | ⏳ | HAAL-168 (Could): backend confidential client, PKCE, state/nonce |
 | V11 Cryptography | 🟡 | Standard libraries only (argon2-cffi, BLAKE3, TLS by proxy); key management with HAAL-160 |
@@ -71,7 +71,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | API2 Broken Authentication | ✅ HAAL-160..162 |
 | API3 Broken Object Property Level Authorization | ✅ `ApiModel` forbids unknown fields; response schemas explicit in contract |
 | API4 Unrestricted Resource Consumption | ✅ rate limit, body limits, pagination ≤ 200, upload ≤ 10 MB, DB pool/timeouts |
-| API5 Broken Function Level Authorization | ⏳ admin/owner checks in authz atom (HAAL-164/165) |
+| API5 Broken Function Level Authorization | 🟡 admin checks ✅ (HAAL-164, tested per endpoint incl. non-admin refusal); owner checks in the authz atom ⏳ HAAL-165 |
 | API6 Unrestricted Access to Sensitive Business Flows | ⏳ registration invite-only, reset/register throttling (HAAL-160..162) |
 | API7 Server Side Request Forgery | ✅ no outbound requests driven by user input in v1.0 (link previews rejected, gap T-05 Later) |
 | API8 Security Misconfiguration | ✅ as A02 |
