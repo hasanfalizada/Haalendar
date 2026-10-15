@@ -37,13 +37,13 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V5 File Handling | 🟡 | Signature check, limits, names ✅; storage outside web root, metadata stripping, download headers ⏳ HAAL-040 |
 | V6 Authentication | ✅ | Argon2id + rehash, 15-char policy atom with common-password list, invite-only registration, e-mail verification, generic responses, password reset (1 h single use), lockout 15 min doubling to 24 h, auth rate limit 20/min, optional TOTP with replay protection and recovery codes, admin 2FA policy (HAAL-160..162) |
 | V7 Session Management | ✅ | Server sessions, hashed tokens, `__Host-` cookie, idle 30 d / abs 90 d, revocation on password change/reset, re-auth window 15 min, CSRF token (HAAL-160..161); session list UI with HAAL-166 |
-| V8 Authorization | 🟡 | Function level ✅ (admin role on every admin endpoint, re-auth for admin mutations, no self-changes, last active admin kept under an advisory lock — HAAL-164); data level ⏳ HAAL-165 (authz atom, permission matrix tests, PostgreSQL RLS) |
+| V8 Authorization | ✅ | Function level (admin role on every admin endpoint, re-auth for admin mutations, no self-changes, last active admin kept under an advisory lock — HAAL-164); data level: authz.check.v1 atom (default deny, admins without content access, 404 for unreadable / 403 for read-only), PostgreSQL RLS on every owner/share table, least-privilege app role without BYPASSRLS, permission-matrix and isolation tests (HAAL-165). Each content endpoint calls `authz.require` as it is built |
 | V9 Self-contained Tokens | — | No JWT in v1.0 (ADR-0005); personal API tokens v1.1 are opaque |
 | V10 OAuth and OIDC | ⏳ | HAAL-168 (Could): backend confidential client, PKCE, state/nonce |
 | V11 Cryptography | 🟡 | Standard libraries only (argon2-cffi, BLAKE3, TLS by proxy); key management with HAAL-160 |
 | V12 Secure Communication | 🟡 | HTTPS required in production, HSTS ✅; TLS termination via Caddy ⏳ HAAL-150 |
 | V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; container hardening ⏳ HAAL-150 |
-| V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; soft delete + export ⏳ HAAL-030/043; GDPR erasure open (O-01) |
+| V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) ✅; soft delete everywhere + export ⏳ HAAL-030/043; GDPR erasure open (O-01) |
 | V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SBOM + licence gate ⏳ HAAL-151 |
 | V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections) |
 | V17 WebRTC | — | Not used |
@@ -52,7 +52,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 
 | Risk | Mitigation |
 |---|---|
-| A01 Broken Access Control | ⏳ authz atom + RLS + permission tests (HAAL-165); CSRF layer 1 ✅; SSRF: no server-side fetch of user URLs in v1.0 |
+| A01 Broken Access Control | ✅ authz atom + RLS + least-privilege DB role + permission/isolation tests (HAAL-165); CSRF layers 1–2 ✅; SSRF: no server-side fetch of user URLs in v1.0 |
 | A02 Security Misconfiguration | ✅ secure defaults, production guards, headers, docs disabled outside dev, Host allow-list, first-run wizard closed once an admin exists and token-protected in production (HAAL-163) |
 | A03 Software Supply Chain Failures | ✅ pins, lockfiles, 7-day release age, blocked install scripts, audits; ⏳ SBOM/licence gate/signing (HAAL-151) |
 | A04 Cryptographic Failures | 🟡 TLS + HSTS; Argon2id and token hashing with HAAL-160 |
@@ -67,7 +67,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 
 | Risk | Mitigation |
 |---|---|
-| API1 Broken Object Level Authorization | ⏳ container-level authz on every request + RLS (HAAL-165); UUIDv7 IDs |
+| API1 Broken Object Level Authorization | ✅ container-level authz (`authz.require`) + RLS in the same transaction (HAAL-165); UUIDv7 IDs; unreadable objects answer 404 |
 | API2 Broken Authentication | ✅ HAAL-160..162 |
 | API3 Broken Object Property Level Authorization | ✅ `ApiModel` forbids unknown fields; response schemas explicit in contract |
 | API4 Unrestricted Resource Consumption | ✅ rate limit, body limits, pagination ≤ 200, upload ≤ 10 MB, DB pool/timeouts |
