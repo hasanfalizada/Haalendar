@@ -1,10 +1,11 @@
 # SOFTWARE REQUIREMENTS SPECIFICATION (SRS) — Haalendar
 
 +++===+++ 2026-10-14 — Hasan Alizada — HAAL-002 v1.0 approved by owner; HAAL-003 v1.1 adds approved gap-analysis scope. Decisions logged in section 9.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-163 v1.5: decision D-26 (setup token) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.4 |
+| Version | 1.5 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -468,6 +469,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-23 | Technology stack | ADR-0003 accepted: React + Vite SPA, uv + pnpm, SQLAlchemy + Alembic instead of Next.js, Pants, Prisma/SQLModel | 2.5 |
 | D-24 | Auth | ADR-0005 accepted: server sessions, password ≥ 15, admins without content access, export of owned items, RLS, logout wipes device data | FR-ACC-02, FR-X-14 |
 | D-25 | Domain model | Item supertype, local time + IANA zone, delete batch id, default colors calendar blue / event brown | FR-ACC-11 |
+| D-26 | First-run setup | Setup token `HAALENDAR_SETUP_TOKEN` is mandatory in production (wizard refuses without it, 403) and optional in development; the server still starts without it because the token is not needed after setup | FR-ACC-05 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

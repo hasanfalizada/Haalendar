@@ -32,7 +32,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 |---|---|---|
 | V1 Encoding and Sanitization | 🟡 | ORM parameterised SQL only; React output encoding; Markdown sanitising ⏳ HAAL-047 |
 | V2 Validation and Business Logic | 🟡 | `ApiModel` strict schemas; per-endpoint validation with each feature |
-| V3 Web Frontend Security | 🟡 | CSP, headers, CSRF layer 1 ✅; SPA served with CSP ⏳ HAAL-150; per-session CSRF token ⏳ HAAL-160 |
+| V3 Web Frontend Security | 🟡 | CSP, headers, CSRF layer 1 ✅; SPA served with CSP ⏳ HAAL-150; per-session CSRF token ✅ (server HAAL-160, sent by the SPA from HAAL-163, memory only) |
 | V4 API and Web Service | 🟡 | Content-type/body limits, RFC 9457, merge-patch, If-Match ✅/contract; per-endpoint enforcement with features |
 | V5 File Handling | 🟡 | Signature check, limits, names ✅; storage outside web root, metadata stripping, download headers ⏳ HAAL-040 |
 | V6 Authentication | ✅ | Argon2id + rehash, 15-char policy atom with common-password list, invite-only registration, e-mail verification, generic responses, password reset (1 h single use), lockout 15 min doubling to 24 h, auth rate limit 20/min, optional TOTP with replay protection and recovery codes, admin 2FA policy (HAAL-160..162) |
@@ -53,7 +53,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | Risk | Mitigation |
 |---|---|
 | A01 Broken Access Control | ⏳ authz atom + RLS + permission tests (HAAL-165); CSRF layer 1 ✅; SSRF: no server-side fetch of user URLs in v1.0 |
-| A02 Security Misconfiguration | ✅ secure defaults, production guards, headers, docs disabled outside dev, Host allow-list |
+| A02 Security Misconfiguration | ✅ secure defaults, production guards, headers, docs disabled outside dev, Host allow-list, first-run wizard closed once an admin exists and token-protected in production (HAAL-163) |
 | A03 Software Supply Chain Failures | ✅ pins, lockfiles, 7-day release age, blocked install scripts, audits; ⏳ SBOM/licence gate/signing (HAAL-151) |
 | A04 Cryptographic Failures | 🟡 TLS + HSTS; Argon2id and token hashing with HAAL-160 |
 | A05 Injection | ✅ ORM parameters, no shell/eval; 🟡 Markdown sanitising (HAAL-047) |
