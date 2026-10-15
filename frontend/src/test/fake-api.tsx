@@ -37,7 +37,7 @@ export function me(overrides: Partial<Me> = {}): Me {
     email: "admin@example.org",
     display_name: "Ada Admin",
     role: "admin",
-    time_zone: "Europe/Berlin",
+    time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone, // = device zone: no mismatch notice by default
     locale: "en",
     totp_enabled: false,
     must_change_password: false,

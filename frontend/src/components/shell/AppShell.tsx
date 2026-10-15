@@ -2,6 +2,7 @@
 // top bar + slide-out drawer on phones. Active route is exposed with aria-current for assistive technology.
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin-only items are shown to administrators only.
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The signed-in user's avatar links to the profile (Settings).
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Notice when the device and profile time zones differ.
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { ConnectionStatus } from "./ConnectionStatus";
+import { TimeZoneMismatch } from "./TimeZoneMismatch";
 import { MODULE_ITEMS, SECONDARY_ITEMS, type NavItem } from "./nav-items";
 import { useModuleShortcuts } from "./useModuleShortcuts";
 
@@ -140,6 +142,7 @@ export function AppShell() {
       </header>
 
       <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
+        <TimeZoneMismatch />
         <Outlet />
       </main>
     </div>

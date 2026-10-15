@@ -625,6 +625,7 @@ dependencies = [
     { name = "pyotp" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "structlog" },
+    { name = "tzdata" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -653,6 +654,7 @@ requires-dist = [
     { name = "pyotp", specifier = "==2.10.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.1.4" },
     { name = "structlog", specifier = "==26.1.0" },
+    { name = "tzdata", specifier = "==2026.5" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.54.0" },
 ]
 

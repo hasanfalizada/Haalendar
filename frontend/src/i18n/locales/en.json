@@ -292,5 +292,11 @@
       "generic": "The change could not be saved. Please try again.",
       "offline": "Sharing needs a connection to the server."
     }
+  },
+  "timeZone": {
+    "mismatch": "This device is set to {{device}}, your profile to {{profile}}. Times are shown in {{profile}}.",
+    "useDevice": "Use {{zone}}",
+    "keep": "Keep {{zone}}",
+    "failed": "The time zone could not be changed. Try again in Settings → Profile."
   }
 }

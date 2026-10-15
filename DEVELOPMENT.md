@@ -247,6 +247,8 @@ The environment is selected with `HAALENDAR_ENV`.
 - **Row actions** — make administrator / regular user, unlock, reset password (link by e-mail, or a one-time password without SMTP), deactivate (signs the user out everywhere, keeps all data) and reactivate. Your own row has no actions, and the last active administrator can never be demoted or deactivated.
 - Changes ask for your password again when the last sign-in or confirmation is older than 15 minutes.
 
+**Time zones.** Event times are stored as wall-clock time plus an IANA zone; instants (timestamps in the API) are always UTC and are shown in the profile's zone. The backend reads zone rules only from the pinned `tzdata` package — to pick up new rules, bump `tzdata` in `backend/pyproject.toml` and run the tests (the time atom vectors must still pass).
+
 **Sharing.** `POST /api/v1/shares` shares a container with another active user by e-mail (`view` or `edit`); only the owner shares, changes (`PATCH` with `If-Match`) and revokes (`DELETE`), and a grantee may leave with the same `DELETE`. *Settings → Sharing* lists what you shared and what was shared with you. Calendars become shareable from the calendar list once calendars can be created (HAAL-094); boards and notes follow with their modules.
 
 **Profile.** *Settings → Profile* changes the display name and time zone and uploads a photo (PNG, JPEG or WebP up to 2 MB). The server re-encodes the photo to a 256×256 WebP — location and camera metadata are removed — and stores it under `HAALENDAR_STORAGE_DIR`; removing the photo keeps the stored file. Without `HAALENDAR_STORAGE_DIR` development uses the system temp directory, so photos disappear after a reboot.

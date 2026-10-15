@@ -1,0 +1,40 @@
+{
+  "$comment": "+++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Wall-clock time in an IANA zone → UTC instant (FR-ACC-11, domain model P7). DST rules follow RFC 5545 3.3.5: a local time that does not exist (spring-forward gap) is interpreted with the UTC offset in effect before the gap, so it moves forward; an ambiguous local time (fall-back overlap) means its first occurrence. Used to derive event start_utc/end_utc and to place timed events on the viewer's days.",
+  "id": "time.local_to_utc.v1",
+  "version": "1.0.0",
+  "purpose": "Converts a local date and time in an IANA time zone into the UTC instant it denotes, reporting the offset used and whether a DST gap or overlap was resolved.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["date", "time", "tzid"],
+    "additionalProperties": false,
+    "properties": {
+      "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Local calendar date YYYY-MM-DD." },
+      "time": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$", "description": "Local wall-clock time HH:MM." },
+      "tzid": { "type": "string", "description": "IANA time zone, e.g. Europe/Berlin." }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["utc", "offset_minutes", "resolution"],
+    "additionalProperties": false,
+    "properties": {
+      "utc": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:00Z$", "description": "RFC 3339 UTC instant, minute precision." },
+      "offset_minutes": { "type": "integer", "description": "UTC offset applied (local = utc + offset)." },
+      "resolution": { "enum": ["exact", "gap_shifted", "overlap_first"] }
+    }
+  },
+  "errors": [{ "code": "unknown_time_zone", "when": "tzid is not an IANA zone" }],
+  "events": [],
+  "invariants": [
+    "exact: the local time exists exactly once; converting the result back to the zone yields the input",
+    "gap_shifted: the local time does not exist; the offset in effect before the gap is used, so the result shown in the zone is later than the input by the size of the gap",
+    "overlap_first: the local time exists twice; the earlier instant (offset before the transition) is returned",
+    "the result does not depend on the host time zone or locale",
+    "dates are proleptic Gregorian; leap days are valid only in leap years"
+  ],
+  "requirements": ["FR-ACC-11", "ADR-0005"]
+}

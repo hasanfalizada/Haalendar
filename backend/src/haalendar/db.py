@@ -35,7 +35,9 @@ def create_engine(settings: Settings) -> AsyncEngine:
         max_overflow=settings.db_max_overflow,
         pool_timeout=settings.db_pool_timeout_seconds,
         pool_pre_ping=True,
-        connect_args={"connect_timeout": settings.db_connect_timeout_seconds},
+        # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Sessions always run in UTC, so timestamptz values reach the
+        # API as UTC instants (contract Timestamp: RFC 3339, UTC) whatever the server's default time zone is.
+        connect_args={"connect_timeout": settings.db_connect_timeout_seconds, "options": "-c timezone=UTC"},
     )
     log.info(
         "db_engine_created",

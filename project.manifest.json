@@ -93,6 +93,60 @@
         "ADR-0005"
       ],
       "notes": "Server entry point: haalendar.authz.require (loads owner and share under row-level security). PostgreSQL RLS (haalendar.security.rls) enforces the same rules as a second layer; the isolation suite is backend/tests/test_isolation.py. Sharing API: haalendar.sharing (HAAL-167)."
+    },
+    {
+      "id": "time.local_to_utc.v1",
+      "status": "implemented",
+      "purpose": "Converts a local date and time in an IANA zone into the UTC instant it denotes (RFC 5545: DST gap moves forward, overlap takes the first occurrence) and reports the offset and resolution.",
+      "contract": "atoms/time.local_to_utc.v1/contract.json",
+      "examples": "atoms/time.local_to_utc.v1/examples.md",
+      "vectors": "atoms/time.local_to_utc.v1/vectors.json",
+      "capabilities": [
+        "localToUtc"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_time.py",
+        "typescript": "frontend/src/atoms/time/time.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/time/local_to_utc.py",
+        "typescript": "frontend/src/atoms/time/localToUtc.ts"
+      },
+      "hash": "b3:d9fe7febbe77d9bc4bfa97566574f1fcf4e913c417033cf7250fd04d1084ffb8",
+      "deps": [],
+      "requirements": [
+        "FR-ACC-11",
+        "ADR-0005"
+      ],
+      "notes": "Python uses the pinned tzdata package only (zoneinfo.reset_tzpath); TypeScript uses Intl (browser IANA data). Vectors are fixed to tzdata 2026.5 rules."
+    },
+    {
+      "id": "time.event_days.v1",
+      "status": "implemented",
+      "purpose": "Returns the first and last local date an event covers for a viewer in a given zone: all-day events keep their dates, timed events are placed by their UTC instants.",
+      "contract": "atoms/time.event_days.v1/contract.json",
+      "examples": "atoms/time.event_days.v1/examples.md",
+      "vectors": "atoms/time.event_days.v1/vectors.json",
+      "capabilities": [
+        "eventDays"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_time.py",
+        "typescript": "frontend/src/atoms/time/time.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/time/event_days.py",
+        "typescript": "frontend/src/atoms/time/eventDays.ts"
+      },
+      "hash": "b3:8067a4194bb1fa1819304bff229713a1857e31fe71c2c64942534c9dfed95134",
+      "deps": [
+        "time.local_to_utc.v1"
+      ],
+      "requirements": [
+        "FR-ACC-11",
+        "FR-CAL-01"
+      ],
+      "notes": "Used by the day/week/month views (HAAL-060, 087, 088) and for shared calendars across zones."
     }
   ],
   "flows": [
@@ -136,6 +190,14 @@
       "purpose": "Share / change / revoke: the container owner is checked with authz.check (action share) under row-level security; a grantee may only leave; revocation is soft (FR-ACC-10).",
       "steps": [
         "authz.check.v1"
+      ]
+    },
+    {
+      "id": "time.place_event",
+      "purpose": "Event times: local date/time + tzid are stored; start_utc/end_utc derived with time.local_to_utc; views place events on the viewer's days with time.event_days (FR-ACC-11).",
+      "steps": [
+        "time.local_to_utc.v1",
+        "time.event_days.v1"
       ]
     }
   ]

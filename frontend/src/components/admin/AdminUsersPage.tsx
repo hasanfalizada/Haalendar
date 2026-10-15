@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input, Select } from "@/components/ui/input";
+import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
 import { describeError, log } from "@/lib/log";
 import { cn } from "@/lib/utils";
 
@@ -79,8 +80,9 @@ export function AdminUsersPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [oneTime, setOneTime] = useState<OneTimePassword | null>(null);
 
-  const dateFormat = new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" });
-  const formatDate = (value: string) => dateFormat.format(new Date(value));
+  // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Instants are shown in the profile's time zone.
+  const timeZone = useDisplayTimeZone();
+  const formatDate = (value: string) => formatInstant(value, timeZone, i18n.language);
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: adminKeys.all });
