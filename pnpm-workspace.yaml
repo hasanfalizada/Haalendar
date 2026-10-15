@@ -8,3 +8,7 @@ minimumReleaseAge: 10080
 # Install scripts are blocked by default; @scarf/scarf is install telemetry pulled in by Prism — never allowed to run.
 allowBuilds:
   '@scarf/scarf': false
+
+# Security fixes for transitive dev-tool dependencies (pnpm audit, HAAL-020). Remove when the parent packages update.
+overrides:
+  "js-yaml@>=4.0.0 <4.3.2": "4.3.2"

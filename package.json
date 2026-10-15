@@ -14,6 +14,7 @@
     "test": "pnpm --filter haalendar-frontend test",
     "gen:api": "pnpm --filter haalendar-frontend gen:api",
     "mock:api": "pnpm --filter haalendar-frontend mock:api",
-    "backend:check": "cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy src tests && uv run pytest"
+    "backend:check": "cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy src tests && uv run pytest",
+    "security:audit": "pnpm audit --audit-level low && cd backend && uv export --no-emit-project --format requirements-txt -q | uv run pip-audit -r /dev/stdin --require-hashes --disable-pip --strict --progress-spinner off"
   }
 }

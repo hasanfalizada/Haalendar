@@ -32,6 +32,20 @@ Please include:
 
 This is a community project maintained on a best-effort basis. As stated in the [LICENSE](LICENSE), the software is provided "AS IS", without warranties or liability of any kind.
 
+## Security design
+
+Haalendar targets **OWASP ASVS 5.0 Level 2** and is reviewed against the OWASP Top 10:2025 and the OWASP API Security Top 10:2023. Built-in protections:
+
+- Strict security headers on every response (Content-Security-Policy without inline scripts, HSTS on HTTPS, `nosniff`, no framing, no `Server` header).
+- Host header allow-list, cross-site request rejection (Origin and Fetch Metadata checks), per-client rate limiting, request size and content-type limits.
+- Strict input models (unknown fields rejected); errors as RFC 9457 problems without internal details.
+- Image uploads validated by file signature (no SVG or other active content), size-limited, with sanitised file names.
+- Production refuses insecure configuration (default secret key, plain HTTP); secrets can be supplied as files.
+- Logs are structured and never contain passwords, tokens or cookies; metrics are off by default and token-protected.
+- Supply chain: exact version pins and lockfiles, packages younger than 7 days are refused, install scripts are blocked, dependencies are audited (`pnpm security:audit`).
+
+Operators should run Haalendar behind HTTPS and keep the instance updated.
+
 ## Scope
 
 In scope: the Haalendar application code and the official Docker images in this repository.

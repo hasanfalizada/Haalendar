@@ -155,6 +155,7 @@ All checks must pass before a pull request (see `CONTRIBUTING.md`).
 ```bash
 pnpm check           # frontend: generate API client, TypeScript, ESLint, Prettier, unit tests
 pnpm backend:check   # backend: Ruff lint, Ruff format, mypy (strict), pytest
+pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnpm audit + pip-audit)
 ```
 
 ### Backend (from `backend/`)
@@ -248,6 +249,9 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | `HAALENDAR_LOG_LEVEL` / `HAALENDAR_LOG_FORMAT` | `INFO` / `json` | `console` for local reading |
 | `HAALENDAR_DB_SLOW_QUERY_MS` | `200` | Log SQL slower than this (0 = off) |
 | `HAALENDAR_METRICS_ENABLED` / `HAALENDAR_METRICS_TOKEN` | `false` / — | Prometheus metrics at `/metrics`, bearer token ≥ 24 chars required |
+| `HAALENDAR_EXTRA_ALLOWED_HOSTS` / `HAALENDAR_EXTRA_ALLOWED_ORIGINS` | empty | Additional Host names / origins (public URL and loopback are always allowed) |
+| `HAALENDAR_RATE_LIMIT_PER_MINUTE` / `HAALENDAR_RATE_LIMIT_BURST` | `600` / `120` | Per-client rate limit (0 = off) |
+| `HAALENDAR_MAX_REQUEST_BODY_BYTES` | `1048576` | Request body limit |
 | `VITE_API_TARGET` | `http://localhost:8080` | Frontend dev proxy target (`http://localhost:4010` for the mock) |
 
 ## 8. Troubleshooting
@@ -256,6 +260,9 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 |---|---|
 | `pnpm install` fails with "within the minimumReleaseAge cutoff" | Supply-chain policy: versions younger than 7 days are refused. Choose an older version; do not disable the policy. |
 | `ERR_PNPM_IGNORED_BUILDS` | A dependency wants to run an install script. Review it and allow or deny it with `pnpm approve-builds`; scripts are blocked by default. |
+| 400 `Host not allowed` | The request used a host name that is not the public URL host or loopback (for example a LAN IP). Add it to `HAALENDAR_EXTRA_ALLOWED_HOSTS`. |
+| 403 `csrf_failed` on POST/PATCH/DELETE | The request came from an origin other than the public URL (or the Vite dev server in development). Add it to `HAALENDAR_EXTRA_ALLOWED_ORIGINS` if it is legitimate. |
+| 429 `rate_limited` | Too many requests from one client; wait for `Retry-After` seconds or raise the limit for local load tests. |
 | `/api/v1/health/ready` returns 503 with `"database": false` | PostgreSQL is not running or `HAALENDAR_DATABASE_URL` is wrong. Check `docker ps`. |
 | 503 with `"migrations": false` | Run `uv run alembic upgrade head` in `backend/`. |
 | PostgreSQL container exits immediately | Old volume mounted at `/var/lib/postgresql/data`; use `/var/lib/postgresql` for PostgreSQL 18. |

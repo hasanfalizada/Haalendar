@@ -4,6 +4,7 @@
 error handlers, middleware and routers. run() starts uvicorn without the Server header and with trusted proxies only.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-019. Metrics registry, DB pool gauges, slow-query logging and the
 token-protected /metrics endpoint are wired here.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-020. Security guards (Host, rate limit, body/content-type, CSRF origin).
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from haalendar.errors import install_error_handlers
 from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
 from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
+from haalendar.security.guards import BodyGuard, CsrfOriginGuard, HostGuard, RateLimitGuard
 
 log = get_logger(__name__)
 
@@ -60,6 +62,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.metrics = metrics
     install_error_handlers(app)
+    # Starlette runs the last added middleware first: request context (ids, headers, logging) wraps every guard,
+    # so rejections still carry X-Request-ID, security headers and a log line.
+    app.add_middleware(CsrfOriginGuard, allowed_origins=settings.allowed_origins)
+    app.add_middleware(BodyGuard, max_body_bytes=settings.max_request_body_bytes)
+    app.add_middleware(
+        RateLimitGuard, per_minute=settings.rate_limit_per_minute, burst=settings.rate_limit_burst
+    )
+    app.add_middleware(HostGuard, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(RequestContextMiddleware, settings=settings, metrics=metrics)
     app.include_router(health.router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)

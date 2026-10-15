@@ -11,6 +11,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
@@ -77,6 +78,14 @@ class Settings(BaseSettings):
     metrics_token: SecretStr | None = None
     # SQL statements slower than this are logged (0 disables); default matches the p95 API target (SRS 4.1).
     db_slow_query_ms: int = Field(default=200, ge=0)
+    # Security baseline (HAAL-020). Hosts/origins: comma-separated additions to those derived from public_url.
+    extra_allowed_hosts: str = ""
+    extra_allowed_origins: str = ""
+    # Per-client token bucket: sustained requests per minute and burst size (0 disables the limiter).
+    rate_limit_per_minute: int = Field(default=600, ge=0)
+    rate_limit_burst: int = Field(default=120, ge=1)
+    # Default request body limit; upload endpoints raise their own limit (10 MB images, FR-X-11).
+    max_request_body_bytes: int = Field(default=1_048_576, ge=1024)
 
     @model_validator(mode="after")
     def _forbid_insecure_production(self) -> Settings:
@@ -100,6 +109,27 @@ class Settings(BaseSettings):
     @property
     def https(self) -> bool:
         return self.public_url.startswith("https://")
+
+    @property
+    def allowed_hosts(self) -> frozenset[str]:
+        """Host header values accepted (host part only, lower-case): public host, loopback, extras."""
+        public_host = (urlsplit(self.public_url).hostname or "").lower()
+        hosts = {public_host, "localhost", "127.0.0.1", "::1"}
+        hosts.update(h.strip().lower() for h in self.extra_allowed_hosts.split(",") if h.strip())
+        hosts.discard("")
+        return frozenset(hosts)
+
+    @property
+    def allowed_origins(self) -> frozenset[str]:
+        """Origins allowed to send unsafe requests (CSRF Origin check); the Vite dev server in development."""
+        parts = urlsplit(self.public_url)
+        origins = {f"{parts.scheme}://{parts.netloc}".lower()}
+        if self.env is Environment.DEVELOPMENT:
+            origins.update({"http://localhost:5173", "http://127.0.0.1:5173"})
+        origins.update(
+            o.strip().rstrip("/").lower() for o in self.extra_allowed_origins.split(",") if o.strip()
+        )
+        return frozenset(origins)
 
 
 class _ExplicitSettings(Settings):

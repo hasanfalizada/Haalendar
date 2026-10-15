@@ -23,6 +23,16 @@ from haalendar.observability import Metrics, route_template
 log = get_logger(__name__)
 
 REQUEST_ID_HEADER = "x-request-id"
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-020. API responses never render; the SPA (served by this app from HAAL-150)
+# gets a strict same-origin policy: no inline scripts, no eval, no framing, no plugins. Radix UI sets style attributes,
+# hence style-src-attr 'unsafe-inline' only (not style elements or scripts). ASVS 5.0 V3.
+API_CSP = b"default-src 'none'; frame-ancestors 'none'"
+SPA_CSP = (
+    b"default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; "
+    b"img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; "
+    b"object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+)
 _VALID_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 
@@ -35,8 +45,7 @@ def security_headers(path: str, settings: Settings) -> list[tuple[bytes, bytes]]
         (b"cross-origin-resource-policy", b"same-origin"),
         (b"permissions-policy", b"camera=(), microphone=(), geolocation=(), payment=(), usb=()"),
     ]
-    if path.startswith("/api/"):
-        headers.append((b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"))
+    headers.append((b"content-security-policy", API_CSP if path.startswith("/api/") else SPA_CSP))
     if settings.https and settings.hsts_max_age_seconds > 0:
         headers.append(
             (
