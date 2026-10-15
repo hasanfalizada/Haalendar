@@ -6,6 +6,8 @@ SameSite=Lax, Path=/, no Domain, lifetime = absolute session expiry.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset, re-authentication, password change, admin reset.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Second factor at login, TOTP enrolment, admin unlock.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. First-run setup (setup_status, setup_admin).
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Profile (me PATCH), avatar upload/removal (me_avatar) and avatar
+download (user_avatar).
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin panel (admin.yaml admin_users, admin_user, admin_user_action,
 admin_invites, admin_invite) and the invitation page (auth_invite_info). Every admin mutation requires re-auth.
 """
@@ -20,7 +22,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Header, Query, Request, Response, status
 
 from haalendar.accounts import service
-from haalendar.accounts.models import AuthSession, UserAccount
+from haalendar.accounts.models import AuthSession
 from haalendar.accounts.schemas import (
     AdminInviteCreatedOut,
     AdminInviteIn,
@@ -36,6 +38,7 @@ from haalendar.accounts.schemas import (
     MeOut,
     PasswordResetConfirmIn,
     PasswordResetRequestIn,
+    ProfilePatchIn,
     ReauthIn,
     RegistrationIn,
     SetupAdminIn,
@@ -46,29 +49,17 @@ from haalendar.accounts.schemas import (
     TotpSetupOut,
     UserStatus,
 )
-from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, Auth, DbSession
+from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, AppStorage, Auth, DbSession
 from haalendar.errors import ProblemCode, ProblemError
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 me_router = APIRouter(tags=["account"])
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
 setup_router = APIRouter(prefix="/setup", tags=["setup"])
+users_router = APIRouter(prefix="/users", tags=["account"])
 
 
-def to_me(user: UserAccount, csrf_token: str | None = None) -> MeOut:
-    return MeOut(
-        id=user.id,
-        email=user.email,
-        display_name=user.display_name,
-        avatar_url=None,
-        role="admin" if user.role == "admin" else "user",
-        time_zone=user.time_zone,
-        locale="en",
-        totp_enabled=user.totp_enabled_at is not None,
-        must_change_password=user.must_change_password,
-        csrf_token=csrf_token,
-        version=user.version,
-    )
+to_me = service.to_me
 
 
 def _set_session_cookie(response: Response, token: str, session: AuthSession) -> None:
@@ -320,3 +311,62 @@ async def admin_invite_user(
 async def admin_revoke_invite(id: uuid.UUID, admin: Admin, db: DbSession) -> None:
     service.require_recent_reauth(admin.session)
     await service.admin_revoke_invite(db, admin.user, id)
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Profile and avatar.
+
+AVATAR_CACHE = "private, max-age=31536000, immutable"
+
+
+@me_router.patch("/me", operation_id="updateProfile")
+async def update_profile(
+    body: ProfilePatchIn,
+    response: Response,
+    auth: Auth,
+    db: DbSession,
+    if_match: Annotated[str | None, Header()] = None,
+) -> MeOut:
+    user = await service.update_profile(
+        db,
+        auth.user,
+        expected_version=_expected_version(if_match),
+        display_name=body.display_name,
+        time_zone=body.time_zone,
+    )
+    response.headers["ETag"] = f'"{user.version}"'
+    return to_me(user, csrf_token=auth.session.csrf_secret)
+
+
+@me_router.put("/me/avatar", operation_id="uploadAvatar")
+async def upload_avatar(request: Request, auth: Auth, db: DbSession, storage: AppStorage) -> MeOut:
+    user = await service.set_avatar(db, storage, auth.user, await request.body())
+    return to_me(user, csrf_token=auth.session.csrf_secret)
+
+
+@me_router.delete("/me/avatar", operation_id="removeAvatar")
+async def remove_avatar(auth: Auth, db: DbSession) -> MeOut:
+    user = await service.remove_avatar(db, auth.user)
+    return to_me(user, csrf_token=auth.session.csrf_secret)
+
+
+@users_router.get(
+    "/{id}/avatar",
+    operation_id="getUserAvatar",
+    response_class=Response,
+    responses={200: {"content": {"image/webp": {}}}},
+)
+async def get_user_avatar(
+    id: uuid.UUID,
+    auth: Auth,
+    db: DbSession,
+    storage: AppStorage,
+    v: Annotated[str | None, Query(max_length=64)] = None,
+) -> Response:
+    data = await service.avatar_bytes(db, storage, id)
+    if data is None:
+        raise ProblemError(404, ProblemCode.NOT_FOUND, "No avatar")
+    return Response(
+        content=data,
+        media_type=service.AVATAR_MEDIA_TYPE,
+        headers={"Cache-Control": AVATAR_CACHE, "Content-Disposition": 'inline; filename="avatar.webp"'},
+    )

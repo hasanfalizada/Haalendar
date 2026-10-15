@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import ipaddress
 import secrets
@@ -26,13 +27,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts import crypto
+from haalendar.accounts.avatar import process_avatar
 from haalendar.accounts.mailer import Mailer
 from haalendar.accounts.models import AuthSession, AuthToken, InstanceSettings, RecoveryCode, UserAccount
-from haalendar.accounts.schemas import AdminInviteOut, AdminUserOut, UserStatus
+from haalendar.accounts.schemas import AdminInviteOut, AdminUserOut, MeOut, UserStatus
 from haalendar.atoms.accounts.password_policy import check_password
 from haalendar.config import Settings
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
+from haalendar.storage import Storage
 
 log = get_logger(__name__)
 
@@ -1093,3 +1096,109 @@ async def admin_revoke_invite(db: AsyncSession, admin: UserAccount, invite_id: u
         raise ProblemError(404, ProblemCode.NOT_FOUND, "Invitation not found")
     invite.revoked_at = utcnow()
     log.info("admin_invite_revoked", admin_id=str(admin.id), invite_id=str(invite.id))
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Profile (FR-ACC-08): name, time zone, locale with optimistic
+# concurrency (If-Match → version), avatar upload/removal. The avatar is re-encoded off the event loop and stored
+# content-addressed; removing it only clears the reference (files are never deleted). avatar_url carries a content
+# version, so browsers may cache it forever.
+# ---------------------------------------------------------------------------------------------------------------
+
+AVATAR_MEDIA_TYPE = "image/webp"
+
+
+def avatar_url(user: UserAccount) -> str | None:
+    if not user.avatar_key:
+        return None
+    version = user.avatar_key.rsplit("/", 1)[-1][:16]
+    return f"/api/v1/users/{user.id}/avatar?v={version}"
+
+
+def to_me(user: UserAccount, csrf_token: str | None = None) -> MeOut:
+    return MeOut(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=avatar_url(user),
+        role="admin" if user.role == "admin" else "user",
+        time_zone=user.time_zone,
+        locale="en",
+        totp_enabled=user.totp_enabled_at is not None,
+        must_change_password=user.must_change_password,
+        csrf_token=csrf_token,
+        version=user.version,
+    )
+
+
+async def update_profile(
+    db: AsyncSession,
+    user: UserAccount,
+    *,
+    expected_version: int,
+    display_name: str | None,
+    time_zone: str | None,
+) -> UserAccount:
+    if user.version != expected_version:
+        raise ProblemError(
+            412,
+            ProblemCode.VERSION_CONFLICT,
+            "The profile was changed meanwhile",
+            current=to_me(user).model_dump(mode="json"),
+        )
+    changed: list[str] = []
+    if display_name is not None:
+        name = display_name.strip()
+        if not name:
+            raise ProblemError(
+                422,
+                ProblemCode.VALIDATION_FAILED,
+                "Invalid profile",
+                errors=[{"pointer": "/display_name", "detail": "Enter a name"}],
+            )
+        if name != user.display_name:
+            user.display_name = name
+            changed.append("display_name")
+    if time_zone is not None and time_zone != user.time_zone:
+        if time_zone not in _time_zones():
+            raise ProblemError(
+                422,
+                ProblemCode.VALIDATION_FAILED,
+                "Unknown time zone",
+                errors=[{"pointer": "/time_zone", "detail": "Use an IANA time zone, e.g. Europe/Berlin"}],
+            )
+        user.time_zone = time_zone
+        changed.append("time_zone")
+    if changed:
+        user.version += 1
+        log.info("profile_updated", user_id=str(user.id), fields=changed)
+    return user
+
+
+async def set_avatar(db: AsyncSession, storage: Storage, user: UserAccount, data: bytes) -> UserAccount:
+    processed = await asyncio.to_thread(process_avatar, data)
+    stored = await asyncio.to_thread(storage.put, user.id, processed, AVATAR_MEDIA_TYPE)
+    if stored.key != user.avatar_key:
+        user.avatar_key = stored.key
+        user.version += 1
+    log.info("avatar_set", user_id=str(user.id), size_bytes=stored.size_bytes)
+    return user
+
+
+async def remove_avatar(db: AsyncSession, user: UserAccount) -> UserAccount:
+    if user.avatar_key is not None:
+        user.avatar_key = None  # the stored file stays (never deleted)
+        user.version += 1
+        log.info("avatar_removed", user_id=str(user.id))
+    return user
+
+
+async def avatar_bytes(db: AsyncSession, storage: Storage, user_id: uuid.UUID) -> bytes | None:
+    """Avatar of an active user, or None (unknown, deactivated, no avatar or file missing)."""
+    user = await db.get(UserAccount, user_id)
+    if user is None or user.deactivated_at is not None or not user.avatar_key:
+        return None
+    data = await asyncio.to_thread(storage.get, user.avatar_key)
+    if data is None:
+        log.error("avatar_file_missing", user_id=str(user.id))
+    return data

@@ -59,6 +59,7 @@ def test_production_accepts_safe_configuration() -> None:
             "HAALENDAR_SECRET_KEY": "x" * 40,
             "HAALENDAR_PUBLIC_URL": "https://cal.example.org",
             "HAALENDAR_DATABASE_URL": "postgresql+psycopg://haalendar_app:s3cret@db/haalendar",
+            "HAALENDAR_STORAGE_DIR": "/data/storage",
         }
     )
     assert settings.https is True

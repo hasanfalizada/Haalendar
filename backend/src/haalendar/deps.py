@@ -21,6 +21,7 @@ from haalendar.accounts.models import AuthSession, UserAccount
 from haalendar.config import Settings
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.security.guards import UNSAFE_METHODS
+from haalendar.storage import Storage
 
 SESSION_COOKIE = "__Host-haalendar_session"
 CSRF_HEADER = "x-csrf-token"
@@ -47,9 +48,15 @@ def get_mailer(request: Request) -> Mailer:
     return mailer
 
 
+def get_storage(request: Request) -> Storage:
+    storage: Storage = request.app.state.storage
+    return storage
+
+
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 AppSettings = Annotated[Settings, Depends(get_settings_dep)]
 AppMailer = Annotated[Mailer, Depends(get_mailer)]
+AppStorage = Annotated[Storage, Depends(get_storage)]
 
 
 @dataclass(frozen=True, slots=True)

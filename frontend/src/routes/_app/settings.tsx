@@ -1,12 +1,11 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Settings placeholder with the theme switch (FR-X-16). Full user
 // settings (week start, Week A/B, …) arrive in HAAL-045.
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Account section: who is signed in, sign out (wipes cached data).
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The account section became the profile section (incl. sign-out).
+import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { meQuery, signOut } from "@/api/session";
-import { Button } from "@/components/ui/button";
+import { ProfileSection } from "@/components/profile/ProfileSection";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/ThemeProvider";
 import type { ThemePreference } from "@/theme/theme";
@@ -20,9 +19,6 @@ const OPTIONS: { value: ThemePreference; labelKey: `pages.settings.theme${"Syste
 function SettingsPage() {
   const { t } = useTranslation();
   const { preference, setPreference } = useTheme();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { data: me } = useQuery(meQuery);
   return (
     <div className="flex flex-col">
       <div className="border-b border-line px-4 py-2.5">
@@ -59,20 +55,7 @@ function SettingsPage() {
           })}
         </div>
       </div>
-      <div className="flex flex-col gap-2 border-t border-line p-4">
-        <span className="text-[11px] font-semibold tracking-wider text-muted uppercase">
-          {t("pages.settings.account")}
-        </span>
-        {me ? <p>{t("pages.settings.signedInAs", { email: me.email })}</p> : null}
-        <Button
-          className="w-fit"
-          onClick={() => {
-            void signOut(queryClient).then(() => navigate({ to: "/login", replace: true }));
-          }}
-        >
-          {t("auth.signOut")}
-        </Button>
-      </div>
+      <ProfileSection />
     </div>
   );
 }

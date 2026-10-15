@@ -39,7 +39,7 @@ Haalendar targets **OWASP ASVS 5.0 Level 2** and is reviewed against the OWASP T
 - Strict security headers on every response (Content-Security-Policy without inline scripts, HSTS on HTTPS, `nosniff`, no framing, no `Server` header).
 - Host header allow-list, cross-site request rejection (Origin and Fetch Metadata checks), per-client rate limiting, request size and content-type limits.
 - Strict input models (unknown fields rejected); errors as RFC 9457 problems without internal details.
-- Image uploads validated by file signature (no SVG or other active content), size-limited, with sanitised file names.
+- Image uploads validated by file signature (no SVG or other active content), size-limited, with sanitised file names; profile photos are re-encoded on the server, which removes location and camera metadata and any hidden payload.
 - Production refuses insecure configuration (default secret key, plain HTTP); secrets can be supplied as files.
 - The first-run admin wizard is open only while no administrator exists; in production it additionally requires a setup token from the server configuration, so nobody can claim a freshly deployed instance first.
 - Every user sees only their own data and data explicitly shared with them: one authorization policy decides every request, and PostgreSQL row-level security enforces the same rules in the database. The application connects with a least-privilege role that cannot bypass these rules and cannot delete rows.

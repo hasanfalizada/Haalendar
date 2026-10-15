@@ -13,7 +13,8 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "shortcut": "Shortcut: {{keys}}",
-    "users": "Users"
+    "users": "Users",
+    "profile": "Profile of {{name}}"
   },
   "status": {
     "online": "Connected",
@@ -48,7 +49,6 @@
       "themeSystem": "System",
       "themeLight": "Light",
       "themeDark": "Dark",
-      "account": "Account",
       "signedInAs": "Signed in as {{email}}"
     },
     "notFound": {
@@ -232,5 +232,24 @@
       "reauthFailed": "Your identity could not be confirmed.",
       "loadFailed": "Users could not be loaded."
     }
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Display name",
+    "language": "Language",
+    "languageHint": "More languages will follow.",
+    "save": "Save profile",
+    "saved": "Profile saved.",
+    "conflict": "Your profile was changed elsewhere. The latest version is shown — please check and save again.",
+    "failed": "The profile could not be saved. Please try again.",
+    "offline": "Changing the profile needs a connection to the server.",
+    "avatarUpload": "Upload photo",
+    "avatarChange": "Change photo",
+    "avatarRemove": "Remove photo",
+    "avatarHint": "PNG, JPEG or WebP, up to 2 MB. It is cropped to a square and location data is removed.",
+    "avatarType": "Use a PNG, JPEG or WebP image.",
+    "avatarSize": "The image must not exceed 2 MB.",
+    "avatarSaved": "Photo updated.",
+    "avatarRemoved": "Photo removed."
   }
 }

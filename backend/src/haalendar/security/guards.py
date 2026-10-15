@@ -19,6 +19,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from haalendar.errors import ProblemCode
 from haalendar.logging import get_logger
+from haalendar.security.uploads import AVATAR_PATH, AVATAR_TYPES, MAX_AVATAR_BYTES
 
 log = get_logger(__name__)
 
@@ -26,6 +27,18 @@ UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 ALLOWED_BODY_TYPES = ("application/json", "application/merge-patch+json", "multipart/form-data")
 RATE_LIMIT_EXEMPT_PREFIXES = ("/api/v1/health/",)
 AUTH_PREFIX = "/api/v1/auth/"
+
+
+@dataclass(frozen=True, slots=True)
+class BodyRule:
+    """Per-path body limit and accepted content types (upload endpoints)."""
+
+    max_bytes: int
+    content_types: tuple[str, ...]
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Upload endpoints get their own limit and only their media types.
+BODY_RULES: dict[str, BodyRule] = {AVATAR_PATH: BodyRule(MAX_AVATAR_BYTES, AVATAR_TYPES)}
 
 
 def _header(scope: Scope, name: bytes) -> str:
@@ -178,16 +191,19 @@ class BodyGuard:
         if scope["type"] != "http" or scope.get("method") not in UNSAFE_METHODS:
             await self.app(scope, receive, send)
             return
+        rule = BODY_RULES.get(scope.get("path", ""))
+        limit = rule.max_bytes if rule else self.max_body_bytes
+        allowed_types = rule.content_types if rule else ALLOWED_BODY_TYPES
         length_header = _header(scope, b"content-length")
-        if length_header.isdigit() and int(length_header) > self.max_body_bytes:
-            log.warning("body_too_large", content_length=int(length_header), limit=self.max_body_bytes)
+        if length_header.isdigit() and int(length_header) > limit:
+            log.warning("body_too_large", content_length=int(length_header), limit=limit)
             await send_problem(scope, send, 413, ProblemCode.PAYLOAD_TOO_LARGE, "Request body is too large")
             return
         has_body = (length_header.isdigit() and int(length_header) > 0) or "chunked" in _header(
             scope, b"transfer-encoding"
         )
         content_type = _header(scope, b"content-type").split(";", 1)[0].strip().lower()
-        if has_body and content_type not in ALLOWED_BODY_TYPES:
+        if has_body and content_type not in allowed_types:
             log.warning("unsupported_media_type", content_type=content_type[:100])
             await send_problem(
                 scope, send, 415, ProblemCode.UNSUPPORTED_MEDIA_TYPE, "Unsupported content type"
@@ -198,7 +214,6 @@ class BodyGuard:
         # response it produces (typically a parse error) with 413. Raising from receive() does not work because
         # FastAPI converts exceptions during body reading into 400.
         received = 0
-        limit = self.max_body_bytes
         exceeded = False
         replaced = False
 

@@ -247,6 +247,8 @@ The environment is selected with `HAALENDAR_ENV`.
 - **Row actions** — make administrator / regular user, unlock, reset password (link by e-mail, or a one-time password without SMTP), deactivate (signs the user out everywhere, keeps all data) and reactivate. Your own row has no actions, and the last active administrator can never be demoted or deactivated.
 - Changes ask for your password again when the last sign-in or confirmation is older than 15 minutes.
 
+**Profile.** *Settings → Profile* changes the display name and time zone and uploads a photo (PNG, JPEG or WebP up to 2 MB). The server re-encodes the photo to a 256×256 WebP — location and camera metadata are removed — and stores it under `HAALENDAR_STORAGE_DIR`; removing the photo keeps the stored file. Without `HAALENDAR_STORAGE_DIR` development uses the system temp directory, so photos disappear after a reboot.
+
 Open registration (without invitation) is an instance setting; to try it, enable it in the development database and use the interactive docs (`/api/v1/docs`) or `curl`:
 
 ```bash
@@ -291,6 +293,7 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | `HAALENDAR_MIGRATION_DATABASE_URL` | `postgresql+psycopg://haalendar:haalendar@localhost:5432/haalendar` | Owner role for migrations and `haalendar-db-bootstrap` only; not needed by the running app |
 | `HAALENDAR_SECRET_KEY` | development placeholder | Required in production |
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | `https://` in production |
+| `HAALENDAR_STORAGE_DIR` | system temp directory | File storage root (avatars); required in production, must be a persistent volume and be backed up with the database |
 | `HAALENDAR_SETUP_TOKEN` | — | Token for the first-run admin wizard; mandatory in production, optional in development |
 | `HAALENDAR_PORT` | `8080` | API port |
 | `HAALENDAR_LOG_LEVEL` / `HAALENDAR_LOG_FORMAT` | `INFO` / `json` | `console` for local reading |

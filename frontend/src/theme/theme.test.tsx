@@ -1,11 +1,9 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Theme resolution, persistence, storage failures and the settings switch.
-import { createMemoryHistory } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { App } from "@/App";
-import { createAppRouter, createQueryClient } from "@/router";
+import { json, me, renderApp, stubApi } from "@/test/fake-api";
 import { stubMatchMedia } from "@/test/setup";
 
 import { readPreference, resolveTheme, THEME_STORAGE_KEY, writePreference } from "./theme";
@@ -42,13 +40,9 @@ describe("theme logic", () => {
 
 describe("theme in the app", () => {
   function renderSettings() {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response("{}", { status: 200 })),
-    );
-    const queryClient = createQueryClient();
-    const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: ["/settings"] }));
-    render(<App queryClient={queryClient} router={router} />);
+    // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. A realistic signed-in user (the page shows the profile too).
+    stubApi({ "GET /me": () => json(me()) });
+    renderApp("/settings");
   }
 
   it("follows the OS dark setting when preference is system", async () => {

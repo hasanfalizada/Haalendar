@@ -229,27 +229,59 @@ paths:
         required: true
         content: { application/merge-patch+json: { schema: { $ref: '#/components/schemas/ProfilePatch' } } }
       responses:
-        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '200':
+          description: Updated
+          headers:
+            ETag: { $ref: '../components/common.yaml#/components/headers/ETag' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+        '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The avatar is sent as the raw request body (no multipart parser);
+  # the server checks the file signature, re-encodes to a 256×256 WebP (strips EXIF/GPS) and stores it content-addressed.
   me_avatar:
     put:
       tags: [account]
       operationId: uploadAvatar
-      summary: Upload avatar image (PNG/JPEG/WebP, ≤ 2 MB)
+      summary: Upload avatar image (PNG/JPEG/WebP, ≤ 2 MB, raw body); returns the updated profile
+      description: >-
+        The file itself is the request body. The declared Content-Type must be one of the image types, but only the
+        file signature decides; anything else is refused with 415. Images over 40 megapixels are refused with 413.
       requestBody:
         required: true
         content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                file: { type: string, contentMediaType: application/octet-stream }
+          image/png: { schema: { type: string, contentMediaType: image/png } }
+          image/jpeg: { schema: { type: string, contentMediaType: image/jpeg } }
+          image/webp: { schema: { type: string, contentMediaType: image/webp } }
       responses:
-        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '200': { description: Avatar replaced, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '413': { $ref: '../components/common.yaml#/components/responses/PayloadTooLarge' }
         '415': { $ref: '../components/common.yaml#/components/responses/UnsupportedMediaType' }
+    delete:
+      tags: [account]
+      operationId: removeAvatar
+      summary: Remove the avatar from the profile (the stored file is kept, never deleted)
+      responses:
+        '200': { description: Avatar removed, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+  user_avatar:
+    get:
+      tags: [account]
+      operationId: getUserAvatar
+      summary: Avatar of a user (any signed-in user may fetch it); cached immutably per version
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - { name: v, in: query, schema: { type: string, maxLength: 64 }, description: Version from avatar_url (cache key only) }
+      responses:
+        '200':
+          description: 256×256 WebP image
+          headers:
+            Cache-Control: { schema: { type: string }, description: 'private, max-age=31536000, immutable' }
+          content: { image/webp: { schema: { type: string, contentMediaType: image/webp } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   me_password:
     post:
       tags: [account]
@@ -448,7 +480,7 @@ components:
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         email: { type: string, format: email }
         display_name: { type: string }
-        avatar_url: { oneOf: [{ type: string, format: uri-reference }, { type: 'null' }] }
+        avatar_url: { oneOf: [{ type: string, format: uri-reference }, { type: 'null' }], description: 'Versioned URL of the avatar image, null without avatar.' }
         role: { type: string, enum: [admin, user] }
         time_zone: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
         locale: { type: string, enum: [en] }

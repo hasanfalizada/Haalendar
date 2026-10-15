@@ -54,6 +54,7 @@ paths:
   /auth/oidc/callback: { $ref: './modules/accounts.yaml#/paths/auth_oidc_callback' }
   /me: { $ref: './modules/accounts.yaml#/paths/me' }
   /me/avatar: { $ref: './modules/accounts.yaml#/paths/me_avatar' }
+  /users/{id}/avatar: { $ref: './modules/accounts.yaml#/paths/user_avatar' }
   /me/password: { $ref: './modules/accounts.yaml#/paths/me_password' }
   /me/settings: { $ref: './modules/accounts.yaml#/paths/me_settings' }
   /me/sessions: { $ref: './modules/accounts.yaml#/paths/me_sessions' }

@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     mail_dir: str = ""
     # First-run setup (HAAL-163): token required to create the first admin; mandatory in production.
     setup_token: SecretStr | None = None
+    # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. File storage root (local adapter, ADR-0004); empty = system temp
+    # directory outside production, required in production (the compose file mounts /data).
+    storage_dir: str = ""
 
     @model_validator(mode="after")
     def _forbid_insecure_production(self) -> Settings:
@@ -137,6 +140,8 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "HAALENDAR_DATABASE_URL must be set (the development default is not allowed)"
                 )
+            if not self.storage_dir:
+                raise ValueError("HAALENDAR_STORAGE_DIR must be set in production (persistent volume)")
         return self
 
     @property

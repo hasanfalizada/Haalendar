@@ -17,6 +17,10 @@ from haalendar.logging import get_logger
 log = get_logger(__name__)
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Avatars: raw-body upload, at most 2 MiB, PNG/JPEG/WebP only.
+AVATAR_PATH = "/api/v1/me/avatar"
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+AVATAR_TYPES = ("image/png", "image/jpeg", "image/webp")
 MAX_FILENAME_CHARS = 120
 EXTENSIONS = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
 _UNSAFE_CHARS = re.compile(r'[\x00-\x1f\x7f<>:"/\\|?*]')

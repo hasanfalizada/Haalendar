@@ -19,6 +19,9 @@ dependencies = [
   "email-validator==2.3.0",
   "pyotp==2.10.0",
   "cryptography==50.0.2",
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Avatar re-encoding (metadata stripping) and content-addressed storage (ADR-0004).
+  "pillow==12.3.0",
+  "blake3==1.0.10",
 ]
 
 [dependency-groups]

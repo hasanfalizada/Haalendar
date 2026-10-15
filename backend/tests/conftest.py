@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import tempfile
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -45,6 +46,8 @@ def make_settings(**overrides: str) -> Settings:
         "HAALENDAR_EXTRA_ALLOWED_HOSTS": "testserver",
         "HAALENDAR_RATE_LIMIT_PER_MINUTE": "0",
         "HAALENDAR_AUTH_RATE_LIMIT_PER_MINUTE": "0",
+        # Production-mode tests need a storage directory (required there since HAAL-166).
+        "HAALENDAR_STORAGE_DIR": str(Path(tempfile.gettempdir()) / "haalendar-test-storage"),
     }
     env.update({f"HAALENDAR_{k.upper()}": v for k, v in overrides.items()})
     return load_settings(env)

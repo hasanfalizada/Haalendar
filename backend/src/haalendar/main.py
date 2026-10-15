@@ -6,6 +6,7 @@ error handlers, middleware and routers. run() starts uvicorn without the Server 
 token-protected /metrics endpoint are wired here.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-020. Security guards (Host, rate limit, body/content-type, CSRF origin).
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. Accounts routers (register, verify e-mail, login, logout, me) and mailer.
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. File storage (local adapter) and the users router (avatars).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from haalendar import __version__
-from haalendar.accounts.api import admin_router, auth_router, me_router, setup_router
+from haalendar.accounts.api import admin_router, auth_router, me_router, setup_router, users_router
 from haalendar.accounts.mailer import create_mailer
 from haalendar.api import health
 from haalendar.config import Environment, Settings, get_settings
@@ -27,6 +28,7 @@ from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
 from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
 from haalendar.security.guards import BodyGuard, CsrfOriginGuard, HostGuard, RateLimitGuard
+from haalendar.storage import create_storage
 
 log = get_logger(__name__)
 
@@ -82,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.metrics = metrics
     app.state.mailer = create_mailer(settings)
+    app.state.storage = create_storage(settings)
     install_error_handlers(app)
     # Starlette runs the last added middleware first: request context (ids, headers, logging) wraps every guard,
     # so rejections still carry X-Request-ID, security headers and a log line.
@@ -101,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(me_router, prefix=API_PREFIX)
     app.include_router(admin_router, prefix=API_PREFIX)
     app.include_router(setup_router, prefix=API_PREFIX)
+    app.include_router(users_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

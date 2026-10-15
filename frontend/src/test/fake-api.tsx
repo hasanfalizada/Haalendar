@@ -64,11 +64,12 @@ export function stubApi(routes: Record<string, Handler>): Call[] {
     vi.fn(async (request: Request) => {
       const url = new URL(request.url);
       const path = url.pathname.replace(/^\/api\/v1/, "");
-      const text = request.method === "GET" ? "" : await request.clone().text();
+      const isJson = (request.headers.get("Content-Type") ?? "").includes("json");
+      const text = request.method === "GET" || !isJson ? "" : await request.clone().text();
       const call: Call = {
         method: request.method,
         path: path + url.search,
-        body: text ? (JSON.parse(text) as unknown) : undefined,
+        body: text ? (JSON.parse(text) as unknown) : undefined, // binary bodies (uploads) are not decoded
         headers: request.headers,
       };
       calls.push(call);

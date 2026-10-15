@@ -1,6 +1,7 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Application shell (wireframes D1/M2): icon rail on ≥ md screens,
 // top bar + slide-out drawer on phones. Active route is exposed with aria-current for assistive technology.
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin-only items are shown to administrators only.
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The signed-in user's avatar links to the profile (Settings).
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -8,6 +9,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { meQuery } from "@/api/session";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -81,6 +83,16 @@ export function AppShell() {
         {secondaryItems.map((item) => (
           <RailLink key={item.to} item={item} />
         ))}
+        {me?.display_name ? (
+          <Link
+            to="/settings"
+            aria-label={t("nav.profile", { name: me.display_name })}
+            title={me.display_name}
+            className="mt-1 rounded-full"
+          >
+            <Avatar name={me.display_name} url={me.avatar_url} size={32} />
+          </Link>
+        ) : null}
         <div className="mt-2">
           <ConnectionStatus compact />
         </div>
@@ -104,7 +116,21 @@ export function AppShell() {
                 <DrawerLink key={item.to} item={item} onNavigate={closeDrawer} />
               ))}
             </nav>
-            <div className="mt-auto">
+            <div className="mt-auto flex flex-col gap-3">
+              {me?.display_name ? (
+                <Link
+                  to="/settings"
+                  onClick={closeDrawer}
+                  aria-label={t("nav.profile", { name: me.display_name })}
+                  className="flex items-center gap-3 rounded-sm p-2 hover:bg-surface"
+                >
+                  <Avatar name={me.display_name} url={me.avatar_url} size={36} />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{me.display_name}</span>
+                    <span className="block truncate text-xs text-muted">{me.email}</span>
+                  </span>
+                </Link>
+              ) : null}
               <ConnectionStatus />
             </div>
           </SheetContent>

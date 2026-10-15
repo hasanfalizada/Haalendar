@@ -170,3 +170,12 @@ class AdminInviteCreatedOut(BaseModel):
 class InviteInfoOut(BaseModel):
     email: str
     expires_at: datetime
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Profile (FR-ACC-08): merge-patch of name, time zone and locale.
+
+
+class ProfilePatchIn(ApiModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=80)
+    time_zone: str | None = Field(default=None, min_length=1, max_length=64)
+    locale: Literal["en"] | None = None
