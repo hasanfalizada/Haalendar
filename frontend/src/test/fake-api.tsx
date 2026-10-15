@@ -53,6 +53,15 @@ const DEFAULTS: Record<string, Handler> = {
   "GET /health/live": () => json({ status: "ok", version: "0.1.0" }),
   "GET /health/ready": () => json({ status: "ok", version: "0.1.0" }),
   "GET /shares": () => json({ data: [] }),
+  "GET /me/sessions": () => json({ data: [] }),
+  "GET /admin/settings": () =>
+    json({
+      registration_mode: "invite",
+      require_admin_2fa: false,
+      demo_mode: false,
+      smtp_configured: false,
+      version: 1,
+    }),
 };
 
 function matcher(pattern: string): RegExp {

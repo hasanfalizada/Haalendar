@@ -161,6 +161,9 @@ paths:
       tags: [admin]
       operationId: adminUpdateInstanceSettings
       summary: Update instance settings (requires re-auth)
+      description: >-
+        Turning on require_admin_2fa is refused with 409 while the acting administrator has no 2FA, so nobody locks
+        themselves out of the admin panel.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IfMatch'
       requestBody:
@@ -174,8 +177,16 @@ paths:
                 registration_mode: { type: string, enum: [invite, open] }
                 require_admin_2fa: { type: boolean }
       responses:
-        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/InstanceSettings' } } } }
+        '200':
+          description: Updated
+          headers:
+            ETag: { $ref: '../components/common.yaml#/components/headers/ETag' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/InstanceSettings' } } }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+        '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
   admin_imports:
     get:
       tags: [admin]

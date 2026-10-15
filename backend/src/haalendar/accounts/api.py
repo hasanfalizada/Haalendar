@@ -6,6 +6,7 @@ SameSite=Lax, Path=/, no Domain, lifetime = absolute session expiry.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-161. Password reset, re-authentication, password change, admin reset.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-162. Second factor at login, TOTP enrolment, admin unlock.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. First-run setup (setup_status, setup_admin).
++++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Verification resend, recovery codes, own sessions, instance settings.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Profile (me PATCH), avatar upload/removal (me_avatar) and avatar
 download (user_avatar).
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin panel (admin.yaml admin_users, admin_user, admin_user_action,
@@ -21,7 +22,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Header, Query, Request, Response, status
 
 from haalendar.accounts import service
-from haalendar.accounts.models import AuthSession
+from haalendar.accounts.models import AuthSession, InstanceSettings
 from haalendar.accounts.schemas import (
     AdminInviteCreatedOut,
     AdminInviteIn,
@@ -31,6 +32,9 @@ from haalendar.accounts.schemas import (
     AdminUserPageOut,
     AdminUserPatchIn,
     ChangePasswordIn,
+    EmailIn,
+    InstanceSettingsOut,
+    InstanceSettingsPatchIn,
     InviteInfoOut,
     LoginIn,
     LoginOut,
@@ -39,7 +43,10 @@ from haalendar.accounts.schemas import (
     PasswordResetRequestIn,
     ProfilePatchIn,
     ReauthIn,
+    RecoveryCodesOut,
     RegistrationIn,
+    SessionListOut,
+    SessionOut,
     SetupAdminIn,
     SetupStatusOut,
     TokenIn,
@@ -49,6 +56,7 @@ from haalendar.accounts.schemas import (
     UserStatus,
 )
 from haalendar.api.preconditions import expected_version
+from haalendar.config import Settings
 from haalendar.deps import SESSION_COOKIE, Admin, AppMailer, AppSettings, AppStorage, Auth, DbSession
 from haalendar.errors import ProblemCode, ProblemError
 
@@ -358,3 +366,90 @@ async def get_user_avatar(
         media_type=service.AVATAR_MEDIA_TYPE,
         headers={"Cache-Control": AVATAR_CACHE, "Content-Disposition": 'inline; filename="avatar.webp"'},
     )
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Remaining self-service and instance settings.
+
+
+@auth_router.post(
+    "/verify-email/resend", status_code=status.HTTP_202_ACCEPTED, operation_id="resendVerificationEmail"
+)
+async def resend_verification_email(
+    body: EmailIn, db: DbSession, mailer: AppMailer, settings: AppSettings
+) -> None:
+    await service.resend_verification(db, mailer, settings, str(body.email))
+
+
+@me_router.post("/me/totp/recovery-codes", operation_id="regenerateRecoveryCodes")
+async def regenerate_recovery_codes(auth: Auth, db: DbSession) -> RecoveryCodesOut:
+    return RecoveryCodesOut(
+        recovery_codes=await service.regenerate_recovery_codes(db, auth.session, auth.user)
+    )
+
+
+@me_router.get("/me/sessions", operation_id="listSessions")
+async def list_sessions(auth: Auth, db: DbSession) -> SessionListOut:
+    sessions = await service.list_sessions(db, auth.user.id)
+    return SessionListOut(
+        data=[
+            SessionOut(
+                id=s.id,
+                created_at=s.created_at,
+                last_seen_at=s.last_seen_at,
+                device=service.device_summary(s.user_agent),
+                ip_prefix=s.ip_prefix,
+                current=s.id == auth.session.id,
+            )
+            for s in sessions
+        ]
+    )
+
+
+@me_router.delete("/me/sessions/{id}", status_code=status.HTTP_204_NO_CONTENT, operation_id="revokeSession")
+async def revoke_session(id: uuid.UUID, auth: Auth, db: DbSession) -> None:
+    await service.revoke_own_session(db, auth.user.id, id)
+
+
+@me_router.post(
+    "/me/sessions/revoke-others", status_code=status.HTTP_204_NO_CONTENT, operation_id="revokeOtherSessions"
+)
+async def revoke_other_sessions(auth: Auth, db: DbSession) -> None:
+    await service.revoke_sessions(db, auth.user.id, keep=auth.session.id)
+
+
+def _instance_settings_out(row: InstanceSettings, settings: Settings) -> InstanceSettingsOut:
+    return InstanceSettingsOut(
+        registration_mode="open" if row.registration_mode == "open" else "invite",
+        require_admin_2fa=row.require_admin_2fa,
+        demo_mode=settings.demo_mode,
+        smtp_configured=bool(settings.smtp_host),
+        version=row.version,
+    )
+
+
+@admin_router.get("/settings", operation_id="adminGetInstanceSettings")
+async def admin_get_instance_settings(
+    admin: Admin, db: DbSession, settings: AppSettings
+) -> InstanceSettingsOut:
+    return _instance_settings_out(await service.get_instance_settings(db), settings)
+
+
+@admin_router.patch("/settings", operation_id="adminUpdateInstanceSettings")
+async def admin_update_instance_settings(
+    body: InstanceSettingsPatchIn,
+    response: Response,
+    admin: Admin,
+    db: DbSession,
+    settings: AppSettings,
+    if_match: Annotated[str | None, Header()] = None,
+) -> InstanceSettingsOut:
+    service.require_recent_reauth(admin.session)
+    row = await service.update_instance_settings(
+        db,
+        admin.user,
+        expected_version=expected_version(if_match),
+        registration_mode=body.registration_mode,
+        require_admin_2fa=body.require_admin_2fa,
+    )
+    response.headers["ETag"] = f'"{row.version}"'
+    return _instance_settings_out(row, settings)

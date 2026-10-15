@@ -204,20 +204,36 @@ async def register(
         log.info("user_registered", user_id=str(user.id), via="invite", role=user.role)
         return
 
+    log.info("user_registered", user_id=str(user.id), via="open")
+    await _send_verification(db, mailer, settings, user)
+
+
+async def _send_verification(db: AsyncSession, mailer: Mailer, settings: Settings, user: UserAccount) -> None:
+    """Issue a 24 h verification link (HAAL-171: older pending links of the account are revoked) and e-mail it."""
+    now = utcnow()
+    await db.execute(
+        update(AuthToken)
+        .where(
+            AuthToken.user_id == user.id,
+            AuthToken.purpose == "email_verify",
+            AuthToken.used_at.is_(None),
+            AuthToken.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+    )
     verify_token = crypto.new_token()
     db.add(
         AuthToken(
             user_id=user.id,
-            email=email,
+            email=user.email,
             purpose="email_verify",
             token_hash=crypto.token_digest(verify_token),
             expires_at=now + VERIFY_TOKEN_TTL,
         )
     )
     await db.flush()
-    log.info("user_registered", user_id=str(user.id), via="open")
     await mailer.send(
-        email,
+        user.email,
         "Haalendar: confirm your e-mail address",
         f"Hello {user.display_name},\n\nconfirm your e-mail address to finish creating your Haalendar account:\n"
         f"{settings.public_url.rstrip('/')}/verify-email?token={verify_token}\n\n"
@@ -231,6 +247,7 @@ async def verify_email(db: AsyncSession, token: str) -> None:
             AuthToken.token_hash == crypto.token_digest(token),
             AuthToken.purpose == "email_verify",
             AuthToken.used_at.is_(None),
+            AuthToken.revoked_at.is_(None),
             AuthToken.expires_at > utcnow(),
         )
     )
@@ -1202,3 +1219,134 @@ async def avatar_bytes(db: AsyncSession, storage: Storage, user_id: uuid.UUID) -
     if data is None:
         log.error("avatar_file_missing", user_id=str(user.id))
     return data
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Remaining self-service: resend the verification link (generic
+# outcome, throttled per account), replace recovery codes, list/revoke own sessions; instance settings for admins
+# (registration mode, admin 2FA policy) with If-Match. Enabling the admin 2FA policy is refused while the acting admin
+# has no 2FA (no self lock-out).
+# ---------------------------------------------------------------------------------------------------------------
+
+VERIFY_RESEND_INTERVAL = timedelta(minutes=5)
+
+
+async def resend_verification(db: AsyncSession, mailer: Mailer, settings: Settings, email: str) -> None:
+    """Send a new verification link to an existing, active, unverified account; silently nothing otherwise."""
+    user = await _find_user_by_email(db, email)
+    if user is None or user.deactivated_at is not None or user.email_verified_at is not None:
+        log.info("verify_resend_ignored")
+        return
+    recent = await db.scalar(
+        select(AuthToken.id)
+        .where(
+            AuthToken.user_id == user.id,
+            AuthToken.purpose == "email_verify",
+            AuthToken.created_at > utcnow() - VERIFY_RESEND_INTERVAL,
+        )
+        .limit(1)
+    )
+    if recent is not None:
+        log.info("verify_resend_throttled", user_id=str(user.id))
+        return
+    await _send_verification(db, mailer, settings, user)
+    log.info("verify_resend_sent", user_id=str(user.id))
+
+
+async def regenerate_recovery_codes(db: AsyncSession, session: AuthSession, user: UserAccount) -> list[str]:
+    require_recent_reauth(session)
+    if user.totp_enabled_at is None:
+        raise ProblemError(409, ProblemCode.INVALID_STATE, "Two-factor authentication is not enabled")
+    codes = await _replace_recovery_codes(db, user.id)
+    log.info("recovery_codes_regenerated", user_id=str(user.id))
+    return codes
+
+
+async def list_sessions(db: AsyncSession, user_id: uuid.UUID) -> list[AuthSession]:
+    now = utcnow()
+    return list(
+        (
+            await db.scalars(
+                select(AuthSession)
+                .where(
+                    AuthSession.user_id == user_id,
+                    AuthSession.revoked_at.is_(None),
+                    AuthSession.idle_expires_at > now,
+                    AuthSession.absolute_expires_at > now,
+                )
+                .order_by(AuthSession.last_seen_at.desc())
+            )
+        ).all()
+    )
+
+
+async def revoke_own_session(db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> None:
+    session = await db.scalar(
+        select(AuthSession).where(
+            AuthSession.id == session_id, AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None)
+        )
+    )
+    if session is None:
+        raise ProblemError(404, ProblemCode.NOT_FOUND, "Session not found")
+    session.revoked_at = utcnow()
+    log.info("session_revoked", user_id=str(user_id), session_id=str(session_id))
+
+
+def device_summary(user_agent: str | None) -> str:
+    """Short, human-readable device description from the stored user agent (never shown raw)."""
+    ua = (user_agent or "").lower()
+    browser = next(
+        (name for key, name in (("edg/", "Edge"), ("firefox/", "Firefox"), ("chrome/", "Chrome"), ("safari/", "Safari"))
+         if key in ua),
+        "Browser",
+    )  # fmt: skip
+    system = next(
+        (name for key, name in (("android", "Android"), ("iphone", "iOS"), ("ipad", "iPadOS"), ("windows", "Windows"),
+                                ("mac os", "macOS"), ("linux", "Linux")) if key in ua),
+        "",
+    )  # fmt: skip
+    return f"{browser} on {system}" if system else browser
+
+
+async def get_instance_settings(db: AsyncSession) -> InstanceSettings:
+    row = await db.get(InstanceSettings, 1)
+    if row is None:
+        raise ProblemError(500, ProblemCode.INTERNAL_ERROR, "Instance settings are missing")
+    return row
+
+
+async def update_instance_settings(
+    db: AsyncSession,
+    admin: UserAccount,
+    *,
+    expected_version: int,
+    registration_mode: str | None,
+    require_admin_2fa: bool | None,
+) -> InstanceSettings:
+    row = await db.get(InstanceSettings, 1, with_for_update=True, populate_existing=True)
+    if row is None:
+        raise ProblemError(500, ProblemCode.INTERNAL_ERROR, "Instance settings are missing")
+    if row.version != expected_version:
+        raise ProblemError(
+            412,
+            ProblemCode.VERSION_CONFLICT,
+            "The settings were changed meanwhile",
+            current={"registration_mode": row.registration_mode, "require_admin_2fa": row.require_admin_2fa,
+                     "version": row.version},
+        )  # fmt: skip
+    changed: list[str] = []
+    if registration_mode is not None and registration_mode != row.registration_mode:
+        row.registration_mode = registration_mode
+        changed.append("registration_mode")
+    if require_admin_2fa is not None and require_admin_2fa != row.require_admin_2fa:
+        if require_admin_2fa and admin.totp_enabled_at is None:
+            raise ProblemError(
+                409, ProblemCode.INVALID_STATE, "Enable two-factor authentication for yourself first"
+            )
+        row.require_admin_2fa = require_admin_2fa
+        changed.append("require_admin_2fa")
+    if changed:
+        row.version += 1
+        row.updated_by = admin.id
+        log.info("instance_settings_changed", admin_id=str(admin.id), fields=changed)
+    return row

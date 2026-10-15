@@ -3,10 +3,12 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Account section: who is signed in, sign out (wipes cached data).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The account section became the profile section (incl. sign-out).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing overview (shared by me / with me).
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Security section (password, 2FA, sessions).
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ProfileSection } from "@/components/profile/ProfileSection";
+import { SecuritySection } from "@/components/security/SecuritySection";
 import { SharingSection } from "@/components/sharing/SharingSection";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -58,6 +60,7 @@ function SettingsPage() {
         </div>
       </div>
       <ProfileSection />
+      <SecuritySection />
       <SharingSection />
     </div>
   );

@@ -109,7 +109,9 @@
         "locked": "Too many failed attempts. Wait a few minutes and try again.",
         "unverified": "Confirm your e-mail address first — check your inbox for the link.",
         "generic": "Could not sign in. Please try again."
-      }
+      },
+      "forgot": "Forgot password?",
+      "createAccount": "Create an account"
     },
     "invite": {
       "title": "Join Haalendar",
@@ -136,6 +138,50 @@
       "submit": "Confirm",
       "wrong": "The password or code is incorrect.",
       "rateLimited": "Too many attempts. Wait a moment and try again."
+    },
+    "toLogin": "Go to sign-in",
+    "register": {
+      "title": "Create your account",
+      "intro": "Choose your name and a password. We will send a link to confirm your e-mail address.",
+      "submit": "Create account",
+      "submitting": "Creating…",
+      "haveAccount": "Already have an account?",
+      "closedTitle": "Registration by invitation",
+      "closedBody": "New accounts on this instance are created by invitation. Ask your administrator.",
+      "checkTitle": "Check your inbox",
+      "checkBody": "If {{email}} can be registered, a confirmation link is on its way. It is valid for 24 hours.",
+      "failed": "The account could not be created. Please try again."
+    },
+    "resend": {
+      "button": "Send the link again",
+      "sent": "If the address belongs to an unconfirmed account, a new link was sent. Check your inbox.",
+      "continue": "Continue"
+    },
+    "verify": {
+      "title": "Confirming your e-mail",
+      "checking": "Confirming…",
+      "doneTitle": "E-mail confirmed",
+      "doneBody": "Your account is ready. You can sign in now.",
+      "invalidTitle": "Link not valid",
+      "invalidBody": "This confirmation link is invalid, was already used or has expired. Enter your e-mail address to get a new one."
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "intro": "Enter the e-mail address of your account. We will send a link to choose a new password.",
+      "submit": "Send reset link",
+      "sentTitle": "Check your inbox",
+      "sentBody": "If an account exists for {{email}}, a reset link is on its way. It is valid for one hour.",
+      "failed": "The request could not be sent. Please try again.",
+      "rateLimited": "Too many requests. Wait a few minutes and try again."
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "intro": "After saving you are signed out on all devices and sign in again with the new password.",
+      "submit": "Save new password",
+      "doneTitle": "Password changed",
+      "doneBody": "Sign in with your new password.",
+      "invalid": "This reset link is invalid, was already used or has expired.",
+      "newLink": "Request a new link"
     }
   },
   "admin": {
@@ -231,6 +277,19 @@
       "forbidden": "Administrator role required.",
       "reauthFailed": "Your identity could not be confirmed.",
       "loadFailed": "Users could not be loaded."
+    },
+    "instance": {
+      "title": "Instance",
+      "registration": "New accounts",
+      "invite": "By invitation only",
+      "open": "Open sign-up",
+      "requireTfa": "Administrators must use 2FA",
+      "save": "Save",
+      "saved": "Instance settings saved.",
+      "ownTfaFirst": "Turn on two-factor authentication for your own account first (Settings → Security).",
+      "smtpOn": "E-mail sending is configured.",
+      "smtpOff": "E-mail sending is not configured: invitations and resets use one-time passwords.",
+      "demo": "Demo mode"
     }
   },
   "profile": {
@@ -298,5 +357,53 @@
     "useDevice": "Use {{zone}}",
     "keep": "Keep {{zone}}",
     "failed": "The time zone could not be changed. Try again in Settings → Profile."
+  },
+  "security": {
+    "title": "Security",
+    "password": {
+      "title": "Change password",
+      "submit": "Change password",
+      "done": "Password changed. Other devices were signed out.",
+      "failed": "The password could not be changed."
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "on": "On — signing in needs a code from your authenticator app.",
+      "off": "Off — protect your account with an authenticator app.",
+      "setUp": "Set up",
+      "scan": "Scan this code with your authenticator app, then enter the 6-digit code it shows.",
+      "qrLabel": "QR code for your authenticator app",
+      "manual": "Or enter this key manually:",
+      "confirm": "Turn on",
+      "sixDigits": "Enter the 6-digit code.",
+      "wrongCode": "The code is incorrect. Check the time on your phone and try again.",
+      "regenerate": "New recovery codes",
+      "turnOff": "Turn off",
+      "confirmOff": "Turn off 2FA",
+      "offDone": "Two-factor authentication is off.",
+      "adminRequired": "This instance requires two-factor authentication for administrators.",
+      "failed": "The change could not be saved. Please try again."
+    },
+    "codes": {
+      "title": "Recovery codes",
+      "body": "Each code signs you in once if you lose your phone. Store them somewhere safe — they are shown only now.",
+      "copy": "Copy codes",
+      "copied": "Copied",
+      "download": "Download",
+      "done": "I saved them",
+      "fileHeader": "Haalendar recovery codes (each works once)"
+    },
+    "sessions": {
+      "title": "Signed-in devices",
+      "thisDevice": "This device",
+      "unknownDevice": "Unknown device",
+      "lastActive": "Last active {{date}}",
+      "signOut": "Sign out",
+      "signOutDevice": "Sign out {{device}}",
+      "signOutOthers": "Sign out all other devices",
+      "revoked": "The device was signed out.",
+      "othersRevoked": "All other devices were signed out.",
+      "failed": "The device could not be signed out."
+    }
   }
 }

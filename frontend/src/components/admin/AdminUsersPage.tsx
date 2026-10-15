@@ -28,6 +28,7 @@ import { describeError, log } from "@/lib/log";
 import { cn } from "@/lib/utils";
 
 import { useAdminErrorText } from "./admin-errors";
+import { InstanceSettingsCard } from "./InstanceSettingsCard";
 import { InviteDialog } from "./InviteDialog";
 import { type OneTimePassword, OneTimePasswordDialog } from "./OneTimePasswordDialog";
 import { PendingInvites } from "./PendingInvites";
@@ -184,6 +185,7 @@ export function AdminUsersPage() {
         </p>
       ) : null}
 
+      <InstanceSettingsCard />
       <PendingInvites onResult={setBanner} formatDate={formatDate} />
 
       <div className="flex flex-col gap-2 px-4 py-3 md:flex-row">

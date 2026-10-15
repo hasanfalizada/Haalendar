@@ -108,6 +108,27 @@ paths:
       responses:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. New verification link for an unverified account; always 202 (no
+  # account enumeration), at most one e-mail per 5 minutes per account; older links stop working.
+  auth_verify_email_resend:
+    post:
+      tags: [auth]
+      operationId: resendVerificationEmail
+      summary: Send a new e-mail confirmation link (always 202)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+      responses:
+        '202': { description: Accepted (an e-mail is sent only to an existing unverified account) }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
   auth_password_reset_request:
     post:
       tags: [auth]
@@ -341,11 +362,12 @@ paths:
     delete:
       tags: [account]
       operationId: revokeSession
-      summary: Revoke one session
+      summary: Revoke one of my sessions (revoking the current one signs this device out)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   me_sessions_revoke_others:
     post:
@@ -405,6 +427,25 @@ paths:
       responses:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. New set of recovery codes; every unused old code stops working.
+  me_totp_recovery_codes:
+    post:
+      tags: [account]
+      operationId: regenerateRecoveryCodes
+      summary: Replace the recovery codes (requires re-auth and enabled 2FA); returns 10 new codes, shown once
+      responses:
+        '200':
+          description: New codes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recovery_codes]
+                properties:
+                  recovery_codes: { type: array, items: { type: string }, minItems: 10, maxItems: 10 }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
   me_push_subscriptions:
     post:
       tags: [account]

@@ -253,22 +253,13 @@ The environment is selected with `HAALENDAR_ENV`.
 
 **Profile.** *Settings → Profile* changes the display name and time zone and uploads a photo (PNG, JPEG or WebP up to 2 MB). The server re-encodes the photo to a 256×256 WebP — location and camera metadata are removed — and stores it under `HAALENDAR_STORAGE_DIR`; removing the photo keeps the stored file. Without `HAALENDAR_STORAGE_DIR` development uses the system temp directory, so photos disappear after a reboot.
 
-Open registration (without invitation) is an instance setting; to try it, enable it in the development database and use the interactive docs (`/api/v1/docs`) or `curl`:
+**Open sign-up.** An administrator switches *Users → Instance → New accounts* to *Open sign-up*; the sign-in page then links to `/register`. After registering, the confirmation e-mail — without SMTP an `.eml` file in `HAALENDAR_MAIL_DIR` (default `/tmp/haalendar-mail`) — contains the `/verify-email?token=…` link; *Send the link again* issues a new one (at most every 5 minutes, older links stop working).
 
-```bash
-docker exec -it haalendar-db psql -U haalendar -c "UPDATE instance_settings SET registration_mode = 'open'"
-```
+**Forgotten password.** *Forgot password?* on the sign-in page sends a `/reset-password?token=…` link (valid 1 hour, single use); saving the new password signs the account out everywhere.
 
-1. `POST /api/v1/auth/register` with e-mail, a password of at least 15 characters, display name and time zone → 202.
-2. Open the verification e-mail: without SMTP it is an `.eml` file in `HAALENDAR_MAIL_DIR` (default `/tmp/haalendar-mail`); copy the token from the link.
-3. `POST /api/v1/auth/verify-email` with `{"token": "..."}` → 204.
-4. `POST /api/v1/auth/login` → 200 with the session cookie and `csrf_token`; `GET /api/v1/me` returns the account.
-
-5. Password reset: `POST /api/v1/auth/password-reset/request` → a reset `.eml` (link valid 1 hour, single use) → `POST /api/v1/auth/password-reset/confirm` with `token` and `new_password`. All sessions of the account are signed out.
+**Settings → Security.** Change the password (asks for the current password again; other devices are signed out), turn on two-factor authentication (scan the QR code, confirm a code, store the 10 recovery codes), create new recovery codes, turn 2FA off, and see or sign out signed-in devices.
 
 The session cookie is `__Host-` prefixed and `Secure`: browsers accept it on `https://` and on `http://localhost` only.
-
-6. Two-factor authentication: `POST /api/v1/me/totp/setup` (returns `otpauth_uri` for the QR code and the secret) → `POST /api/v1/me/totp/enable` with a code from the app → 10 recovery codes (shown once). From then on `POST /api/v1/auth/login` needs `totp_code` or `recovery_code`.
 
 ### E-mail (SMTP)
 

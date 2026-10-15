@@ -199,6 +199,13 @@
         "time.local_to_utc.v1",
         "time.event_days.v1"
       ]
+    },
+    {
+      "id": "accounts.self_service",
+      "purpose": "Open sign-up, password reset and password change check the new password live and on the server with the policy atom (FR-ACC-01, FR-ACC-02).",
+      "steps": [
+        "accounts.password_policy.v1"
+      ]
     }
   ]
 }

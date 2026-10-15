@@ -1,15 +1,19 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Sign-in (FR-ACC-02): e-mail + password, then the TOTP code or a
 // recovery code when the account has two-factor authentication. Generic messages never reveal whether an e-mail
 // exists. After sign-in the user returns to the page that required it (same-origin paths only).
-import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+// +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Links to password reset and (open mode) sign-up; an unconfirmed
+// e-mail offers a new confirmation link.
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { login } from "@/api/generated/sdk.gen";
 import { problemCode } from "@/api/problem";
 import { meQuery, rememberSession, safeRedirect } from "@/api/session";
+import { setupStatusQuery } from "@/api/setup";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { ResendVerification } from "@/components/auth/ResendVerification";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { describeError, log } from "@/lib/log";
@@ -42,10 +46,13 @@ function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [unverified, setUnverified] = useState<string | null>(null);
+  const { data: status } = useQuery(setupStatusQuery);
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setUnverified(null);
     setBusy(true);
     try {
       const { data, error: problem } = await login({
@@ -69,6 +76,7 @@ function LoginPage() {
           setError(t("auth.login.errors.locked"));
         } else if (code_ === "email_not_verified") {
           setError(t("auth.login.errors.unverified"));
+          setUnverified(email.trim());
         } else {
           setError(t("auth.login.errors.generic"));
         }
@@ -158,6 +166,19 @@ function LoginPage() {
       <Button type="submit" variant="primary" size="touch" disabled={busy}>
         {busy ? t("auth.login.submitting") : t("auth.login.submit")}
       </Button>
+      {unverified ? <ResendVerification email={unverified} /> : null}
+      {!secondFactor ? (
+        <div className="flex flex-wrap justify-between gap-2 text-[13px]">
+          <Link to="/forgot-password" className="font-medium text-primary underline-offset-4 hover:underline">
+            {t("auth.login.forgot")}
+          </Link>
+          {status?.registration_mode === "open" ? (
+            <Link to="/register" className="font-medium text-primary underline-offset-4 hover:underline">
+              {t("auth.login.createAccount")}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </AuthCard>
   );
 }

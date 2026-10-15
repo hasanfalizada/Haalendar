@@ -179,3 +179,40 @@ class ProfilePatchIn(ApiModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=80)
     time_zone: str | None = Field(default=None, min_length=1, max_length=64)
     locale: Literal["en"] | None = None
+
+
+# +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Verification resend, sessions, recovery codes, instance settings.
+
+
+class EmailIn(ApiModel):
+    email: EmailStr = Field(max_length=254)
+
+
+class SessionOut(BaseModel):
+    id: uuid.UUID
+    created_at: datetime
+    last_seen_at: datetime
+    device: str
+    ip_prefix: str | None
+    current: bool
+
+
+class SessionListOut(BaseModel):
+    data: list[SessionOut]
+
+
+class RecoveryCodesOut(BaseModel):
+    recovery_codes: list[str]
+
+
+class InstanceSettingsOut(BaseModel):
+    registration_mode: Literal["invite", "open"]
+    require_admin_2fa: bool
+    demo_mode: bool
+    smtp_configured: bool
+    version: int
+
+
+class InstanceSettingsPatchIn(ApiModel):
+    registration_mode: Literal["invite", "open"] | None = None
+    require_admin_2fa: bool | None = None
