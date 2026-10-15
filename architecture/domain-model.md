@@ -304,7 +304,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 ## 6. Data dictionary — accounts and platform
 | Table | Key columns | Rules |
 |---|---|---|
-| `user` | id, email (citext U), email_verified_at, password_hash, display_name, avatar_key, time_zone (IANA), locale, role, totp_secret_enc, totp_enabled_at, failed_login_count, locked_until, last_login_at, deactivated_at, must_change_password, [common] | Argon2id hash; TOTP secret encrypted with server key; soft deactivation (ADR-0005) |
+| `user_account` (table name; `user` is reserved in PostgreSQL) | id, email (U on lower(email)), email_verified_at, password_hash, display_name, avatar_key, time_zone (IANA), locale, role, totp_secret_enc, totp_enabled_at, failed_login_count, locked_until, last_login_at, deactivated_at, must_change_password, [common] | Argon2id hash; TOTP secret encrypted with server key; soft deactivation (ADR-0005) |
 | `user_settings` | user_id PK, week_start (0..6, default 1 = Monday), time_format, theme, default_color, agenda_days (default 30), week_ab_enabled, week_ab_anchor (date: Monday of an "A" week), week_ab_labels (text[2], default {A,B}), updated_at, version, sync_seq | FR-ACC-09, FR-CAL-23/27 |
 | `session` | id, token_hash (U), user_id, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent, ip_prefix, csrf_secret, reauth_at | idle 30 d, absolute 90 d; re-auth window 15 min (ADR-0005) |
 | `auth_token` | id, user_id (NULL for invite to new e-mail), email, purpose, token_hash (U), expires_at, used_at, created_by | verify 24 h, reset 1 h, invite |
