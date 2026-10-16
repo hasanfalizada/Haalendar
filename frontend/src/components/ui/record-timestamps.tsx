@@ -2,6 +2,7 @@
 // views and the trash: relative for recent changes, exact date and time in the tooltip and in <time datetime>, in the
 // profile's time zone. The actor is named only when it is the current user ("by you"); other people's names arrive
 // with the audit history (HAAL-032). "Updated" is omitted while it equals "created".
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-033. Callers that know a name (the trash: deleted_by_name) pass it.
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -20,12 +21,14 @@ interface RecordTimestampsProps {
   record: RecordTimes;
   /** Reference time for relative labels (tests); defaults to now. */
   now?: Date;
+  /** Known actor names per row, shown as "by <name>" when the actor is someone else. */
+  names?: Partial<Record<"created" | "updated" | "deleted", string | null>>;
   className?: string;
 }
 
 const SAME_MOMENT_MS = 60_000;
 
-export function RecordTimestamps({ record, now, className }: RecordTimestampsProps) {
+export function RecordTimestamps({ record, now, names, className }: RecordTimestampsProps) {
   const { t, i18n } = useTranslation();
   const { data: me } = useQuery(meQuery);
   const timeZone = useDisplayTimeZone();
@@ -49,7 +52,11 @@ export function RecordTimestamps({ record, now, className }: RecordTimestampsPro
             <time dateTime={row.iso} title={formatInstant(row.iso, timeZone, i18n.language)}>
               {formatRelative(row.iso, reference, timeZone, i18n.language)}
             </time>
-            {me && row.actor && row.actor === me.id ? ` ${t("records.byYou")}` : ""}
+            {me && row.actor && row.actor === me.id
+              ? ` ${t("records.byYou")}`
+              : names?.[row.key]
+                ? ` ${t("records.by", { name: names[row.key] })}`
+                : ""}
           </dd>
         </div>
       ))}

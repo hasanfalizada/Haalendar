@@ -279,6 +279,10 @@ The test suite fails when the code contains a delete construct (rare legitimate 
 
 Deliberate maintenance on a throw-away database is done as a superuser with `SET session_replication_role = replica` for that session only — never on real data.
 
+### Trash
+
+`/trash` lists everything the signed-in user may restore, newest deletion first: own content, content in containers shared with edit permission, and deleted containers for their owner. Things deleted together form one entry (with counts of what they contain); restoring brings back the whole delete batch, and nothing is ever purged. A new soft-deletable type registers a `TrashSource` in `haalendar/trash/service.py` (title, who may restore, children of its batch, container lookup); multi-select in lists uses `frontend/src/lib/useSelection.ts`.
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.

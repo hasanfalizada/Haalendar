@@ -24,7 +24,12 @@ describe("AppShell", () => {
   beforeEach(() => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(JSON.stringify({ status: "ok", version: "0.1.0" }), { status: 200 })),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ status: "ok", version: "0.1.0", data: [], next_cursor: null }), {
+            status: 200,
+          }),
+      ),
     );
   });
   afterEach(() => vi.unstubAllGlobals());

@@ -118,11 +118,14 @@ paths:
                       data: { type: array, items: { $ref: '#/components/schemas/SearchHit' } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
 
+  # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-033. One entry per delete batch (things deleted together appear once,
+  # with counts of what they contain); everything the user may restore (own content, containers shared with edit
+  # permission; containers themselves only for their owner). Nothing is ever purged.
   trash:
     get:
       tags: [trash]
       operationId: listTrash
-      summary: Soft-deleted items and containers of the user, newest deletion first; kept forever (FR-X-04)
+      summary: Soft-deleted items and containers the user may restore, newest deletion first; kept forever (FR-X-04)
       parameters:
         - { name: module, in: query, schema: { type: string, enum: [event, note, card, calendar, board, column] } }
         - $ref: '../components/common.yaml#/components/parameters/Cursor'
@@ -163,6 +166,11 @@ paths:
                     properties:
                       type: { type: string, enum: [event, note, card, calendar, board, column, attachment, checklist_item, comment, label, link, reminder] }
                       id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+      description: >-
+        Each entry brings back its whole delete batch. Entries that cannot be restored are reported in `failed`
+        (codes: not_found — unknown, already restored or not visible; forbidden — visible but not yours to restore;
+        unsupported — type not available yet; parent_in_trash — its container is in the trash too: restore `parent`
+        first or together).
       responses:
         '200':
           description: Restored entries
@@ -170,17 +178,30 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [restored]
+                required: [restored, rows, failed]
                 properties:
-                  restored: { type: integer }
+                  restored: { type: integer, description: Entries restored }
+                  rows: { type: integer, description: 'Records brought back, children of the batches included' }
                   failed:
                     type: array
                     items:
                       type: object
+                      required: [type, id, code]
                       properties:
+                        type: { type: string }
                         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                        code: { type: string }
+                        code: { type: string, enum: [not_found, forbidden, unsupported, parent_in_trash] }
+                        parent:
+                          oneOf:
+                            - type: object
+                              required: [type, id, title]
+                              properties:
+                                type: { type: string }
+                                id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                                title: { type: string }
+                            - type: 'null'
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
 
   export:
     get:
@@ -313,16 +334,22 @@ components:
         score: { type: number }
     TrashEntry:
       type: object
-      required: [type, id, title, deleted_at, delete_batch_id]
+      required: [type, id, title, deleted_at, delete_batch_id, deleted_by, deleted_by_name, created_at, updated_at, contents]
       properties:
-        type: { type: string }
+        type: { type: string, enum: [event, note, card, calendar, board, column] }
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         title: { type: string }
         container_name: { type: string }
         deleted_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
-        deleted_by: { allOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }], description: 'Who deleted it (the updated_by of the deleted row).' }
+        deleted_by: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }], description: 'Who deleted it (the updated_by of the deleted row).' }
         delete_batch_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        deleted_by_name: { oneOf: [{ type: string }, { type: 'null' }] }
         created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        updated_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        contents:
+          type: object
+          additionalProperties: { type: integer }
+          description: 'What was deleted together with it, per type (e.g. {"event": 37}); empty when nothing.'
     Notification:
       type: object
       required: [id, kind, created_at, payload]

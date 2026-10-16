@@ -410,7 +410,8 @@
     "created": "Created",
     "updated": "Updated",
     "deleted": "Deleted",
-    "byYou": "by you"
+    "byYou": "by you",
+    "by": "by {{name}}"
   },
   "history": {
     "title": "History",
@@ -427,5 +428,44 @@
       "share": "shared it",
       "unshare": "stopped sharing"
     }
+  },
+  "trash": {
+    "intro": "Deleted items are kept here forever. Restore anything you need.",
+    "module": "Show",
+    "all": "Everything",
+    "types": {
+      "event": "Event",
+      "note": "Note",
+      "card": "Card",
+      "calendar": "Calendar",
+      "board": "Board",
+      "column": "Column"
+    },
+    "plural": {
+      "event_one": "{{count}} event",
+      "event_other": "{{count}} events",
+      "note_one": "{{count}} note",
+      "note_other": "{{count}} notes",
+      "card_one": "{{count}} card",
+      "card_other": "{{count}} cards",
+      "column_one": "{{count}} column",
+      "column_other": "{{count}} columns"
+    },
+    "selectAll": "Select all",
+    "select": "Select {{title}}",
+    "selected": "{{count}} selected",
+    "restore": "Restore",
+    "restoreSelected": "Restore selected",
+    "clear": "Clear selection",
+    "restored_one": "{{count}} entry restored.",
+    "restored_other": "{{count}} entries restored.",
+    "failed_one": "{{count}} entry could not be restored (already restored or not yours to restore).",
+    "failed_other": "{{count}} entries could not be restored (already restored or not yours to restore).",
+    "parentTitle": "“{{title}}” is in the trash too",
+    "parentBody": "The item belongs to it and would stay invisible. Restore “{{title}}” as well?",
+    "parentConfirm": "Restore both",
+    "loadMore": "Load more",
+    "loadFailed": "The trash could not be loaded.",
+    "offline": "Restoring needs a connection to the server."
   }
 }
