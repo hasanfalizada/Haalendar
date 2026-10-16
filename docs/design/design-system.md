@@ -93,7 +93,9 @@ Shell regions: rail (modules Calendar / To-Do / Kanban, then Trash, Notification
 | Esc | Close (guarded if unsaved) |
 | 1–8 (in event popover) | Set color |
 | ? | Shortcut list |
-Single-key shortcuts are disabled while focus is in a text field.
+| F6 / Shift+F6 | Next / previous region (navigation, content, notifications) — added by D-42, 2026-10-16 |
+| Home / End, Space | First / last item, select the focused item — added by D-42 |
+Single-key shortcuts are disabled while focus is in a text field. The "?" overlay lists only the shortcuts available on the current page (D-42).
 
 ## 9. Accessibility checklist (per component)
 Visible focus ring (2 px `primary`, 2 px offset); roles and names for icon buttons; dialogs trap focus and return it; color + icon/text for every status (priority badge text, overdue icon); contrast AA verified for tokens in both themes; touch targets ≥ 44 px on touch devices; motion reduced when requested.

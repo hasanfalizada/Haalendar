@@ -6,6 +6,8 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. A write that finds the session expired offers "Sign in", which
 // returns to the current page afterwards (drafts bring the text back).
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. Undo / redo shortcuts for the signed-in user.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. Shortcut overlay button in the rail ("?" anywhere); navigation,
+// header and content are regions for F6 / Shift+F6.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -19,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { ConnectionStatus } from "./ConnectionStatus";
+import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { TimeZoneMismatch } from "./TimeZoneMismatch";
 import { MODULE_ITEMS, SECONDARY_ITEMS, type NavItem } from "./nav-items";
 import { useModuleShortcuts } from "./useModuleShortcuts";
@@ -94,6 +97,8 @@ export function AppShell() {
       {/* Desktop / tablet: icon rail */}
       <nav
         aria-label={t("nav.label")}
+        data-region="navigation"
+        tabIndex={-1}
         className="hidden w-14 shrink-0 flex-col items-center gap-1.5 border-r border-line bg-surface py-3 md:flex"
       >
         <img src={LOGO_SRC} alt={t("app.name")} width={32} height={32} className="mb-2 size-8" />
@@ -104,6 +109,7 @@ export function AppShell() {
         {secondaryItems.map((item) => (
           <RailLink key={item.to} item={item} />
         ))}
+        <ShortcutsOverlay className="size-10" />
         {me?.display_name ? (
           <Link
             to="/settings"
@@ -120,7 +126,11 @@ export function AppShell() {
       </nav>
 
       {/* Phone: top bar with drawer */}
-      <header className="flex items-center gap-2 border-b border-line px-2 pt-[env(safe-area-inset-top)] md:hidden">
+      <header
+        data-region="header"
+        tabIndex={-1}
+        className="flex items-center gap-2 border-b border-line px-2 pt-[env(safe-area-inset-top)] outline-none md:hidden"
+      >
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" aria-label={t("nav.openMenu")} className="size-11">
@@ -160,7 +170,7 @@ export function AppShell() {
         <span className="font-semibold">{t("app.name")}</span>
       </header>
 
-      <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
+      <main id="main" data-region="content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
         <TimeZoneMismatch />
         <Outlet />
       </main>

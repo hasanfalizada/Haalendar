@@ -7,7 +7,10 @@
 // the range, a plain click opens the row — or toggles it while something is selected on a touch screen (selection
 // mode after a long press). The click that ends a long press is swallowed. Ctrl/Cmd+A selects every loaded row of the
 // list (option selectAllShortcut; one list per page), not in text fields and not behind a dialog.
-import { type MouseEvent, type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. Ctrl/Cmd+A and Esc go through the shortcut registry ("?" overlay).
+import { type MouseEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from "react";
+
+import { useShortcut } from "./shortcuts";
 
 const LONG_PRESS_MS = 500;
 
@@ -34,11 +37,6 @@ export interface Selection {
 export interface SelectionOptions {
   /** Ctrl/Cmd+A selects all loaded rows of this list (enable for one list per page). */
   selectAllShortcut?: boolean;
-}
-
-function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
 }
 
 export function useSelection(ids: readonly string[], options: SelectionOptions = {}): Selection {
@@ -81,30 +79,22 @@ export function useSelection(ids: readonly string[], options: SelectionOptions =
   }, [ids]);
 
   const { selectAllShortcut = false } = options;
-  useEffect(() => {
-    if (!selectAllShortcut) return undefined;
-    function onKey(event: KeyboardEvent) {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.code !== "KeyA") return;
-      if (isTyping(event.target) || document.querySelector('[role="dialog"]')) return;
-      event.preventDefault();
-      selectAll();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [selectAllShortcut, selectAll]);
-
-  useEffect(() => {
-    if (selectedIds.length === 0) return undefined;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape" && !document.querySelector('[role="dialog"]')) clear();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [selectedIds.length, clear]);
+  useShortcut({
+    id: "select-all",
+    keys: ["Mod+A"],
+    group: "items",
+    label: "shortcuts.selectAll",
+    handler: selectAll,
+    enabled: selectAllShortcut,
+  });
+  useShortcut({
+    id: "clear-selection",
+    keys: ["Esc"],
+    group: "items",
+    label: "shortcuts.clearSelection",
+    handler: clear,
+    enabled: selectedIds.length > 0,
+  });
 
   const cancelPress = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);

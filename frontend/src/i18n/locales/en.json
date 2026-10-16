@@ -553,5 +553,31 @@
       "color": "the color change of {{count}} items",
       "priority": "the priority change of {{count}} items"
     }
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "hint": "Shortcuts that work on this page. Single keys do nothing while you type in a field.",
+    "or": "or",
+    "groups": {
+      "navigation": "Navigation",
+      "items": "Lists and selection",
+      "editing": "Editing",
+      "general": "General"
+    },
+    "overlay": "Show keyboard shortcuts",
+    "goTo": "Go to {{module}}",
+    "regionNext": "Next area of the page",
+    "regionPrevious": "Previous area of the page",
+    "undo": "Undo",
+    "redo": "Redo",
+    "selectAll": "Select all shown",
+    "clearSelection": "Clear the selection",
+    "listMove": "Previous / next item",
+    "listJump": "First / last item",
+    "listExtend": "Extend the selection",
+    "listSelect": "Select or unselect the item",
+    "open": "Open the item",
+    "restore": "Restore the entry",
+    "listDelete": "Delete the selection (asks first)"
   }
 }

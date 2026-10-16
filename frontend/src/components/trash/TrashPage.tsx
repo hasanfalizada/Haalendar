@@ -4,6 +4,8 @@
 // offers to restore the container as well. Nothing is ever purged.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results through runWrite: one notification per restore.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036. The shared bulk bar; Ctrl/Cmd+click on a row and Ctrl/Cmd+A select.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. Keyboard: ↑/↓ between entries, Space selects, Enter restores.
+// Delete does nothing here: the trash keeps everything (no purge, D-38).
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type MouseEvent, useState } from "react";
@@ -18,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/input";
 import { RecordTimestamps } from "@/components/ui/record-timestamps";
+import { useListNavigation } from "@/lib/useListNavigation";
 import { useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +80,18 @@ export function TrashPage() {
       .join(", ");
   }
 
+  const navigation = useListNavigation(
+    entries.map((e) => e.id),
+    selection,
+    {
+      openLabel: "shortcuts.restore",
+      onOpen: (id) => {
+        const entry = entries.find((e) => e.id === id);
+        if (entry && !busy) void restore([{ type: entry.type, id: entry.id }]);
+      },
+    },
+  );
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2.5">
@@ -128,7 +143,11 @@ export function TrashPage() {
               }
             />
           ) : null}
-          <ul className="flex flex-col divide-y divide-line">
+          <ul
+            className="flex flex-col divide-y divide-line"
+            aria-label={t("pages.trash.title")}
+            {...navigation.listProps}
+          >
             {entries.map((entry) => {
               const contents = describeContents(entry);
               return (
@@ -139,6 +158,7 @@ export function TrashPage() {
                     selection.isSelected(entry.id) && "bg-primary-tint/40",
                   )}
                   {...selection.rowProps(entry.id)}
+                  {...navigation.itemProps(entry.id)}
                 >
                   <input
                     type="checkbox"
