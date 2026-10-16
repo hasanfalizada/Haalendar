@@ -258,10 +258,19 @@ paths:
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
 
   bulk:
+    # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036 (D-41). Typed targets (containers too), per-target values (one
+    # request can undo a bulk change of mixed colors), new versions in the answer (If-Match of the undo step).
     post:
       tags: [bulk]
       operationId: bulkOperation
       summary: Apply one action to many items atomically — one undo step (FR-X-07)
+      description: >-
+        All-or-nothing: when any target cannot be changed nothing is changed, and the problem lists the offending
+        targets as errors with pointer /targets/{index} and a code (not_found, forbidden, version_conflict,
+        unsupported, invalid_state). Only version conflicts → 412 version_conflict; otherwise 422 validation_failed.
+        delete removes all targets in one delete batch; restore brings back the delete batch of each target. A
+        repeated request after success fails with version_conflict (versions have moved on), so retrying with the
+        same Idempotency-Key never applies twice.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
       requestBody:
@@ -277,15 +286,13 @@ paths:
                   type: array
                   minItems: 1
                   maxItems: 500
-                  items:
-                    type: object
-                    required: [item_id, version]
-                    properties:
-                      item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                      version: { type: integer }
-                      occurrence_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
-                color: { $ref: '../components/common.yaml#/components/schemas/Color' }
-                priority: { $ref: '../components/common.yaml#/components/schemas/Priority' }
+                  items: { $ref: '#/components/schemas/BulkTarget' }
+                color:
+                  $ref: '../components/common.yaml#/components/schemas/Color'
+                  description: set_color — value for targets without their own color.
+                priority:
+                  $ref: '../components/common.yaml#/components/schemas/Priority'
+                  description: set_priority — value for targets without their own priority.
       responses:
         '200':
           description: All applied (all-or-nothing)
@@ -293,15 +300,45 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [applied]
+                required: [applied, delete_batch_id, items]
                 properties:
                   applied: { type: integer }
                   delete_batch_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+                  items:
+                    type: array
+                    description: Every changed row with its new version (rows restored together with a target are not listed).
+                    items: { $ref: '#/components/schemas/BulkItemResult' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
 
 components:
   schemas:
+    BulkType:
+      type: string
+      description: Kind of a bulk target; a kind accepts only the actions its module supports.
+      enum: [event, note, card, calendar]
+    BulkTarget:
+      type: object
+      required: [type, id, version]
+      properties:
+        type: { $ref: '#/components/schemas/BulkType' }
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        version: { type: integer, description: Version the client saw; a different current version is a conflict. }
+        occurrence_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        color:
+          $ref: '../components/common.yaml#/components/schemas/Color'
+          description: set_color — value for this target (overrides the request's color).
+        priority:
+          $ref: '../components/common.yaml#/components/schemas/Priority'
+          description: set_priority — value for this target (overrides the request's priority).
+    BulkItemResult:
+      type: object
+      required: [type, id, version]
+      properties:
+        type: { $ref: '#/components/schemas/BulkType' }
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        version: { type: integer }
     Share:
       type: object
       required: [id, container_kind, container_id, container_name, grantee_id, grantee_name, grantee_email, owner_id, owner_name, permission, granted_by, created_at, revoked_at, version]

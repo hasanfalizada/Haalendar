@@ -452,12 +452,8 @@
       "column_one": "{{count}} column",
       "column_other": "{{count}} columns"
     },
-    "selectAll": "Select all",
     "select": "Select {{title}}",
-    "selected": "{{count}} selected",
     "restore": "Restore",
-    "restoreSelected": "Restore selected",
-    "clear": "Clear selection",
     "restored_one": "{{count}} entry restored.",
     "restored_other": "{{count}} entries restored.",
     "failed_one": "{{count}} entry could not be restored (already restored or not yours to restore).",
@@ -518,6 +514,44 @@
       "shareCreated": "sharing with {{email}}",
       "sharePermission": "the permission change for {{name}}",
       "shareRemoved": "removing access for {{name}}"
+    }
+  },
+  "bulk": {
+    "toolbar": "Bulk actions",
+    "selectAll": "Select all",
+    "selected_one": "{{count}} of {{total}} selected",
+    "selected_other": "{{count}} of {{total}} selected",
+    "hint": "Select with the checkboxes, Ctrl+click, Shift+click or Ctrl+A",
+    "restore": "Restore selected",
+    "delete": "Delete selected",
+    "color": "Color",
+    "priority": "Priority",
+    "moveNextDay": "Move to next day",
+    "clear": "Clear selection",
+    "colors": {
+      "red": "Red",
+      "orange": "Orange",
+      "yellow": "Yellow",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "brown": "Brown",
+      "black": "Black"
+    },
+    "priorities": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "conflict_one": "{{count}} of {{total}} selected was changed elsewhere in the meantime. Nothing was changed — the list is refreshed, please try again.",
+    "conflict_other": "{{count}} of {{total}} selected were changed elsewhere in the meantime. Nothing was changed — the list is refreshed, please try again.",
+    "refused_one": "{{count}} of {{total}} selected cannot be changed this way. Nothing was changed.",
+    "refused_other": "{{count}} of {{total}} selected cannot be changed this way. Nothing was changed.",
+    "labels": {
+      "delete": "deleting {{count}} items",
+      "restore": "restoring {{count}} items",
+      "color": "the color change of {{count}} items",
+      "priority": "the priority change of {{count}} items"
     }
   }
 }

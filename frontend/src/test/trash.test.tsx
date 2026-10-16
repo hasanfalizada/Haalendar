@@ -83,11 +83,11 @@ describe("trash page", () => {
     await user.keyboard("{Shift>}");
     await user.click(screen.getByRole("checkbox", { name: "Select Calendar 3" }));
     await user.keyboard("{/Shift}");
-    expect(screen.getByText("3 selected")).toBeInTheDocument();
+    expect(screen.getByText("3 of 4 selected")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Select Calendar 4" })).not.toBeChecked();
 
     await user.click(screen.getByRole("checkbox", { name: "Select all" }));
-    expect(screen.getByText("4 selected")).toBeInTheDocument();
+    expect(screen.getByText("4 of 4 selected")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(screen.queryByText(/selected$/)).not.toBeInTheDocument();
 

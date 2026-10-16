@@ -2,6 +2,9 @@
 
 +++===+++ 2026-10-14 — Hasan Alizada — HAAL-016. Settings with HAALENDAR_ prefix; every secret can also be given
 as HAALENDAR_<NAME>_FILE pointing to a Docker secret file (ADR-0004 section 6). Production refuses insecure defaults.
++++===+++ 2026-10-16 — Hasan Alizada — HAAL-036 (found during the browser check). An empty value means "not set" for
+every variable, as .env.example documents: `HAALENDAR_SETUP_TOKEN=` used to count as a configured (empty) token, so
+the first-run wizard in development refused every request; an empty SECRET_KEY used to become an empty key.
 """
 
 from __future__ import annotations
@@ -48,16 +51,20 @@ def _read_secret_files(environ: dict[str, str]) -> dict[str, str]:
         if not (key.startswith(ENV_PREFIX) and key.endswith("_FILE")):
             continue
         target = key[: -len("_FILE")]
-        if target in environ:
+        if environ.get(target, "").strip():
             continue
-        resolved[target] = Path(path).read_text(encoding="utf-8").strip()
+        value = Path(path).read_text(encoding="utf-8").strip()
+        if value:
+            resolved[target] = value
     return resolved
 
 
 class Settings(BaseSettings):
     """Typed runtime configuration. Field names map to HAALENDAR_<UPPER_NAME>."""
 
-    model_config = SettingsConfigDict(env_prefix=ENV_PREFIX, extra="ignore", frozen=True)
+    model_config = SettingsConfigDict(
+        env_prefix=ENV_PREFIX, extra="ignore", frozen=True, env_ignore_empty=True
+    )
 
     env: Environment = Environment.DEVELOPMENT
     # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Two database roles (ADR-0005 defense in depth): the application
@@ -195,7 +202,7 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
         return Settings(**overrides)
     # Explicit environment (tests, tools): os.environ is not consulted at all.
     explicit = {k[len(ENV_PREFIX) :].lower(): v for k, v in source.items() if k.startswith(ENV_PREFIX)}
-    explicit = {k: v for k, v in explicit.items() if not k.endswith("_file")}
+    explicit = {k: v for k, v in explicit.items() if not k.endswith("_file") and v.strip()}
     return _ExplicitSettings(**{**explicit, **overrides})
 
 

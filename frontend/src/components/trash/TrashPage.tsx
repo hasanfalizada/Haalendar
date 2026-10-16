@@ -3,15 +3,17 @@
 // checkbox, Shift+click range, select all, Esc, long press on touch). An item whose container is still in the trash
 // offers to restore the container as well. Nothing is ever purged.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results through runWrite: one notification per restore.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036. The shared bulk bar; Ctrl/Cmd+click on a row and Ctrl/Cmd+A select.
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { type MouseEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { restoreFromTrash } from "@/api/generated/sdk.gen";
 import type { TrashEntry } from "@/api/generated/types.gen";
 import { type TrashModule, trashKeys, trashQuery } from "@/api/trash";
 import { runWrite } from "@/api/write";
+import { BulkBar } from "@/components/ui/bulk-bar";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/input";
@@ -27,33 +29,16 @@ interface Parent {
   title: string;
 }
 
-function SelectAllBox({
-  checked,
-  indeterminate,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  indeterminate: boolean;
-  onChange: () => void;
-  label: string;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (ref.current) ref.current.indeterminate = indeterminate;
-  }, [indeterminate]);
-  return (
-    <input ref={ref} type="checkbox" aria-label={label} checked={checked} onChange={onChange} className="size-4" />
-  );
-}
-
 export function TrashPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [module, setModule] = useState<TrashModule | "">("");
   const trash = useInfiniteQuery(trashQuery(module));
   const entries: TrashEntry[] = trash.data?.pages.flatMap((page) => page.data) ?? [];
-  const selection = useSelection(entries.map((e) => e.id));
+  const selection = useSelection(
+    entries.map((e) => e.id),
+    { selectAllShortcut: true },
+  );
   const [pendingParent, setPendingParent] = useState<{
     parent: Parent;
     entries: { type: string; id: string }[];
@@ -92,7 +77,6 @@ export function TrashPage() {
       .join(", ");
   }
 
-  const someSelected = selection.count > 0;
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2.5">
@@ -134,36 +118,15 @@ export function TrashPage() {
             </p>
           ) : null}
           {entries.length > 0 ? (
-            <div className="flex min-h-9 flex-wrap items-center gap-3 border-b border-line pb-2">
-              <SelectAllBox
-                label={t("trash.selectAll")}
-                checked={selection.allSelected}
-                indeterminate={someSelected && !selection.allSelected}
-                onChange={() => {
-                  if (selection.allSelected) selection.clear();
-                  else selection.selectAll();
-                }}
-              />
-              {someSelected ? (
-                <>
-                  <span className="text-[13px]">{t("trash.selected", { count: selection.count })}</span>
-                  <Button
-                    variant="primary"
-                    disabled={busy}
-                    onClick={() =>
-                      void restore(
-                        entries.filter((e) => selection.isSelected(e.id)).map((e) => ({ type: e.type, id: e.id })),
-                      )
-                    }
-                  >
-                    {t("trash.restoreSelected")}
-                  </Button>
-                  <Button variant="ghost" onClick={selection.clear}>
-                    {t("trash.clear")}
-                  </Button>
-                </>
-              ) : null}
-            </div>
+            <BulkBar
+              selection={selection}
+              total={entries.length}
+              actions={["restore"]}
+              busy={busy}
+              onAction={() =>
+                void restore(entries.filter((e) => selection.isSelected(e.id)).map((e) => ({ type: e.type, id: e.id })))
+              }
+            />
           ) : null}
           <ul className="flex flex-col divide-y divide-line">
             {entries.map((entry) => {
@@ -171,8 +134,11 @@ export function TrashPage() {
               return (
                 <li
                   key={entry.id}
-                  className={cn("flex items-start gap-3 py-2", selection.isSelected(entry.id) && "bg-primary-tint/40")}
-                  {...selection.longPress(entry.id)}
+                  className={cn(
+                    "flex items-start gap-3 py-2 select-none",
+                    selection.isSelected(entry.id) && "bg-primary-tint/40",
+                  )}
+                  {...selection.rowProps(entry.id)}
                 >
                   <input
                     type="checkbox"

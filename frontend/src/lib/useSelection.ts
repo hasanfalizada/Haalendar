@@ -3,7 +3,11 @@
 // - click on a checkbox toggles one entry and sets the range anchor; Shift+click selects the range from the anchor;
 // - selectAll / clear; Esc clears (unless a dialog is open); a long press (500 ms) toggles an entry on touch screens;
 // - entries that leave the list (e.g. after a reload) silently leave the selection.
-import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036. Row clicks (rowProps): Ctrl/Cmd+click toggles, Shift+click selects
+// the range, a plain click opens the row — or toggles it while something is selected on a touch screen (selection
+// mode after a long press). The click that ends a long press is swallowed. Ctrl/Cmd+A selects every loaded row of the
+// list (option selectAllShortcut; one list per page), not in text fields and not behind a dialog.
+import { type MouseEvent, type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const LONG_PRESS_MS = 500;
 
@@ -20,12 +24,29 @@ export interface Selection {
     onPointerUp: () => void;
     onPointerLeave: () => void;
   };
+  /** Props for a clickable row: long press plus Ctrl/Cmd/Shift clicks; a plain click calls onOpen. */
+  rowProps: (
+    id: string,
+    onOpen?: () => void,
+  ) => ReturnType<Selection["longPress"]> & { onClick: (event: MouseEvent) => void };
 }
 
-export function useSelection(ids: readonly string[]): Selection {
+export interface SelectionOptions {
+  /** Ctrl/Cmd+A selects all loaded rows of this list (enable for one list per page). */
+  selectAllShortcut?: boolean;
+}
+
+function isTyping(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
+}
+
+export function useSelection(ids: readonly string[], options: SelectionOptions = {}): Selection {
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const anchor = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressed = useRef(false);
+  const lastPointer = useRef<string>("mouse");
 
   const selectedIds = useMemo(() => ids.filter((id) => picked.has(id)), [ids, picked]);
 
@@ -59,6 +80,21 @@ export function useSelection(ids: readonly string[]): Selection {
     setPicked(new Set(ids));
   }, [ids]);
 
+  const { selectAllShortcut = false } = options;
+  useEffect(() => {
+    if (!selectAllShortcut) return undefined;
+    function onKey(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.code !== "KeyA") return;
+      if (isTyping(event.target) || document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      selectAll();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [selectAllShortcut, selectAll]);
+
   useEffect(() => {
     if (selectedIds.length === 0) return undefined;
     function onKey(event: KeyboardEvent) {
@@ -78,9 +114,11 @@ export function useSelection(ids: readonly string[]): Selection {
   const longPress = useCallback(
     (id: string) => ({
       onPointerDown: (event: PointerEvent) => {
+        lastPointer.current = event.pointerType;
         if (event.pointerType !== "touch") return;
         cancelPress();
         timer.current = setTimeout(() => {
+          pressed.current = true;
           toggle(id);
         }, LONG_PRESS_MS);
       },
@@ -90,14 +128,43 @@ export function useSelection(ids: readonly string[]): Selection {
     [cancelPress, toggle],
   );
 
+  const count = selectedIds.length;
+  const rowProps = useCallback(
+    (id: string, onOpen?: () => void) => ({
+      ...longPress(id),
+      onClick: (event: MouseEvent) => {
+        if (pressed.current) {
+          pressed.current = false; // the click that ends a long press
+          return;
+        }
+        // Checkboxes, buttons and links inside the row handle their own clicks.
+        if (event.target instanceof Element && event.target.closest("button, a, input, select, textarea, label"))
+          return;
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          toggle(id);
+        } else if (event.shiftKey) {
+          event.preventDefault();
+          toggle(id, { range: true });
+        } else if (count > 0 && lastPointer.current === "touch") {
+          toggle(id);
+        } else {
+          onOpen?.();
+        }
+      },
+    }),
+    [longPress, toggle, count],
+  );
+
   return {
     selectedIds,
-    count: selectedIds.length,
+    count,
     isSelected: (id) => picked.has(id),
     toggle,
     selectAll,
     clear,
     allSelected: ids.length > 0 && selectedIds.length === ids.length,
     longPress,
+    rowProps,
   };
 }

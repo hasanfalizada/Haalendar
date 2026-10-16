@@ -9,6 +9,7 @@ token-protected /metrics endpoint are wired here.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. File storage (local adapter) and the users router (avatars).
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing router.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-033. Trash router.
++++===+++ 2026-10-16 — Hasan Alizada — HAAL-036. Bulk router.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from haalendar import __version__
 from haalendar.accounts.api import admin_router, auth_router, me_router, setup_router, users_router
 from haalendar.accounts.mailer import create_mailer
 from haalendar.api import health
+from haalendar.bulk.api import router as bulk_router
 from haalendar.config import Environment, Settings, get_settings
 from haalendar.db import create_engine, create_session_factory, role_bypasses_rls
 from haalendar.errors import install_error_handlers
@@ -111,6 +113,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(users_router, prefix=API_PREFIX)
     app.include_router(sharing_router, prefix=API_PREFIX)
     app.include_router(trash_router, prefix=API_PREFIX)
+    app.include_router(bulk_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

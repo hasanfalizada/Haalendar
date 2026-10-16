@@ -293,6 +293,10 @@ Editors that hold typed text use `useDraft` (`src/lib/useDraft.ts`) with `DraftN
 
 An undoable write passes `undo` to `runWrite`: a function that turns the server's answer into a step, `newStep(kind, label, payload)` from `frontend/src/lib/undo.ts`. The payload must be plain data (it is kept in the tab's sessionStorage); the inverse requests come from a handler registered once with `registerUndo(kind, { undo, redo })` in a module imported by `App.tsx` (see `components/sharing/undo-sharing.ts`). A handler's `next` returns the payload for the opposite direction, e.g. with the new version for If-Match. Several requests that form one user action are one `batchStep`; prefer the atomic `/bulk` endpoint where it exists.
 
+### Multi-select and bulk actions
+
+Lists select with `useSelection` (`frontend/src/lib/useSelection.ts`): spread `rowProps(id, onOpen)` on a row for Ctrl/Cmd+click, Shift+click and long press, and pass `{ selectAllShortcut: true }` for Ctrl/Cmd+A on the page's main list. `BulkBar` shows the actions the list supports; `runBulk` (`src/lib/bulk.ts`) sends them to `POST /bulk` as one request, one notification and one undo step (pass the rows' current color / priority so a change can be undone). On the server a new kind registers a `BulkSource` in `haalendar/bulk/service.py` (model, supported actions, who may change a row, refusals, children restored with a delete batch).
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.
