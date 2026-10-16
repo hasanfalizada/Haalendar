@@ -49,6 +49,7 @@ docker --version && uv --version && node --version && pnpm --version
 | `backend/` | Python 3.14 / FastAPI / SQLAlchemy / Alembic |
 | `frontend/` | React / Vite / TypeScript / Tailwind web app |
 | `branding/` | Logos and icons |
+| `docs/` | Development documentation: SRS and decision log, ADRs, domain model, design system, security baseline (see `docs/README.md`) |
 | `.env.example` | All configuration variables with defaults |
 
 ## 3. First-time setup

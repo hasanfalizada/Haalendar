@@ -9,7 +9,7 @@ Open-source, self-hosted productivity suite: **Calendar**, **To-Do** and **Kanba
 > **Status: complete rewrite in progress** on the `revamp` branch. A development build runs locally (see the development guide); it is not ready for real use yet.
 > The previous version (single-user calendar, Angular + PHP + SQLite) remains available on the `master` branch until v1.0.
 
-- [Development guide](DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md)
+- [Development guide](DEVELOPMENT.md) · [Development documentation](docs/README.md) (requirements, architecture decisions, design) · [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md)
 
 ## License
 

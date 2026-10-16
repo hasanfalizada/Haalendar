@@ -1,4 +1,4 @@
-<!-- +++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Contributor guide to the atom layout. Architecture rationale is kept in the private docs repository. -->
+<!-- +++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Contributor guide to the atom layout. Architecture rationale: docs/architecture/adr/ADR-0006-project-manifest-and-atoms.md. -->
 
 # Atoms
 

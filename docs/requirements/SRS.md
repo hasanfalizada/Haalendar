@@ -9,10 +9,11 @@
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169 v1.10: decisions D-31 (time handling) and D-32 (OIDC deferred to v1.1) approved by owner.
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171 v1.11: decision D-33 (auth UI scope) approved by owner.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030 v1.12: decision D-34 (soft delete enforcement) approved by owner.
++++===+++ 2026-10-16 — Hasan Alizada — v1.13: decision D-35 (development documentation public in the code repository) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.12 |
+| Version | 1.13 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -485,6 +486,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-32 | OIDC/SSO | HAAL-168 (Could) is deferred to v1.1; v1.0 ships local accounts, invitations and optional TOTP only | FR-ACC-12 |
 | D-33 | Auth UI | HAAL-171 also implements the instance settings (registration mode, admin 2FA policy; enabling the policy is refused while the acting admin has no 2FA) and the session list with revoke one / all others; TOTP QR codes are rendered in the browser with uqr (no network, no innerHTML); new endpoints: verification resend (generic 202, 5-minute throttle, old links revoked) and recovery-code regeneration (re-auth) | FR-ACC-01..04 |
 | D-34 | Soft delete enforcement | Four layers: soft_delete/live/restore_batch helpers; SQLAlchemy guards refusing ORM deletes, delete() and DELETE/TRUNCATE SQL; no DELETE/TRUNCATE privilege for the app role; BEFORE DELETE/TRUNCATE triggers on every table for every role. Tests fail on delete constructs in the code (explicit `physical-delete-allowed` markers only), on contract DELETE operations without `x-soft-delete`, and on tables without triggers. Maintenance only as superuser with session_replication_role = replica (throw-away databases; demo reset and a possible erasure procedure for O-01 must be designed against this) | FR-X-01 |
+| D-35 | Development documentation | The development documentation moves into `docs/` of the public code repository with its full history (git subtree); the separate private repository is no longer updated. Nothing secret is kept in `docs/` | ADR-0002 §6 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

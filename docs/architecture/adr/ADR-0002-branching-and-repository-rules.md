@@ -47,3 +47,9 @@ The existing name `development` is kept (instead of `develop`) to avoid churn.
 1. **`revamp` is the working trunk until v1.0.** The owner may commit directly to `revamp`; larger tasks may use `feature/HAAL-xxx-*` branches created from and merged back into `revamp`. Release path for v1.0: `revamp` → PR into `development` → `release/1.0.0` → `master` (tag `v1.0.0`). After v1.0 the full Gitflow above applies and `revamp` is retired.
 2. **Stale remote branches are kept** (29 Dependabot, 6 legacy feature branches).
 3. **Merge strategy accepted:** squash into `development`, merge commit into `master`.
+
+## 6. Amendment (2026-10-16) — development documentation in the code repository
++++===+++ 2026-10-16 — Hasan Alizada — Owner decision D-35.
+- The development documentation (requirements, ADRs, domain model, design, security baseline) moved from the separate private repository into `docs/` of this repository, **with its full history** (`git subtree add --prefix=docs`). The way the project is developed is public.
+- The former separate docs repository is no longer updated.
+- Rule: documentation changes go through the same branches and commits as code; nothing secret is stored in `docs/` (no credentials, private hostnames or real user data).
