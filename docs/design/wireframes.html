@@ -1,0 +1,563 @@
+<title>Haalendar Wireframes</title>
+<!-- +++===+++ 2026-10-14 — Hasan Alizada — HAAL-018. Wireframes (desktop + mobile) and live preview of design tokens. Source of truth for tokens and components: design/design-system.md. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a review sheet — tokens first, then desktop frames (scrollable), then phone frames side by side. */
+:root{
+  --bg:#FFFFFF; --surface:#F5F8F8; --surface-2:#EAF0F0; --line:#D9E2E2; --fg:#111827; --muted:#56636F;
+  --primary:#0F766E; --primary-hover:#115E59; --primary-ink:#FFFFFF; --primary-tint:#E6F6F3; --accent:#F59E0B;
+  --danger:#B42318; --ok:#15803D; --warn-bg:#FEF3C7; --warn-fg:#78350F; --shadow:0 1px 2px rgb(17 24 39/.06),0 4px 16px rgb(17 24 39/.08);
+  --ev-red:#DC2626; --ev-orange:#EA580C; --ev-yellow:#EAB308; --ev-green:#16A34A; --ev-blue:#2563EB; --ev-purple:#9333EA; --ev-brown:#92400E; --ev-black:#1F2937;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r-sm:6px; --r-md:10px; --r-lg:16px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1220; --surface:#111A27; --surface-2:#18232F; --line:#253243; --fg:#EEF2F6; --muted:#9AA7B4;
+  --primary:#2DD4BF; --primary-hover:#5EEAD4; --primary-ink:#0B1220; --primary-tint:#0F2E2B; --accent:#FBBF24;
+  --danger:#F97066; --ok:#4ADE80; --warn-bg:#3A2A08; --warn-fg:#FDE68A; --shadow:0 1px 2px rgb(0 0 0/.4),0 6px 20px rgb(0 0 0/.35);
+  --ev-black:#9CA3AF; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1220; --surface:#111A27; --surface-2:#18232F; --line:#253243; --fg:#EEF2F6; --muted:#9AA7B4;
+  --primary:#2DD4BF; --primary-hover:#5EEAD4; --primary-ink:#0B1220; --primary-tint:#0F2E2B; --accent:#FBBF24;
+  --danger:#F97066; --ok:#4ADE80; --warn-bg:#3A2A08; --warn-fg:#FDE68A; --shadow:0 1px 2px rgb(0 0 0/.4),0 6px 20px rgb(0 0 0/.35);
+  --ev-black:#9CA3AF; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--surface);color:var(--fg);font:14px/1.5 var(--font);margin:0}
+.page{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:32px 64px;display:grid;gap:40px}
+h1{font-size:28px;line-height:1.2;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:20px;margin:0 0 4px;font-weight:600;text-wrap:balance}
+h3{font-size:14px;margin:0;font-weight:600}
+.lede{color:var(--muted);max-width:68ch;margin:8px 0 0}
+.cap{color:var(--muted);font-size:12.5px;max-width:80ch;margin:6px 0 14px}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tnum{font-variant-numeric:tabular-nums}
+section{display:grid;gap:8px}
+.hdr{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.hdr svg.logo{width:44px;height:44px;flex:none}
+/* tokens */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.sw{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.sw i{display:block;height:44px}
+.sw div{padding:8px 10px;font-size:12px}
+.typescale{display:grid;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px}
+.typescale div{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+.typescale span:first-child{width:96px;flex:none;color:var(--muted);font-size:12px}
+/* frames */
+.scroll{overflow-x:auto;padding-bottom:6px}
+.frame{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
+.desk{width:1040px;height:620px;display:grid;grid-template-columns:56px 248px 1fr}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0}
+.rail .ic{width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--muted)}
+.rail .ic.on{background:var(--primary-tint);color:var(--primary)}
+.rail .sp{flex:1}
+.side{border-right:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.main{display:flex;flex-direction:column;min-width:0}
+.top{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top .title{font-size:18px;font-weight:600}
+.top .meta{color:var(--muted);font-size:12.5px}
+.top .grow{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--bg);color:var(--fg);font:500 13px var(--font);cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn.pri{background:var(--primary);color:var(--primary-ink);border-color:var(--primary)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sq{width:32px;padding:0;justify-content:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.seg span{padding:5px 10px;font-size:12.5px;border-right:1px solid var(--line)}
+.seg span:last-child{border-right:0}
+.seg .on{background:var(--primary-tint);color:var(--primary);font-weight:600}
+.kbd{font:500 11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--muted);background:var(--surface)}
+.search{display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 10px;color:var(--muted);background:var(--surface);min-width:240px}
+.search .grow{flex:1}
+/* mini month */
+.mm{display:grid;grid-template-columns:22px repeat(7,1fr);gap:2px;font-size:11.5px;text-align:center}
+.mm .wk{color:var(--muted);font-size:10px;align-self:center}
+.mm .dh{color:var(--muted);font-weight:600;font-size:10.5px}
+.mm .d{padding:3px 0;border-radius:5px}
+.mm .o{color:var(--muted);opacity:.55}
+.mm .t{outline:1.5px solid var(--primary);color:var(--primary);font-weight:600}
+.mm .s{background:var(--primary);color:var(--primary-ink);font-weight:600}
+.cal-list{display:grid;gap:4px;font-size:13px}
+.cal-list div{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:3px;flex:none}
+.cb{width:14px;height:14px;border:1.5px solid var(--muted);border-radius:3px;flex:none}
+.cb.on{background:var(--primary);border-color:var(--primary)}
+.overdue{background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--r-sm);padding:6px 10px;font-size:12.5px;font-weight:600;display:flex;gap:6px;align-items:center}
+/* event chips */
+.ev{--c:var(--ev-brown);display:flex;align-items:center;gap:10px;padding:8px 12px 8px 10px;border-radius:var(--r-sm);background:color-mix(in srgb,var(--c) 13%,var(--bg));border-left:4px solid var(--c);font-size:13.5px}
+.ev .tm{width:84px;flex:none;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.ev .tt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.ev .icons{display:flex;gap:6px;color:var(--muted)}
+.ev.sel{outline:2px solid var(--primary);outline-offset:1px}
+.pr{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:999px;border:1px solid currentColor}
+.pr.h{color:var(--danger)} .pr.l{color:var(--muted)}
+.day{padding:14px 16px;display:grid;gap:6px;align-content:start;overflow:auto}
+.grp{margin-top:6px}
+/* popover */
+.pop{position:absolute;width:330px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow);padding:14px;display:grid;gap:9px;font-size:13px}
+.pop .row{display:flex;gap:8px;align-items:flex-start;color:var(--fg)}
+.pop .row svg{color:var(--muted);flex:none;margin-top:2px}
+.badge{font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+.colors{display:flex;gap:6px}
+.colors i{width:18px;height:18px;border-radius:50%;display:block;border:2px solid var(--bg);box-shadow:0 0 0 1px var(--line)}
+.colors i.on{box-shadow:0 0 0 2px var(--fg)}
+.actions{display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:9px}
+/* dialog */
+.overlay{background:color-mix(in srgb,var(--fg) 35%,transparent);display:grid;place-items:center;height:100%}
+.dlg{width:560px;background:var(--bg);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:18px 20px;display:grid;gap:12px}
+.fld{display:grid;gap:4px}
+.fld .in{height:34px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 10px;display:flex;align-items:center;gap:8px;background:var(--bg)}
+.fld .in.ta{height:64px;align-items:flex-start;padding-top:8px;color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row4{display:grid;grid-template-columns:1.3fr .8fr 1.3fr .8fr;gap:8px}
+.hint{font-size:12px;color:var(--muted)}
+.warnline{background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--r-sm);padding:7px 10px;font-size:12.5px;display:flex;gap:8px;align-items:center}
+.sw-toggle{width:30px;height:18px;border-radius:999px;background:var(--primary);position:relative;flex:none}
+.sw-toggle::after{content:"";position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--primary-ink)}
+/* week */
+.week{display:grid;grid-template-columns:52px repeat(7,1fr);font-size:12px;flex:1;overflow:hidden}
+.week .h{padding:6px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);text-align:center}
+.week .h b{display:block;font-size:16px}
+.week .h.today b{color:var(--primary)}
+.week .ad{border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:3px;min-height:30px;display:grid;gap:2px}
+.week .hr{color:var(--muted);text-align:right;padding-right:6px;font-size:10.5px;height:44px}
+.week .cell{border-left:1px solid var(--line);border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent);height:44px;position:relative}
+.blk{position:absolute;left:3px;right:3px;border-radius:5px;padding:3px 6px;font-size:11.5px;background:color-mix(in srgb,var(--c) 18%,var(--bg));border-left:3px solid var(--c);overflow:hidden}
+.now{position:absolute;left:0;right:0;border-top:2px solid var(--danger)}
+.chip{font-size:11px;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--c) 16%,var(--bg));border-left:3px solid var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* month */
+.month{display:grid;grid-template-columns:repeat(7,1fr);font-size:12px;flex:1}
+.month .dh{padding:6px 8px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+.month .c{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px;min-height:84px;display:grid;gap:2px;align-content:start}
+.month .c .n{font-size:12px;font-weight:600}
+.month .c.o .n{color:var(--muted);opacity:.6}
+.month .c.t .n{color:var(--primary)}
+.more{font-size:11px;color:var(--primary);font-weight:600}
+/* notes */
+.notes{columns:3 200px;column-gap:12px;padding:16px}
+.note{break-inside:avoid;margin-bottom:12px;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;background:color-mix(in srgb,var(--c,var(--bg)) 9%,var(--bg));display:grid;gap:6px;font-size:13px}
+.note h4{margin:0;font-size:14px}
+.chk{display:flex;gap:8px;align-items:center}
+.chk.done{color:var(--muted);text-decoration:line-through}
+.tags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+/* kanban */
+.board{display:grid;grid-template-columns:repeat(4,250px);gap:12px;padding:16px;overflow:hidden;align-items:start}
+.col{background:var(--surface);border-radius:var(--r-md);padding:10px;display:grid;gap:8px}
+.col .ch{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px}
+.col .wip{margin-left:auto;font-size:11px;color:var(--muted)}
+.col .wip.over{color:var(--danger);font-weight:700}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 10px;display:grid;gap:6px;font-size:13px;border-top:3px solid var(--c,var(--line))}
+.card .ft{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:11.5px}
+.due{font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px}
+.due.over{background:color-mix(in srgb,var(--danger) 15%,var(--bg));color:var(--danger)}
+.due.soon{background:var(--warn-bg);color:var(--warn-fg)}
+.av{width:20px;height:20px;border-radius:50%;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:700;display:grid;place-items:center}
+.card.drag{transform:rotate(2deg);box-shadow:var(--shadow);opacity:.95}
+/* palette */
+.pal{width:640px;background:var(--bg);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+.pal .q{display:flex;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);font-size:15px}
+.pal .res{padding:8px;display:grid;gap:2px;font-size:13px}
+.pal .it{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:var(--r-sm)}
+.pal .it.on{background:var(--primary-tint)}
+.pal mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:2px}
+.pal .it .k{margin-left:auto;color:var(--muted);font-size:12px}
+/* toast & bulk */
+.toast{position:absolute;right:20px;bottom:20px;background:var(--fg);color:var(--bg);border-radius:var(--r-md);padding:10px 12px 10px 14px;display:flex;gap:14px;align-items:center;font-size:13px;box-shadow:var(--shadow)}
+.toast b{color:var(--accent)}
+.bulk{position:absolute;left:50%;transform:translateX(-50%);bottom:20px;background:var(--bg);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:999px;padding:6px 8px 6px 16px;display:flex;gap:6px;align-items:center;font-size:13px;white-space:nowrap}
+.banner{background:var(--warn-bg);color:var(--warn-fg);font-size:12.5px;padding:6px 16px;display:flex;gap:8px;align-items:center}
+.trash{padding:8px 16px;display:grid;font-size:13px}
+.trash .tr{display:grid;grid-template-columns:20px 1fr 120px 170px;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--line)}
+/* phones */
+.phones{display:flex;gap:24px;flex-wrap:wrap}
+.phone{width:300px;height:620px;border:10px solid var(--fg);border-radius:36px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;position:relative;flex:none;max-width:100%}
+.ph-top{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.ph-top .t{font-weight:600;font-size:15px;flex:1}
+.ph-sub{font-size:11.5px;color:var(--muted);padding:6px 12px;border-bottom:1px solid var(--line);display:flex;gap:10px}
+.ph-body{flex:1;overflow:hidden;padding:10px 12px;display:grid;gap:6px;align-content:start}
+.fab{position:absolute;right:16px;bottom:22px;width:52px;height:52px;border-radius:16px;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;box-shadow:var(--shadow)}
+.drawer{position:absolute;inset:0;display:grid;grid-template-columns:240px 1fr}
+.drawer .pane{background:var(--bg);padding:14px;display:grid;gap:12px;align-content:start;box-shadow:var(--shadow)}
+.drawer .scrim{background:color-mix(in srgb,var(--fg) 40%,transparent)}
+.navi{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:var(--r-sm);font-weight:500}
+.navi.on{background:var(--primary-tint);color:var(--primary)}
+.sheet-h{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.dots{display:flex;gap:5px;justify-content:center;padding:6px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--line);display:block}
+.dots i.on{background:var(--primary)}
+.notes-1{display:grid;gap:8px}
+/* shortcuts */
+table{border-collapse:collapse;width:100%;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;font-size:13px}
+td,th{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.rel{position:relative}
+svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="board" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="text" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+  <symbol id="img" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
+  <symbol id="rep" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M12 22s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+  <symbol id="left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+  <symbol id="cloud" viewBox="0 0 24 24"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4 12a4 4 0 0 0 1 7.9z"/><path d="m3 3 18 18"/></symbol>
+  <symbol id="pinned" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 7 4 3H6l4-3z"/></symbol>
+  <symbol id="msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+</svg>
+
+<main class="page">
+  <header class="hdr">
+    <svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#0F766E"/><rect x="119" y="110" width="73" height="292" rx="27" fill="#fff"/><rect x="320" y="110" width="73" height="292" rx="27" fill="#fff"/><polyline points="174,265 238,329 357,192" fill="none" stroke="#F59E0B" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div style="min-width:0">
+      <div class="label">HAAL-018 · approved by owner · 14 Oct 2026</div>
+      <h1>Haalendar Wireframes</h1>
+      <p class="lede">Low-fidelity screens for the v1.0 scope (SRS v1.4) built with the proposed design tokens. Content is sample data. Switch your system theme to review the dark palette.</p>
+    </div>
+  </header>
+
+  <!-- ================= TOKENS ================= -->
+  <section>
+    <h2>Tokens</h2>
+    <p class="cap">UI chrome uses teal; the 8 event colors are only for user content, shown as a 4 px bar on a light tint so text always stays ink-on-tint (AA in both themes).</p>
+    <div class="swatches">
+      <div class="sw"><i style="background:var(--primary)"></i><div><b>primary</b><br><span class="mono">#0F766E / #2DD4BF</span></div></div>
+      <div class="sw"><i style="background:var(--accent)"></i><div><b>accent</b> (graphics only)<br><span class="mono">#F59E0B / #FBBF24</span></div></div>
+      <div class="sw"><i style="background:var(--primary-tint)"></i><div><b>primary-tint</b><br>selection, active nav</div></div>
+      <div class="sw"><i style="background:var(--surface)"></i><div><b>surface</b><br>sidebars, columns</div></div>
+      <div class="sw"><i style="background:var(--fg)"></i><div><b>fg</b> ink<br><span class="mono">#111827 / #EEF2F6</span></div></div>
+      <div class="sw"><i style="background:var(--danger)"></i><div><b>danger</b><br>delete, overdue</div></div>
+    </div>
+    <div class="label" style="margin-top:8px">Event colors (FR-X-13) · default brown</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px">
+      <div class="ev" style="--c:var(--ev-red)"><span class="tt">Red</span></div>
+      <div class="ev" style="--c:var(--ev-orange)"><span class="tt">Orange</span></div>
+      <div class="ev" style="--c:var(--ev-yellow)"><span class="tt">Yellow</span></div>
+      <div class="ev" style="--c:var(--ev-green)"><span class="tt">Green</span></div>
+      <div class="ev" style="--c:var(--ev-blue)"><span class="tt">Blue</span></div>
+      <div class="ev" style="--c:var(--ev-purple)"><span class="tt">Purple</span></div>
+      <div class="ev" style="--c:var(--ev-brown)"><span class="tt">Brown (default)</span></div>
+      <div class="ev" style="--c:var(--ev-black)"><span class="tt">Black</span></div>
+    </div>
+    <div class="typescale" style="margin-top:8px">
+      <div><span>Title 24/600</span><span style="font-size:24px;font-weight:600">Tuesday, 14 October</span></div>
+      <div><span>Heading 18/600</span><span style="font-size:18px;font-weight:600">Week 42 · Day 287 · Week A</span></div>
+      <div><span>Body 14/400</span><span>Dentist appointment — bring the insurance card.</span></div>
+      <div><span>Small 12.5/400</span><span style="font-size:12.5px;color:var(--muted)">Created 12 Oct 2026, 09:14 · Updated today</span></div>
+      <div><span>Time 13 tabular</span><span class="mono">08:00 – 09:15</span></div>
+    </div>
+  </section>
+
+  <!-- ================= DESKTOP ================= -->
+  <section>
+    <h2>D1 · Calendar, day view</h2>
+    <p class="cap">Left rail switches modules (Alt+1/2/3). Sidebar: mini month with ISO week numbers, calendars with visibility, layers, overdue counter. Header: date, live clock, week, day number, Week A/B. Order: all-day first, then by time. Icons show description, attachments, recurrence; one event is selected (Delete key works on it).</p>
+    <div class="scroll"><div class="frame desk">
+      <nav class="rail" aria-label="Modules">
+        <div class="ic on" title="Calendar"><svg class="i"><use href="#cal"/></svg></div>
+        <div class="ic" title="To-Do"><svg class="i"><use href="#check"/></svg></div>
+        <div class="ic" title="Kanban"><svg class="i"><use href="#board"/></svg></div>
+        <div class="sp"></div>
+        <div class="ic" title="Trash"><svg class="i"><use href="#trash"/></svg></div>
+        <div class="ic" title="Notifications"><svg class="i"><use href="#bell"/></svg></div>
+        <div class="ic" title="Account"><svg class="i"><use href="#user"/></svg></div>
+      </nav>
+      <aside class="side">
+        <button class="btn pri" style="justify-content:center"><svg class="i"><use href="#plus"/></svg>New event <span class="kbd" style="background:transparent;color:inherit;border-color:currentColor">N</span></button>
+        <div>
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px"><b style="flex:1;font-size:13px">October 2026</b><span class="btn ghost sq"><svg class="i"><use href="#left"/></svg></span><span class="btn ghost sq"><svg class="i"><use href="#right"/></svg></span></div>
+          <div class="mm tnum">
+            <span></span><span class="dh">Mo</span><span class="dh">Tu</span><span class="dh">We</span><span class="dh">Th</span><span class="dh">Fr</span><span class="dh">Sa</span><span class="dh">Su</span>
+            <span class="wk">40</span><span class="d o">28</span><span class="d o">29</span><span class="d o">30</span><span class="d">1</span><span class="d">2</span><span class="d">3</span><span class="d">4</span>
+            <span class="wk">41</span><span class="d">5</span><span class="d">6</span><span class="d">7</span><span class="d">8</span><span class="d">9</span><span class="d">10</span><span class="d">11</span>
+            <span class="wk">42</span><span class="d">12</span><span class="d">13</span><span class="d s">14</span><span class="d">15</span><span class="d">16</span><span class="d">17</span><span class="d">18</span>
+            <span class="wk">43</span><span class="d">19</span><span class="d">20</span><span class="d">21</span><span class="d">22</span><span class="d">23</span><span class="d">24</span><span class="d">25</span>
+            <span class="wk">44</span><span class="d">26</span><span class="d">27</span><span class="d">28</span><span class="d">29</span><span class="d">30</span><span class="d">31</span><span class="d o">1</span>
+          </div>
+        </div>
+        <div class="cal-list"><div class="label">Calendars</div>
+          <div><span class="cb on"></span><span class="dot" style="background:var(--ev-blue)"></span>Personal</div>
+          <div><span class="cb on"></span><span class="dot" style="background:var(--ev-green)"></span>Work</div>
+          <div><span class="cb"></span><span class="dot" style="background:var(--ev-purple)"></span>Family <span class="badge" style="margin-left:auto">shared</span></div>
+        </div>
+        <div class="cal-list"><div class="label">Layers</div>
+          <div><span class="cb on"></span>Note due dates</div>
+          <div><span class="cb"></span>Card due dates</div>
+        </div>
+        <div class="overdue"><svg class="i"><use href="#alert"/></svg>3 overdue events</div>
+      </aside>
+      <div class="main">
+        <div class="top">
+          <span class="btn">Today <span class="kbd">T</span></span>
+          <span class="btn sq"><svg class="i"><use href="#left"/></svg></span><span class="btn sq"><svg class="i"><use href="#right"/></svg></span>
+          <span class="title">Today, 14 October 2026</span>
+          <span class="meta tnum">Week 42 · Day 287 · <b style="color:var(--primary)">Week A</b> · 14:32:07</span>
+          <span class="grow"></span>
+          <span class="seg"><span class="on">Day</span><span>Week</span><span>Month</span><span>Agenda</span></span>
+          <span class="search"><svg class="i"><use href="#search"/></svg><span class="grow">Search</span><span class="kbd">Ctrl K</span></span>
+        </div>
+        <div class="day">
+          <div class="label">All day</div>
+          <div class="ev" style="--c:var(--ev-purple)"><span class="tm">All day</span><span class="tt">Mom's birthday</span><span class="icons"><svg class="i"><use href="#rep"/></svg></span></div>
+          <div class="ev" style="--c:var(--ev-brown)"><span class="tm">All day</span><span class="tt">Pay rent</span><span class="pr h">High</span><span class="icons"><svg class="i"><use href="#rep"/></svg></span></div>
+          <div class="label grp">Timed</div>
+          <div class="ev" style="--c:var(--ev-green)"><span class="tm">09:00 – 09:15</span><span class="tt">Team standup</span><span class="icons"><svg class="i"><use href="#rep"/></svg></span></div>
+          <div class="ev sel" style="--c:var(--ev-blue)"><span class="tm">11:30 – 12:30</span><span class="tt">Dentist appointment</span><span class="icons"><svg class="i"><use href="#text"/></svg><svg class="i"><use href="#img"/></svg></span></div>
+          <div class="ev" style="--c:var(--ev-orange)"><span class="tm">15:00 – 16:00</span><span class="tt">Architecture review: Haalendar sync design</span><span class="pr l">Low</span><span class="icons"><svg class="i"><use href="#text"/></svg></span></div>
+          <div class="ev" style="--c:var(--ev-red)"><span class="tm">18:30 – 20:00</span><span class="tt">Gym</span><span class="icons"><svg class="i"><use href="#rep"/></svg></span></div>
+          <div class="label grp">Note due · layer</div>
+          <div class="ev" style="--c:var(--ev-yellow);border-left-style:dashed"><span class="tm">17:00</span><span class="tt">Buy batteries for the smoke detector</span><span class="icons"><svg class="i"><use href="#check"/></svg></span></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>D2 · Event details popover</h2>
+    <p class="cap">Opens on click and right-click. Color changes in place (FR-CAL-18). Recurring events get "This occurrence" actions. Timestamps at the bottom (FR-X-02).</p>
+    <div class="scroll"><div class="frame rel" style="width:1040px;height:380px;background:var(--surface)">
+      <div style="padding:20px;display:grid;gap:6px;width:520px">
+        <div class="ev sel" style="--c:var(--ev-blue)"><span class="tm">11:30 – 12:30</span><span class="tt">Dentist appointment</span></div>
+        <div class="ev" style="--c:var(--ev-red)"><span class="tm">18:30 – 20:00</span><span class="tt">Gym</span></div>
+      </div>
+      <div class="pop" style="left:560px;top:20px">
+        <div style="display:flex;gap:8px;align-items:center"><b style="font-size:15px;flex:1">Dentist appointment</b><span class="badge">Medium</span><span class="btn ghost sq"><svg class="i"><use href="#x"/></svg></span></div>
+        <div class="row"><svg class="i"><use href="#clock"/></svg><span class="tnum">Tue 14 Oct 2026, 11:30 – 12:30<br><span class="hint">Europe/Berlin</span></span></div>
+        <div class="row"><svg class="i"><use href="#pin"/></svg>Dr. Weber, Hauptstraße 12</div>
+        <div class="row"><svg class="i"><use href="#text"/></svg><span>Bring the insurance card and the X-ray from… <a href="#d3" style="color:var(--primary)">more</a></span></div>
+        <div class="row"><svg class="i"><use href="#img"/></svg><span style="display:flex;gap:6px"><i style="width:44px;height:32px;border-radius:4px;background:var(--surface-2);display:block"></i><i style="width:44px;height:32px;border-radius:4px;background:var(--surface-2);display:block"></i></span></div>
+        <div class="colors"><i style="background:var(--ev-red)"></i><i style="background:var(--ev-orange)"></i><i style="background:var(--ev-yellow)"></i><i style="background:var(--ev-green)"></i><i class="on" style="background:var(--ev-blue)"></i><i style="background:var(--ev-purple)"></i><i style="background:var(--ev-brown)"></i><i style="background:var(--ev-black)"></i></div>
+        <div class="actions">
+          <span class="btn"><svg class="i"><use href="#edit"/></svg>Edit <span class="kbd">E</span></span>
+          <span class="btn"><svg class="i"><use href="#next"/></svg>Next day</span>
+          <span class="btn"><svg class="i"><use href="#copy"/></svg>Duplicate</span>
+          <span class="btn" style="color:var(--danger)"><svg class="i"><use href="#trash"/></svg>Delete</span>
+        </div>
+        <div class="hint">Created 12 Oct 2026, 09:14 · Updated 13 Oct, 18:02</div>
+      </div>
+    </div></div>
+  </section>
+
+  <section id="d3">
+    <h2>D3 · Event editor with unsaved-changes guard and duplicate warning</h2>
+    <p class="cap">Title max 150, all-day on by default, 15-minute times, end auto-shifts. Duplicate title warning (FR-CAL-16) is inline and non-blocking. Closing with changes asks for confirmation (FR-X-09).</p>
+    <div class="scroll"><div class="frame" style="width:1040px;height:600px">
+      <div class="overlay"><div class="dlg">
+        <div style="display:flex;align-items:center"><b style="font-size:17px;flex:1">Edit event</b><span class="hint" style="margin-right:8px">Unsaved changes</span><span class="btn ghost sq"><svg class="i"><use href="#x"/></svg></span></div>
+        <div class="fld"><span class="label">Title</span><div class="in">Gym<span class="hint" style="margin-left:auto">3/150</span></div></div>
+        <div class="warnline"><svg class="i"><use href="#alert"/></svg>An active event named "Gym" already exists (repeats weekly). <a href="#d1" style="color:inherit;font-weight:600">Open it</a></div>
+        <div style="display:flex;gap:10px;align-items:center"><span class="sw-toggle"></span><span>All day</span><span class="grow" style="flex:1"></span><span class="label">Calendar</span><span class="btn">Personal ▾</span></div>
+        <div class="row4"><div class="fld"><span class="label">From</span><div class="in tnum">14 Oct 2026</div></div><div class="fld"><span class="label">Time</span><div class="in" style="color:var(--muted)">—</div></div><div class="fld"><span class="label">To</span><div class="in tnum">14 Oct 2026</div></div><div class="fld"><span class="label">Time</span><div class="in" style="color:var(--muted)">—</div></div></div>
+        <div class="row2"><div class="fld"><span class="label">Repeat</span><div class="in">Weekly on Tue, Thu · until 31 Dec 2026 ▾</div></div><div class="fld"><span class="label">Reminder</span><div class="in">1 hour before ▾</div></div></div>
+        <div class="fld"><span class="label">Description (Markdown)</span><div class="in ta">Leg day. Paste a screenshot here to attach it.</div></div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><span class="label">Color</span><div class="colors"><i class="on" style="background:var(--ev-red)"></i><i style="background:var(--ev-orange)"></i><i style="background:var(--ev-yellow)"></i><i style="background:var(--ev-green)"></i><i style="background:var(--ev-blue)"></i><i style="background:var(--ev-purple)"></i><i style="background:var(--ev-brown)"></i><i style="background:var(--ev-black)"></i></div><span class="label">Priority</span><span class="seg"><span>Low</span><span class="on">Medium</span><span>High</span></span></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn">Cancel</span><span class="btn pri">Save <span class="kbd" style="background:transparent;color:inherit;border-color:currentColor">Ctrl ↵</span></span></div>
+      </div></div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>D4 · Week view and D5 · month view</h2>
+    <p class="cap">Week: all-day row, time grid, overlapping events side by side, current-time line, drag to reschedule. Month: "+N more" opens the day.</p>
+    <div class="scroll"><div class="frame" style="width:1040px;height:430px;display:flex;flex-direction:column">
+      <div class="top"><span class="title">13 – 19 October 2026</span><span class="meta">Week 42 · Week A</span><span class="grow"></span><span class="seg"><span>Day</span><span class="on">Week</span><span>Month</span><span>Agenda</span></span></div>
+      <div class="week">
+        <span></span><div class="h">Mon<b>13</b></div><div class="h today">Tue<b>14</b></div><div class="h">Wed<b>15</b></div><div class="h">Thu<b>16</b></div><div class="h">Fri<b>17</b></div><div class="h">Sat<b>18</b></div><div class="h">Sun<b>19</b></div>
+        <span class="hr">all day</span><div class="ad"></div><div class="ad"><span class="chip" style="--c:var(--ev-purple)">Mom's birthday</span><span class="chip" style="--c:var(--ev-brown)">Pay rent</span></div><div class="ad"></div><div class="ad"></div><div class="ad"><span class="chip" style="--c:var(--ev-green)">Sprint review</span></div><div class="ad"></div><div class="ad"></div>
+        <span class="hr">09:00</span><div class="cell"><div class="blk" style="--c:var(--ev-green);top:2px;height:14px">Standup</div></div><div class="cell"><div class="blk" style="--c:var(--ev-green);top:2px;height:14px">Standup</div></div><div class="cell"><div class="blk" style="--c:var(--ev-green);top:2px;height:14px">Standup</div></div><div class="cell"><div class="blk" style="--c:var(--ev-green);top:2px;height:14px">Standup</div></div><div class="cell"><div class="blk" style="--c:var(--ev-green);top:2px;height:14px">Standup</div></div><div class="cell"></div><div class="cell"></div>
+        <span class="hr">10:00</span><div class="cell"></div><div class="cell"></div><div class="cell"><div class="blk" style="--c:var(--ev-orange);top:4px;height:76px;right:52%">Workshop</div><div class="blk" style="--c:var(--ev-blue);top:26px;height:40px;left:50%">Call bank</div></div><div class="cell"></div><div class="cell"></div><div class="cell"><div class="blk" style="--c:var(--ev-red);top:4px;height:60px">Run 10 km</div></div><div class="cell"></div>
+        <span class="hr">11:00</span><div class="cell"></div><div class="cell"><div class="blk" style="--c:var(--ev-blue);top:22px;height:44px">Dentist</div></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <span class="hr">12:00</span><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <span class="hr">13:00</span><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <span class="hr">14:00</span><div class="cell"></div><div class="cell"><div class="now" style="top:23px"></div></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      </div>
+    </div></div>
+    <div class="scroll"><div class="frame" style="width:1040px;display:flex;flex-direction:column">
+      <div class="month">
+        <div class="dh">Mon</div><div class="dh">Tue</div><div class="dh">Wed</div><div class="dh">Thu</div><div class="dh">Fri</div><div class="dh">Sat</div><div class="dh">Sun</div>
+        <div class="c"><span class="n">12</span><span class="chip" style="--c:var(--ev-green)">09:00 Standup</span></div>
+        <div class="c"><span class="n">13</span><span class="chip" style="--c:var(--ev-green)">09:00 Standup</span></div>
+        <div class="c t"><span class="n">14</span><span class="chip" style="--c:var(--ev-purple)">Mom's birthday</span><span class="chip" style="--c:var(--ev-brown)">Pay rent</span><span class="chip" style="--c:var(--ev-blue)">11:30 Dentist</span><span class="more">+3 more</span></div>
+        <div class="c"><span class="n">15</span><span class="chip" style="--c:var(--ev-orange)">10:00 Workshop</span></div>
+        <div class="c"><span class="n">16</span></div>
+        <div class="c"><span class="n">17</span><span class="chip" style="--c:var(--ev-red)">10:00 Run 10 km</span></div>
+        <div class="c"><span class="n">18</span></div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>D6 · To-Do (notes)</h2>
+    <p class="cap">Masonry grid, pinned first, checklists with checked items at the bottom, labels, due date, colors. Archive is a separate view.</p>
+    <div class="scroll"><div class="frame desk" style="height:470px;grid-template-columns:56px 1fr">
+      <nav class="rail"><div class="ic"><svg class="i"><use href="#cal"/></svg></div><div class="ic on"><svg class="i"><use href="#check"/></svg></div><div class="ic"><svg class="i"><use href="#board"/></svg></div></nav>
+      <div class="main">
+        <div class="top"><span class="title">To-Do</span><span class="seg"><span class="on">Notes</span><span>Archive</span></span><span class="tag">#home</span><span class="tag">#shopping</span><span class="grow"></span><span class="btn pri"><svg class="i"><use href="#plus"/></svg>New note</span></div>
+        <div style="padding:8px 16px 0" class="label">Pinned</div>
+        <div class="notes">
+          <div class="note" style="--c:var(--ev-yellow)"><div style="display:flex;gap:6px"><h4 style="flex:1">Groceries</h4><svg class="i" style="color:var(--primary)"><use href="#pinned"/></svg></div>
+            <div class="chk"><span class="cb"></span>Oat milk</div><div class="chk"><span class="cb"></span>Coffee beans</div><div class="chk"><span class="cb"></span>Tomatoes</div><div class="chk done"><span class="cb on"></span>Bread</div>
+            <div class="tags"><span class="tag">#shopping</span></div></div>
+          <div class="note"><h4>Ideas for Haalendar v1.1</h4><span>Subscribe to public holiday ICS, Trello import, natural-language quick add.</span><div class="tags"><span class="tag">#work</span><span class="pr h">High</span></div></div>
+          <div class="note" style="--c:var(--ev-blue)"><h4>Smoke detector</h4><span>Buy 9V batteries.</span><span class="due soon" style="justify-self:start">Due today 17:00</span></div>
+          <div class="note" style="--c:var(--ev-green)"><h4>Books</h4><div class="chk"><span class="cb"></span>Designing Data-Intensive Applications</div><div class="chk"><span class="cb"></span>A Philosophy of Software Design</div><span class="hint">2 images</span></div>
+          <div class="note"><h4>Passport renewal</h4><span>Book appointment at the Bürgeramt; photos ready.</span><div class="tags"><span class="tag">#home</span></div></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>D7 · Kanban board</h2>
+    <p class="cap">Columns with WIP limits (over limit = warning, move still allowed), card color stripe, labels, due badges, checklist progress, assignees, a card being dragged.</p>
+    <div class="scroll"><div class="frame desk" style="height:470px;grid-template-columns:56px 1fr">
+      <nav class="rail"><div class="ic"><svg class="i"><use href="#cal"/></svg></div><div class="ic"><svg class="i"><use href="#check"/></svg></div><div class="ic on"><svg class="i"><use href="#board"/></svg></div></nav>
+      <div class="main">
+        <div class="top"><span class="title">Haalendar revamp</span><span class="badge">shared · 2 members</span><span class="grow"></span><span class="btn">Filter: Assigned to me ▾</span><span class="btn pri"><svg class="i"><use href="#plus"/></svg>Card</span></div>
+        <div class="board">
+          <div class="col"><div class="ch">Backlog <span class="wip">7</span></div>
+            <div class="card" style="--c:var(--ev-purple)">HAAL-050 Offline sync ADR<div class="ft"><span class="tag">adr</span><span class="pr h">High</span></div></div>
+            <div class="card">HAAL-019 Observability baseline<div class="ft"><span class="tag">backend</span></div></div>
+          </div>
+          <div class="col"><div class="ch">In progress <span class="wip over">3 / 2</span></div>
+            <div class="card" style="--c:var(--ev-blue)">HAAL-018 Wireframes and design system<div class="ft"><span class="due soon">Due tomorrow</span><svg class="i"><use href="#list"/></svg>4/6<span class="av" style="margin-left:auto">HA</span></div></div>
+            <div class="card drag" style="--c:var(--ev-green)">HAAL-017 Frontend shell<div class="ft"><svg class="i"><use href="#msg"/></svg>2<span class="av" style="margin-left:auto">HA</span></div></div>
+          </div>
+          <div class="col"><div class="ch">Review <span class="wip">1 / 3</span></div>
+            <div class="card" style="--c:var(--ev-red)">HAAL-016 Backend skeleton<div class="ft"><span class="due over">Overdue 1 d</span><svg class="i"><use href="#img"/></svg>1</div></div>
+          </div>
+          <div class="col"><div class="ch">Done <span class="wip">15</span></div>
+            <div class="card">HAAL-015 OpenAPI contract</div><div class="card">HAAL-014 Project manifest</div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>D8 · Command palette and search (Ctrl+K)</h2>
+    <p class="cap">One input for navigation, quick create and full-text search across modules (FR-X-10, FR-INT-03). Typing 2026-10-20 + Enter jumps to that day.</p>
+    <div class="scroll"><div class="frame" style="width:1040px;height:430px"><div class="overlay" style="place-items:start center;padding-top:40px">
+      <div class="pal">
+        <div class="q"><svg class="i"><use href="#search"/></svg><span style="flex:1">dentist</span><span class="kbd">Esc</span></div>
+        <div class="res">
+          <div class="label" style="padding:4px 10px">Calendar</div>
+          <div class="it on"><span class="dot" style="background:var(--ev-blue)"></span><span><mark>Dentist</mark> appointment</span><span class="k tnum">Tue 14 Oct</span></div>
+          <div class="it"><span class="dot" style="background:var(--ev-blue)"></span><span>Kids: <mark>dentist</mark> check-up</span><span class="k tnum">Mon 3 Nov</span></div>
+          <div class="label" style="padding:4px 10px">To-Do</div>
+          <div class="it"><svg class="i"><use href="#check"/></svg><span>Insurance: send <mark>dentist</mark> invoice</span><span class="k">#home</span></div>
+          <div class="label" style="padding:4px 10px">Actions</div>
+          <div class="it"><svg class="i"><use href="#plus"/></svg><span>Create event "dentist"</span><span class="k"><span class="kbd">Ctrl ↵</span></span></div>
+          <div class="it"><svg class="i"><use href="#board"/></svg><span>Go to Kanban</span><span class="k"><span class="kbd">Alt 3</span></span></div>
+        </div>
+      </div>
+    </div></div></div>
+  </section>
+
+  <section>
+    <h2>D9 · Multi-select, undo toast, trash, offline banner</h2>
+    <p class="cap">Bulk bar after Ctrl/Shift-click (one undo step). Every DB action reports its result; deletions offer Undo. Trash is ordered by deletion time and keeps everything. Offline banner shows queued changes.</p>
+    <div class="scroll"><div class="frame rel" style="width:1040px;height:400px;display:flex;flex-direction:column">
+      <div class="banner"><svg class="i"><use href="#cloud"/></svg>Offline — 4 changes saved on this device, they sync when you are back online.</div>
+      <div class="top"><span class="title">Trash</span><span class="meta">Kept forever · restore puts items back where they were</span><span class="grow"></span><span class="seg"><span class="on">All</span><span>Events</span><span>Notes</span><span>Cards</span></span></div>
+      <div class="trash">
+        <div class="tr" style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em"><span></span><span>Item</span><span>Module</span><span>Deleted</span></div>
+        <div class="tr" style="background:var(--primary-tint)"><span class="cb on"></span><span>Gym (series)</span><span>Calendar</span><span class="tnum">14 Oct 2026, 14:31</span></div>
+        <div class="tr" style="background:var(--primary-tint)"><span class="cb on"></span><span>Old shopping list</span><span>To-Do</span><span class="tnum">14 Oct 2026, 14:30</span></div>
+        <div class="tr"><span class="cb"></span><span>HAAL-099 Spike</span><span>Kanban</span><span class="tnum">2 Oct 2026, 10:05</span></div>
+      </div>
+      <div class="bulk"><b>2 selected</b><span class="btn">Restore</span><span class="btn ghost sq"><svg class="i"><use href="#x"/></svg></span></div>
+      <div class="toast">Event deleted <b style="cursor:pointer">Undo</b><span class="kbd" style="background:transparent">Ctrl Z</span></div>
+    </div></div>
+  </section>
+
+  <!-- ================= MOBILE ================= -->
+  <section>
+    <h2>Mobile (375 px class)</h2>
+    <p class="cap">M1 day view: swipe left/right changes the day, floating New button. M2 slide-out drawer with modules and calendars (approved pattern). M3 editor as full-screen sheet. M4 kanban one column at a time with snap and dots. M5 notes in one column.</p>
+    <div class="phones">
+      <div class="phone"><div class="ph-top"><svg class="i"><use href="#menu"/></svg><span class="t">Today, 14 Oct</span><span class="btn">Today</span></div>
+        <div class="ph-sub tnum"><span>Week 42</span><span>Day 287</span><b style="color:var(--primary)">Week A</b><span style="margin-left:auto">‹ swipe ›</span></div>
+        <div class="ph-body">
+          <div class="overdue"><svg class="i"><use href="#alert"/></svg>3 overdue</div>
+          <div class="ev" style="--c:var(--ev-purple)"><span class="tt">Mom's birthday</span></div>
+          <div class="ev" style="--c:var(--ev-brown)"><span class="tt">Pay rent</span><span class="pr h">High</span></div>
+          <div class="ev" style="--c:var(--ev-green)"><span class="tm" style="width:44px">09:00</span><span class="tt">Team standup</span></div>
+          <div class="ev" style="--c:var(--ev-blue)"><span class="tm" style="width:44px">11:30</span><span class="tt">Dentist</span><span class="icons"><svg class="i"><use href="#text"/></svg></span></div>
+          <div class="ev" style="--c:var(--ev-orange)"><span class="tm" style="width:44px">15:00</span><span class="tt">Architecture review</span></div>
+          <div class="ev" style="--c:var(--ev-red)"><span class="tm" style="width:44px">18:30</span><span class="tt">Gym</span></div>
+        </div><div class="fab"><svg class="i" style="width:22px;height:22px"><use href="#plus"/></svg></div></div>
+
+      <div class="phone"><div class="ph-top"><svg class="i"><use href="#menu"/></svg><span class="t">Today, 14 Oct</span></div>
+        <div class="drawer"><div class="pane">
+          <div style="display:flex;gap:8px;align-items:center"><span class="av" style="width:32px;height:32px">HA</span><div><b>Hasan Alizada</b><div class="hint">Synced 14:31</div></div></div>
+          <div class="navi on"><svg class="i"><use href="#cal"/></svg>Calendar</div><div class="navi"><svg class="i"><use href="#check"/></svg>To-Do</div><div class="navi"><svg class="i"><use href="#board"/></svg>Kanban</div>
+          <div class="cal-list"><div class="label">Calendars</div><div><span class="cb on"></span>Personal</div><div><span class="cb on"></span>Work</div><div><span class="cb"></span>Family</div></div>
+          <div class="navi"><svg class="i"><use href="#trash"/></svg>Trash</div><div class="navi"><svg class="i"><use href="#bell"/></svg>Notifications <span class="badge" style="margin-left:auto">2</span></div><div class="navi"><svg class="i"><use href="#user"/></svg>Settings</div>
+        </div><div class="scrim"></div></div></div>
+
+      <div class="phone"><div class="sheet-h"><svg class="i"><use href="#x"/></svg><b style="flex:1">New event</b><span class="btn pri">Save</span></div>
+        <div class="ph-body" style="gap:10px">
+          <div class="fld"><span class="label">Title</span><div class="in">Parents' evening</div></div>
+          <div style="display:flex;gap:10px;align-items:center"><span class="sw-toggle" style="background:var(--line)"></span>All day</div>
+          <div class="row2"><div class="fld"><span class="label">From</span><div class="in tnum">16 Oct 18:00</div></div><div class="fld"><span class="label">To</span><div class="in tnum">16 Oct 19:00</div></div></div>
+          <div class="fld"><span class="label">Repeat</span><div class="in">Does not repeat ▾</div></div>
+          <div class="fld"><span class="label">Reminder</span><div class="in">30 min before ▾</div></div>
+          <div class="fld"><span class="label">Description</span><div class="in ta">Room 2.14</div></div>
+          <div class="colors"><i style="background:var(--ev-red)"></i><i style="background:var(--ev-orange)"></i><i style="background:var(--ev-yellow)"></i><i style="background:var(--ev-green)"></i><i style="background:var(--ev-blue)"></i><i class="on" style="background:var(--ev-purple)"></i><i style="background:var(--ev-brown)"></i><i style="background:var(--ev-black)"></i></div>
+        </div></div>
+
+      <div class="phone"><div class="ph-top"><svg class="i"><use href="#menu"/></svg><span class="t">Haalendar revamp</span></div>
+        <div class="dots"><i></i><i class="on"></i><i></i><i></i></div>
+        <div class="ph-body"><div class="col"><div class="ch">In progress <span class="wip over">3 / 2</span></div>
+          <div class="card" style="--c:var(--ev-blue)">HAAL-018 Wireframes<div class="ft"><span class="due soon">Tomorrow</span>4/6</div></div>
+          <div class="card" style="--c:var(--ev-green)">HAAL-017 Frontend shell<div class="ft"><svg class="i"><use href="#msg"/></svg>2</div></div>
+          <div class="card">HAAL-020 Security baseline</div>
+          <div class="hint" style="text-align:center">Long-press to move · swipe for next column</div></div></div>
+        <div class="fab"><svg class="i" style="width:22px;height:22px"><use href="#plus"/></svg></div></div>
+
+      <div class="phone"><div class="ph-top"><svg class="i"><use href="#menu"/></svg><span class="t">To-Do</span><svg class="i"><use href="#search"/></svg></div>
+        <div class="ph-body notes-1">
+          <div class="note" style="--c:var(--ev-yellow)"><h4>Groceries</h4><div class="chk"><span class="cb"></span>Oat milk</div><div class="chk"><span class="cb"></span>Coffee beans</div><div class="chk done"><span class="cb on"></span>Bread</div></div>
+          <div class="note" style="--c:var(--ev-blue)"><h4>Smoke detector</h4><span class="due soon" style="justify-self:start">Due 17:00</span></div>
+          <div class="note"><h4>Passport renewal</h4><span>Book appointment.</span></div>
+        </div><div class="fab"><svg class="i" style="width:22px;height:22px"><use href="#plus"/></svg></div></div>
+    </div>
+  </section>
+
+  <!-- ================= SHORTCUTS ================= -->
+  <section>
+    <h2>Keyboard map (FR-X-08)</h2>
+    <p class="cap">Single-key shortcuts are inactive while typing in a field. "?" opens this list in the app.</p>
+    <div class="scroll"><table>
+      <tr><th>Keys</th><th>Action</th><th>Keys</th><th>Action</th></tr>
+      <tr><td><span class="kbd">Alt 1</span> <span class="kbd">Alt 2</span> <span class="kbd">Alt 3</span></td><td>Calendar · To-Do · Kanban</td><td><span class="kbd">Ctrl K</span> or <span class="kbd">/</span></td><td>Command palette, search, date jump</td></tr>
+      <tr><td><span class="kbd">T</span></td><td>Today</td><td><span class="kbd">N</span></td><td>New item in current module</td></tr>
+      <tr><td><span class="kbd">←</span> <span class="kbd">→</span> or <span class="kbd">J</span> <span class="kbd">K</span></td><td>Previous / next day (week, month in those views)</td><td><span class="kbd">E</span> / <span class="kbd">Enter</span></td><td>Edit / open selected</td></tr>
+      <tr><td><span class="kbd">D</span> <span class="kbd">W</span> <span class="kbd">M</span> <span class="kbd">A</span></td><td>Day · Week · Month · Agenda</td><td><span class="kbd">Delete</span></td><td>Delete selected (with confirmation)</td></tr>
+      <tr><td><span class="kbd">↑</span> <span class="kbd">↓</span>, <span class="kbd">Shift ↑↓</span></td><td>Move focus, extend selection</td><td><span class="kbd">Ctrl A</span></td><td>Select all in view</td></tr>
+      <tr><td><span class="kbd">Ctrl Z</span> / <span class="kbd">Ctrl Shift Z</span></td><td>Undo / redo (50 steps)</td><td><span class="kbd">Shift N</span></td><td>Move selected to next day</td></tr>
+      <tr><td><span class="kbd">Ctrl ↵</span></td><td>Save editor</td><td><span class="kbd">Esc</span></td><td>Close (asks if unsaved)</td></tr>
+      <tr><td><span class="kbd">?</span></td><td>Shortcut list</td><td><span class="kbd">1</span>–<span class="kbd">8</span> in popover</td><td>Set color of selected event</td></tr>
+    </table></div>
+  </section>
+</main>
