@@ -20,8 +20,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from haalendar.config import Settings
 from haalendar.logging import get_logger
+from haalendar.softdelete import install_guards
 
 log = get_logger(__name__)
+
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Physical deletes are refused for every session of this process.
+install_guards()
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 ALEMBIC_INI = BACKEND_ROOT / "alembic.ini"

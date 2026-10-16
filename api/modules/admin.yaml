@@ -1,4 +1,5 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Administration, instance settings, legacy import, demo status, health (FR-ACC-06, FR-OPS-01/03, SRS 4.5). Admins manage accounts, never content (ADR-0005).
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   admin_users:
     get:
@@ -84,6 +85,7 @@ paths:
     delete:
       tags: [admin]
       operationId: adminRevokeInvite
+      x-soft-delete: 'Sets revoked_at; the invitation is kept.'
       summary: Revoke a pending invitation (kept as revoked, never deleted; requires re-auth)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'

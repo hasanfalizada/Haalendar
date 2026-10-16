@@ -1,4 +1,5 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Calendars, events, occurrences and recurrence scopes, ICS, duplicate check, overdue counter (FR-CAL-*).
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   calendars:
     get:
@@ -57,6 +58,7 @@ paths:
     delete:
       tags: [calendar]
       operationId: deleteCalendar
+      x-soft-delete: 'Sets deleted_at with one delete_batch_id for the calendar and its events; restorable from the trash.'
       summary: Soft-delete calendar with its events (one delete batch); default calendar cannot be deleted
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -169,6 +171,7 @@ paths:
     delete:
       tags: [calendar]
       operationId: deleteEvent
+      x-soft-delete: 'Sets deleted_at, adds an exception or ends the series; restorable from the trash.'
       summary: Soft-delete; for recurring events scope this (exception) / following (series ends) / all (FR-CAL-11, FR-CAL-12, FR-CAL-31)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'

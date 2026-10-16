@@ -1,4 +1,5 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Kanban module: boards, columns, cards, moves, assignees, board labels (FR-KAN-*).
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   boards:
     get:
@@ -69,6 +70,7 @@ paths:
     delete:
       tags: [kanban]
       operationId: deleteBoard
+      x-soft-delete: 'Sets deleted_at with one delete_batch_id for the board, its columns and cards; restorable from the trash.'
       summary: Soft-delete board with columns and cards (one delete batch)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -125,7 +127,8 @@ paths:
     delete:
       tags: [kanban]
       operationId: deleteColumn
-      summary: Delete column
+      x-soft-delete: 'Sets deleted_at with one delete_batch_id for the column and its cards; restorable from the trash.'
+      summary: Soft-delete column with its cards (one delete batch)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/IfMatch'
@@ -173,7 +176,8 @@ paths:
     delete:
       tags: [kanban]
       operationId: deleteCard
-      summary: Delete card
+      x-soft-delete: 'Sets deleted_at; restorable from the trash.'
+      summary: Soft-delete card
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/IfMatch'

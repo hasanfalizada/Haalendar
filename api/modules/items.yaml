@@ -1,4 +1,5 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Generic item sub-resources shared by events, notes and cards (item supertype): attachments, reminders, links, labels, checklist, comments, history, conversion.
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   item_attachments:
     get:
@@ -44,6 +45,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteAttachment
+      x-soft-delete: 'Sets deleted_at; metadata and the stored file are kept; restorable from the trash.'
       summary: Soft-delete (binary kept)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -88,7 +90,8 @@ paths:
     delete:
       tags: [items]
       operationId: deleteReminder
-      summary: Delete reminder
+      x-soft-delete: 'Sets deleted_at; restorable.'
+      summary: Soft-delete reminder
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
@@ -129,7 +132,8 @@ paths:
     delete:
       tags: [items]
       operationId: deleteLink
-      summary: Delete link
+      x-soft-delete: 'Sets deleted_at; restorable.'
+      summary: Soft-delete link
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
@@ -192,7 +196,8 @@ paths:
     delete:
       tags: [items]
       operationId: deleteLabel
-      summary: Delete label
+      x-soft-delete: 'Sets deleted_at; restorable.'
+      summary: Soft-delete label
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
@@ -255,7 +260,8 @@ paths:
     delete:
       tags: [items]
       operationId: deleteChecklistItem
-      summary: Delete checklist item
+      x-soft-delete: 'Sets deleted_at; restorable.'
+      summary: Soft-delete checklist item
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
@@ -327,7 +333,8 @@ paths:
     delete:
       tags: [items]
       operationId: deleteComment
-      summary: Delete comment
+      x-soft-delete: 'Sets deleted_at; restorable.'
+      summary: Soft-delete comment
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:

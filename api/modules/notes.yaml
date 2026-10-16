@@ -1,4 +1,5 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. To-Do module: Keep-like notes (FR-TODO-*). Checklist, labels, reminders and attachments via items.yaml.
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   notes:
     get:
@@ -64,7 +65,8 @@ paths:
     delete:
       tags: [todo]
       operationId: deleteNote
-      summary: Delete note
+      x-soft-delete: 'Sets deleted_at; restorable from the trash.'
+      summary: Soft-delete note
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/IfMatch'

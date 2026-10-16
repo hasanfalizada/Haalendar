@@ -265,6 +265,19 @@ The session cookie is `__Host-` prefixed and `Secure`: browsers accept it on `ht
 
 Set `HAALENDAR_SMTP_HOST`, `HAALENDAR_SMTP_PORT`, `HAALENDAR_SMTP_SECURITY` (`starttls` on 587 or `ssl` on 465), `HAALENDAR_SMTP_USERNAME`, `HAALENDAR_SMTP_PASSWORD` (or `HAALENDAR_SMTP_PASSWORD_FILE`) and `HAALENDAR_MAIL_FROM`. Credentials over an unencrypted connection are refused at startup. The active mode is logged at startup as `mail_mode` (`SmtpMailer`, `FileMailer` or `DisabledMailer`). Without SMTP in production, an admin resets passwords manually: the user receives a one-time password and must set a new one at the next login.
 
+### Soft delete (critical rule)
+
+Haalendar never removes rows physically — users rely on years of data and on the trash. Four layers enforce it:
+
+1. **Code:** delete with `haalendar.softdelete.soft_delete(obj, actor_id, batch_id)` (sets `deleted_at`, a shared `delete_batch_id`, `version`, `updated_by`), read with `live(Model.deleted_at)`, restore with `restore_batch(...)`. Security records use `revoked_at` / `used_at` instead.
+2. **Guards:** any `session.delete()`, `delete()` statement or SQL text with `DELETE FROM` / `TRUNCATE` raises `PhysicalDeleteError` before reaching the database.
+3. **Privileges:** the application role has no `DELETE` or `TRUNCATE` privilege.
+4. **Triggers:** every table refuses `DELETE` and `TRUNCATE` for every role, including the owner and superusers.
+
+The test suite fails when the code contains a delete construct (rare legitimate cases, such as removing a temporary upload file, carry a `# physical-delete-allowed: <reason>` comment), when a contract `DELETE` lacks `x-soft-delete`, or when a table has no triggers. A migration that creates a table must call `forbid_delete_triggers(table)` (and the RLS builders for owner/share tables).
+
+Deliberate maintenance on a throw-away database is done as a superuser with `SET session_replication_role = replica` for that session only — never on real data.
+
 ### Observability
 
 - **Logs:** one JSON line per event on stdout (`HAALENDAR_LOG_FORMAT=console` for reading). Every request line has `request_id`, `method`, `route`, `status`, `duration_ms`. Passwords, tokens, cookies and the database URL are always redacted.
@@ -313,6 +326,7 @@ All variables, defaults and comments are in [`.env.example`](.env.example). The 
 | Backend refuses to start: "superuser or BYPASSRLS role" | `HAALENDAR_DATABASE_URL` points to the owner/superuser. Run `uv run haalendar-db-bootstrap` and connect as the application role. |
 | `permission denied for table …` | The app role lacks privileges on a new table: run `uv run alembic upgrade head` (it refreshes grants) or `uv run haalendar-db-bootstrap`. |
 | 403 `forbidden` on the setup page | Production requires `HAALENDAR_SETUP_TOKEN` to be set on the server and entered in the wizard; check both values. |
+| `Physical DELETE on table … is forbidden` / `PhysicalDeleteError` | Soft delete only: set `deleted_at` (or `revoked_at`) instead — see *Soft delete (critical rule)*. |
 | `/api/v1/health/ready` returns 503 with `"database": false` | PostgreSQL is not running or `HAALENDAR_DATABASE_URL` is wrong. Check `docker ps`. |
 | 503 with `"migrations": false` | Run `uv run alembic upgrade head` in `backend/`. |
 | PostgreSQL container exits immediately | Old volume mounted at `/var/lib/postgresql/data`; use `/var/lib/postgresql` for PostgreSQL 18. |

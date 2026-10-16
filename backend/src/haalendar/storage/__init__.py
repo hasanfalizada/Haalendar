@@ -78,7 +78,9 @@ class LocalStorage:
             os.chmod(temporary, 0o640)
             os.replace(temporary, path)
         except BaseException:
-            Path(temporary).unlink(missing_ok=True)  # only our own unfinished temporary file
+            Path(temporary).unlink(
+                missing_ok=True
+            )  # physical-delete-allowed: our own unfinished temporary upload file
             raise
         log.info("storage_put", key=key, size_bytes=len(data), media_type=media_type)
         return stored

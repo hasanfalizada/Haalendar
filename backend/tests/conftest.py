@@ -123,6 +123,9 @@ def clean_db(owner_db_url: str, db_url: str) -> Iterator[str]:
     with psycopg.connect(
         _libpq_url(owner_db_url, make_url(owner_db_url).database or ""), autocommit=True
     ) as conn:
+        # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. The documented maintenance path: a superuser session with
+        # replica replication role skips the no-delete triggers (throw-away test database only).
+        conn.execute("SET session_replication_role = replica")
         conn.execute("TRUNCATE session, auth_token, recovery_code, share, calendar RESTART IDENTITY")
         conn.execute(
             "UPDATE instance_settings SET updated_by = NULL, registration_mode = 'invite', require_admin_2fa = false"

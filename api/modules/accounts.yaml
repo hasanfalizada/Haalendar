@@ -1,4 +1,5 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Auth, setup, current user, sessions, 2FA, push subscriptions, settings (FR-ACC-*, ADR-0005).
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   setup_status:
     get:
@@ -283,6 +284,7 @@ paths:
     delete:
       tags: [account]
       operationId: removeAvatar
+      x-soft-delete: 'The profile stops referencing the image; the stored file is kept.'
       summary: Remove the avatar from the profile (the stored file is kept, never deleted)
       responses:
         '200': { description: Avatar removed, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
@@ -362,6 +364,7 @@ paths:
     delete:
       tags: [account]
       operationId: revokeSession
+      x-soft-delete: 'Sets revoked_at; the session record is kept.'
       summary: Revoke one of my sessions (revoking the current one signs this device out)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -473,7 +476,8 @@ paths:
     delete:
       tags: [account]
       operationId: removePushSubscription
-      summary: Remove a Web Push subscription
+      x-soft-delete: 'Sets revoked_at; the subscription record is kept.'
+      summary: Revoke a Web Push subscription (soft, revoked_at)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:

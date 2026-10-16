@@ -1,4 +1,5 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Cross-module endpoints: sharing, search, trash, export, notifications, bulk operations (FR-ACC-10, FR-X-04/07/10/14/19/21).
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing (FR-ACC-10, ADR-0005): only the owner shares, changes and
   # revokes; a grantee may leave (DELETE on the own share). Revocation is soft; at most one active share per grantee.
@@ -79,6 +80,7 @@ paths:
     delete:
       tags: [sharing]
       operationId: revokeShare
+      x-soft-delete: 'Sets revoked_at; the share is kept.'
       summary: Revoke (owner) or leave (grantee); soft via `revoked_at`, the grantee's local copies are removed on next sync
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
