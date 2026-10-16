@@ -237,7 +237,9 @@
       "reactivate": "{{name}} can sign in again.",
       "unlock": "{{name}} was unlocked.",
       "resetEmail": "A password reset link was sent to {{email}}.",
-      "invited": "An invitation was sent to {{email}}."
+      "invited": "An invitation was sent to {{email}}.",
+      "resetOneTime": "A one-time password for {{name}} was created.",
+      "accountCreated": "The account for {{email}} was created."
     },
     "oneTime": {
       "title": "One-time password",
@@ -299,9 +301,7 @@
     "languageHint": "More languages will follow.",
     "save": "Save profile",
     "saved": "Profile saved.",
-    "conflict": "Your profile was changed elsewhere. The latest version is shown — please check and save again.",
-    "failed": "The profile could not be saved. Please try again.",
-    "offline": "Changing the profile needs a connection to the server.",
+    "conflict": "Your profile was changed elsewhere. The latest version is shown; your changes are kept and can be restored.",
     "avatarUpload": "Upload photo",
     "avatarChange": "Change photo",
     "avatarRemove": "Remove photo",
@@ -347,24 +347,24 @@
       "email": "Enter a valid e-mail address.",
       "notFound": "This share no longer exists. The list has been refreshed.",
       "ownerOnly": "Only the owner can change sharing.",
-      "changedMeanwhile": "The share was changed meanwhile. The list has been refreshed — please try again.",
-      "generic": "The change could not be saved. Please try again.",
-      "offline": "Sharing needs a connection to the server."
-    }
+      "changedMeanwhile": "The share was changed meanwhile. The list has been refreshed — please try again."
+    },
+    "permissionChanged": "Permission changed to “{{permission}}”.",
+    "removed": "Access removed.",
+    "left": "You left “{{name}}”."
   },
   "timeZone": {
     "mismatch": "This device is set to {{device}}, your profile to {{profile}}. Times are shown in {{profile}}.",
     "useDevice": "Use {{zone}}",
     "keep": "Keep {{zone}}",
-    "failed": "The time zone could not be changed. Try again in Settings → Profile."
+    "switched": "Your profile now uses {{zone}}."
   },
   "security": {
     "title": "Security",
     "password": {
       "title": "Change password",
       "submit": "Change password",
-      "done": "Password changed. Other devices were signed out.",
-      "failed": "The password could not be changed."
+      "done": "Password changed. Other devices were signed out."
     },
     "twoFactor": {
       "title": "Two-factor authentication",
@@ -382,7 +382,9 @@
       "confirmOff": "Turn off 2FA",
       "offDone": "Two-factor authentication is off.",
       "adminRequired": "This instance requires two-factor authentication for administrators.",
-      "failed": "The change could not be saved. Please try again."
+      "setupStarted": "Scan the QR code to finish turning on two-factor authentication.",
+      "onDone": "Two-factor authentication is on. Keep your recovery codes safe.",
+      "regenerated": "New recovery codes were created; the old ones no longer work."
     },
     "codes": {
       "title": "Recovery codes",
@@ -402,8 +404,7 @@
       "signOutDevice": "Sign out {{device}}",
       "signOutOthers": "Sign out all other devices",
       "revoked": "The device was signed out.",
-      "othersRevoked": "All other devices were signed out.",
-      "failed": "The device could not be signed out."
+      "othersRevoked": "All other devices were signed out."
     }
   },
   "records": {
@@ -465,7 +466,43 @@
     "parentBody": "The item belongs to it and would stay invisible. Restore “{{title}}” as well?",
     "parentConfirm": "Restore both",
     "loadMore": "Load more",
-    "loadFailed": "The trash could not be loaded.",
-    "offline": "Restoring needs a connection to the server."
+    "loadFailed": "The trash could not be loaded."
+  },
+  "notify": {
+    "region": "Notifications",
+    "reference": "Reference: {{id}}",
+    "queued_one": "Saved on this device. It will sync when the connection is back.",
+    "queued_other": "{{count}} changes saved on this device. They will sync when the connection is back.",
+    "synced_one": "{{count}} change synced.",
+    "synced_other": "{{count}} changes synced."
+  },
+  "write": {
+    "keptOnDevice": "Your text is kept on this device.",
+    "signIn": "Sign in",
+    "reasons": {
+      "network": "Not saved — the server cannot be reached. Check the connection and try again.",
+      "timeout": "No answer from the server. The change may not have been saved — check, then try again.",
+      "conflict": "Not saved — this was changed elsewhere in the meantime. The latest version is shown.",
+      "invalid": "Not saved — please check the highlighted fields.",
+      "forbidden": "Not saved — you do not have permission for this.",
+      "notFound": "Not saved — this item no longer exists or is not available to you.",
+      "tooLarge": "Not saved — the file is too large.",
+      "unsupportedType": "Not saved — this file type is not supported.",
+      "rateLimited": "Too many attempts. Wait a moment, then try again.",
+      "sessionExpired": "Not saved — your session has expired. Sign in again to continue.",
+      "securityCheck": "Not saved — the security check failed. Reload the page and try again.",
+      "duplicate": "Not saved — this already exists.",
+      "invalidState": "Not saved — this is not possible in the current state.",
+      "server": "Not saved — the server ran into an error. Try again; if it keeps happening, tell your administrator.",
+      "generic": "Not saved. Please try again."
+    }
+  },
+  "drafts": {
+    "found": "Unsaved changes from {{time}} were kept on this device.",
+    "restore": "Restore",
+    "discard": "Discard",
+    "signOutTitle": "Sign out and delete unsaved changes?",
+    "signOutBody": "Changes that have not been saved yet are kept on this device. Signing out deletes them.",
+    "signOutConfirm": "Sign out anyway"
   }
 }

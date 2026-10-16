@@ -283,6 +283,12 @@ Deliberate maintenance on a throw-away database is done as a superuser with `SET
 
 `/trash` lists everything the signed-in user may restore, newest deletion first: own content, content in containers shared with edit permission, and deleted containers for their owner. Things deleted together form one entry (with counts of what they contain); restoring brings back the whole delete batch, and nothing is ever purged. A new soft-deletable type registers a `TrashSource` in `haalendar/trash/service.py` (title, who may restore, children of its batch, container lookup); multi-select in lists uses `frontend/src/lib/useSelection.ts`.
 
+### Result notifications and drafts
+
+Every write from the UI goes through `runWrite` (`frontend/src/api/write.ts`): it runs a request of the generated client and reports exactly one result — a success toast, or a failure with a readable reason and Retry (or, inside an open dialog, a reason returned for the dialog to show with `failure: "inline"`). Pass `reasons` for codes that need a domain-specific message and `onFieldErrors` for 422 field errors. `src/api/write-coverage.test.ts` fails when a module imports a write of the generated client without `runWrite`; full-page auth flows are the listed exceptions. The offline outbox reports through `notify.queued` / `notify.synced` (`src/lib/notify.tsx`).
+
+Editors that hold typed text use `useDraft` (`src/lib/useDraft.ts`) with `DraftNotice`: the values are kept in IndexedDB (`haalendar-drafts`, per user) until `commit()` after a confirmed save; call `flush()` right before sending. Never put passwords, codes or tokens into a draft — such field names are refused. Drafts are deleted on sign-out.
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.

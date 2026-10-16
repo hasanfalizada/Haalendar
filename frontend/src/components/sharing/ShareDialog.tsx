@@ -1,6 +1,7 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. "Share" dialog for one container (calendar now; board and note when
 // they exist): invite another user of the instance by e-mail with view or edit permission, change or remove existing
 // access. Wired into the calendar list by HAAL-094 and into boards and notes by their tasks.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Failures are shown inside the dialog, successes as notifications.
 import { useQuery } from "@tanstack/react-query";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +13,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 
 import { ShareRow } from "./ShareRow";
-import { useShareActions } from "./useShareActions";
+import { type ActionResult, useShareActions } from "./useShareActions";
 
 interface ShareDialogProps {
   open: boolean;
@@ -24,7 +25,7 @@ interface ShareDialogProps {
 
 export function ShareDialog({ open, onClose, containerKind, containerId, containerName }: ShareDialogProps) {
   const { t } = useTranslation();
-  const actions = useShareActions();
+  const actions = useShareActions("inline");
   const shares = useQuery({
     ...sharesQuery({ direction: "granted", containerKind, containerId }),
     enabled: open,
@@ -33,7 +34,7 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
   const [email, setEmail] = useState("");
   const [permission, setPermission] = useState<Permission>("view");
   const [emailError, setEmailError] = useState<string | undefined>();
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -48,19 +49,19 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
     const result = await actions.share(containerKind, containerId, email.trim(), permission);
     setBusy(false);
     if (result.ok) {
-      setMessage({ ok: true, text: t("sharing.shared", { email: email.trim() }) });
       setEmail("");
       setPermission("view");
     } else if (result.fieldError) {
       setEmailError(result.fieldError);
     } else if (result.error) {
-      setMessage({ ok: false, text: result.error });
+      setMessage(result.error);
     }
   }
 
-  async function report(promise: Promise<{ ok: boolean; error?: string }>) {
+  async function report(promise: Promise<ActionResult>) {
+    setMessage(null);
     const result = await promise;
-    setMessage(result.ok ? null : { ok: false, text: result.error ?? t("sharing.errors.generic") });
+    if (result.error) setMessage(result.error);
   }
 
   const list: Share[] = shares.data ?? [];
@@ -114,11 +115,8 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
         </form>
 
         {message ? (
-          <p
-            role={message.ok ? "status" : "alert"}
-            className={message.ok ? "text-[13px] text-primary" : "text-[13px] text-danger"}
-          >
-            {message.text}
+          <p role="alert" className="text-[13px] text-danger">
+            {message}
           </p>
         ) : null}
 
@@ -138,7 +136,7 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
                   subtitle={share.grantee_email}
                   mode="owner"
                   onChangePermission={(s, p) => report(actions.changePermission(s, p))}
-                  onRemove={(s) => report(actions.revoke(s))}
+                  onRemove={(s) => report(actions.revoke(s, "owner"))}
                 />
               ))}
             </ul>

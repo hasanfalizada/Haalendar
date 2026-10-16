@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Pending invitations with revoke (a revoked invitation is kept on the
 // server, never deleted). Hidden while there are none.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. The result is reported through runWrite.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,36 +8,28 @@ import { useTranslation } from "react-i18next";
 import { adminInvitesQuery, adminKeys } from "@/api/admin";
 import { adminRevokeInvite } from "@/api/generated/sdk.gen";
 import type { AdminInvite } from "@/api/generated/types.gen";
+import { runWrite } from "@/api/write";
 import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { describeError, log } from "@/lib/log";
 
-import { useAdminErrorText } from "./admin-errors";
+import { useAdminReasons } from "./admin-errors";
 
-interface PendingInvitesProps {
-  onResult: (result: { ok: boolean; text: string }) => void;
-  formatDate: (value: string) => string;
-}
-
-export function PendingInvites({ onResult, formatDate }: PendingInvitesProps) {
+export function PendingInvites({ formatDate }: { formatDate: (value: string) => string }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const withReauth = useReauth();
-  const errorText = useAdminErrorText();
+  const adminReasons = useAdminReasons();
   const { data: invites = [] } = useQuery(adminInvitesQuery);
   const [revoking, setRevoking] = useState<AdminInvite | null>(null);
 
   async function revoke(invite: AdminInvite) {
-    try {
-      const { error } = await withReauth(() => adminRevokeInvite({ path: { id: invite.id } }));
-      const text = error === undefined ? t("admin.invites.revoked", { email: invite.email }) : errorText(error);
-      if (text) onResult({ ok: error === undefined, text });
-      log.info("admin_invite_revoke_done", { ok: error === undefined });
-    } catch (err) {
-      log.warn("admin_invite_revoke_unreachable", { error: describeError(err) });
-      onResult({ ok: false, text: t("auth.offline") });
-    }
+    await runWrite({
+      name: "admin_invite_revoke",
+      run: () => withReauth(() => adminRevokeInvite({ path: { id: invite.id } })),
+      success: t("admin.invites.revoked", { email: invite.email }),
+      reasons: (problem) => adminReasons(problem),
+    });
     setRevoking(null);
     await queryClient.invalidateQueries({ queryKey: adminKeys.invites });
   }

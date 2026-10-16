@@ -9,7 +9,9 @@ import { vi } from "vitest";
 import "@/i18n";
 import { App } from "@/App";
 import type { Me } from "@/api/generated/types.gen";
+import { Notifications } from "@/components/ui/notifications";
 import { createAppRouter, createQueryClient } from "@/router";
+import { ThemeProvider } from "@/theme/ThemeProvider";
 
 export interface Call {
   method: string;
@@ -100,9 +102,14 @@ export function renderApp(initialPath: string) {
   return { router, queryClient };
 }
 
-/** A single component with the query client and translations (no router). */
+/** A single component with the query client, translations and the notification region (no router). */
 export function renderWithProviders(ui: ReactNode) {
   const queryClient = createQueryClient();
-  render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  render(
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+      <Notifications />
+    </ThemeProvider>,
+  );
   return { queryClient };
 }

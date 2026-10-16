@@ -1,7 +1,12 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Vitest setup: jest-dom matchers, matchMedia stub (jsdom lacks it),
 // cleanup and isolated storage between tests.
 import "@testing-library/jest-dom/vitest";
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. jsdom has no IndexedDB (local drafts): an in-memory implementation,
+// fresh for every test; open toasts are dismissed between tests.
+import "fake-indexeddb/auto";
 import { cleanup } from "@testing-library/react";
+import { IDBFactory } from "fake-indexeddb";
+import { toast } from "sonner";
 import { afterEach, vi } from "vitest";
 
 export function stubMatchMedia(prefersDark: boolean): void {
@@ -30,8 +35,15 @@ globalThis.ResizeObserver = class {
   disconnect(): void {}
 };
 
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. jsdom lacks pointer capture, used by the toasts' swipe handling.
+Element.prototype.setPointerCapture = () => undefined;
+Element.prototype.releasePointerCapture = () => undefined;
+Element.prototype.hasPointerCapture = () => false;
+
 afterEach(() => {
   cleanup();
+  toast.dismiss();
+  globalThis.indexedDB = new IDBFactory();
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
 });

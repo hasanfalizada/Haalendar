@@ -1,7 +1,7 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing overview in Settings: what I shared (change permission,
 // remove access) and what others shared with me (leave). Changes need a connection.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results are notifications (runWrite).
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Share } from "@/api/generated/types.gen";
@@ -15,11 +15,8 @@ export function SharingSection() {
   const actions = useShareActions();
   const granted = useQuery(sharesQuery({ direction: "granted" }));
   const received = useQuery(sharesQuery({ direction: "received" }));
-  const [error, setError] = useState<string | null>(null);
-
-  async function report(promise: Promise<{ ok: boolean; error?: string }>) {
-    const result = await promise;
-    setError(result.ok ? null : (result.error ?? t("sharing.errors.generic")));
+  async function report(promise: Promise<unknown>) {
+    await promise;
   }
 
   const kindLabel = (share: Share) => t(`sharing.kind.${share.container_kind}`);
@@ -29,11 +26,6 @@ export function SharingSection() {
       <h2 id="sharing-title" className="text-[11px] font-semibold tracking-wider text-muted uppercase">
         {t("sharing.title")}
       </h2>
-      {error ? (
-        <p role="alert" className="rounded-sm bg-warn-bg px-3 py-2 text-[13px] text-warn-fg">
-          {error}
-        </p>
-      ) : null}
 
       <div className="flex flex-col gap-2">
         <h3 className="text-[13px] font-medium">{t("sharing.sharedByMe")}</h3>
@@ -49,7 +41,7 @@ export function SharingSection() {
                 subtitle={`${kindLabel(share)} · ${share.container_name}`}
                 mode="owner"
                 onChangePermission={(s, p) => report(actions.changePermission(s, p))}
-                onRemove={(s) => report(actions.revoke(s))}
+                onRemove={(s) => report(actions.revoke(s, "owner"))}
               />
             ))}
           </ul>
@@ -69,7 +61,7 @@ export function SharingSection() {
                 title={share.container_name}
                 subtitle={t("sharing.from", { kind: kindLabel(share), name: share.owner_name })}
                 mode="grantee"
-                onRemove={(s) => report(actions.revoke(s))}
+                onRemove={(s) => report(actions.revoke(s, "grantee"))}
               />
             ))}
           </ul>

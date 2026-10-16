@@ -1,12 +1,14 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Current session: GET /me is the single source of "who is signed in".
 // null = not signed in (401); a thrown error = server unreachable (callers stay offline-tolerant). The CSRF token of
 // the session is taken from /me and kept in memory only (ADR-0005).
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Signing out also deletes the user's local drafts (D-39).
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { setCsrfToken } from "./client";
 import { getMe, logout } from "./generated/sdk.gen";
 import { ApiError } from "./problem";
 import type { Me } from "./generated/types.gen";
+import { wipeDrafts } from "@/lib/drafts";
 import { describeError, log } from "@/lib/log";
 
 export const meQueryKey = ["session", "me"] as const;
@@ -36,12 +38,14 @@ export function rememberSession(queryClient: QueryClient, me: Me, csrfToken: str
 
 /** Sign out: revoke the server session, forget the CSRF token and wipe all cached data on this device (ADR-0005). */
 export async function signOut(queryClient: QueryClient): Promise<void> {
+  const user = queryClient.getQueryData<Me | null>(meQueryKey)?.id;
   try {
     await logout();
   } catch (error) {
     log.warn("logout_unreachable", { error: describeError(error) });
   }
   setCsrfToken(null);
+  if (user) await wipeDrafts(user);
   queryClient.clear();
   queryClient.setQueryData(meQueryKey, null);
   log.info("signed_out");

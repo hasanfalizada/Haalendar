@@ -1,33 +1,33 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Invite a user: with SMTP an invitation e-mail is sent; without SMTP
 // the account is created at once and the one-time password is handed to the caller to show.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Through runWrite: a failure is shown inside the open dialog (a toast
+// would sit behind the modal), the success as a notification once the dialog has closed.
 import { useQueryClient } from "@tanstack/react-query";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { adminKeys } from "@/api/admin";
 import { adminInviteUser } from "@/api/generated/sdk.gen";
-import { fieldErrorsOf, isProblem, problemCode } from "@/api/problem";
+import { runWrite } from "@/api/write";
 import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
-import { describeError, log } from "@/lib/log";
 
-import { useAdminErrorText } from "./admin-errors";
+import { useAdminReasons } from "./admin-errors";
 import type { OneTimePassword } from "./OneTimePasswordDialog";
 
 interface InviteDialogProps {
   open: boolean;
   onClose: () => void;
-  onSent: (email: string) => void;
   onAccountCreated: (value: OneTimePassword) => void;
 }
 
-export function InviteDialog({ open, onClose, onSent, onAccountCreated }: InviteDialogProps) {
+export function InviteDialog({ open, onClose, onAccountCreated }: InviteDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const withReauth = useReauth();
-  const errorText = useAdminErrorText();
+  const adminReasons = useAdminReasons();
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"user" | "admin">("user");
@@ -54,37 +54,39 @@ export function InviteDialog({ open, onClose, onSent, onAccountCreated }: Invite
     setEmailError(undefined);
     setBusy(true);
     const idempotencyKey = crypto.randomUUID(); // the same key for the retry after re-authentication
-    try {
-      const result = await withReauth(() =>
-        adminInviteUser({
-          body: { email: email.trim(), role, ...(name.trim() ? { display_name: name.trim() } : {}) },
-          headers: { "Idempotency-Key": idempotencyKey },
-        }),
-      );
-      if (result.error !== undefined || result.data === undefined) {
-        const code = problemCode(result.error);
-        log.warn("admin_invite_failed", { code });
-        if (code === "duplicate") setEmailError(t("admin.invite.duplicate"));
-        else if (code === "validation_failed" && isProblem(result.error))
-          setEmailError(fieldErrorsOf(result.error)[0]?.detail ?? t("admin.errors.generic"));
-        else setFormError(errorText(result.error));
-        return;
-      }
+    const address = email.trim();
+    const result = await runWrite({
+      name: "admin_invite",
+      run: () =>
+        withReauth(() =>
+          adminInviteUser({
+            body: { email: address, role, ...(name.trim() ? { display_name: name.trim() } : {}) },
+            headers: { "Idempotency-Key": idempotencyKey },
+          }),
+        ),
+      failure: "inline",
+      success: (created) =>
+        created.delivery === "one_time_password"
+          ? t("admin.results.accountCreated", { email: created.user?.email ?? address })
+          : t("admin.results.invited", { email: created.invite?.email ?? address }),
+      reasons: (problem) => (problem.code === "duplicate" ? t("admin.invite.duplicate") : adminReasons(problem)),
+      onFieldErrors: (errors) => {
+        setEmailError(errors[0]?.detail);
+      },
+    });
+    setBusy(false);
+    if (result.ok) {
       const created = result.data;
-      log.info("admin_invite_sent", { delivery: created.delivery });
       await queryClient.invalidateQueries({ queryKey: adminKeys.all });
       reset();
       onClose();
       if (created.delivery === "one_time_password" && created.one_time_password) {
-        onAccountCreated({ email: created.user?.email ?? email.trim(), password: created.one_time_password });
-      } else {
-        onSent(created.invite?.email ?? email.trim());
+        onAccountCreated({ email: created.user?.email ?? address, password: created.one_time_password });
       }
-    } catch (err) {
-      log.warn("admin_invite_unreachable", { error: describeError(err) });
-      setFormError(t("auth.offline"));
-    } finally {
-      setBusy(false);
+    } else if (result.code === "duplicate") {
+      setEmailError(result.reason ?? undefined);
+    } else if (result.code !== "validation_failed" || !result.problem?.errors?.length) {
+      setFormError(result.reason);
     }
   }
 

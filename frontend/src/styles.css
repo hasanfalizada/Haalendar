@@ -2,6 +2,9 @@
    exposed to Tailwind v4 via @theme. Dark mode follows the resolved data-theme attribute set by src/theme/theme.ts. */
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
+/* +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Toast styles bundled with the app: the CSP (style-src 'self') blocks
+   the <style> element Sonner tries to insert at runtime, so its stylesheet is served from our own origin instead. */
+@import "sonner/dist/styles.css";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -108,4 +111,10 @@
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. A modal dialog disables pointer events outside itself; result
+   toasts (Retry, Close) must stay usable on top of it. */
+[data-sonner-toast] {
+  pointer-events: auto;
 }

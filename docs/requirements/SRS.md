@@ -13,10 +13,11 @@
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-031 v1.14: decision D-36 (record timestamps) approved by owner.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-032 v1.15: decision D-37 (audit log) approved by owner.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-033 v1.16: decision D-38 (trash) approved by owner.
++++===+++ 2026-10-16 — Hasan Alizada — HAAL-034 v1.17: decision D-39 (result notifications and local drafts) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.16 |
+| Version | 1.17 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -493,6 +494,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-36 | Record timestamps | Database triggers keep `updated_at` current on every UPDATE (soft delete and restore included) and keep `created_at` unchangeable on every table; tests fail for a table without them. Display: relative for the last 7 days, otherwise date and time, exact value in the tooltip and `<time datetime>`, profile time zone. Actor shown only as "by you" until the audit history (HAAL-032); `deleted_by` = `updated_by` of the deleted row | FR-X-02 |
 | D-37 | Audit log | Written by SECURITY DEFINER database triggers on every audited table (the app role has SELECT only, under RLS; audit_log is append-only for every role). Audited: content and shares, plus account changes relevant to admins (role, status, profile, instance settings) without secret or login-bookkeeping columns; sessions, tokens, recovery codes and logins stay in the structured logs. Snapshots: full row on create, changed fields only otherwise; technical columns ignored. Actions derived (create/update/delete/restore/move/share/unshare). Readers: container owner and grantees (share history: owner only); account history: the account and admins. Kept forever (GDPR O-01 open). Every table is audited or listed as exempt (test) | FR-X-03 |
 | D-38 | Trash | Reusable multi-select hook built with the trash (checkbox, Shift range, select all, Esc, long press); HAAL-036 adds bulk actions on it. One entry per delete batch with counts of its contents; restoring an entry restores the batch; an item whose container is still in the trash is refused with parent_in_trash and the UI offers to restore the container too. The trash shows everything the user may restore (own content, containers shared with edit permission; deleted containers only for the owner) with who deleted it. Nothing is purged. Sources register per type (calendar now) | FR-X-04, FR-X-07 |
+| D-39 | Result notifications and local drafts | Toasts with Sonner (bundled stylesheet, the CSP stays `style-src 'self'`). Every write from the UI goes through one wrapper (`runWrite`) that reports exactly one result: success (4 s), or failure with a human-readable reason (no connection, no answer within 30 s, changed elsewhere, invalid fields, no permission, too large, session expired with "Sign in", server error with a request reference) that stays until dismissed and offers Retry where repeating can help; failures are announced as alerts. Inside an open dialog the dialog shows the failure; full-page sign-in/sign-up flows show the result on the page. A test fails when a module writes without the wrapper. "Queued" and "synced" notifications are provided for the offline outbox (HAAL-052/053). Forms keep their values on failure; closing the tab while a write is in flight asks first. New requirement: text being edited is kept as a local draft on the device (IndexedDB, per user, one second after typing and when the tab is hidden) until the server confirms the save, and offered for restore after a failure, a conflict, a reload or a crash; drafts never contain passwords, codes or tokens and are deleted on sign-out (which asks first when drafts exist). Existing in-page result banners were replaced by notifications | FR-X-05, FR-X-09, FR-OFF-02 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

@@ -1,6 +1,8 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Security in Settings: change password (re-auth; other devices are
 // signed out), two-factor authentication (QR enrolment, recovery codes, regeneration, turning off) and sessions
 // (this device marked; sign out one or all others).
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results are reported through runWrite (one notification per write);
+// field-level errors stay next to the fields.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,35 +18,20 @@ import {
   startTotpSetup,
 } from "@/api/generated/sdk.gen";
 import type { Me } from "@/api/generated/types.gen";
-import { ApiError, fieldErrorsOf, isProblem, problemCode } from "@/api/problem";
+import { ApiError } from "@/api/problem";
 import { meQuery, meQueryKey } from "@/api/session";
+import { runWrite } from "@/api/write";
 import { isViolation, passwordViolations, useViolationText } from "@/components/auth/password";
 import { PasswordField } from "@/components/auth/PasswordField";
-import { REAUTH_CANCELLED, useReauth } from "@/components/auth/reauth";
+import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { QrCode } from "@/components/ui/qr-code";
 import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
-import { describeError, log } from "@/lib/log";
-import { cn } from "@/lib/utils";
 
 import { RecoveryCodesDialog } from "./RecoveryCodesDialog";
 
-interface Notice {
-  ok: boolean;
-  text: string;
-}
-
 const sessionsQueryKey = ["session", "list"] as const;
-
-function NoticeLine({ notice }: { notice: Notice | null }) {
-  if (!notice) return null;
-  return (
-    <p role={notice.ok ? "status" : "alert"} className={cn("text-[13px]", notice.ok ? "text-primary" : "text-danger")}>
-      {notice.text}
-    </p>
-  );
-}
 
 export function SecuritySection() {
   const { t } = useTranslation();
@@ -68,13 +55,11 @@ function ChangePassword({ me }: { me: Me }) {
   const violationText = useViolationText();
   const [password, setPassword] = useState("");
   const [fieldError, setFieldError] = useState<string | undefined>();
-  const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
   const violations = passwordViolations(password, me.email, me.display_name);
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    setNotice(null);
     const first = violations[0];
     if (first) {
       setFieldError(violationText(first));
@@ -82,25 +67,19 @@ function ChangePassword({ me }: { me: Me }) {
     }
     setFieldError(undefined);
     setBusy(true);
-    try {
-      const { error } = await withReauth(() => changePassword({ body: { new_password: password } }));
-      if (error === REAUTH_CANCELLED) return;
-      if (error !== undefined) {
-        log.warn("password_change_failed", { code: problemCode(error) });
-        const violation = isProblem(error) ? fieldErrorsOf(error).find((e) => isViolation(e.code)) : undefined;
+    await runWrite({
+      name: "password_change",
+      run: () => withReauth(() => changePassword({ body: { new_password: password } })),
+      success: t("security.password.done"),
+      onFieldErrors: (errors) => {
+        const violation = errors.find((e) => isViolation(e.code));
         if (violation && isViolation(violation.code)) setFieldError(violationText(violation.code));
-        else setNotice({ ok: false, text: t("security.password.failed") });
-        return;
-      }
-      log.info("password_changed");
-      setPassword("");
-      setNotice({ ok: true, text: t("security.password.done") });
-    } catch (err) {
-      log.warn("password_change_unreachable", { error: describeError(err) });
-      setNotice({ ok: false, text: t("auth.offline") });
-    } finally {
-      setBusy(false);
-    }
+      },
+      onSuccess: () => {
+        setPassword("");
+      },
+    });
+    setBusy(false);
   }
 
   return (
@@ -121,7 +100,6 @@ function ChangePassword({ me }: { me: Me }) {
         violations={violations}
         error={fieldError}
       />
-      <NoticeLine notice={notice} />
       <Button type="submit" className="w-fit" disabled={busy || !password}>
         {t("security.password.submit")}
       </Button>
@@ -138,37 +116,27 @@ function TwoFactor({ me }: { me: Me }) {
   const [codeError, setCodeError] = useState<string | undefined>();
   const [codes, setCodes] = useState<string[] | null>(null);
   const [confirmOff, setConfirmOff] = useState(false);
-  const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function act<T>(event: string, run: () => Promise<{ data?: T; error?: unknown }>): Promise<T | null> {
-    setNotice(null);
+  async function act<T>(name: string, run: () => Promise<{ data?: T; error?: unknown }>, success: string) {
     setBusy(true);
-    try {
-      const { data, error } = await withReauth(run);
-      if (error === REAUTH_CANCELLED) return null;
-      if (error !== undefined) {
-        const problem = problemCode(error);
-        log.warn(`${event}_failed`, { code: problem });
-        if (problem === "validation_failed") setCodeError(t("security.twoFactor.wrongCode"));
-        else if (problem === "forbidden") setNotice({ ok: false, text: t("security.twoFactor.adminRequired") });
-        else setNotice({ ok: false, text: t("security.twoFactor.failed") });
-        return null;
-      }
-      log.info(`${event}_done`);
-      return data ?? null;
-    } catch (err) {
-      log.warn(`${event}_unreachable`, { error: describeError(err) });
-      setNotice({ ok: false, text: t("auth.offline") });
-      return null;
-    } finally {
-      setBusy(false);
-    }
+    const result = await runWrite<T>({
+      name,
+      run: () => withReauth(run),
+      success,
+      reasons: (problem) => (problem.code === "forbidden" ? t("security.twoFactor.adminRequired") : null),
+      onFieldErrors: () => {
+        setCodeError(t("security.twoFactor.wrongCode"));
+      },
+    });
+    setBusy(false);
+    return result;
   }
 
   async function start() {
-    const data = await act("totp_setup", () => startTotpSetup());
-    if (data) {
+    const result = await act("totp_setup", () => startTotpSetup(), t("security.twoFactor.setupStarted"));
+    if (result.ok) {
+      const data = result.data;
       setEnrolment({ uri: data.otpauth_uri, secret: data.secret });
       setCode("");
       setCodeError(undefined);
@@ -182,27 +150,31 @@ function TwoFactor({ me }: { me: Me }) {
       return;
     }
     setCodeError(undefined);
-    const data = await act("totp_enable", () => enableTotp({ body: { totp_code: code } }));
-    if (data) {
+    const result = await act(
+      "totp_enable",
+      () => enableTotp({ body: { totp_code: code } }),
+      t("security.twoFactor.onDone"),
+    );
+    if (result.ok) {
       setEnrolment(null);
-      setCodes(data.recovery_codes);
+      setCodes(result.data.recovery_codes);
       await queryClient.invalidateQueries({ queryKey: meQueryKey });
     }
   }
 
   async function regenerate() {
-    const data = await act("recovery_codes_regenerate", () => regenerateRecoveryCodes());
-    if (data) setCodes(data.recovery_codes);
+    const result = await act(
+      "recovery_codes_regenerate",
+      () => regenerateRecoveryCodes(),
+      t("security.twoFactor.regenerated"),
+    );
+    if (result.ok) setCodes(result.data.recovery_codes);
   }
 
   async function turnOff() {
     setConfirmOff(false);
-    const result = await act<unknown>("totp_disable", async () => {
-      const response = await disableTotp();
-      return response.error === undefined ? { data: true } : { error: response.error };
-    });
-    if (result) {
-      setNotice({ ok: true, text: t("security.twoFactor.offDone") });
+    const result = await act("totp_disable", () => disableTotp(), t("security.twoFactor.offDone"));
+    if (result.ok) {
       await queryClient.invalidateQueries({ queryKey: meQueryKey });
     }
   }
@@ -215,7 +187,6 @@ function TwoFactor({ me }: { me: Me }) {
       <p className="text-[13px] text-muted">
         {me.totp_enabled ? t("security.twoFactor.on") : t("security.twoFactor.off")}
       </p>
-      <NoticeLine notice={notice} />
 
       {!me.totp_enabled && !enrolment ? (
         <Button className="w-fit" disabled={busy} onClick={() => void start()}>
@@ -307,7 +278,6 @@ function Sessions() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const timeZone = useDisplayTimeZone();
-  const [notice, setNotice] = useState<Notice | null>(null);
   const sessions = useQuery({
     queryKey: sessionsQueryKey,
     queryFn: async () => {
@@ -318,21 +288,8 @@ function Sessions() {
     retry: false,
   });
 
-  async function run(event: string, request: () => Promise<{ error?: unknown }>, done: string) {
-    setNotice(null);
-    try {
-      const { error } = await request();
-      if (error !== undefined) {
-        log.warn(`${event}_failed`, { code: problemCode(error) });
-        setNotice({ ok: false, text: t("security.sessions.failed") });
-      } else {
-        log.info(`${event}_done`);
-        setNotice({ ok: true, text: done });
-      }
-    } catch (err) {
-      log.warn(`${event}_unreachable`, { error: describeError(err) });
-      setNotice({ ok: false, text: t("auth.offline") });
-    }
+  async function run(name: string, request: () => Promise<{ error?: unknown }>, done: string) {
+    await runWrite({ name, run: request, success: done });
     await queryClient.invalidateQueries({ queryKey: sessionsQueryKey });
   }
 
@@ -343,7 +300,6 @@ function Sessions() {
       <h3 id="sessions-title" className="text-[13px] font-medium">
         {t("security.sessions.title")}
       </h3>
-      <NoticeLine notice={notice} />
       <ul className="flex flex-col divide-y divide-line rounded-sm border border-line">
         {list.map((session) => (
           <li key={session.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">

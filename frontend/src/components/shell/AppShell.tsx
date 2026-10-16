@@ -3,13 +3,16 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Admin-only items are shown to administrators only.
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The signed-in user's avatar links to the profile (Settings).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Notice when the device and profile time zones differ.
-import { useQuery } from "@tanstack/react-query";
-import { Link, Outlet } from "@tanstack/react-router";
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. A write that finds the session expired offers "Sign in", which
+// returns to the current page afterwards (drafts bring the text back).
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { meQuery } from "@/api/session";
+import { meQuery, meQueryKey } from "@/api/session";
+import { setSessionExpiredHandler } from "@/api/write";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -57,6 +60,19 @@ export function AppShell() {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: me } = useQuery(meQuery);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const here = useRouterState({ select: (state) => state.location.href });
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      // The cached profile still says "signed in"; forget it so the sign-in page does not bounce back.
+      queryClient.setQueryData(meQueryKey, null);
+      void navigate({ to: "/login", search: { redirect: here } });
+    });
+    return () => {
+      setSessionExpiredHandler(null);
+    };
+  }, [navigate, here, queryClient]);
   const secondaryItems = SECONDARY_ITEMS.filter((item) => !item.adminOnly || me?.role === "admin");
   useModuleShortcuts();
   const closeDrawer = () => {

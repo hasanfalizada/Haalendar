@@ -2,6 +2,7 @@
 // "load more", invite, change role, unlock, reset password, deactivate (soft) and reactivate. One DOM for all screen
 // sizes: a table on ≥ md, stacked cards on phones. The own row has no actions ("not on yourself"); consequential
 // actions are confirmed; the server asks for re-authentication when needed.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results are reported through runWrite (one notification per write).
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -12,6 +13,7 @@ import { adminUpdateUser, adminUserAction } from "@/api/generated/sdk.gen";
 import type { AdminUser } from "@/api/generated/types.gen";
 import { problemCode } from "@/api/problem";
 import { meQuery } from "@/api/session";
+import { runWrite } from "@/api/write";
 import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -24,10 +26,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input, Select } from "@/components/ui/input";
 import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
-import { describeError, log } from "@/lib/log";
 import { cn } from "@/lib/utils";
 
-import { useAdminErrorText } from "./admin-errors";
+import { useAdminReasons } from "./admin-errors";
 import { InstanceSettingsCard } from "./InstanceSettingsCard";
 import { InviteDialog } from "./InviteDialog";
 import { type OneTimePassword, OneTimePasswordDialog } from "./OneTimePasswordDialog";
@@ -36,10 +37,6 @@ import { PendingInvites } from "./PendingInvites";
 type Action = "deactivate" | "reactivate" | "unlock" | "reset-password";
 type Pending =
   { kind: "role"; user: AdminUser; role: "admin" | "user" } | { kind: "action"; user: AdminUser; action: Action };
-interface Banner {
-  ok: boolean;
-  text: string;
-}
 
 const STATUSES: readonly UserStatus[] = ["active", "deactivated", "locked", "unverified"];
 const STATUS_STYLE: Record<UserStatus, string> = {
@@ -67,7 +64,7 @@ export function AdminUsersPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const withReauth = useReauth();
-  const errorText = useAdminErrorText();
+  const adminReasons = useAdminReasons();
   const { data: me } = useQuery(meQuery);
 
   const [search, setSearch] = useState("");
@@ -76,7 +73,6 @@ export function AdminUsersPage() {
   const users = useInfiniteQuery(adminUsersQuery({ q, status }));
   const rows = users.data?.pages.flatMap((page) => page.data) ?? [];
 
-  const [banner, setBanner] = useState<Banner | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [oneTime, setOneTime] = useState<OneTimePassword | null>(null);
@@ -90,58 +86,44 @@ export function AdminUsersPage() {
   }
 
   async function changeRole(user: AdminUser, role: "admin" | "user") {
-    try {
-      const { error } = await withReauth(() =>
-        adminUpdateUser({
-          path: { id: user.id },
-          headers: { "If-Match": `"${String(user.version)}"` },
-          body: { role },
-        }),
-      );
-      if (error === undefined) {
-        log.info("admin_role_change_done", { role });
-        setBanner({
-          ok: true,
-          text: t("admin.results.role", { name: user.display_name, role: t(`admin.role.${role}`) }),
-        });
-      } else {
-        log.warn("admin_role_change_failed", { code: problemCode(error) });
-        const text = errorText(error);
-        if (text) setBanner({ ok: false, text });
-      }
-    } catch (err) {
-      log.warn("admin_role_change_unreachable", { error: describeError(err) });
-      setBanner({ ok: false, text: t("auth.offline") });
-    }
+    await runWrite({
+      name: "admin_role_change",
+      run: () =>
+        withReauth(() =>
+          adminUpdateUser({
+            path: { id: user.id },
+            headers: { "If-Match": `"${String(user.version)}"` },
+            body: { role },
+          }),
+        ),
+      success: t("admin.results.role", { name: user.display_name, role: t(`admin.role.${role}`) }),
+      reasons: (problem) => adminReasons(problem),
+    });
     await refresh();
   }
 
   async function runAction(user: AdminUser, action: Action) {
-    try {
-      const { data, error } = await withReauth(() => adminUserAction({ path: { id: user.id, action } }));
-      if (error !== undefined || data === undefined) {
-        log.warn("admin_action_failed", { action, code: problemCode(error) });
-        const text = errorText(error, action === "reset-password" ? "reset" : "default");
-        if (text) setBanner({ ok: false, text });
-      } else {
-        log.info("admin_action_done", { action, delivery: data.delivery });
+    await runWrite({
+      name: `admin_${action.replace("-", "_")}`,
+      run: () => withReauth(() => adminUserAction({ path: { id: user.id, action } })),
+      success: (data) =>
+        data.delivery === "one_time_password"
+          ? t("admin.results.resetOneTime", { name: user.display_name })
+          : t(`admin.results.${action === "reset-password" ? "resetEmail" : action}`, {
+              name: user.display_name,
+              email: user.email,
+            }),
+      reasons: (problem) => adminReasons(problem, action === "reset-password" ? "reset" : "default"),
+      onSuccess: (data) => {
         if (data.delivery === "one_time_password" && data.one_time_password) {
-          setBanner(null);
           setOneTime({ email: user.email, password: data.one_time_password });
-        } else {
-          const key = action === "reset-password" ? "resetEmail" : action;
-          setBanner({ ok: true, text: t(`admin.results.${key}`, { name: user.display_name, email: user.email }) });
         }
-      }
-    } catch (err) {
-      log.warn("admin_action_unreachable", { action, error: describeError(err) });
-      setBanner({ ok: false, text: t("auth.offline") });
-    }
+      },
+    });
     await refresh();
   }
 
   function request(next: Pending) {
-    setBanner(null);
     if (next.kind === "action" && !CONFIRMED.has(next.action)) {
       void runAction(next.user, next.action);
       return;
@@ -173,20 +155,8 @@ export function AdminUsersPage() {
         </Button>
       </div>
 
-      {banner ? (
-        <p
-          role={banner.ok ? "status" : "alert"}
-          className={cn(
-            "mx-4 mt-3 rounded-sm px-3 py-2 text-[13px]",
-            banner.ok ? "bg-primary-tint text-primary" : "bg-warn-bg text-warn-fg",
-          )}
-        >
-          {banner.text}
-        </p>
-      ) : null}
-
       <InstanceSettingsCard />
-      <PendingInvites onResult={setBanner} formatDate={formatDate} />
+      <PendingInvites formatDate={formatDate} />
 
       <div className="flex flex-col gap-2 px-4 py-3 md:flex-row">
         <Input
@@ -311,9 +281,6 @@ export function AdminUsersPage() {
         open={inviteOpen}
         onClose={() => {
           setInviteOpen(false);
-        }}
-        onSent={(email) => {
-          setBanner({ ok: true, text: t("admin.results.invited", { email }) });
         }}
         onAccountCreated={setOneTime}
       />

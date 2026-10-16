@@ -2,6 +2,7 @@
 // one entry per delete batch with what it contains, who deleted it and when, restore one entry or many (multi-select:
 // checkbox, Shift+click range, select all, Esc, long press on touch). An item whose container is still in the trash
 // offers to restore the container as well. Nothing is ever purged.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results through runWrite: one notification per restore.
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
@@ -10,11 +11,11 @@ import { useTranslation } from "react-i18next";
 import { restoreFromTrash } from "@/api/generated/sdk.gen";
 import type { TrashEntry } from "@/api/generated/types.gen";
 import { type TrashModule, trashKeys, trashQuery } from "@/api/trash";
+import { runWrite } from "@/api/write";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/input";
 import { RecordTimestamps } from "@/components/ui/record-timestamps";
-import { describeError, log } from "@/lib/log";
 import { useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,6 @@ export function TrashPage() {
   const trash = useInfiniteQuery(trashQuery(module));
   const entries: TrashEntry[] = trash.data?.pages.flatMap((page) => page.data) ?? [];
   const selection = useSelection(entries.map((e) => e.id));
-  const [banner, setBanner] = useState<{ ok: boolean; text: string } | null>(null);
   const [pendingParent, setPendingParent] = useState<{
     parent: Parent;
     entries: { type: string; id: string }[];
@@ -62,37 +62,28 @@ export function TrashPage() {
 
   async function restore(targets: { type: string; id: string }[]) {
     setBusy(true);
-    setBanner(null);
-    try {
-      const { data, error } = await restoreFromTrash({
-        body: { entries: targets.map((e) => ({ type: e.type as TrashModule, id: e.id })) },
-      });
-      if (error !== undefined) {
-        log.warn("trash_restore_failed");
-        setBanner({ ok: false, text: t("trash.loadFailed") });
-        return;
-      }
-      log.info("trash_restored", { restored: data.restored, failed: data.failed.length });
-      const blocked = data.failed.find((f) => f.code === "parent_in_trash" && f.parent);
-      const others = data.failed.filter((f) => f.code !== "parent_in_trash");
-      const parts: string[] = [];
-      if (data.restored > 0) parts.push(t("trash.restored", { count: data.restored }));
-      if (others.length > 0) parts.push(t("trash.failed", { count: others.length }));
-      if (parts.length > 0) setBanner({ ok: others.length === 0, text: parts.join(" ") });
-      if (blocked?.parent) {
-        setPendingParent({
-          parent: blocked.parent,
-          entries: data.failed.filter((f) => f.code === "parent_in_trash").map((f) => ({ type: f.type, id: f.id })),
-        });
-      }
+    const result = await runWrite({
+      name: "trash_restore",
+      run: () =>
+        restoreFromTrash({ body: { entries: targets.map((e) => ({ type: e.type as TrashModule, id: e.id })) } }),
+      success: (data) => {
+        const others = data.failed.filter((f) => f.code !== "parent_in_trash");
+        const parts: string[] = [];
+        if (data.restored > 0) parts.push(t("trash.restored", { count: data.restored }));
+        if (others.length > 0) parts.push(t("trash.failed", { count: others.length }));
+        // Only "the container is in the trash too": the dialog below is the answer.
+        if (parts.length === 0) return null;
+        return others.length > 0 ? { failure: parts.join(" ") } : parts.join(" ");
+      },
+    });
+    if (result.ok) {
+      const blocked = result.data.failed.filter((f) => f.code === "parent_in_trash");
+      const parent = blocked.find((f) => f.parent)?.parent;
+      if (parent) setPendingParent({ parent, entries: blocked.map((f) => ({ type: f.type, id: f.id })) });
       selection.clear();
-    } catch (err) {
-      log.warn("trash_restore_unreachable", { error: describeError(err) });
-      setBanner({ ok: false, text: t("trash.offline") });
-    } finally {
-      setBusy(false);
-      await queryClient.invalidateQueries({ queryKey: trashKeys.all });
     }
+    setBusy(false);
+    await queryClient.invalidateQueries({ queryKey: trashKeys.all });
   }
 
   function describeContents(entry: TrashEntry): string {
@@ -123,18 +114,6 @@ export function TrashPage() {
           ))}
         </Select>
       </div>
-
-      {banner ? (
-        <p
-          role={banner.ok ? "status" : "alert"}
-          className={cn(
-            "mx-4 mt-3 rounded-sm px-3 py-2 text-[13px]",
-            banner.ok ? "bg-primary-tint text-primary" : "bg-warn-bg text-warn-fg",
-          )}
-        >
-          {banner.text}
-        </p>
-      ) : null}
 
       {trash.isSuccess && entries.length === 0 ? (
         <div className="grid flex-1 place-items-center p-6 text-center">

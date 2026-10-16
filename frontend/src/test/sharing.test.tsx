@@ -114,12 +114,15 @@ describe("share dialog", () => {
       expect(calls.find((c) => c.method === "PATCH")?.headers.get("If-Match")).toBe('"3"');
     });
     expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ permission: "edit" });
+    // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Permission changes and removals report their result.
+    expect(await screen.findByText("Permission changed to “Can edit”.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Remove: Bob Builder" }));
     await user.click(
       within(screen.getByRole("group", { name: "Confirm" })).getByRole("button", { name: "Remove access" }),
     );
     expect(await screen.findByText("Only you have access.")).toBeInTheDocument();
+    expect(screen.getByText("Access removed.")).toBeInTheDocument();
     expect(calls.some((c) => c.method === "DELETE")).toBe(true);
   });
 });
@@ -158,6 +161,7 @@ describe("sharing overview in settings", () => {
     await user.click(screen.getByRole("button", { name: "Leave: Team" }));
     await user.click(within(screen.getByRole("group", { name: "Confirm" })).getByRole("button", { name: "Leave" }));
     expect(await screen.findByText("Nothing has been shared with you yet.")).toBeInTheDocument();
+    expect(screen.getByText("You left “Team”.")).toBeInTheDocument();
     expect(calls.find((c) => c.method === "DELETE")?.path).toBe("/shares/0199f000-0000-7000-8000-0000000000s2");
   });
 });
