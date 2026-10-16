@@ -11,10 +11,11 @@
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030 v1.12: decision D-34 (soft delete enforcement) approved by owner.
 +++===+++ 2026-10-16 — Hasan Alizada — v1.13: decision D-35 (development documentation public in the code repository) approved by owner.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-031 v1.14: decision D-36 (record timestamps) approved by owner.
++++===+++ 2026-10-16 — Hasan Alizada — HAAL-032 v1.15: decision D-37 (audit log) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.14 |
+| Version | 1.15 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -489,6 +490,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-34 | Soft delete enforcement | Four layers: soft_delete/live/restore_batch helpers; SQLAlchemy guards refusing ORM deletes, delete() and DELETE/TRUNCATE SQL; no DELETE/TRUNCATE privilege for the app role; BEFORE DELETE/TRUNCATE triggers on every table for every role. Tests fail on delete constructs in the code (explicit `physical-delete-allowed` markers only), on contract DELETE operations without `x-soft-delete`, and on tables without triggers. Maintenance only as superuser with session_replication_role = replica (throw-away databases; demo reset and a possible erasure procedure for O-01 must be designed against this) | FR-X-01 |
 | D-35 | Development documentation | The development documentation moves into `docs/` of the public code repository with its full history (git subtree); the separate private repository is no longer updated. Nothing secret is kept in `docs/` | ADR-0002 §6 |
 | D-36 | Record timestamps | Database triggers keep `updated_at` current on every UPDATE (soft delete and restore included) and keep `created_at` unchangeable on every table; tests fail for a table without them. Display: relative for the last 7 days, otherwise date and time, exact value in the tooltip and `<time datetime>`, profile time zone. Actor shown only as "by you" until the audit history (HAAL-032); `deleted_by` = `updated_by` of the deleted row | FR-X-02 |
+| D-37 | Audit log | Written by SECURITY DEFINER database triggers on every audited table (the app role has SELECT only, under RLS; audit_log is append-only for every role). Audited: content and shares, plus account changes relevant to admins (role, status, profile, instance settings) without secret or login-bookkeeping columns; sessions, tokens, recovery codes and logins stay in the structured logs. Snapshots: full row on create, changed fields only otherwise; technical columns ignored. Actions derived (create/update/delete/restore/move/share/unshare). Readers: container owner and grantees (share history: owner only); account history: the account and admins. Kept forever (GDPR O-01 open). Every table is audited or listed as exempt (test) | FR-X-03 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

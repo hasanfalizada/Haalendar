@@ -26,11 +26,17 @@ from haalendar.storage import Storage
 SESSION_COOKIE = "__Host-haalendar_session"
 CSRF_HEADER = "x-csrf-token"
 USER_ID_SETTING = "app.user_id"
+REQUEST_ID_SETTING = "app.request_id"
 
 
 async def get_db(request: Request) -> AsyncIterator[AsyncSession]:
     async with request.app.state.session_factory() as session:
         try:
+            # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-032. Audit records written in this transaction carry the
+            # request id, so an audit entry can be matched to its log lines (transaction-local).
+            request_id = getattr(request.state, "request_id", None)
+            if request_id:
+                await session.execute(select(func.set_config(REQUEST_ID_SETTING, request_id, True)))
             yield session
             await session.commit()
         except BaseException:

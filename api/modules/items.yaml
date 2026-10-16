@@ -491,14 +491,14 @@ components:
             body: { $ref: '../components/common.yaml#/components/schemas/Markdown' }
     AuditRecord:
       type: object
-      required: [id, occurred_at, action, entity_type, entity_id]
+      required: [id, occurred_at, actor_id, actor_name, action, entity_type, entity_id, before, after]
       properties:
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         occurred_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
         actor_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
-        actor_name: { type: string }
+        actor_name: { oneOf: [{ type: string }, { type: 'null' }], description: 'Display name of the actor; null for system actions.' }
         action: { type: string, enum: [create, update, delete, restore, move, share, unshare] }
         entity_type: { type: string }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        before: { type: object }
-        after: { type: object }
+        before: { oneOf: [{ type: object }, { type: 'null' }], description: 'Changed fields before the change; null on create (HAAL-032).' }
+        after: { oneOf: [{ type: object }, { type: 'null' }], description: 'Full record on create, otherwise only the changed fields.' }

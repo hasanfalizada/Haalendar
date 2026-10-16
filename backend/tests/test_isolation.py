@@ -114,7 +114,7 @@ def test_application_role_is_least_privilege(db_url: str) -> None:
     assert rights, "no tables visible"
     for table, can_delete, can_truncate, can_update in rights:
         assert not can_delete and not can_truncate, table
-        assert can_update == (table != "alembic_version"), table
+        assert can_update == (table not in {"alembic_version", "audit_log"}), table
 
 
 def test_physical_delete_is_impossible(clean_db: str) -> None:

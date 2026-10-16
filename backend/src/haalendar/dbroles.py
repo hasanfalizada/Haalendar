@@ -26,7 +26,11 @@ log = get_logger(__name__)
 
 DEFAULT_TABLE_PRIVILEGES = ("SELECT", "INSERT", "UPDATE")
 # Tables with narrower rights than the default (append-only audit tables join this map when they are created).
-TABLE_PRIVILEGES: dict[str, tuple[str, ...]] = {"alembic_version": ("SELECT",)}
+TABLE_PRIVILEGES: dict[str, tuple[str, ...]] = {
+    "alembic_version": ("SELECT",),
+    # HAAL-032: written only by SECURITY DEFINER triggers; the application can read (under RLS), never write.
+    "audit_log": ("SELECT",),
+}
 ROLE_NAME = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 
 

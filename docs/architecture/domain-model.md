@@ -288,6 +288,8 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | delivered_push_at | timestamptz | Web Push delivery |
 
 ### 5.18 `audit_log` (append-only)
++++===+++ 2026-10-16 — Hasan Alizada — HAAL-032. Implemented in migration 0009: rows written by database triggers (D-37); `entity_id` of one-row tables is the nil UUID.
+
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid PK | |

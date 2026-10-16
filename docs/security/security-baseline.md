@@ -45,7 +45,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; container hardening ⏳ HAAL-150 |
 | V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) and for every role (no-delete triggers, ORM/SQL guards, source scan, contract `x-soft-delete` — HAAL-030) ✅; export ⏳ HAAL-043; GDPR erasure open (O-01) |
 | V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SBOM + licence gate ⏳ HAAL-151 |
-| V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections) |
+| V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections); tamper-proof audit log of all changes written by database triggers, append-only, readable under RLS, linked by request id (HAAL-032) |
 | V17 WebRTC | — | Not used |
 
 ## 3. OWASP Top 10:2025
@@ -60,7 +60,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | A06 Insecure Design | ✅ threat-driven requirements, ADRs, contract-first, soft delete |
 | A07 Authentication Failures | ✅ HAAL-160..162 (see V6/V7) |
 | A08 Software or Data Integrity Failures | 🟡 lockfile hashes; optimistic concurrency (If-Match) in contract; ⏳ image signing (HAAL-151) |
-| A09 Security Logging & Alerting Failures | ✅ security events logged with correlation; metrics for alerting |
+| A09 Security Logging & Alerting Failures | ✅ security events logged with correlation; metrics for alerting; audit log of every change (HAAL-032) |
 | A10 Mishandling of Exceptional Conditions | ✅ global handlers fail closed with generic 500, guards reject early, readiness reports not crashes |
 
 ## 4. OWASP API Security Top 10:2023

@@ -275,9 +275,13 @@ Haalendar never removes rows physically — users rely on years of data and on t
 3. **Privileges:** the application role has no `DELETE` or `TRUNCATE` privilege.
 4. **Triggers:** every table refuses `DELETE` and `TRUNCATE` for every role, including the owner and superusers.
 
-The test suite fails when the code contains a delete construct (rare legitimate cases, such as removing a temporary upload file, carry a `# physical-delete-allowed: <reason>` comment), when a contract `DELETE` lacks `x-soft-delete`, or when a table has no triggers. A migration that creates a table must call `forbid_delete_triggers(table)`, `record_time_triggers(table, created_at=…, updated_at=…)` (the database keeps `updated_at` current and `created_at` unchangeable) and, for owner/share tables, the RLS builders. Tests that need to simulate elapsed time move timestamps with `sql_maintenance(...)` (owner connection in replica mode).
+The test suite fails when the code contains a delete construct (rare legitimate cases, such as removing a temporary upload file, carry a `# physical-delete-allowed: <reason>` comment), when a contract `DELETE` lacks `x-soft-delete`, or when a table has no triggers. A migration that creates a table must call `forbid_delete_triggers(table)`, `record_time_triggers(table, created_at=…, updated_at=…)` (the database keeps `updated_at` current and `created_at` unchangeable), `audit_trigger(table, mode, excluded)` — or list the table in `AUDIT_EXEMPT_TABLES` with a reason — and, for owner/share tables, the RLS builders. Tests that need to simulate elapsed time move timestamps with `sql_maintenance(...)` (owner connection in replica mode).
 
 Deliberate maintenance on a throw-away database is done as a superuser with `SET session_replication_role = replica` for that session only — never on real data.
+
+### Audit log
+
+Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.
 
 ### Observability
 

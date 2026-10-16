@@ -23,7 +23,11 @@ from typing import Literal
 ContainerKind = Literal["calendar", "board", "note"]
 
 # Table → protection pattern. A table with owner_id / container_id / grantee_id that is missing here fails the tests.
-PROTECTED_TABLES: dict[str, Literal["container", "share"]] = {"calendar": "container", "share": "share"}
+PROTECTED_TABLES: dict[str, Literal["container", "share", "audit"]] = {
+    "calendar": "container",
+    "share": "share",
+    "audit_log": "audit",  # HAAL-032: haalendar.audit.sql.audit_read_policy
+}
 
 CURRENT_USER_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_current_user_id() RETURNS uuid

@@ -43,6 +43,7 @@ Haalendar targets **OWASP ASVS 5.0 Level 2** and is reviewed against the OWASP T
 - Production refuses insecure configuration (default secret key, plain HTTP); secrets can be supplied as files.
 - The first-run admin wizard is open only while no administrator exists; in production it additionally requires a setup token from the server configuration, so nobody can claim a freshly deployed instance first.
 - Data is never deleted physically: deletes are soft (restorable from the trash), and the database itself refuses DELETE and TRUNCATE on every table, even for administrators of the database server.
+- Every change is recorded in a tamper-proof audit log written by the database itself (who, when, what changed); the application cannot write, change or delete audit records, and passwords or 2FA secrets never appear in it.
 - Every user sees only their own data and data explicitly shared with them: one authorization policy decides every request, and PostgreSQL row-level security enforces the same rules in the database. The application connects with a least-privilege role that cannot bypass these rules and cannot delete rows.
 - Administrators manage accounts, never content. Every admin change requires a recent password confirmation, admins cannot change their own account in the admin panel, deactivation is soft (data kept, all sessions ended), and one active administrator always remains.
 - Logs are structured and never contain passwords, tokens or cookies; metrics are off by default and token-protected.

@@ -411,5 +411,21 @@
     "updated": "Updated",
     "deleted": "Deleted",
     "byYou": "by you"
+  },
+  "history": {
+    "title": "History",
+    "empty": "No changes recorded yet.",
+    "you": "You",
+    "system": "System",
+    "emptyValue": "—",
+    "actions": {
+      "create": "created it",
+      "update": "changed",
+      "delete": "moved it to the trash",
+      "restore": "restored it",
+      "move": "moved it",
+      "share": "shared it",
+      "unshare": "stopped sharing"
+    }
   }
 }
