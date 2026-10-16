@@ -504,5 +504,20 @@
     "signOutTitle": "Sign out and delete unsaved changes?",
     "signOutBody": "Changes that have not been saved yet are kept on this device. Signing out deletes them.",
     "signOutConfirm": "Sign out anyway"
+  },
+  "undo": {
+    "action": "Undo",
+    "hint": "{{keys}} to undo",
+    "undone": "Undone: {{label}}.",
+    "redone": "Redone: {{label}}.",
+    "cannotUndo": "Cannot undo {{label}} — it was changed in the meantime.",
+    "cannotRedo": "Cannot redo {{label}} — it was changed in the meantime.",
+    "nothingToUndo": "Nothing to undo.",
+    "nothingToRedo": "Nothing to redo.",
+    "labels": {
+      "shareCreated": "sharing with {{email}}",
+      "sharePermission": "the permission change for {{name}}",
+      "shareRemoved": "removing access for {{name}}"
+    }
   }
 }

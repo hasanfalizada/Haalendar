@@ -5,6 +5,7 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Notice when the device and profile time zones differ.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. A write that finds the session expired offers "Sign in", which
 // returns to the current page afterwards (drafts bring the text back).
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. Undo / redo shortcuts for the signed-in user.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -21,6 +22,7 @@ import { ConnectionStatus } from "./ConnectionStatus";
 import { TimeZoneMismatch } from "./TimeZoneMismatch";
 import { MODULE_ITEMS, SECONDARY_ITEMS, type NavItem } from "./nav-items";
 import { useModuleShortcuts } from "./useModuleShortcuts";
+import { useUndoShortcuts } from "./useUndoShortcuts";
 
 const LOGO_SRC = "/icon.svg";
 
@@ -75,6 +77,7 @@ export function AppShell() {
   }, [navigate, here, queryClient]);
   const secondaryItems = SECONDARY_ITEMS.filter((item) => !item.adminOnly || me?.role === "admin");
   useModuleShortcuts();
+  useUndoShortcuts(me?.id ?? null);
   const closeDrawer = () => {
     setDrawerOpen(false);
   };

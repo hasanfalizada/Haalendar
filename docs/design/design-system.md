@@ -67,7 +67,7 @@ Shell regions: rail (modules Calendar / To-Do / Kanban, then Trash, Notification
 
 ## 7. Interaction patterns
 - **Selection**: click selects; Ctrl/Cmd-click toggles; Shift-click/Shift+arrows extend; long-press on touch enters selection mode; BulkActionBar appears at the bottom.
-- **Result feedback**: one toast per write — success (auto-hide 4 s, Undo for destructive/move), failure (stays until dismissed, with reason and Retry), queued offline, synced.
+- **Result feedback**: one toast per write — success (auto-hide 4 s, Undo for every undoable action — D-40, 2026-10-16), failure (stays until dismissed, with reason and Retry), queued offline, synced.
 - **Undo/redo**: Ctrl+Z / Ctrl+Shift+Z, 50 steps per session; toast Undo triggers the same command.
 - **Unsaved changes**: AlertDialog "Discard changes?" with Keep editing (default focus) / Discard.
 - **Delete**: AlertDialog for single delete via keyboard; bulk delete shows count; recurring events ask "This event / This and following / All events".
@@ -105,4 +105,4 @@ D1 calendar day view · D2 event popover · D3 event editor (duplicate warning, 
 1. Wireframes D1–D9 and M1–M5 approved without changes.
 2. Events rendered as tint + 4 px color bar with dark text (replaces legacy full-color fills with white text).
 3. Keyboard map in section 8 approved.
-4. Toasts auto-hide after 4 s; Undo offered on destructive and move actions.
+4. Toasts auto-hide after 4 s; Undo offered on every undoable action (amended by D-40, 2026-10-16).

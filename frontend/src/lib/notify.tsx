@@ -29,8 +29,13 @@ function button(action: NotifyAction | undefined) {
 }
 
 export const notify = {
-  success(text: string, options: { action?: NotifyAction } = {}): string | number {
-    return toast.success(text, { duration: SUCCESS_MS, action: button(options.action) });
+  success(text: string, options: { action?: NotifyAction; hint?: string } = {}): string | number {
+    return toast.success(text, { duration: SUCCESS_MS, action: button(options.action), description: options.hint });
+  },
+
+  /** A neutral message, e.g. "Nothing to undo". */
+  info(text: string): string | number {
+    return toast.info(text, { duration: SUCCESS_MS });
   },
 
   failure(text: string, options: FailureOptions = {}): string | number {

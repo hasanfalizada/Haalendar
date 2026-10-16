@@ -2,6 +2,7 @@
 // null = not signed in (401); a thrown error = server unreachable (callers stay offline-tolerant). The CSRF token of
 // the session is taken from /me and kept in memory only (ADR-0005).
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Signing out also deletes the user's local drafts (D-39).
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. …and the undo history of this tab.
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { setCsrfToken } from "./client";
@@ -9,6 +10,7 @@ import { getMe, logout } from "./generated/sdk.gen";
 import { ApiError } from "./problem";
 import type { Me } from "./generated/types.gen";
 import { wipeDrafts } from "@/lib/drafts";
+import { bindUndoUser } from "@/lib/undo";
 import { describeError, log } from "@/lib/log";
 
 export const meQueryKey = ["session", "me"] as const;
@@ -46,6 +48,7 @@ export async function signOut(queryClient: QueryClient): Promise<void> {
   }
   setCsrfToken(null);
   if (user) await wipeDrafts(user);
+  bindUndoUser(null);
   queryClient.clear();
   queryClient.setQueryData(meQueryKey, null);
   log.info("signed_out");

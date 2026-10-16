@@ -1,6 +1,8 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Guard for FR-X-05 ("failures are never silent"): every module that
 // calls a write of the generated client (POST/PUT/PATCH/DELETE) must report it through runWrite. Exceptions are listed
 // with their reason; a new request helper under src/api must be registered so its callers are checked too.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. Undo handler modules (registerUndo) are covered: lib/undo runs their
+// requests through runWrite.
 import { describe, expect, it } from "vitest";
 
 // Sources as text through Vite (the app's TypeScript config has no Node types).
@@ -74,7 +76,10 @@ describe("write coverage", () => {
       ...importedNames(text, /generated\/sdk\.gen$/).filter((n) => writes.has(n)),
       ...importedNames(text, /^@\/api\//).filter((n) => helperNames.has(n)),
     ];
-    return used.length > 0 && !importedNames(text, /^@\/api\/write$/).includes("runWrite");
+    const covered =
+      importedNames(text, /^@\/api\/write$/).includes("runWrite") ||
+      importedNames(text, /^@\/lib\/undo$/).includes("registerUndo");
+    return used.length > 0 && !covered;
   }
 
   it("recognises a module that writes without runWrite", () => {

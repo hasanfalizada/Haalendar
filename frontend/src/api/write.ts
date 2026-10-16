@@ -5,10 +5,13 @@
 // The form keeps its values on every failure. A cancelled re-authentication reports nothing (nothing was attempted).
 // While a write is in flight, closing the tab asks first. A test fails if a component calls a write of the generated
 // client without this wrapper (write-coverage.test.ts).
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. An undoable write passes `undo`: the step is recorded after the
+// success and the notification offers "Undo" (the same command as Ctrl+Z).
 import i18n from "@/i18n";
 import { REAUTH_CANCELLED } from "@/components/auth/reauth";
 import { describeError, log } from "@/lib/log";
 import { notify } from "@/lib/notify";
+import { record, type UndoStep, undo } from "@/lib/undo";
 
 import type { Problem } from "./generated/types.gen";
 import { fieldErrorsOf, isProblem, type ProblemCode } from "./problem";
@@ -37,6 +40,8 @@ export interface WriteOptions<T> {
    * trash entries could not be restored), or null when the caller answers with a dialog instead (it must).
    */
   success: string | ((data: T) => string | { failure: string } | null);
+  /** The undo step for a successful write (FR-X-06), or null when this result cannot be undone. */
+  undo?: (data: T) => UndoStep | null;
   /** Called with the result of a successful attempt, the first one or a Retry. */
   onSuccess?: (data: T) => void | Promise<void>;
   /** Reasons for particular problem codes instead of the generic ones (e.g. "last administrator"). */
@@ -51,6 +56,9 @@ export interface WriteOptions<T> {
   retry?: boolean;
   timeoutMs?: number;
 }
+
+// Apple keyboards say ⌘ where others say Ctrl.
+const UNDO_KEYS = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘Z" : "Ctrl+Z";
 
 let pending = 0;
 let sessionExpiredHandler: (() => void) | null = null;
@@ -189,8 +197,19 @@ export async function runWrite<T>(options: WriteOptions<T>): Promise<WriteResult
   log.info(`${options.name}_ok`);
   const result = data as T; // no error → the generated client has parsed the body
   const message = typeof options.success === "function" ? options.success(result) : options.success;
-  if (typeof message === "string") notify.success(message);
-  else if (message) notify.failure(message.failure);
+  const step = options.undo?.(result) ?? null;
+  if (step) record(step);
+  if (typeof message === "string") {
+    notify.success(
+      message,
+      step
+        ? {
+            action: { label: i18n.t("undo.action"), run: () => void undo(step.id) },
+            hint: i18n.t("undo.hint", { keys: UNDO_KEYS }),
+          }
+        : {},
+    );
+  } else if (message) notify.failure(message.failure);
   await options.onSuccess?.(result);
   return { ok: true, data: result };
 }

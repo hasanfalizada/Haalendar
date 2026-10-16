@@ -3,6 +3,8 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Through runWrite: every change now reports its result (permission
 // changes and removals used to succeed silently). Inside the share dialog failures are returned for the dialog to
 // show ("inline"); in Settings they are notifications.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. Giving access, changing the permission and removing access are
+// undoable (undo-sharing.ts); leaving a share is not.
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -10,6 +12,9 @@ import { createShare, revokeShare, updateShare } from "@/api/generated/sdk.gen";
 import type { ContainerKind, Permission, Problem, Share } from "@/api/generated/types.gen";
 import { sharingKeys } from "@/api/sharing";
 import { runWrite } from "@/api/write";
+import { newStep, type UndoStep } from "@/lib/undo";
+
+import { accessOf, type PermissionChange, type ShareAccess } from "./undo-sharing";
 
 export interface ActionResult {
   ok: boolean;
@@ -36,14 +41,24 @@ export function useShareActions(display: "toast" | "inline" = "toast") {
     }
   }
 
-  async function run(
+  async function run<T>(
     name: string,
-    request: () => Promise<{ error?: unknown; response?: Response }>,
+    request: () => Promise<{ data?: T; error?: unknown; response?: Response }>,
     success: string,
-    reasons: (problem: Problem) => string | null = generic,
-    failure: "toast" | "inline" = display,
+    options: {
+      reasons?: (problem: Problem) => string | null;
+      failure?: "toast" | "inline";
+      undo?: (data: T) => UndoStep | null;
+    } = {},
   ): Promise<ActionResult> {
-    const result = await runWrite({ name, run: request, success, reasons, failure });
+    const result = await runWrite<T>({
+      name,
+      run: request,
+      success,
+      reasons: options.reasons ?? generic,
+      failure: options.failure ?? display,
+      ...(options.undo ? { undo: options.undo } : {}),
+    });
     await queryClient.invalidateQueries({ queryKey: sharingKeys.all });
     return result.ok ? { ok: true } : { ok: false, ...(result.reason ? { error: result.reason } : {}) };
   }
@@ -71,12 +86,20 @@ export function useShareActions(display: "toast" | "inline" = "toast") {
             body: { container_kind: containerKind, container_id: containerId, grantee_email: email, permission },
           }),
         t("sharing.shared", { email }),
-        (problem) => {
-          fieldError = fieldReason(problem) ?? undefined;
-          return fieldError ?? generic(problem);
+        {
+          reasons: (problem) => {
+            fieldError = fieldReason(problem) ?? undefined;
+            return fieldError ?? generic(problem);
+          },
+          // Field-level answers belong next to the field, so the share form always shows its failures itself.
+          failure: "inline",
+          undo: (created) =>
+            newStep<ShareAccess>(
+              "share.create",
+              { key: "undo.labels.shareCreated", values: { email } },
+              accessOf(created),
+            ),
         },
-        // Field-level answers belong next to the field, so the share form always shows its failures itself.
-        "inline",
       );
       if (result.ok) return result;
       return fieldError ? { ok: false, fieldError } : result;
@@ -91,12 +114,30 @@ export function useShareActions(display: "toast" | "inline" = "toast") {
             body: { permission },
           }),
         t("sharing.permissionChanged", { permission: t(`sharing.permission.${permission}`) }),
+        {
+          undo: (updated) =>
+            newStep<PermissionChange>(
+              "share.permission",
+              { key: "undo.labels.sharePermission", values: { name: share.grantee_name } },
+              { id: share.id, from: share.permission, to: permission, version: updated.version },
+            ),
+        },
       ),
     revoke: (share: Share, mode: "owner" | "grantee") =>
       run(
         mode === "owner" ? "share_revoke" : "share_leave",
         () => revokeShare({ path: { id: share.id } }),
         mode === "owner" ? t("sharing.removed") : t("sharing.left", { name: share.container_name }),
+        mode === "owner"
+          ? {
+              undo: () =>
+                newStep<ShareAccess>(
+                  "share.revoke",
+                  { key: "undo.labels.shareRemoved", values: { name: share.grantee_name } },
+                  accessOf(share),
+                ),
+            }
+          : {},
       ),
   };
 }

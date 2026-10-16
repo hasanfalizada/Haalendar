@@ -289,6 +289,10 @@ Every write from the UI goes through `runWrite` (`frontend/src/api/write.ts`): i
 
 Editors that hold typed text use `useDraft` (`src/lib/useDraft.ts`) with `DraftNotice`: the values are kept in IndexedDB (`haalendar-drafts`, per user) until `commit()` after a confirmed save; call `flush()` right before sending. Never put passwords, codes or tokens into a draft — such field names are refused. Drafts are deleted on sign-out.
 
+### Undo / redo
+
+An undoable write passes `undo` to `runWrite`: a function that turns the server's answer into a step, `newStep(kind, label, payload)` from `frontend/src/lib/undo.ts`. The payload must be plain data (it is kept in the tab's sessionStorage); the inverse requests come from a handler registered once with `registerUndo(kind, { undo, redo })` in a module imported by `App.tsx` (see `components/sharing/undo-sharing.ts`). A handler's `next` returns the payload for the opposite direction, e.g. with the new version for If-Match. Several requests that form one user action are one `batchStep`; prefer the atomic `/bulk` endpoint where it exists.
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.
