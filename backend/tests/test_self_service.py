@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from haalendar.accounts.service import device_summary
 
-from .account_helpers import PASSWORD, create_user, link_token, login, mails, register, sql
+from .account_helpers import PASSWORD, create_user, link_token, login, mails, register, sql, sql_maintenance
 from .test_login_protection import _csrf, _enable_totp, _login_full
 
 pytestmark = pytest.mark.db
@@ -29,7 +29,7 @@ def _open_registration(db_url: str) -> None:
 
 
 def test_resend_is_generic_throttled_and_supersedes_old_links(
-    api: TestClient, clean_db: str, mail_dir: Path
+    api: TestClient, clean_db: str, owner_db_url: str, mail_dir: Path
 ) -> None:
     _open_registration(clean_db)
     assert register(api, "val@example.org") == 202
@@ -40,7 +40,7 @@ def test_resend_is_generic_throttled_and_supersedes_old_links(
 
     assert resend("val@example.org") == 202
     assert len(mails(mail_dir)) == 1  # throttled: the first link is younger than 5 minutes
-    sql(clean_db, "UPDATE auth_token SET created_at = now() - interval '6 minutes'")
+    sql_maintenance(owner_db_url, "UPDATE auth_token SET created_at = now() - interval '6 minutes'")
     assert resend("VAL@example.org") == 202
     assert len(mails(mail_dir)) == 2
     second = link_token(mails(mail_dir)[-1])
@@ -49,7 +49,7 @@ def test_resend_is_generic_throttled_and_supersedes_old_links(
     assert api.post("/api/v1/auth/verify-email", json={"token": second}).status_code == 204
     assert login(api, "val@example.org")[0] == 200
 
-    sql(clean_db, "UPDATE auth_token SET created_at = now() - interval '6 minutes'")
+    sql_maintenance(owner_db_url, "UPDATE auth_token SET created_at = now() - interval '6 minutes'")
     assert resend("val@example.org") == 202  # already verified: nothing sent
     assert resend("nobody@example.org") == 202
     assert len(mails(mail_dir)) == 2

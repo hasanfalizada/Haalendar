@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from haalendar.main import create_app
 
-from .account_helpers import PASSWORD, create_user, link_token, login, mails, sql
+from .account_helpers import PASSWORD, create_user, link_token, login, mails, sql, sql_maintenance
 from .conftest import make_settings
 
 pytestmark = pytest.mark.db
@@ -58,25 +58,29 @@ def test_reset_flow_changes_password_and_revokes_sessions(
     assert mails(mail_dir)[-1]["Subject"] == "Haalendar: your password was changed"
 
 
-def test_reset_link_is_single_use_and_expires(api: TestClient, clean_db: str, mail_dir: Path) -> None:
+def test_reset_link_is_single_use_and_expires(
+    api: TestClient, clean_db: str, owner_db_url: str, mail_dir: Path
+) -> None:
     create_user(api, clean_db, "bob@example.org")
     _request_reset(api, "bob@example.org")
     token = link_token(mails(mail_dir)[-1])
     assert _confirm(api, token) == 204
     assert _confirm(api, token, "another-good-passphrase-1") == 400
 
-    sql(clean_db, "UPDATE auth_token SET created_at = now() - interval '10 minutes'")
+    sql_maintenance(owner_db_url, "UPDATE auth_token SET created_at = now() - interval '10 minutes'")
     _request_reset(api, "bob@example.org")
     expired = link_token(mails(mail_dir)[-1])
     sql(clean_db, "UPDATE auth_token SET expires_at = now() - interval '1 second' WHERE used_at IS NULL")
     assert _confirm(api, expired) == 400
 
 
-def test_new_link_supersedes_old_one(api: TestClient, clean_db: str, mail_dir: Path) -> None:
+def test_new_link_supersedes_old_one(
+    api: TestClient, clean_db: str, owner_db_url: str, mail_dir: Path
+) -> None:
     create_user(api, clean_db, "cy@example.org")
     _request_reset(api, "cy@example.org")
     first = link_token(mails(mail_dir)[-1])
-    sql(clean_db, "UPDATE auth_token SET created_at = now() - interval '10 minutes'")
+    sql_maintenance(owner_db_url, "UPDATE auth_token SET created_at = now() - interval '10 minutes'")
     _request_reset(api, "cy@example.org")
     second = link_token(mails(mail_dir)[-1])
     assert _confirm(api, first) == 400

@@ -320,7 +320,7 @@ components:
         title: { type: string }
         container_name: { type: string }
         deleted_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
-        deleted_by: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        deleted_by: { allOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }], description: 'Who deleted it (the updated_by of the deleted row).' }
         delete_batch_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
     Notification:

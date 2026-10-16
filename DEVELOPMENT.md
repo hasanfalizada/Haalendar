@@ -275,7 +275,7 @@ Haalendar never removes rows physically — users rely on years of data and on t
 3. **Privileges:** the application role has no `DELETE` or `TRUNCATE` privilege.
 4. **Triggers:** every table refuses `DELETE` and `TRUNCATE` for every role, including the owner and superusers.
 
-The test suite fails when the code contains a delete construct (rare legitimate cases, such as removing a temporary upload file, carry a `# physical-delete-allowed: <reason>` comment), when a contract `DELETE` lacks `x-soft-delete`, or when a table has no triggers. A migration that creates a table must call `forbid_delete_triggers(table)` (and the RLS builders for owner/share tables).
+The test suite fails when the code contains a delete construct (rare legitimate cases, such as removing a temporary upload file, carry a `# physical-delete-allowed: <reason>` comment), when a contract `DELETE` lacks `x-soft-delete`, or when a table has no triggers. A migration that creates a table must call `forbid_delete_triggers(table)`, `record_time_triggers(table, created_at=…, updated_at=…)` (the database keeps `updated_at` current and `created_at` unchangeable) and, for owner/share tables, the RLS builders. Tests that need to simulate elapsed time move timestamps with `sql_maintenance(...)` (owner connection in replica mode).
 
 Deliberate maintenance on a throw-away database is done as a superuser with `SET session_replication_role = replica` for that session only — never on real data.
 

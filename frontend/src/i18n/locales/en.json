@@ -405,5 +405,11 @@
       "othersRevoked": "All other devices were signed out.",
       "failed": "The device could not be signed out."
     }
+  },
+  "records": {
+    "created": "Created",
+    "updated": "Updated",
+    "deleted": "Deleted",
+    "byYou": "by you"
   }
 }

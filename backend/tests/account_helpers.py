@@ -30,6 +30,18 @@ def sql(db_url: str, statement: str, *params: object) -> list[tuple[object, ...]
         return cursor.fetchall() if cursor.description else []
 
 
+def sql_maintenance(owner_db_url: str, statement: str, *params: object) -> None:
+    """Change data the application may not change (e.g. move created_at back to simulate elapsed time).
+
+    +++===+++ 2026-10-16 — Hasan Alizada — HAAL-031. Uses the documented maintenance path: owner connection with
+    session_replication_role = replica, which skips the record-time and no-delete triggers.
+    """
+    url = make_url(owner_db_url).set(drivername="postgresql").render_as_string(hide_password=False)
+    with psycopg.connect(url, autocommit=True) as conn:
+        conn.execute("SET session_replication_role = replica")
+        conn.execute(statement, params or None)
+
+
 def invite(db_url: str, address: str, role: str = "user") -> str:
     async def run() -> str:
         engine = create_async_engine(db_url)

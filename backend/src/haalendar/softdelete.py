@@ -9,6 +9,8 @@
 A source scan in the test suite additionally fails on delete constructs in the code.
 Deleting = setting deleted_at plus a delete_batch_id shared by everything removed in one operation, so the trash
 (HAAL-033) can restore a container together with the children deleted with it, but not those deleted earlier.
++++===+++ 2026-10-16 — Hasan Alizada — HAAL-031. "Deleted by" is the updated_by of a deleted row: soft_delete sets it and
+a deleted row is not changed again until it is restored, so no separate deleted_by column is needed.
 """
 
 from __future__ import annotations
