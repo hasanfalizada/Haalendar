@@ -12,6 +12,7 @@ import "@/api/client";
 import "@/i18n";
 import { installUnloadGuard } from "@/api/write";
 import { ReauthProvider } from "@/components/auth/ReauthProvider";
+import "@/components/attachments/undo-attachments";
 import "@/components/sharing/undo-sharing";
 import "@/lib/bulk";
 import { Notifications } from "@/components/ui/notifications";

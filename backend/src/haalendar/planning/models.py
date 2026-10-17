@@ -3,6 +3,9 @@
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Domain model 5.1 (`calendar`) and 5.16 (`share`), common columns P3.
 Both tables are protected by row-level security (haalendar.security.rls); endpoints follow in HAAL-094 (calendars)
 and HAAL-167 (sharing). Rows are never deleted: containers get `deleted_at`, shares get `revoked_at`.
++++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Domain model 5.4 `item`, the supertype of events, notes and cards
+(owner decision D-45: created now, before its modules, because attachments hang off it). The subtype tables and the
+item endpoints arrive with the modules; the full-text column comes with search (HAAL-039).
 """
 
 from __future__ import annotations
@@ -10,13 +13,27 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, func, text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from haalendar.accounts.models import _uuid7
 from haalendar.models import Base
 
 COLORS = ("red", "orange", "yellow", "green", "blue", "purple", "brown", "black")
+PRIORITIES = ("low", "medium", "high")
+ITEM_KINDS = ("event", "note", "card")
 
 
 class Calendar(Base):
@@ -76,5 +93,38 @@ class Share(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+class Item(Base):
+    __tablename__ = "item"
+    __table_args__ = (
+        CheckConstraint(f"kind in ({', '.join(repr(k) for k in ITEM_KINDS)})", name="kind_valid"),
+        CheckConstraint("container_kind in ('calendar', 'board', 'note')", name="container_kind_valid"),
+        CheckConstraint("char_length(title) <= 200", name="title_length"),
+        CheckConstraint(f"color in ({', '.join(repr(c) for c in COLORS)})", name="color_valid"),
+        CheckConstraint(f"priority in ({', '.join(repr(p) for p in PRIORITIES)})", name="priority_valid"),
+        Index("ix_item_container", "container_kind", "container_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    kind: Mapped[str] = mapped_column(String(10))
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"), index=True)
+    container_kind: Mapped[str] = mapped_column(String(10))
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    title: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    body: Mapped[str | None] = mapped_column(Text)
+    color: Mapped[str] = mapped_column(String(10), default="brown", server_default="brown")
+    priority: Mapped[str] = mapped_column(String(10), default="medium", server_default="medium")
+    legacy_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     sync_seq: Mapped[int | None] = mapped_column(BigInteger)

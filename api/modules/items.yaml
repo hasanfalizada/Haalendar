@@ -11,25 +11,35 @@ paths:
       responses:
         '200': { description: Attachments, content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Attachment' } } } } } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    # +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040 (D-45). Raw request body like the avatar upload (no multipart):
+    # the image bytes, the original file name in X-File-Name (percent-encoded UTF-8), an optional client-generated id.
     post:
       tags: [items]
       operationId: uploadAttachment
       summary: Upload an image (PNG, JPEG, WebP, GIF ≤ 10 MB, type verified by content) — FR-X-11
+      description: >-
+        The file signature decides the type (the declared Content-Type must still be one of the four). PNG, JPEG and
+        still WebP are decoded and written anew without metadata (EXIF/GPS); animated GIF and WebP are kept as sent
+        after validation. Limits: 10 MB, 40 megapixels, 300 frames, 20 attachments per item. A thumbnail (WebP, at
+        most 320 px) is created at once. Needs edit access to the item's container.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+        - { name: X-File-Name, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 1024 }, description: 'Original file name, percent-encoded UTF-8.' }
+        - { name: X-Attachment-Id, in: header, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' }, description: 'Client-generated UUIDv7 (offline creation).' }
       requestBody:
         required: true
         content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                file: { type: string, contentMediaType: application/octet-stream }
+          image/png: { schema: { type: string, contentMediaType: image/png } }
+          image/jpeg: { schema: { type: string, contentMediaType: image/jpeg } }
+          image/webp: { schema: { type: string, contentMediaType: image/webp } }
+          image/gif: { schema: { type: string, contentMediaType: image/gif } }
       responses:
         '201': { description: Stored, content: { application/json: { schema: { $ref: '#/components/schemas/Attachment' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '413': { $ref: '../components/common.yaml#/components/responses/PayloadTooLarge' }
         '415': { $ref: '../components/common.yaml#/components/responses/UnsupportedMediaType' }
   attachment:

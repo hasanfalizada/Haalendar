@@ -21,6 +21,9 @@ MAX_IMAGE_BYTES = 10 * 1024 * 1024
 AVATAR_PATH = "/api/v1/me/avatar"
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
 AVATAR_TYPES = ("image/png", "image/jpeg", "image/webp")
+# +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Attachments: raw-body upload, at most 10 MiB, four image types.
+ATTACHMENT_PATH = re.compile(r"^/api/v1/items/[0-9a-fA-F-]{36}/attachments$")
+ATTACHMENT_TYPES = ("image/png", "image/jpeg", "image/webp", "image/gif")
 MAX_FILENAME_CHARS = 120
 EXTENSIONS = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
 _UNSAFE_CHARS = re.compile(r'[\x00-\x1f\x7f<>:"/\\|?*]')

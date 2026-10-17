@@ -29,6 +29,7 @@ const PAGE_RESULT: Record<string, string> = {
 
 /** Request helpers under src/api and the exported functions that perform writes (their callers must use runWrite). */
 const REQUEST_HELPERS: Record<string, string[]> = {
+  "api/attachments.ts": ["uploadAttachmentFile"],
   "api/profile.ts": ["uploadAvatarFile"],
   // logout: signing out always ends on the sign-in page.
   "api/session.ts": [],

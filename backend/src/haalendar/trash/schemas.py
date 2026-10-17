@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from haalendar.security.schemas import ApiModel
 
-TrashType = Literal["event", "note", "card", "calendar", "board", "column"]
+TrashType = Literal["event", "note", "card", "calendar", "board", "column", "attachment"]
 RestorableType = Literal[
     "event",
     "note",

@@ -33,6 +33,9 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     "instance_settings": ("singleton", ()),
     "calendar": ("self:calendar", ()),
     "share": ("ref", ()),
+    # +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Items and attachments (storage keys are internal).
+    "item": ("ref", ()),
+    "attachment": ("ref", ("storage_key", "thumbnail_key")),
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.

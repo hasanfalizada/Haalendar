@@ -440,7 +440,8 @@
       "card": "Card",
       "calendar": "Calendar",
       "board": "Board",
-      "column": "Column"
+      "column": "Column",
+      "attachment": "Image"
     },
     "plural": {
       "event_one": "{{count}} event",
@@ -513,7 +514,9 @@
     "labels": {
       "shareCreated": "sharing with {{email}}",
       "sharePermission": "the permission change for {{name}}",
-      "shareRemoved": "removing access for {{name}}"
+      "shareRemoved": "removing access for {{name}}",
+      "attachmentAdded": "adding “{{name}}”",
+      "attachmentDeleted": "deleting “{{name}}”"
     }
   },
   "bulk": {
@@ -588,5 +591,23 @@
     "keep": "Keep editing",
     "leave": "Leave, keep the draft",
     "discard": "Discard changes"
+  },
+  "attachments": {
+    "title": "Images",
+    "add": "Add image",
+    "hint": "PNG, JPEG, WebP or GIF up to 10 MB. You can also drop images here or paste a screenshot.",
+    "open": "Open {{name}}",
+    "delete": "Delete {{name}}",
+    "uploading": "Uploading {{name}}",
+    "pasted": "Pasted image",
+    "added": "Image “{{name}}” added.",
+    "deleted": "Image “{{name}}” deleted.",
+    "tooLarge": "This image is larger than 10 MB.",
+    "badType": "Use a PNG, JPEG, WebP or GIF image.",
+    "limit": "An item can have at most {{max}} images.",
+    "previous": "Previous image",
+    "next": "Next image",
+    "position": "{{index}} of {{total}}",
+    "download": "Download"
   }
 }

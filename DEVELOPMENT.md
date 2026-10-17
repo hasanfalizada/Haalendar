@@ -305,6 +305,10 @@ Register every shortcut through `useShortcut` (`frontend/src/lib/shortcuts.ts`) 
 
 Every editor calls `useUnsavedGuard({ dirty, … })` (`frontend/src/lib/useUnsavedGuard.ts`) and renders `<UnsavedChangesDialog prompt={guard.prompt} />`. Dialog editors close through `guard.requestClose(close)` (from `onOpenChange` and the Cancel button). Pass `hasDraft` with `onLeave` / `onDiscard` for editors that keep a local draft, and `onSave` with `scope` (the form) for Ctrl/Cmd+Enter.
 
+### Attachments
+
+Images hang off items (`item` table, D-45). The API takes the raw body: `POST /api/v1/items/{id}/attachments` with `Content-Type` of the image and the name in `X-File-Name` (percent-encoded). `haalendar/attachments/images.py` decides the type by content, enforces 10 MB / 40 megapixels / 300 frames, re-encodes still images without metadata and makes the thumbnail; files are stored content-addressed and never deleted. In the SPA, `components/attachments/Attachments.tsx` shows and manages the images of an item; editors put `useAttachmentUpload(...).onPaste` on their text fields so a pasted screenshot is attached.
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.

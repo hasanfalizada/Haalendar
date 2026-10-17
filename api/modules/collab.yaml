@@ -127,7 +127,7 @@ paths:
       operationId: listTrash
       summary: Soft-deleted items and containers the user may restore, newest deletion first; kept forever (FR-X-04)
       parameters:
-        - { name: module, in: query, schema: { type: string, enum: [event, note, card, calendar, board, column] } }
+        - { name: module, in: query, schema: { type: string, enum: [event, note, card, calendar, board, column, attachment] } }
         - $ref: '../components/common.yaml#/components/parameters/Cursor'
         - $ref: '../components/common.yaml#/components/parameters/Limit'
       responses:
@@ -373,7 +373,7 @@ components:
       type: object
       required: [type, id, title, deleted_at, delete_batch_id, deleted_by, deleted_by_name, created_at, updated_at, contents]
       properties:
-        type: { type: string, enum: [event, note, card, calendar, board, column] }
+        type: { type: string, enum: [event, note, card, calendar, board, column, attachment] }
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         title: { type: string }
         container_name: { type: string }

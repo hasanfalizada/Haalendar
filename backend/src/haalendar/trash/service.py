@@ -11,6 +11,9 @@
 - Restoring an entry brings back its whole batch (restore_batch); the audit log records it. An item whose container
   is still in the trash is refused with parent_in_trash so the user can restore the container first or together.
 - Nothing is ever purged.
++++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Attachments are a source (owner of the container or an edit share may
+restore them). Restoring also checks the source's may_restore condition in SQL, so a visible row that the user may
+not restore is refused as forbidden instead of silently not changing.
 """
 
 from __future__ import annotations
@@ -23,10 +26,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, func, select, tuple_
+from sqlalchemy import ColumnElement, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts.models import UserAccount
+from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
 from haalendar.planning.models import Calendar
@@ -69,6 +73,16 @@ SOURCES: dict[str, TrashSource] = {
         title=lambda row: row.name,
         may_restore=lambda user_id: Calendar.owner_id == user_id,
         refuse=lambda row, user_id: None if row.owner_id == user_id else "forbidden",
+    ),
+    "attachment": TrashSource(
+        kind="attachment",
+        model=Attachment,
+        title=lambda row: row.file_name,
+        may_restore=lambda user_id: or_(
+            func.haalendar_owns_container(Attachment.container_kind, Attachment.container_id),
+            func.haalendar_share_permission(Attachment.container_kind, Attachment.container_id) == "edit",
+        ),
+        refuse=lambda row, user_id: None,
     ),
 }
 
@@ -165,6 +179,11 @@ async def restore(db: AsyncSession, user_id: uuid.UUID, entries: list[RestoreEnt
             failed.append(RestoreFailureOut(type=entry.type, id=entry.id, code="not_found"))
             continue
         refusal = source.refuse(row, user_id)
+        if refusal is None:
+            permitted = await db.scalar(
+                select(model.id).where(model.id == row.id, source.may_restore(user_id))
+            )
+            refusal = None if permitted is not None else "forbidden"
         if refusal is not None:
             failed.append(RestoreFailureOut(type=entry.type, id=entry.id, code=refusal))
             continue

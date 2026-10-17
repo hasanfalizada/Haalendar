@@ -24,7 +24,7 @@ import { useListNavigation } from "@/lib/useListNavigation";
 import { useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 
-const MODULES: readonly TrashModule[] = ["event", "note", "card", "calendar", "board", "column"];
+const MODULES: readonly TrashModule[] = ["event", "note", "card", "calendar", "board", "column", "attachment"];
 
 interface Parent {
   type: string;

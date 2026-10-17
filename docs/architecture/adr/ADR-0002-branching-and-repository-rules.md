@@ -53,3 +53,9 @@ The existing name `development` is kept (instead of `develop`) to avoid churn.
 - The development documentation (requirements, ADRs, domain model, design, security baseline) moved from the separate private repository into `docs/` of this repository, **with its full history** (`git subtree add --prefix=docs`). The way the project is developed is public.
 - The former separate docs repository is no longer updated.
 - Rule: documentation changes go through the same branches and commits as code; nothing secret is stored in `docs/` (no credentials, private hostnames or real user data).
+
+## 7. Amendment (2026-10-17) — every commit directly on `revamp`
+
++++===+++ 2026-10-17 — Hasan Alizada — owner decision D-44.
+
+Until v1.0 every task is committed directly on `revamp`: no `feature/HAAL-xxx-*` branches and no pull request per task (amends decision 1 of section 5). The owner makes the commits and pushes. `revamp` is merged into `master` later as a whole; the exact release path (directly or through `development` / `release/1.0.0`) is decided at release time. Rules for `master` (section 3) are unchanged.

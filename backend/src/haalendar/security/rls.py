@@ -23,10 +23,12 @@ from typing import Literal
 ContainerKind = Literal["calendar", "board", "note"]
 
 # Table → protection pattern. A table with owner_id / container_id / grantee_id that is missing here fails the tests.
-PROTECTED_TABLES: dict[str, Literal["container", "share", "audit"]] = {
+PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content"]] = {
     "calendar": "container",
     "share": "share",
     "audit_log": "audit",  # HAAL-032: haalendar.audit.sql.audit_read_policy
+    "item": "content",  # HAAL-040: content_policies
+    "attachment": "content",  # HAAL-040: content_policies
 }
 
 CURRENT_USER_FUNCTION = """
@@ -89,6 +91,23 @@ def share_policies() -> list[str]:
         f"CREATE POLICY share_read ON share FOR SELECT USING (grantee_id = {me} OR {owns})",
         f"CREATE POLICY share_insert ON share FOR INSERT WITH CHECK ({owns} AND granted_by = {me} AND grantee_id <> {me})",
         f"CREATE POLICY share_update ON share FOR UPDATE USING ({owns}) WITH CHECK ({owns} AND grantee_id <> {me})",
+    ]
+
+
+# +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Content rows (items and what hangs off them, e.g. attachments) carry
+# container_kind / container_id: read = owner of the container or any active share; insert = owner or an edit share,
+# and the row's author column must be the current user; update = owner or an edit share (soft delete, restore and
+# edits included). Moving content to another container needs write access there too (WITH CHECK).
+def content_policies(table: str, author_column: str) -> list[str]:
+    me = "haalendar_current_user_id()"
+    owns = "haalendar_owns_container(container_kind, container_id)"
+    shared = "haalendar_share_permission(container_kind, container_id)"
+    writable = f"({owns} OR {shared} = 'edit')"
+    return [
+        f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+        f"CREATE POLICY {table}_read ON {table} FOR SELECT USING ({owns} OR {shared} IS NOT NULL)",
+        f"CREATE POLICY {table}_insert ON {table} FOR INSERT WITH CHECK ({writable} AND {author_column} = {me})",
+        f"CREATE POLICY {table}_update ON {table} FOR UPDATE USING ({writable}) WITH CHECK ({writable})",
     ]
 
 

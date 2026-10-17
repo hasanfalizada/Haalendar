@@ -236,6 +236,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 |---|---|---|
 | id | uuid PK | |
 | item_id | uuid FK item NN | |
+| container_kind, container_id | | copied from the item (row-level security and audit like the item; D-45, 2026-10-17) |
 | uploaded_by | uuid FK user NN | |
 | file_name | text NN | original name, sanitised |
 | media_type | text NN | image/png, image/jpeg, image/webp, image/gif — verified by content (FR-X-11) |
@@ -243,6 +244,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | width, height | int | |
 | content_hash | text NN | BLAKE3 hex; storage key = per-user prefix + hash (ADR-0004) |
 | storage_key | text NN | adapter-specific key |
+| thumbnail_key | text NN | WebP thumbnail ≤ 320 px, made at upload (D-45) |
 | [common] | | binary never deleted (P2) |
 
 ### 5.14 `link`

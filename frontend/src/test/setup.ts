@@ -39,6 +39,9 @@ globalThis.ResizeObserver = class {
 Element.prototype.setPointerCapture = () => undefined;
 Element.prototype.releasePointerCapture = () => undefined;
 Element.prototype.hasPointerCapture = () => false;
+// +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. jsdom has no object URLs (previews of images being uploaded).
+URL.createObjectURL = () => "blob:test";
+URL.revokeObjectURL = () => undefined;
 
 afterEach(() => {
   cleanup();

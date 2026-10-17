@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -19,7 +20,14 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from haalendar.errors import ProblemCode
 from haalendar.logging import get_logger
-from haalendar.security.uploads import AVATAR_PATH, AVATAR_TYPES, MAX_AVATAR_BYTES
+from haalendar.security.uploads import (
+    ATTACHMENT_PATH,
+    ATTACHMENT_TYPES,
+    AVATAR_PATH,
+    AVATAR_TYPES,
+    MAX_AVATAR_BYTES,
+    MAX_IMAGE_BYTES,
+)
 
 log = get_logger(__name__)
 
@@ -39,6 +47,17 @@ class BodyRule:
 
 # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Upload endpoints get their own limit and only their media types.
 BODY_RULES: dict[str, BodyRule] = {AVATAR_PATH: BodyRule(MAX_AVATAR_BYTES, AVATAR_TYPES)}
+# +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Paths with an id in them (attachment upload: 10 MB, four image types).
+BODY_RULE_PATTERNS: tuple[tuple[re.Pattern[str], BodyRule], ...] = (
+    (ATTACHMENT_PATH, BodyRule(MAX_IMAGE_BYTES, ATTACHMENT_TYPES)),
+)
+
+
+def body_rule(path: str) -> BodyRule | None:
+    rule = BODY_RULES.get(path)
+    if rule is not None:
+        return rule
+    return next((r for pattern, r in BODY_RULE_PATTERNS if pattern.match(path)), None)
 
 
 def _header(scope: Scope, name: bytes) -> str:
@@ -191,7 +210,7 @@ class BodyGuard:
         if scope["type"] != "http" or scope.get("method") not in UNSAFE_METHODS:
             await self.app(scope, receive, send)
             return
-        rule = BODY_RULES.get(scope.get("path", ""))
+        rule = body_rule(scope.get("path", ""))
         limit = rule.max_bytes if rule else self.max_body_bytes
         allowed_types = rule.content_types if rule else ALLOWED_BODY_TYPES
         length_header = _header(scope, b"content-length")
