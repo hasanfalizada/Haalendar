@@ -301,6 +301,10 @@ Lists select with `useSelection` (`frontend/src/lib/useSelection.ts`): spread `r
 
 Register every shortcut through `useShortcut` (`frontend/src/lib/shortcuts.ts`) with a group and a translated label — the "?" overlay lists it while the component is mounted, and the registry handles layouts, Ctrl/Cmd, text fields and open dialogs. Keys a focused widget handles itself are registered without a handler (display only). Lists get keyboard navigation from `useListNavigation` (`src/lib/useListNavigation.ts`): spread `listProps` on the list and `itemProps(id)` on each row; pass `onDelete` to enable the Delete key and confirm with `ConfirmDialog focusConfirm`.
 
+### Unsaved changes
+
+Every editor calls `useUnsavedGuard({ dirty, … })` (`frontend/src/lib/useUnsavedGuard.ts`) and renders `<UnsavedChangesDialog prompt={guard.prompt} />`. Dialog editors close through `guard.requestClose(close)` (from `onOpenChange` and the Cancel button). Pass `hasDraft` with `onLeave` / `onDiscard` for editors that keep a local draft, and `onSave` with `scope` (the form) for Ctrl/Cmd+Enter.
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.

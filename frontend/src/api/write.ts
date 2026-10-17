@@ -7,11 +7,15 @@
 // client without this wrapper (write-coverage.test.ts).
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. An undoable write passes `undo`: the step is recorded after the
 // success and the notification offers "Undo" (the same command as Ctrl+Z).
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. The tab-close guard also asks while an editor has unsaved changes.
+// onSuccess runs before the success notification, so the UI shows the saved state when "Saved" appears (otherwise an
+// editor could still count as unsaved for a moment and ask needlessly when the user moves on).
 import i18n from "@/i18n";
 import { REAUTH_CANCELLED } from "@/components/auth/reauth";
 import { describeError, log } from "@/lib/log";
 import { notify } from "@/lib/notify";
 import { record, type UndoStep, undo } from "@/lib/undo";
+import { dirtyEditorCount } from "@/lib/unsaved";
 
 import type { Problem } from "./generated/types.gen";
 import { fieldErrorsOf, isProblem, type ProblemCode } from "./problem";
@@ -76,8 +80,9 @@ export function setSessionExpiredHandler(handler: (() => void) | null): void {
 /** beforeunload guard; installed once by the app. Returns the remover. */
 export function installUnloadGuard(): () => void {
   const onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (pending === 0) return;
-    log.warn("unload_with_pending_writes", { pending });
+    const dirty = dirtyEditorCount();
+    if (pending === 0 && dirty === 0) return;
+    log.warn("unload_held", { pending, dirty_editors: dirty });
     event.preventDefault();
   };
   window.addEventListener("beforeunload", onBeforeUnload);
@@ -196,6 +201,7 @@ export async function runWrite<T>(options: WriteOptions<T>): Promise<WriteResult
 
   log.info(`${options.name}_ok`);
   const result = data as T; // no error → the generated client has parsed the body
+  await options.onSuccess?.(result);
   const message = typeof options.success === "function" ? options.success(result) : options.success;
   const step = options.undo?.(result) ?? null;
   if (step) record(step);
@@ -210,6 +216,5 @@ export async function runWrite<T>(options: WriteOptions<T>): Promise<WriteResult
         : {},
     );
   } else if (message) notify.failure(message.failure);
-  await options.onSuccess?.(result);
   return { ok: true, data: result };
 }

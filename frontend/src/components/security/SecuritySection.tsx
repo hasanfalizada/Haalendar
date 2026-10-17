@@ -3,8 +3,9 @@
 // (this device marked; sign out one or all others).
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results are reported through runWrite (one notification per write);
 // field-level errors stay next to the fields.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Leaving with a typed new password asks; Ctrl/Cmd+Enter saves.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type SubmitEvent, useState } from "react";
+import { type SubmitEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -27,7 +28,9 @@ import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { QrCode } from "@/components/ui/qr-code";
+import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
+import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 import { RecoveryCodesDialog } from "./RecoveryCodesDialog";
 
@@ -57,6 +60,17 @@ function ChangePassword({ me }: { me: Me }) {
   const [fieldError, setFieldError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const violations = passwordViolations(password, me.email, me.display_name);
+  const form = useRef<HTMLFormElement>(null);
+  const guard = useUnsavedGuard({
+    dirty: password !== "",
+    onDiscard: () => {
+      setPassword("");
+    },
+    scope: form,
+    onSave: () => {
+      if (password && !busy) form.current?.requestSubmit();
+    },
+  });
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,11 +98,13 @@ function ChangePassword({ me }: { me: Me }) {
 
   return (
     <form
+      ref={form}
       onSubmit={(e) => void onSubmit(e)}
       noValidate
       className="flex max-w-md flex-col gap-3"
       aria-labelledby="pw-title"
     >
+      <UnsavedChangesDialog prompt={guard.prompt} />
       <h3 id="pw-title" className="text-[13px] font-medium">
         {t("security.password.title")}
       </h3>

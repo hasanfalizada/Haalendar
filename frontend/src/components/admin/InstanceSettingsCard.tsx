@@ -2,8 +2,9 @@
 // only / open sign-up) and the 2FA requirement for administrators; SMTP and demo mode are shown read-only (set by the
 // deployment). Saves with If-Match and re-authentication.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. The result is reported through runWrite.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Leaving with unsaved changes asks; Ctrl/Cmd+Enter saves.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type SubmitEvent, useState } from "react";
+import { type SubmitEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { adminGetInstanceSettings, adminUpdateInstanceSettings } from "@/api/generated/sdk.gen";
@@ -13,6 +14,8 @@ import { runWrite } from "@/api/write";
 import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/input";
+import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
+import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 const instanceKey = ["admin", "instance-settings"] as const;
 
@@ -39,6 +42,18 @@ function InstanceForm({ current }: { current: InstanceSettings }) {
   const [requireTfa, setRequireTfa] = useState(current.require_admin_2fa);
   const [busy, setBusy] = useState(false);
   const dirty = mode !== current.registration_mode || requireTfa !== current.require_admin_2fa;
+  const form = useRef<HTMLFormElement>(null);
+  const guard = useUnsavedGuard({
+    dirty,
+    onDiscard: () => {
+      setMode(current.registration_mode);
+      setRequireTfa(current.require_admin_2fa);
+    },
+    scope: form,
+    onSave: () => {
+      if (dirty && !busy) form.current?.requestSubmit();
+    },
+  });
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,7 +84,7 @@ function InstanceForm({ current }: { current: InstanceSettings }) {
 
   return (
     <section aria-labelledby="instance-title" className="mx-4 mt-3 rounded-sm border border-line p-3">
-      <form onSubmit={(e) => void onSubmit(e)} noValidate className="flex flex-col gap-3">
+      <form ref={form} onSubmit={(e) => void onSubmit(e)} noValidate className="flex flex-col gap-3">
         <h2 id="instance-title" className="text-[11px] font-semibold tracking-wider text-muted uppercase">
           {t("admin.instance.title")}
         </h2>
@@ -108,6 +123,7 @@ function InstanceForm({ current }: { current: InstanceSettings }) {
           {current.demo_mode ? ` · ${t("admin.instance.demo")}` : ""}
         </p>
       </form>
+      <UnsavedChangesDialog prompt={guard.prompt} />
     </section>
   );
 }

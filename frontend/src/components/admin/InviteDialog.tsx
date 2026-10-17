@@ -2,8 +2,10 @@
 // the account is created at once and the one-time password is handed to the caller to show.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Through runWrite: a failure is shown inside the open dialog (a toast
 // would sit behind the modal), the success as a notification once the dialog has closed.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Closing with typed data (Esc, backdrop, close button, Cancel) asks;
+// Ctrl/Cmd+Enter sends.
 import { useQueryClient } from "@tanstack/react-query";
-import { type SubmitEvent, useState } from "react";
+import { type SubmitEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { adminKeys } from "@/api/admin";
@@ -13,6 +15,8 @@ import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
+import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
+import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 import { useAdminReasons } from "./admin-errors";
 import type { OneTimePassword } from "./OneTimePasswordDialog";
@@ -35,6 +39,22 @@ export function InviteDialog({ open, onClose, onAccountCreated }: InviteDialogPr
   const [emailError, setEmailError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+  const guard = useUnsavedGuard({
+    dirty: open && (email.trim() !== "" || name.trim() !== "" || role !== "user"),
+    inDialog: true,
+    scope: form,
+    onSave: () => {
+      if (!busy) form.current?.requestSubmit();
+    },
+  });
+
+  function close() {
+    guard.requestClose(() => {
+      reset();
+      onClose();
+    });
+  }
 
   function reset() {
     setEmail("");
@@ -94,10 +114,7 @@ export function InviteDialog({ open, onClose, onAccountCreated }: InviteDialogPr
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) {
-          reset();
-          onClose();
-        }
+        if (!next) close();
       }}
     >
       <DialogContent
@@ -105,7 +122,7 @@ export function InviteDialog({ open, onClose, onAccountCreated }: InviteDialogPr
         description={t("admin.invite.intro")}
         closeLabel={t("common.close")}
       >
-        <form onSubmit={(e) => void onSubmit(e)} noValidate className="flex flex-col gap-4">
+        <form ref={form} onSubmit={(e) => void onSubmit(e)} noValidate className="flex flex-col gap-4">
           {formError ? (
             <p role="alert" className="text-[13px] text-danger">
               {formError}
@@ -152,20 +169,14 @@ export function InviteDialog({ open, onClose, onAccountCreated }: InviteDialogPr
             )}
           </Field>
           <DialogFooter>
-            <Button
-              onClick={() => {
-                reset();
-                onClose();
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
+            <Button onClick={close}>{t("common.cancel")}</Button>
             <Button type="submit" variant="primary" disabled={busy}>
               {busy ? t("admin.invite.submitting") : t("admin.invite.submit")}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
+      <UnsavedChangesDialog prompt={guard.prompt} />
     </Dialog>
   );
 }

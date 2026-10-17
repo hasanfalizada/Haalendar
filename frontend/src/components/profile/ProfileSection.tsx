@@ -4,6 +4,8 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results through runWrite (one notification per write). Name and time
 // zone are kept as a local draft until the server confirms the save (useDraft); after a conflict or a reload the
 // draft is offered for restore. Signing out with drafts on the device asks first (they are deleted with the session).
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Leaving with unsaved changes asks (keep editing / leave — the draft
+// stays — / discard); Ctrl/Cmd+Enter saves.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -19,10 +21,12 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DraftNotice } from "@/components/ui/draft-notice";
+import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import { countDrafts } from "@/lib/drafts";
 import { notify } from "@/lib/notify";
 import { useDraft } from "@/lib/useDraft";
+import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 export function ProfileSection() {
   const { data: me } = useQuery(meQuery);
@@ -36,6 +40,7 @@ function ProfileForm({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
+  const form = useRef<HTMLFormElement>(null);
 
   const [name, setName] = useState(me.display_name);
   const [timeZone, setTimeZone] = useState(me.time_zone);
@@ -49,6 +54,20 @@ function ProfileForm({ me }: { me: Me }) {
     [me.display_name, me.time_zone],
   );
   const draft = useDraft({ scope: "profile", values: { display_name: name, time_zone: timeZone }, baseline });
+  const guard = useUnsavedGuard({
+    dirty,
+    hasDraft: true,
+    onLeave: () => draft.flush(),
+    onDiscard: async () => {
+      await draft.discard();
+      setName(me.display_name);
+      setTimeZone(me.time_zone);
+    },
+    scope: form,
+    onSave: () => {
+      if (dirty && !busy) form.current?.requestSubmit();
+    },
+  });
 
   function store(updated: Me) {
     rememberSession(queryClient, updated, updated.csrf_token ?? me.csrf_token ?? "");
@@ -172,7 +191,7 @@ function ProfileForm({ me }: { me: Me }) {
       </div>
       <p className="-mt-2 text-xs text-muted">{t("profile.avatarHint")}</p>
 
-      <form onSubmit={(e) => void onSave(e)} noValidate className="flex max-w-md flex-col gap-4">
+      <form ref={form} onSubmit={(e) => void onSave(e)} noValidate className="flex max-w-md flex-col gap-4">
         <Field id="profile-name" label={t("profile.name")} error={nameError}>
           {(aria) => (
             <Input
@@ -214,6 +233,7 @@ function ProfileForm({ me }: { me: Me }) {
         </Button>
       </div>
 
+      <UnsavedChangesDialog prompt={guard.prompt} />
       <ConfirmDialog
         open={confirmSignOut}
         title={t("drafts.signOutTitle")}

@@ -578,6 +578,15 @@
     "listSelect": "Select or unselect the item",
     "open": "Open the item",
     "restore": "Restore the entry",
-    "listDelete": "Delete the selection (asks first)"
+    "listDelete": "Delete the selection (asks first)",
+    "save": "Save"
+  },
+  "unsaved": {
+    "title": "Unsaved changes",
+    "body": "Your changes have not been saved yet.",
+    "bodyDraft": "Your changes have not been saved yet. If you leave, they stay on this device and are offered next time.",
+    "keep": "Keep editing",
+    "leave": "Leave, keep the draft",
+    "discard": "Discard changes"
   }
 }

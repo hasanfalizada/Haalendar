@@ -2,8 +2,9 @@
 // they exist): invite another user of the instance by e-mail with view or edit permission, change or remove existing
 // access. Wired into the calendar list by HAAL-094 and into boards and notes by their tasks.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Failures are shown inside the dialog, successes as notifications.
+// +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Closing with a typed address asks; Ctrl/Cmd+Enter shares.
 import { useQuery } from "@tanstack/react-query";
-import { type SubmitEvent, useState } from "react";
+import { type SubmitEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ContainerKind, Permission, Share } from "@/api/generated/types.gen";
@@ -11,6 +12,8 @@ import { sharesQuery } from "@/api/sharing";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
+import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
+import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 import { ShareRow } from "./ShareRow";
 import { type ActionResult, useShareActions } from "./useShareActions";
@@ -36,6 +39,18 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
   const [emailError, setEmailError] = useState<string | undefined>();
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+  const guard = useUnsavedGuard({
+    dirty: open && email.trim() !== "",
+    inDialog: true,
+    onDiscard: () => {
+      setEmail("");
+    },
+    scope: form,
+    onSave: () => {
+      if (!busy) form.current?.requestSubmit();
+    },
+  });
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,7 +84,7 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next) guard.requestClose(onClose);
       }}
     >
       <DialogContent
@@ -77,7 +92,12 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
         description={t("sharing.dialogIntro")}
         closeLabel={t("common.close")}
       >
-        <form onSubmit={(e) => void onSubmit(e)} noValidate className="flex flex-col gap-3 md:flex-row md:items-start">
+        <form
+          ref={form}
+          onSubmit={(e) => void onSubmit(e)}
+          noValidate
+          className="flex flex-col gap-3 md:flex-row md:items-start"
+        >
           <div className="flex-1">
             <Field id="share-email" label={t("auth.email")} error={emailError}>
               {(aria) => (
@@ -143,6 +163,7 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
           )}
         </section>
       </DialogContent>
+      <UnsavedChangesDialog prompt={guard.prompt} />
     </Dialog>
   );
 }

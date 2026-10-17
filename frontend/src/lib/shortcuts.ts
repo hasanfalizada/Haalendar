@@ -18,8 +18,11 @@ export interface ShortcutSpec {
   /** Translation key of the description. */
   label: string;
   labelValues?: Record<string, string>;
-  /** Without a handler the shortcut is only listed (the focused widget handles the key itself). */
-  handler?: (event: KeyboardEvent) => void;
+  /**
+   * Without a handler the shortcut is only listed (the focused widget handles the key itself). A handler returning
+   * false declines the key, which then goes to the next registration (e.g. "save" of another editor).
+   */
+  handler?: (event: KeyboardEvent) => unknown;
   allowInFields?: boolean;
   allowInDialog?: boolean;
   enabled?: boolean;
@@ -113,9 +116,9 @@ function onKeyDown(event: KeyboardEvent): void {
     if (typing && !spec.allowInFields) continue;
     if (inDialog && !spec.allowInDialog) continue;
     if (!spec.keys.some((keys) => matches(event, keys))) continue;
+    if (spec.handler(event) === false) continue;
     event.preventDefault();
     log.debug("shortcut", { id: spec.id });
-    spec.handler(event);
     return;
   }
 }
