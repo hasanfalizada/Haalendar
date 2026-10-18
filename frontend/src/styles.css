@@ -26,7 +26,9 @@
   --warn-fg: #78350f;
   --ev-red: #dc2626;
   --ev-orange: #ea580c;
-  --ev-yellow: #eab308;
+  /* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (D-47). Light-theme yellow darkened from #eab308 (1.92:1 against
+     white) to keep the colour bar and swatch at ≥ 3:1 (WCAG 1.4.11); checked by palette-contrast.test.ts. */
+  --ev-yellow: #b88a00;
   --ev-green: #16a34a;
   --ev-blue: #2563eb;
   --ev-purple: #9333ea;
@@ -52,6 +54,10 @@
   --warn-bg: #3a2a08;
   --warn-fg: #fde68a;
   --ev-black: #9ca3af;
+  /* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (D-47). Dark-theme brown lightened from #92400e (2.64:1); yellow
+     keeps its original bright value here (the darker light-theme variant is only needed on white). */
+  --ev-yellow: #eab308;
+  --ev-brown: #a8622a;
   color-scheme: dark;
 }
 
@@ -117,4 +123,41 @@
    toasts (Retry, Close) must stay usable on top of it. */
 [data-sonner-toast] {
   pointer-events: auto;
+}
+
+/* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (FR-X-13, D-47). User colours on items: `ev-<colour>` picks the colour,
+   `ev-tint` mixes 16 % of it into the background (text keeps the normal foreground colour, so text contrast does not
+   depend on the colour), `ev-bar` draws the 4 px colour bar, `ev-swatch` fills a colour sample. */
+.ev-red {
+  --ev: var(--ev-red);
+}
+.ev-orange {
+  --ev: var(--ev-orange);
+}
+.ev-yellow {
+  --ev: var(--ev-yellow);
+}
+.ev-green {
+  --ev: var(--ev-green);
+}
+.ev-blue {
+  --ev: var(--ev-blue);
+}
+.ev-purple {
+  --ev: var(--ev-purple);
+}
+.ev-brown {
+  --ev: var(--ev-brown);
+}
+.ev-black {
+  --ev: var(--ev-black);
+}
+.ev-tint {
+  background-color: color-mix(in srgb, var(--ev) 16%, var(--bg));
+}
+.ev-bar {
+  border-left: 4px solid var(--ev);
+}
+.ev-swatch {
+  background-color: var(--ev);
 }

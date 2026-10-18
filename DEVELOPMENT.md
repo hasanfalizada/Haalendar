@@ -313,6 +313,10 @@ Images hang off items (`item` table, D-45). The API takes the raw body: `POST /a
 
 The rules live in the atom `items.priority.v1` (`atoms/items.priority.v1`): server code sorts and filters with `rank_sql` / `filter_sql` from `haalendar.atoms.items.priority`, the web app with `sortByPriority` / `filterByPriority` from `src/atoms/items/priority.ts`. UI pieces are in `src/components/ui/priority.tsx` (`PriorityBadge` — pass `hideDefault` in list rows —, `PrioritySelect`, `PriorityFilter`); keep the filter in the route's search params with `parsePriorityParam` / `formatPriorityParam`.
 
+### Colors
+
+User colors come from `frontend/src/lib/palette.ts` (order, default brown) and the `ev-*` classes in `styles.css`: `itemColorClasses(color)` gives a row the 16 % tint and the 4 px bar, `ColorSwatch` / `ColorPicker` (`components/ui/color-picker.tsx`) show and choose colors. Changing a `--ev-*` token is checked by `palette-contrast.test.ts` (text ≥ 4.5:1 on the tint, bar ≥ 3:1, both themes); the palette list itself is checked against the contract and the backend by `backend/tests/test_palette.py`.
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.

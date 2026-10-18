@@ -3,32 +3,22 @@
 // to next day. A list shows only the actions its rows support (`actions`); color and priority open a small menu.
 // Sticks to the bottom on phones so it stays reachable with a thumb.
 // +++===+++ 2026-10-17 — Hasan Alizada — HAAL-041. The priority menu shows the priority badges (atom order).
+// +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042. Colours come from the shared palette.
 import { CalendarArrowUp, Palette, RotateCcw, Signal, Trash2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Color } from "@/api/generated/types.gen";
 import { PRIORITIES, type Priority } from "@/atoms/items/priority";
 import type { BulkAction } from "@/lib/bulk";
+import type { Color } from "@/api/generated/types.gen";
+import { COLORS } from "@/lib/palette";
 import type { Selection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 
 import { Button } from "./button";
+import { ColorSwatch } from "./color-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
 import { PriorityBadge } from "./priority";
-
-const COLORS: readonly Color[] = ["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"];
-// Full class names so Tailwind finds them.
-const SWATCH: Record<Color, string> = {
-  red: "bg-ev-red",
-  orange: "bg-ev-orange",
-  yellow: "bg-ev-yellow",
-  green: "bg-ev-green",
-  blue: "bg-ev-blue",
-  purple: "bg-ev-purple",
-  brown: "bg-ev-brown",
-  black: "bg-ev-black",
-};
 
 interface BulkBarProps {
   selection: Selection;
@@ -109,8 +99,8 @@ export function BulkBar({ selection, total, actions, busy = false, onAction, cla
                       onAction("set_color", color);
                     }}
                   >
-                    <span aria-hidden className={cn("size-3 rounded-full", SWATCH[color])} />
-                    {t(`bulk.colors.${color}`)}
+                    <ColorSwatch color={color} />
+                    {t(`palette.colors.${color}`)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

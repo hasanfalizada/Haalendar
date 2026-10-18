@@ -32,7 +32,9 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
-      css: false,
+      // +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042. CSS stays off in tests except styles.css, which the palette
+      // contrast test reads as text (`?raw`) to check the colour tokens.
+      css: { include: [/src\/styles\.css/] },
       // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. At most 4 parallel workers: on WSL /mnt drives starting one
       // fork per core made late workers miss Vitest's fixed 60 s start timeout.
       maxWorkers: 4,

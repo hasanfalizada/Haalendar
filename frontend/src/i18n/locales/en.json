@@ -531,16 +531,6 @@
     "priority": "Priority",
     "moveNextDay": "Move to next day",
     "clear": "Clear selection",
-    "colors": {
-      "red": "Red",
-      "orange": "Orange",
-      "yellow": "Yellow",
-      "green": "Green",
-      "blue": "Blue",
-      "purple": "Purple",
-      "brown": "Brown",
-      "black": "Black"
-    },
     "conflict_one": "{{count}} of {{total}} selected was changed elsewhere in the meantime. Nothing was changed — the list is refreshed, please try again.",
     "conflict_other": "{{count}} of {{total}} selected were changed elsewhere in the meantime. Nothing was changed — the list is refreshed, please try again.",
     "refused_one": "{{count}} of {{total}} selected cannot be changed this way. Nothing was changed.",
@@ -615,5 +605,18 @@
     },
     "filter": "Filter by priority",
     "all": "All"
+  },
+  "palette": {
+    "title": "Color",
+    "colors": {
+      "red": "Red",
+      "orange": "Orange",
+      "yellow": "Yellow",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "brown": "Brown",
+      "black": "Black"
+    }
   }
 }

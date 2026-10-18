@@ -29,7 +29,7 @@ Brand values from `design/brand-guidelines.md`. Neutrals have a slight teal bias
 | `ok` | `#15803D` | `#4ADE80` | Success states |
 | `warn-bg` / `warn-fg` | `#FEF3C7` / `#78350F` | `#3A2A08` / `#FDE68A` | Overdue counter, offline banner, duplicate warning |
 
-**Event colors** (FR-X-13): red `#DC2626`, orange `#EA580C`, yellow `#EAB308`, green `#16A34A`, blue `#2563EB`, purple `#9333EA`, brown `#92400E` (default), black `#1F2937` (dark theme `#9CA3AF`).
+**Event colors** (FR-X-13): red `#DC2626`, orange `#EA580C`, yellow `#B88A00` (dark theme `#EAB308`), green `#16A34A`, blue `#2563EB`, purple `#9333EA`, brown `#92400E` (default; dark theme `#A8622A`), black `#1F2937` (dark theme `#9CA3AF`). Amended 2026-10-18 by D-47: light yellow and dark brown changed so the color bar and swatches reach ≥ 3:1 against the page (WCAG 1.4.11) — previously 1.92:1 and 2.64:1. Tint = 16 %; an automated test checks text on the tint ≥ 4.5:1 and bar ≥ 3:1 for all colors in both themes.
 Rendering rule: an event is a **tint (13–18 % of the color mixed into `bg`) + 4 px left bar** in the full color; text stays `fg`. Text contrast is therefore independent of the event color (legacy used white text on saturated fills, which fails AA for yellow, orange and green).
 
 ## 3. Typography
