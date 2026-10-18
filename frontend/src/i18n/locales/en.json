@@ -618,5 +618,32 @@
       "brown": "Brown",
       "black": "Black"
     }
+  },
+  "export": {
+    "title": "Your data",
+    "intro": "Download a copy of everything you own in Haalendar as a ZIP archive: all records in one JSON file (deleted ones included), your calendars as iCalendar files and, if you like, your images. The archive is prepared in the background and can be downloaded for 7 days.",
+    "choose": "What to include",
+    "modules": {
+      "calendar": "Calendar",
+      "todo": "To-Do",
+      "kanban": "Kanban"
+    },
+    "images": "Include images (larger archive)",
+    "withImages": "with images",
+    "create": "Create export",
+    "queued": "Your export is being prepared. You can leave this page; you will be told when it is ready.",
+    "busy": "An export is already being prepared. Wait until it is ready.",
+    "ready": "Your export is ready to download.",
+    "history": "Your exports",
+    "requested": "Requested {{date}}",
+    "until": "available until {{date}}",
+    "download": "Download",
+    "status": {
+      "queued": "Waiting",
+      "running": "Preparing…",
+      "ready": "Ready",
+      "failed": "Failed",
+      "expired": "Expired"
+    }
   }
 }

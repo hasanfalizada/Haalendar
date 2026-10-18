@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import haalendar.accounts.models
 import haalendar.attachments.models
 import haalendar.audit.models
+import haalendar.exports.models
 import haalendar.planning.models  # noqa: F401 — registers planning tables on Base.metadata
 from haalendar.config import load_settings
 from haalendar.dbroles import apply_app_grants

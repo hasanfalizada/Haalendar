@@ -26,8 +26,11 @@ describe("AppShell", () => {
       "fetch",
       vi.fn(
         async () =>
+          // +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. JSON content type: without it the client reads text and
+          // the pages visited here (e.g. the trash) crashed into the error boundary.
           new Response(JSON.stringify({ status: "ok", version: "0.1.0", data: [], next_cursor: null }), {
             status: 200,
+            headers: { "Content-Type": "application/json" },
           }),
       ),
     );

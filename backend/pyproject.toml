@@ -24,6 +24,8 @@ dependencies = [
   "blake3==1.0.10",
   # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Pinned IANA time zone database (same rules on every host).
   "tzdata==2026.5",
+  # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Background jobs on PostgreSQL (ADR-0003): data export archives.
+  "procrastinate==3.10.0",
 ]
 
 [dependency-groups]
@@ -33,11 +35,15 @@ dev = [
   "ruff==0.17.0",
   "mypy==2.4.0",
   "pip-audit==2.10.1",
+  # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Tests validate export archives against the published JSON Schema.
+  "jsonschema==4.26.0",
+  "types-jsonschema==4.26.0.20261006",
 ]
 
 [project.scripts]
 haalendar-api = "haalendar.main:run"
 haalendar-db-bootstrap = "haalendar.dbroles:main"
+haalendar-worker = "haalendar.jobs:run_worker"
 
 [build-system]
 requires = ["hatchling"]

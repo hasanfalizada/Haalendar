@@ -129,7 +129,8 @@ paths:
   /search: { $ref: './modules/collab.yaml#/paths/search' }
   /trash: { $ref: './modules/collab.yaml#/paths/trash' }
   /trash/restore: { $ref: './modules/collab.yaml#/paths/trash_restore' }
-  /export: { $ref: './modules/collab.yaml#/paths/export' }
+  /exports: { $ref: './modules/collab.yaml#/paths/exports' }
+  /exports/{id}/download: { $ref: './modules/collab.yaml#/paths/export_download' }
   /notifications: { $ref: './modules/collab.yaml#/paths/notifications' }
   /notifications/read: { $ref: './modules/collab.yaml#/paths/notifications_read' }
   /bulk: { $ref: './modules/collab.yaml#/paths/bulk' }

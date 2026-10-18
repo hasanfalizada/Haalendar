@@ -13,6 +13,7 @@ How Haalendar is specified, designed and built — requirements and every owner 
 | [`architecture/`](architecture/) | [Domain model, ER diagrams and data dictionary](architecture/domain-model.md), [time handling](architecture/time-handling.md) |
 | [`design/`](design/) | [Brand guidelines](design/brand-guidelines.md), [design system](design/design-system.md), [wireframes](design/wireframes.html) |
 | [`security/`](security/) | [Security baseline](security/security-baseline.md) (OWASP ASVS 5.0 L2, Top 10, API Top 10 — status per control) |
+| [`export/`](export/) | [Data export](export/README.md): archive layout, archive.json schema and versioning |
 
 ## Where things live
 - **`docs/` (this folder):** development documentation — requirements, architecture, ADRs, design, security, later QA and handover notes.

@@ -26,6 +26,7 @@ from haalendar.authz import require
 from haalendar.deps import Auth, DbSession
 from haalendar.errors import ProblemError
 from haalendar.main import create_app
+from haalendar.security.no_delete import SERVICE_TABLES
 from haalendar.security.rls import PROTECTED_TABLES
 
 from .account_helpers import create_user, login
@@ -113,7 +114,9 @@ def test_application_role_is_least_privilege(db_url: str) -> None:
         ).fetchall()
     assert rights, "no tables visible"
     for table, can_delete, can_truncate, can_update in rights:
-        assert not can_delete and not can_truncate, table
+        # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Only listed service tables may lose rows (D-48).
+        assert can_delete == (table in SERVICE_TABLES), table
+        assert not can_truncate, table
         assert can_update == (table not in {"alembic_version", "audit_log"}), table
 
 

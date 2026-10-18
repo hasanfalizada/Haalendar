@@ -56,6 +56,7 @@ const DEFAULTS: Record<string, Handler> = {
   "GET /health/ready": () => json({ status: "ok", version: "0.1.0" }),
   "GET /shares": () => json({ data: [] }),
   "GET /me/sessions": () => json({ data: [] }),
+  "GET /exports": () => json({ data: [] }),
   "GET /admin/settings": () =>
     json({
       registration_mode: "invite",

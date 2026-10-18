@@ -7,11 +7,19 @@ Deliberate maintenance (throw-away test databases; later the demo reset or an ap
 superuser with `SET session_replication_role = replica`, which skips these triggers for that session only.
 Every migration that creates a table calls forbid_delete_triggers(); the test suite fails for a table without them.
 Builders are frozen once used by an applied migration (same rule as haalendar.security.rls).
++++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (owner decision D-48). The ban protects user content and its
+metadata. Service data may be removed: SERVICE_TABLES lists every such table with the reason, and the test suite
+fails for any other table without the triggers. Today only the job queue's worker registry, which Procrastinate
+cleans up itself when a worker stops or stops responding.
 """
 
 from __future__ import annotations
 
-EXEMPT_TABLES = frozenset({"alembic_version"})
+# Service tables whose rows may be physically removed (never user content or its metadata), with the reason.
+SERVICE_TABLES: dict[str, str] = {
+    "procrastinate_workers": "job queue worker registry: removed by Procrastinate on shutdown or missed heartbeats",
+}
+EXEMPT_TABLES = frozenset({"alembic_version", *SERVICE_TABLES})
 
 FORBID_DELETE_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_forbid_delete() RETURNS trigger

@@ -127,6 +127,10 @@ def clean_db(owner_db_url: str, db_url: str) -> Iterator[str]:
         # replica replication role skips the no-delete triggers (throw-away test database only).
         conn.execute("SET session_replication_role = replica")
         conn.execute("TRUNCATE session, auth_token, recovery_code, share, calendar RESTART IDENTITY")
+        # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Items, attachments, exports and queued jobs as well.
+        conn.execute(
+            "TRUNCATE attachment, item, export_request, procrastinate_events, procrastinate_jobs CASCADE"
+        )
         conn.execute(
             "UPDATE instance_settings SET updated_by = NULL, registration_mode = 'invite', require_admin_2fa = false"
         )

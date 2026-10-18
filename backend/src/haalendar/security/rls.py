@@ -23,12 +23,13 @@ from typing import Literal
 ContainerKind = Literal["calendar", "board", "note"]
 
 # Table → protection pattern. A table with owner_id / container_id / grantee_id that is missing here fails the tests.
-PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content"]] = {
+PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "self"]] = {
     "calendar": "container",
     "share": "share",
     "audit_log": "audit",  # HAAL-032: haalendar.audit.sql.audit_read_policy
     "item": "content",  # HAAL-040: content_policies
     "attachment": "content",  # HAAL-040: content_policies
+    "export_request": "self",  # HAAL-043: self_policies
 }
 
 CURRENT_USER_FUNCTION = """
@@ -108,6 +109,18 @@ def content_policies(table: str, author_column: str) -> list[str]:
         f"CREATE POLICY {table}_read ON {table} FOR SELECT USING ({owns} OR {shared} IS NOT NULL)",
         f"CREATE POLICY {table}_insert ON {table} FOR INSERT WITH CHECK ({writable} AND {author_column} = {me})",
         f"CREATE POLICY {table}_update ON {table} FOR UPDATE USING ({writable}) WITH CHECK ({writable})",
+    ]
+
+
+# +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Rows that belong to one user only (e.g. their data exports): read,
+# insert and update by the owner_id user; nobody else, administrators included.
+def self_policies(table: str) -> list[str]:
+    me = "haalendar_current_user_id()"
+    return [
+        f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+        f"CREATE POLICY {table}_read ON {table} FOR SELECT USING (owner_id = {me})",
+        f"CREATE POLICY {table}_insert ON {table} FOR INSERT WITH CHECK (owner_id = {me})",
+        f"CREATE POLICY {table}_update ON {table} FOR UPDATE USING (owner_id = {me}) WITH CHECK (owner_id = {me})",
     ]
 
 

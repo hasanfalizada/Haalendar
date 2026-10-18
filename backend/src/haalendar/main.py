@@ -11,6 +11,7 @@ token-protected /metrics endpoint are wired here.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-033. Trash router.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036. Bulk router.
 +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Attachment routers.
++++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Export router; the job queue is opened for the app's lifetime.
 """
 
 from __future__ import annotations
@@ -31,6 +32,8 @@ from haalendar.bulk.api import router as bulk_router
 from haalendar.config import Environment, Settings, get_settings
 from haalendar.db import create_engine, create_session_factory, role_bypasses_rls
 from haalendar.errors import install_error_handlers
+from haalendar.exports.api import router as exports_router
+from haalendar.jobs import JobQueue
 from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
 from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
@@ -74,9 +77,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             demo_mode=settings.demo_mode,
             mail_mode=type(app.state.mailer).__name__,
         )
+        jobs = JobQueue(settings)
+        app.state.jobs = jobs
         try:
             yield
         finally:
+            await jobs.close()
             await engine.dispose()
             log.info("app_stopped")
 
@@ -119,6 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(bulk_router, prefix=API_PREFIX)
     app.include_router(attachment_items_router, prefix=API_PREFIX)
     app.include_router(attachments_router, prefix=API_PREFIX)
+    app.include_router(exports_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

@@ -110,6 +110,14 @@ set -a; source ../.env; set +a
 uv run haalendar-api
 ```
 
+Terminal 3 (optional, needed for data exports) — background worker:
+
+```bash
+cd backend
+set -a; source ../.env; set +a
+uv run haalendar-worker
+```
+
 Terminal 2 — web app on `http://localhost:5173` (proxies `/api/v1` to port 8080):
 
 ```bash
@@ -316,6 +324,10 @@ The rules live in the atom `items.priority.v1` (`atoms/items.priority.v1`): serv
 ### Colors
 
 User colors come from `frontend/src/lib/palette.ts` (order, default brown) and the `ev-*` classes in `styles.css`: `itemColorClasses(color)` gives a row the 16 % tint and the 4 px bar, `ColorSwatch` / `ColorPicker` (`components/ui/color-picker.tsx`) show and choose colors. Changing a `--ev-*` token is checked by `palette-contrast.test.ts` (text ≥ 4.5:1 on the tint, bar ≥ 3:1, both themes); the palette list itself is checked against the contract and the backend by `backend/tests/test_palette.py`.
+
+### Background jobs and data export
+
+Jobs run on Procrastinate (`haalendar/jobs.py`): define a task in `make_job_app`, defer it from the API through `request.app.state.jobs`, run them with `haalendar-worker`. Jobs connect as the application role — set `app.user_id` for the user the job works for, so row-level security applies. The export (`haalendar/exports/`, format in [docs/export](docs/export/README.md)) is built from sections: a module adds its rows and files to `SECTIONS` in `exports/sections.py` and, for new fields, extends the 1.x schema. Physical deletion is allowed only for service data listed in `haalendar.security.no_delete.SERVICE_TABLES` (and files such as expired archives); never for user content or its metadata.
 
 ### Audit log
 

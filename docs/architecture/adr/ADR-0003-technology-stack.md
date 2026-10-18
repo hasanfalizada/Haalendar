@@ -96,6 +96,11 @@ Decision: **React + Vite SPA** with TanStack Router (type-safe routing) and TanS
 2. Pants → uv + pnpm workspaces — approved.
 3. Prisma/SQLModel → SQLAlchemy 2.1 + Alembic — approved.
 
+## 8. Addendum — background jobs in place (HAAL-043, 2026-10-18)
++++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (D-48).
+
+Procrastinate 3.10.0 is introduced with the data export: its schema is applied by migration 0011; tasks are defined per process (`haalendar.jobs.make_job_app`); the API defers jobs, a separate process `haalendar-worker` runs them (the same image, another command in deployment). Jobs connect as the application role, so row-level security applies. Finished jobs are kept; the library removes only rows of its worker registry, which is service data (the soft-delete rule protects user content and its metadata, see D-48).
+
 ## 7. Addendum — frontend tooling decisions (HAAL-017, 2026-10-14)
 Open items from section 4 resolved while building the frontend shell:
 | Item | Decision | Reason |

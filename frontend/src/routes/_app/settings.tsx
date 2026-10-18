@@ -4,9 +4,11 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. The account section became the profile section (incl. sign-out).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing overview (shared by me / with me).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Security section (password, 2FA, sessions).
+// +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. "Your data": export archives (#export).
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
+import { ExportSection } from "@/components/exports/ExportSection";
 import { ProfileSection } from "@/components/profile/ProfileSection";
 import { SecuritySection } from "@/components/security/SecuritySection";
 import { SharingSection } from "@/components/sharing/SharingSection";
@@ -62,6 +64,7 @@ function SettingsPage() {
       <ProfileSection />
       <SecuritySection />
       <SharingSection />
+      <ExportSection />
     </div>
   );
 }

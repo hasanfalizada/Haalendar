@@ -5,6 +5,8 @@ addressed by their BLAKE3 content hash under a per-user prefix, so storing the s
 never deleted (FR-X-01): a record that stops referencing a file (avatar removed, attachment soft-deleted) keeps the
 file. v1.0 ships the local adapter; an S3-compatible adapter follows in v1.1. Downloads always go through the API with
 an authorization check.
++++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Data export archives are service data, not user content (D-48): they
+live apart under exports/<owner>/<export id>.zip and are removed when they expire after 7 days.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from haalendar.logging import get_logger
 
 log = get_logger(__name__)
 
+EXPORT_KEY_PATTERN = re.compile(r"^exports/[0-9a-f-]{36}/[0-9a-f-]{36}\.zip$")
 # <owner uuid>/<64 hex BLAKE3>.<extension>
 KEY_PATTERN = re.compile(r"^[0-9a-f-]{36}/[0-9a-f]{64}\.(png|jpg|gif|webp)$")
 EXTENSIONS = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
@@ -43,6 +46,12 @@ class Storage(Protocol):
     def get(self, key: str) -> bytes | None: ...
 
     def stat(self, key: str) -> int | None: ...
+
+    def export_key(self, owner_id: uuid.UUID, export_id: uuid.UUID) -> str: ...
+
+    def export_path(self, key: str) -> Path: ...
+
+    def remove_export(self, key: str) -> None: ...
 
 
 def content_hash(data: bytes) -> str:
@@ -92,6 +101,21 @@ class LocalStorage:
     def stat(self, key: str) -> int | None:
         path = self._path(key)
         return path.stat().st_size if path.is_file() else None
+
+    def export_key(self, owner_id: uuid.UUID, export_id: uuid.UUID) -> str:
+        return f"exports/{owner_id}/{export_id}.zip"
+
+    def export_path(self, key: str) -> Path:
+        if not EXPORT_KEY_PATTERN.match(key):
+            raise ValueError("invalid export key")
+        path = self.root / key
+        path.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
+        return path
+
+    def remove_export(self, key: str) -> None:
+        path = self.export_path(key)
+        path.unlink(missing_ok=True)  # physical-delete-allowed: expired export archive, service data (D-48)
+        log.info("export_archive_removed", key=key)
 
 
 def create_storage(settings: Settings) -> Storage:

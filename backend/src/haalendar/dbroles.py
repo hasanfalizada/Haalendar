@@ -30,6 +30,9 @@ TABLE_PRIVILEGES: dict[str, tuple[str, ...]] = {
     "alembic_version": ("SELECT",),
     # HAAL-032: written only by SECURITY DEFINER triggers; the application can read (under RLS), never write.
     "audit_log": ("SELECT",),
+    # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (D-48). Service data: the worker removes its own registration
+    # (haalendar.security.no_delete.SERVICE_TABLES); user content never gets DELETE.
+    "procrastinate_workers": ("SELECT", "INSERT", "UPDATE", "DELETE"),
 }
 ROLE_NAME = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 

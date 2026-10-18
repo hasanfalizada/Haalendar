@@ -203,18 +203,63 @@ paths:
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
 
-  export:
+  # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (D-48). Google-Takeout style: request an export (chosen modules,
+  # images optional), a background job builds a ZIP (archive.json per ExportFile + schema, iCalendar files, images,
+  # README.html), the archive can be downloaded for 7 days; the request history stays.
+  exports:
     get:
       tags: [export]
-      operationId: exportData
-      summary: Download all items owned by the user (3 modules) as JSON, including soft-deleted with deleted_at; attachment metadata only (FR-X-14)
+      operationId: listExports
+      summary: The user's export requests, newest first (at most 20); expired archives show status expired
       responses:
         '200':
-          description: Export file (Content-Disposition attachment)
+          description: Export requests
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ExportFile' }
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ExportRequest' } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [export]
+      operationId: requestExport
+      summary: Request a data export of the chosen modules (FR-X-14); needs a recent password confirmation
+      description: >-
+        Exports what the user owns: the containers they own and everything in them, soft-deleted records included
+        with deleted_at. One export at a time (409 invalid_state while one is queued or running). The archive is built
+        in the background; poll listExports (an e-mail is sent when mail is configured).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modules]
+              properties:
+                modules: { type: array, minItems: 1, maxItems: 3, uniqueItems: true, items: { type: string, enum: [calendar, todo, kanban] } }
+                include_images: { type: boolean, default: false, description: Put the image files of attachments into the archive. }
+      responses:
+        '202': { description: Queued, content: { application/json: { schema: { $ref: '#/components/schemas/ExportRequest' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  export_download:
+    get:
+      tags: [export]
+      operationId: downloadExport
+      summary: Download a ready export archive (ZIP) while it has not expired
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200':
+          description: ZIP archive (Content-Disposition attachment; haalendar-export-YYYY-MM-DD.zip)
+          content: { application/zip: { schema: { type: string, contentMediaType: application/zip } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
 
   notifications:
     get:
@@ -397,14 +442,34 @@ components:
         payload: { type: object }
         created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
         read_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
-    ExportFile:
+    ExportRequest:
       type: object
-      required: [format, schema_version, exported_at, user, calendars, events, notes, boards]
+      required: [id, status, modules, include_images, requested_at]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        status: { type: string, enum: [queued, running, ready, failed, expired] }
+        modules: { type: array, items: { type: string, enum: [calendar, todo, kanban] } }
+        include_images: { type: boolean }
+        requested_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        finished_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        expires_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        size_bytes: { type: integer }
+        counts: { type: object, additionalProperties: { type: integer }, description: Records per archive.json section }
+        error: { type: string, description: Error code when status is failed }
+        download_url: { type: string, format: uri-reference, description: Present while status is ready }
+    ExportFile:
+      description: >-
+        archive.json inside the export ZIP (D-48). The standalone JSON Schema (backend/src/haalendar/exports/
+        haalendar-export-1.0.schema.json, also inside every archive) is the authoritative description.
+      type: object
+      required: [format, schema_version, exported_at, user, modules, calendars, events, notes, boards, labels, checklist_items, comments, links, reminders, attachments]
       properties:
         format: { const: haalendar-export }
         schema_version: { type: string, example: '1.0' }
         exported_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
-        user: { type: object, properties: { id: { type: string }, email: { type: string }, display_name: { type: string } } }
+        user: { type: object, properties: { id: { type: string }, email: { type: string }, display_name: { type: string }, time_zone: { type: string } } }
+        modules: { type: array, items: { type: string, enum: [calendar, todo, kanban] } }
+        include_images: { type: boolean }
         calendars: { type: array, items: { $ref: './calendar.yaml#/components/schemas/Calendar' } }
         events: { type: array, items: { $ref: './calendar.yaml#/components/schemas/Event' } }
         notes: { type: array, items: { $ref: './notes.yaml#/components/schemas/Note' } }

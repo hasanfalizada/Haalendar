@@ -1,0 +1,660 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hasanfalizada/Haalendar/schemas/haalendar-export-1.0.schema.json",
+  "$comment": "+++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (FR-X-14, D-48). Format of archive.json in a Haalendar export archive. Versioning: 1.x adds optional fields or sections (readers must ignore what they do not know); a breaking change becomes 2.0. Documentation: docs/export/README.md.",
+  "title": "Haalendar export archive (archive.json)",
+  "type": "object",
+  "required": [
+    "format",
+    "schema_version",
+    "exported_at",
+    "user",
+    "modules",
+    "calendars",
+    "events",
+    "notes",
+    "boards",
+    "labels",
+    "checklist_items",
+    "comments",
+    "links",
+    "reminders",
+    "attachments"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path of this schema inside the archive."
+    },
+    "format": {
+      "const": "haalendar-export"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+$"
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "user": {
+      "type": "object",
+      "required": [
+        "id",
+        "email",
+        "display_name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "email": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "time_zone": {
+          "type": "string",
+          "description": "IANA zone of the profile"
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "calendar",
+          "todo",
+          "kanban"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Modules chosen for this export; sections of other modules are empty."
+    },
+    "include_images": {
+      "type": "boolean",
+      "description": "Whether the image files of attachments are in the archive."
+    },
+    "calendars": {
+      "type": "array",
+      "description": "Calendars the user owns (all of them, deleted ones included).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "owner_id",
+          "name",
+          "color",
+          "is_default",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "color": {
+            "enum": [
+              "red",
+              "orange",
+              "yellow",
+              "green",
+              "blue",
+              "purple",
+              "brown",
+              "black"
+            ]
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "archived_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "permission": {
+            "const": "owner"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "Events in the user's calendars (filled once the events module ships; shape in api/modules/calendar.yaml Event).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "notes": {
+      "type": "array",
+      "description": "Notes the user owns (To-Do module; shape in api/modules/notes.yaml Note).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "boards": {
+      "type": "array",
+      "description": "Boards the user owns with columns and cards (Kanban module; shape in api/modules/kanban.yaml BoardDetail).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "labels": {
+      "type": "array",
+      "description": "Labels (shape in api/modules/items.yaml Label).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "checklist_items": {
+      "type": "array",
+      "description": "Checklist items (shape in api/modules/items.yaml ChecklistItem).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "comments": {
+      "type": "array",
+      "description": "Card comments (shape in api/modules/items.yaml Comment).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "links": {
+      "type": "array",
+      "description": "Links between items (shape in api/modules/items.yaml Link).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "reminders": {
+      "type": "array",
+      "description": "Reminders (shape in api/modules/items.yaml Reminder).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Attachment metadata of items in the user's containers; the image itself is at archive_path when the export includes images.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "item_id",
+          "file_name",
+          "media_type",
+          "size_bytes",
+          "content_hash",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "media_type": {
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/webp",
+              "image/gif"
+            ]
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^b3:[0-9a-f]{64}$"
+          },
+          "url": {
+            "type": "string"
+          },
+          "thumbnail_url": {
+            "type": "string"
+          },
+          "archive_path": {
+            "type": "string",
+            "description": "Path of the image inside the archive."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when the record is in the trash (soft-deleted); absent or null otherwise."
+          },
+          "delete_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

@@ -39,7 +39,22 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.
-AUDIT_EXEMPT_TABLES = frozenset({"session", "auth_token", "recovery_code", "audit_log", "alembic_version"})
+AUDIT_EXEMPT_TABLES = frozenset(
+    {
+        "session",
+        "auth_token",
+        "recovery_code",
+        "audit_log",
+        "alembic_version",
+        # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Service data: the job queue (Procrastinate) and export
+        # requests (who exported when is in the structured logs; the export changes no content).
+        "procrastinate_workers",
+        "procrastinate_jobs",
+        "procrastinate_periodic_defers",
+        "procrastinate_events",
+        "export_request",
+    }
+)
 NOISE_COLUMNS = ("updated_at", "updated_by", "version", "sync_seq")
 
 AUDIT_FUNCTION = f"""
