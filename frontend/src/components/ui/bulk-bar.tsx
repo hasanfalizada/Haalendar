@@ -2,20 +2,22 @@
 // of M shown", select all / clear, and the actions the selected rows support — delete, restore, color, priority, move
 // to next day. A list shows only the actions its rows support (`actions`); color and priority open a small menu.
 // Sticks to the bottom on phones so it stays reachable with a thumb.
+// +++===+++ 2026-10-17 — Hasan Alizada — HAAL-041. The priority menu shows the priority badges (atom order).
 import { CalendarArrowUp, Palette, RotateCcw, Signal, Trash2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Color, Priority } from "@/api/generated/types.gen";
+import type { Color } from "@/api/generated/types.gen";
+import { PRIORITIES, type Priority } from "@/atoms/items/priority";
 import type { BulkAction } from "@/lib/bulk";
 import type { Selection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 
 import { Button } from "./button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
+import { PriorityBadge } from "./priority";
 
 const COLORS: readonly Color[] = ["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"];
-const PRIORITIES: readonly Priority[] = ["high", "medium", "low"];
 // Full class names so Tailwind finds them.
 const SWATCH: Record<Color, string> = {
   red: "bg-ev-red",
@@ -130,7 +132,7 @@ export function BulkBar({ selection, total, actions, busy = false, onAction, cla
                       onAction("set_priority", priority);
                     }}
                   >
-                    {t(`bulk.priorities.${priority}`)}
+                    <PriorityBadge priority={priority} />
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

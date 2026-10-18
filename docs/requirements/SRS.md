@@ -20,10 +20,11 @@
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038 v1.21: decision D-43 (unsaved-changes guard) approved by owner.
 +++===+++ 2026-10-17 — Hasan Alizada — v1.22: decision D-44 (all commits directly on revamp) approved by owner.
 +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040 v1.23: decision D-45 (attachments and the item supertype) approved by owner; HAAL-039 postponed until HAAL-050..052 and the first item module exist.
++++===+++ 2026-10-17 — Hasan Alizada — HAAL-041 v1.24: decision D-46 (priority) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.23 |
+| Version | 1.24 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -507,6 +508,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-43 | Unsaved-changes guard | One hook for every editor: in-app navigation (links, Alt+1..3, browser back) is held by the router history and asks in an app dialog; dialog editors ask on Esc, backdrop, close button and Cancel; closing or reloading the tab shows the browser's own prompt (also while a write is in flight). Answers: Keep editing (focused; Esc), Discard changes, and for editors with a local draft also "Leave, keep the draft". Nothing is asked without changes or after saving. Ctrl/Cmd+Enter saves the editor holding the focus. Applied to profile, instance settings, password change, invitation and share dialogs; sign-in, sign-up, reset and setup pages are not guarded | FR-X-09 |
 | D-44 | Repository workflow | Until v1.0 every task is committed directly on `revamp` (no feature branches or pull requests per task); the owner commits and pushes; `revamp` is merged into `master` later as a whole (ADR-0002 section 7) | ADR-0002 |
 | D-45 | Attachments | The `item` supertype table (domain model 5.4, without its endpoints and full-text column) is created with HAAL-040 because attachments hang off it; its modules add subtypes and endpoints. Attachments copy the item's container_kind / container_id, so row-level security (content policies: read = container owner or any share; write = owner or edit share) and the audit log treat them like their item. Upload as the raw request body with the name in X-File-Name (no multipart); type by content; still PNG/JPEG/WebP re-encoded without metadata (EXIF/GPS) — PNG lossless, JPEG/WebP quality 95 — GIF and animated WebP kept as sent; limits 10 MB, 40 megapixels, 300 frames, 20 per item, no per-user quota; WebP thumbnail ≤ 320 px made at upload; served only through the API (nosniff, sandbox CSP, private cache). Soft delete keeps the files; attachments are restorable from the trash and undoable. HAAL-039 (search) is postponed until its dependencies (HAAL-050..052, first item module) are done | FR-X-11, FR-X-04, FR-X-06 |
+| D-46 | Priority | Atom items.priority.v1 (Python and TypeScript, one set of vectors): missing = medium; order high → low with a module tie-break (events: start, cards: position, notes: change time); filter by a set of levels, empty = all; the server sorts and filters in SQL with the same order (rank_sql / filter_sql). Badge = icon + text (icon-only keeps a screen-reader label); details and editors show all three levels, list rows only high and low. Picker = Low / Medium / High radio buttons; filter = toggle buttons, kept in the address (`?priority=high,medium`). Bulk set_priority and set_color for events, notes and cards now (container access decided in SQL); their delete/restore come with the modules. Wiring into lists and editors is done by the modules | FR-X-12, FR-X-07 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

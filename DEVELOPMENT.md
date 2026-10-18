@@ -309,6 +309,10 @@ Every editor calls `useUnsavedGuard({ dirty, … })` (`frontend/src/lib/useUnsav
 
 Images hang off items (`item` table, D-45). The API takes the raw body: `POST /api/v1/items/{id}/attachments` with `Content-Type` of the image and the name in `X-File-Name` (percent-encoded). `haalendar/attachments/images.py` decides the type by content, enforces 10 MB / 40 megapixels / 300 frames, re-encodes still images without metadata and makes the thumbnail; files are stored content-addressed and never deleted. In the SPA, `components/attachments/Attachments.tsx` shows and manages the images of an item; editors put `useAttachmentUpload(...).onPaste` on their text fields so a pasted screenshot is attached.
 
+### Priority
+
+The rules live in the atom `items.priority.v1` (`atoms/items.priority.v1`): server code sorts and filters with `rank_sql` / `filter_sql` from `haalendar.atoms.items.priority`, the web app with `sortByPriority` / `filterByPriority` from `src/atoms/items/priority.ts`. UI pieces are in `src/components/ui/priority.tsx` (`PriorityBadge` — pass `hideDefault` in list rows —, `PrioritySelect`, `PriorityFilter`); keep the filter in the route's search params with `parsePriorityParam` / `formatPriorityParam`.
+
 ### Audit log
 
 Every change of an audited table (accounts, instance settings, calendars, shares, later events, notes, boards and cards) is written to `audit_log` by a database trigger: actor (`app.user_id`), request id (`app.request_id`, the same as in the log lines and the `X-Request-ID` header), action (`create`, `update`, `delete`, `restore`, `move`, `share`, `unshare`) and the changed fields before/after. The application role can only read it, under row-level security; nobody can change or delete records. History for a record comes from `haalendar.audit.service.history(...)`.

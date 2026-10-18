@@ -8,6 +8,9 @@
 - All-or-nothing: every target is checked first (exists and is visible under row-level security, may be changed,
   version as the client saw it, action supported); one refusal refuses the whole request and names the offending
   targets (/targets/{index}). Only version conflicts → 412, otherwise 422. Rows are locked while checked.
++++===+++ 2026-10-17 — Hasan Alizada — HAAL-041. Events, notes and cards (item table) take part for set_priority and
+  set_color; who may change them is decided in SQL (owner of the container or an edit share). Delete and restore of
+  items arrive with their modules (their delete batches include attachments and other children).
 - delete puts all targets into one delete batch (one undo step: restoring the batch); restore brings back the batch
   of each target. Changes are audited by the database triggers. The answer lists the new versions.
 """
@@ -19,7 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.bulk.schemas import (
@@ -33,7 +36,7 @@ from haalendar.bulk.schemas import (
 )
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Calendar
+from haalendar.planning.models import Calendar, Item
 from haalendar.softdelete import new_batch, restore_batch, soft_delete
 
 log = get_logger(__name__)
@@ -50,6 +53,28 @@ class BulkSource:
     refuse: Callable[[Any, BulkAction], TargetFailure | None] = field(default=lambda row, action: None)
     # Models restored together with a delete batch of this kind.
     children: tuple[type[Any], ...] = ()
+    # Rows of the model that belong to this kind (several kinds can share one table, e.g. item).
+    scope: Callable[[], ColumnElement[bool]] | None = None
+    # SQL condition for "may change" when it depends on more than the row (container access); replaces may_change.
+    writable: Callable[[uuid.UUID], ColumnElement[bool]] | None = None
+
+
+def _item_writable(user_id: uuid.UUID) -> ColumnElement[bool]:
+    return or_(
+        func.haalendar_owns_container(Item.container_kind, Item.container_id),
+        func.haalendar_share_permission(Item.container_kind, Item.container_id) == "edit",
+    )
+
+
+def _item_source(kind: BulkType) -> BulkSource:
+    return BulkSource(
+        kind=kind,
+        model=Item,
+        actions=frozenset({"set_priority", "set_color"}),
+        may_change=lambda row, user_id: False,  # decided by `writable`
+        scope=lambda: Item.kind == kind,
+        writable=_item_writable,
+    )
 
 
 SOURCES: dict[str, BulkSource] = {
@@ -62,6 +87,9 @@ SOURCES: dict[str, BulkSource] = {
         # Exactly one active default calendar per user (FR-CAL-32).
         refuse=lambda row, action: "invalid_state" if action == "delete" and row.is_default else None,
     ),
+    "event": _item_source("event"),
+    "note": _item_source("note"),
+    "card": _item_source("card"),
 }
 
 _DETAIL: dict[TargetFailure, str] = {
@@ -87,9 +115,19 @@ async def _load(
     model = source.model
     deleted = model.deleted_at.is_not(None) if action == "restore" else model.deleted_at.is_(None)
     query = select(model).where(model.id == target.id, deleted).execution_options(populate_existing=True)
+    if source.scope is not None:
+        query = query.where(source.scope())
     # FOR UPDATE is subject to the UPDATE policy of row-level security, which would hide a row the user may read but
     # not change; so the row is read first and locked only once the user may change it.
     return await db.scalar(query.with_for_update() if lock else query)
+
+
+async def _may_change(db: AsyncSession, source: BulkSource, row: Any, user_id: uuid.UUID) -> bool:
+    if source.writable is None:
+        return source.may_change(row, user_id)
+    model = source.model
+    found = await db.scalar(select(model.id).where(model.id == row.id, source.writable(user_id)))
+    return found is not None
 
 
 async def apply(db: AsyncSession, user_id: uuid.UUID, body: BulkIn) -> BulkOut:
@@ -119,11 +157,12 @@ async def apply(db: AsyncSession, user_id: uuid.UUID, body: BulkIn) -> BulkOut:
             refuse(index, "unsupported")
             continue
         row = await _load(db, source, target, body.action, lock=False)
-        if row is not None and source.may_change(row, user_id):
+        permitted = row is not None and await _may_change(db, source, row, user_id)
+        if permitted:
             row = await _load(db, source, target, body.action, lock=True)
         if row is None:
             refuse(index, "not_found")
-        elif not source.may_change(row, user_id):
+        elif not permitted:
             refuse(index, "forbidden")
         elif row.version != target.version:
             refuse(index, "version_conflict")

@@ -541,11 +541,6 @@
       "brown": "Brown",
       "black": "Black"
     },
-    "priorities": {
-      "high": "High",
-      "medium": "Medium",
-      "low": "Low"
-    },
     "conflict_one": "{{count}} of {{total}} selected was changed elsewhere in the meantime. Nothing was changed — the list is refreshed, please try again.",
     "conflict_other": "{{count}} of {{total}} selected were changed elsewhere in the meantime. Nothing was changed — the list is refreshed, please try again.",
     "refused_one": "{{count}} of {{total}} selected cannot be changed this way. Nothing was changed.",
@@ -609,5 +604,16 @@
     "next": "Next image",
     "position": "{{index}} of {{total}}",
     "download": "Download"
+  },
+  "priority": {
+    "title": "Priority",
+    "label": "Priority: {{level}}",
+    "levels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "filter": "Filter by priority",
+    "all": "All"
   }
 }

@@ -2,7 +2,7 @@
   "$schema": "./manifest.schema.json",
   "project": "haalendar",
   "manifest_version": "1.0.0",
-  "updated_at": "2026-10-15",
+  "updated_at": "2026-10-17",
   "description": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Central registry of Haalendar atoms. Read this file first; then load only the contract, vectors and implementation of the atoms involved. Update it after every change.",
   "conventions": {
     "atoms_dir": "atoms",
@@ -147,6 +147,35 @@
         "FR-CAL-01"
       ],
       "notes": "Used by the day/week/month views (HAAL-060, 087, 088) and for shared calendars across zones."
+    },
+    {
+      "id": "items.priority.v1",
+      "status": "implemented",
+      "purpose": "Default (missing = medium), order (high → low with a module tie-break) and filter (set of levels, empty = all) of item priorities; the server uses the same order in SQL.",
+      "contract": "atoms/items.priority.v1/contract.json",
+      "examples": "atoms/items.priority.v1/examples.md",
+      "vectors": "atoms/items.priority.v1/vectors.json",
+      "capabilities": [
+        "normalize",
+        "sort",
+        "filter"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_priority_atom.py",
+        "typescript": "frontend/src/atoms/items/priority.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/items/priority.py",
+        "typescript": "frontend/src/atoms/items/priority.ts"
+      },
+      "hash": "b3:ca6af1413ba027273aed51d03a107ccd1e961c4248f0ac94dd8216a0eb10ff2c",
+      "deps": [],
+      "requirements": [
+        "FR-X-12",
+        "D-04",
+        "D-46"
+      ],
+      "notes": "SQL helpers rank_sql / filter_sql live next to the Python implementation; UI in frontend/src/components/ui/priority.tsx; bulk set_priority for events, notes and cards in haalendar.bulk (HAAL-041)."
     }
   ],
   "flows": [
@@ -205,6 +234,13 @@
       "purpose": "Open sign-up, password reset and password change check the new password live and on the server with the policy atom (FR-ACC-01, FR-ACC-02).",
       "steps": [
         "accounts.password_policy.v1"
+      ]
+    },
+    {
+      "id": "items.priority",
+      "purpose": "Lists of events, notes and cards sort and filter by priority with the same rules on the server (SQL) and in the web app (local, offline) (FR-X-12).",
+      "steps": [
+        "items.priority.v1"
       ]
     }
   ]
