@@ -1,5 +1,7 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Side sheet on Radix Dialog: focus trap, Esc to close, scroll lock,
 // focus returns to the trigger. Used for the mobile navigation drawer (D-10) and later for mobile editors.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. Scrolls when its content is taller than the screen (the drawer with
+// the user menu expanded on short phones).
 import { Dialog } from "radix-ui";
 import { X } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
@@ -22,7 +24,7 @@ export function SheetContent({ title, closeLabel, className, children, ...props 
       <Dialog.Overlay className="fixed inset-0 z-40 bg-fg/40 data-[state=open]:animate-in" />
       <Dialog.Content
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col gap-3 bg-bg p-4 shadow-xl",
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col gap-3 overflow-y-auto bg-bg p-4 shadow-xl",
           "pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]",
           className,
         )}

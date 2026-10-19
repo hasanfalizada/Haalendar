@@ -5,7 +5,11 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing overview (shared by me / with me).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Security section (password, 2FA, sessions).
 // +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. "Your data": export archives (#export).
-import { createFileRoute } from "@tanstack/react-router";
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. Every navigation here (user menu: Profile, Settings, Export) shows
+// its target: #profile / #export are scrolled to and focused, without a hash the page scrolls back to the top — also
+// when Settings is already open.
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ExportSection } from "@/components/exports/ExportSection";
@@ -22,11 +26,31 @@ const OPTIONS: { value: ThemePreference; labelKey: `pages.settings.theme${"Syste
   { value: "dark", labelKey: "pages.settings.themeDark" },
 ];
 
+/** Brings the section named by the URL hash into view and focus on every navigation (a new history entry). */
+function useSectionTarget() {
+  const target = useRouterState({
+    select: (state) => `${state.location.state.__TSR_key ?? ""}#${state.location.hash}`,
+  });
+  const top = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const hash = target.slice(target.indexOf("#") + 1);
+    const section = hash ? document.getElementById(hash) : null;
+    if (section) {
+      section.scrollIntoView({ block: "start" });
+      section.focus({ preventScroll: true });
+    } else {
+      top.current?.scrollIntoView({ block: "start" });
+    }
+  }, [target]);
+  return top;
+}
+
 function SettingsPage() {
   const { t } = useTranslation();
   const { preference, setPreference } = useTheme();
+  const top = useSectionTarget();
   return (
-    <div className="flex flex-col">
+    <div ref={top} className="flex flex-col">
       <div className="border-b border-line px-4 py-2.5">
         <h1 className="text-lg font-semibold">{t("pages.settings.title")}</h1>
       </div>

@@ -6,26 +6,26 @@
 // draft is offered for restore. Signing out with drafts on the device asks first (they are deleted with the session).
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Leaving with unsaved changes asks (keep editing / leave — the draft
 // stays — / discard); Ctrl/Cmd+Enter saves.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. Sign-out through the shared flow (useSignOut, also in the user
+// menu); the section is the #profile target of the user menu.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { removeAvatar, updateProfile } from "@/api/generated/sdk.gen";
 import type { Me } from "@/api/generated/types.gen";
 import { avatarProblem, uploadAvatarFile } from "@/api/profile";
-import { meQuery, meQueryKey, rememberSession, signOut } from "@/api/session";
+import { meQuery, meQueryKey, rememberSession } from "@/api/session";
 import { runWrite } from "@/api/write";
 import { TimeZoneSelect } from "@/components/auth/TimeZoneSelect";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DraftNotice } from "@/components/ui/draft-notice";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { Field, Input, Select } from "@/components/ui/input";
-import { countDrafts } from "@/lib/drafts";
 import { notify } from "@/lib/notify";
 import { useDraft } from "@/lib/useDraft";
+import { useSignOut } from "@/lib/useSignOut";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 export function ProfileSection() {
@@ -38,7 +38,6 @@ export function ProfileSection() {
 function ProfileForm({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
 
@@ -46,7 +45,7 @@ function ProfileForm({ me }: { me: Me }) {
   const [timeZone, setTimeZone] = useState(me.time_zone);
   const [nameError, setNameError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const { requestSignOut, signOutDialog } = useSignOut();
   const dirty = name.trim() !== me.display_name || timeZone !== me.time_zone;
 
   const baseline = useMemo(
@@ -145,13 +144,13 @@ function ProfileForm({ me }: { me: Me }) {
     setBusy(false);
   }
 
-  async function finishSignOut() {
-    await signOut(queryClient);
-    await navigate({ to: "/login", replace: true });
-  }
-
   return (
-    <section aria-labelledby="profile-title" className="flex flex-col gap-4 border-t border-line p-4">
+    <section
+      id="profile"
+      tabIndex={-1}
+      aria-labelledby="profile-title"
+      className="flex scroll-mt-2 flex-col gap-4 border-t border-line p-4 outline-none"
+    >
       <h2 id="profile-title" className="text-[11px] font-semibold tracking-wider text-muted uppercase">
         {t("profile.title")}
       </h2>
@@ -220,34 +219,13 @@ function ProfileForm({ me }: { me: Me }) {
 
       <div className="flex flex-col gap-2 border-t border-line pt-4">
         <p>{t("pages.settings.signedInAs", { email: me.email })}</p>
-        <Button
-          className="w-fit"
-          onClick={() => {
-            void countDrafts(me.id).then((count) => {
-              if (count > 0) setConfirmSignOut(true);
-              else void finishSignOut();
-            });
-          }}
-        >
+        <Button className="w-fit" onClick={requestSignOut}>
           {t("auth.signOut")}
         </Button>
       </div>
 
       <UnsavedChangesDialog prompt={guard.prompt} />
-      <ConfirmDialog
-        open={confirmSignOut}
-        title={t("drafts.signOutTitle")}
-        body={t("drafts.signOutBody")}
-        confirmLabel={t("drafts.signOutConfirm")}
-        danger
-        onConfirm={async () => {
-          setConfirmSignOut(false);
-          await finishSignOut();
-        }}
-        onClose={() => {
-          setConfirmSignOut(false);
-        }}
-      />
+      {signOutDialog}
     </section>
   );
 }

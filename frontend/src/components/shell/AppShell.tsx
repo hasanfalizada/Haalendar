@@ -8,24 +8,27 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-035. Undo / redo shortcuts for the signed-in user.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. Shortcut overlay button in the rail ("?" anywhere); navigation,
 // header and content are regions for F6 / Shift+F6.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. The avatar opens the user menu (rail dropdown, drawer list). A
+// drawer entry that focuses its target keeps the focus there when the drawer closes.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { meQuery, meQueryKey } from "@/api/session";
 import { setSessionExpiredHandler } from "@/api/write";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { ConnectionStatus } from "./ConnectionStatus";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { TimeZoneMismatch } from "./TimeZoneMismatch";
+import { UserMenuButton, UserMenuList } from "./UserMenu";
 import { MODULE_ITEMS, SECONDARY_ITEMS, type NavItem } from "./nav-items";
 import { useModuleShortcuts } from "./useModuleShortcuts";
 import { useUndoShortcuts } from "./useUndoShortcuts";
+import { useUserMenu } from "./useUserMenu";
 
 const LOGO_SRC = "/icon.svg";
 
@@ -64,6 +67,7 @@ function DrawerLink({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
 export function AppShell() {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerFocusMoved = useRef(false);
   const { data: me } = useQuery(meQuery);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -79,6 +83,7 @@ export function AppShell() {
     };
   }, [navigate, here, queryClient]);
   const secondaryItems = SECONDARY_ITEMS.filter((item) => !item.adminOnly || me?.role === "admin");
+  const userMenu = useUserMenu();
   useModuleShortcuts();
   useUndoShortcuts(me?.id ?? null);
   const closeDrawer = () => {
@@ -110,16 +115,7 @@ export function AppShell() {
           <RailLink key={item.to} item={item} />
         ))}
         <ShortcutsOverlay className="size-10" />
-        {me?.display_name ? (
-          <Link
-            to="/settings"
-            aria-label={t("nav.profile", { name: me.display_name })}
-            title={me.display_name}
-            className="mt-1 rounded-full"
-          >
-            <Avatar name={me.display_name} url={me.avatar_url} size={32} />
-          </Link>
-        ) : null}
+        <UserMenuButton actions={userMenu.actions} />
         <div className="mt-2">
           <ConnectionStatus compact />
         </div>
@@ -133,11 +129,24 @@ export function AppShell() {
       >
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={t("nav.openMenu")} className="size-11">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t("nav.openMenu")}
+              className="size-11"
+              data-user-menu-button
+            >
               <Menu className="size-5" aria-hidden />
             </Button>
           </SheetTrigger>
-          <SheetContent title={t("app.name")} closeLabel={t("nav.closeMenu")}>
+          <SheetContent
+            title={t("app.name")}
+            closeLabel={t("nav.closeMenu")}
+            onCloseAutoFocus={(event) => {
+              if (drawerFocusMoved.current) event.preventDefault();
+              drawerFocusMoved.current = false;
+            }}
+          >
             <nav aria-label={t("nav.label")} className="flex flex-col gap-1">
               {MODULE_ITEMS.map((item) => (
                 <DrawerLink key={item.to} item={item} onNavigate={closeDrawer} />
@@ -148,20 +157,13 @@ export function AppShell() {
               ))}
             </nav>
             <div className="mt-auto flex flex-col gap-3">
-              {me?.display_name ? (
-                <Link
-                  to="/settings"
-                  onClick={closeDrawer}
-                  aria-label={t("nav.profile", { name: me.display_name })}
-                  className="flex items-center gap-3 rounded-sm p-2 hover:bg-surface"
-                >
-                  <Avatar name={me.display_name} url={me.avatar_url} size={36} />
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{me.display_name}</span>
-                    <span className="block truncate text-xs text-muted">{me.email}</span>
-                  </span>
-                </Link>
-              ) : null}
+              <UserMenuList
+                actions={userMenu.actions}
+                onSelect={(action) => {
+                  drawerFocusMoved.current = action.movesFocus ?? false;
+                  closeDrawer();
+                }}
+              />
               <ConnectionStatus />
             </div>
           </SheetContent>
@@ -174,6 +176,7 @@ export function AppShell() {
         <TimeZoneMismatch />
         <Outlet />
       </main>
+      {userMenu.dialogs}
     </div>
   );
 }

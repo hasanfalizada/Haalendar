@@ -13,8 +13,7 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "shortcut": "Shortcut: {{keys}}",
-    "users": "Users",
-    "profile": "Profile of {{name}}"
+    "users": "Users"
   },
   "status": {
     "online": "Connected",
@@ -645,5 +644,34 @@
       "failed": "Failed",
       "expired": "Expired"
     }
+  },
+  "userMenu": {
+    "open": "Account menu of {{name}}",
+    "profile": "Profile",
+    "settings": "Settings",
+    "export": "Export your data",
+    "help": "Help",
+    "about": "About Haalendar",
+    "signOut": "Sign out"
+  },
+  "help": {
+    "title": "Help",
+    "intro": "Where to find answers and how to tell us about a problem.",
+    "shortcuts": "Keyboard shortcuts",
+    "shortcutsHint": "The keys that work on the current page. Press ? anywhere.",
+    "docs": "Documentation",
+    "docsHint": "How Haalendar works, how to run it and its data formats.",
+    "issues": "Report a problem",
+    "issuesHint": "Describe what happened; please leave out personal data.",
+    "newTab": "(opens in a new tab)"
+  },
+  "about": {
+    "title": "About Haalendar",
+    "version": "Version {{version}}",
+    "free": "Haalendar is free and open-source software. It has no usage restrictions.",
+    "license": "Licence: {{name}}",
+    "author": "Author's website",
+    "repository": "Source code on GitHub",
+    "licenseText": "Licence text"
   }
 }

@@ -1,6 +1,8 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Modal dialog on Radix Dialog (focus trap, Esc, scroll lock, focus
 // return). Centered card on desktop, bottom sheet on phones (design system: dialogs).
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. onOpenAutoFocus passes through (a dialog may focus its main button).
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. onCloseAutoFocus passes through (a dialog opened from a menu returns
+// the focus to the menu's button, the menu item that opened it is gone).
 import { Dialog as RadixDialog } from "radix-ui";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
@@ -17,6 +19,7 @@ interface DialogContentProps {
   children?: ReactNode;
   className?: string;
   onOpenAutoFocus?: (event: Event) => void;
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 export function DialogContent({
@@ -26,6 +29,7 @@ export function DialogContent({
   children,
   className,
   onOpenAutoFocus,
+  onCloseAutoFocus,
 }: DialogContentProps) {
   return (
     <RadixDialog.Portal>
@@ -39,6 +43,7 @@ export function DialogContent({
         )}
         {...(description ? {} : { "aria-describedby": undefined })}
         {...(onOpenAutoFocus ? { onOpenAutoFocus } : {})}
+        {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1">

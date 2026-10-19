@@ -42,6 +42,9 @@ Element.prototype.hasPointerCapture = () => false;
 // +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. jsdom has no object URLs (previews of images being uploaded).
 URL.createObjectURL = () => "blob:test";
 URL.revokeObjectURL = () => undefined;
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. jsdom lacks scrollIntoView (Settings scrolls to the section named
+// by the user menu).
+Element.prototype.scrollIntoView = () => undefined;
 
 afterEach(() => {
   cleanup();

@@ -2,6 +2,7 @@
 // choose modules and whether to include images, create an export (password confirmation), follow its progress, and
 // download the ZIP while it is available (7 days). The archive is prepared in the background; when it becomes ready
 // while the page is open a notification says so (an e-mail is sent as well when mail is configured).
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. Focusable #export target of the user menu.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -73,7 +74,12 @@ export function ExportSection() {
   }
 
   return (
-    <section id="export" aria-labelledby="export-title" className="flex flex-col gap-4 border-t border-line p-4">
+    <section
+      id="export"
+      tabIndex={-1}
+      aria-labelledby="export-title"
+      className="flex scroll-mt-2 flex-col gap-4 border-t border-line p-4 outline-none"
+    >
       <h2 id="export-title" className="text-[11px] font-semibold tracking-wider text-muted uppercase">
         {t("export.title")}
       </h2>

@@ -4,6 +4,7 @@
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 
@@ -12,11 +13,14 @@ export default defineConfig(({ mode }) => {
   const apiTarget = (env.VITE_API_TARGET as string | undefined) ?? "http://localhost:8080";
   // Prism serves the contract without the /api/v1 prefix; the backend serves it with the prefix.
   const isMock = apiTarget.includes(":4010");
+  // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. The app version shown in About comes from package.json.
+  const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8")) as { version: string };
 
   return {
     // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Route code splitting is off under Vitest: tests then do not
     // depend on lazy chunk loading (slow on WSL /mnt file systems); production builds keep per-route chunks.
     plugins: [tanstackRouter({ target: "react", autoCodeSplitting: mode !== "test" }), react(), tailwindcss()],
+    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
     server: {
       port: 5173,

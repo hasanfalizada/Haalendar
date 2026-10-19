@@ -110,10 +110,17 @@ describe("profile settings", () => {
     expect(screen.getByRole("button", { name: "Upload photo" })).toBeInTheDocument();
   });
 
-  it("links the avatar in the navigation to the profile", async () => {
+  // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. The avatar opens the user menu, whose Profile entry leads here.
+  it("leads from the avatar's menu to the profile", async () => {
     stubApi({ "GET /me": () => json(me()) });
-    renderApp("/calendar");
-    expect(await screen.findByRole("link", { name: "Profile of Ada Admin" })).toHaveAttribute("href", "/settings");
+    const { router } = renderApp("/calendar");
+    const user = userEvent.setup();
+    await user.click((await screen.findAllByRole("button", { name: "Account menu of Ada Admin" }))[0]!);
+    await user.click(await screen.findByRole("menuitem", { name: "Profile" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/settings");
+    });
+    expect(router.state.location.hash).toBe("profile");
   });
 });
 

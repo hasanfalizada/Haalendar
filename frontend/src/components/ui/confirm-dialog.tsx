@@ -2,6 +2,7 @@
 // progress and the dialog stays open until the action has finished.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. focusConfirm: the confirm button gets the focus, so a keyboard
 // delete is Delete then Enter (legacy F-16); Esc cancels.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. onCloseAutoFocus: where the focus goes when it closes.
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +16,7 @@ interface ConfirmDialogProps {
   confirmLabel: string;
   danger?: boolean;
   focusConfirm?: boolean;
+  onCloseAutoFocus?: (event: Event) => void;
   onConfirm: () => Promise<void>;
   onClose: () => void;
 }
@@ -26,6 +28,7 @@ export function ConfirmDialog({
   confirmLabel,
   danger = false,
   focusConfirm = false,
+  onCloseAutoFocus,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
@@ -51,6 +54,7 @@ export function ConfirmDialog({
               },
             }
           : {})}
+        {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
       >
         <DialogFooter>
           <Button onClick={onClose} disabled={busy}>

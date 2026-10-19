@@ -2,12 +2,15 @@
 // of the shortcuts that work on the current page, grouped, with key caps for this platform (⌘ on Apple devices). The
 // list comes from the shortcut registry, so it never shows a key that does nothing. Also registers F6 / Shift+F6,
 // which move the focus between the regions of the page (navigation, content, notifications).
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. Can be opened from elsewhere (lib/shortcutsOverlay; Help in the
+// user menu).
 import { Keyboard } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { registerShortcutsOverlay } from "@/lib/shortcutsOverlay";
 import { keyCaps, type ShortcutGroup, useRegisteredShortcuts, useShortcut } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +35,15 @@ export function ShortcutsOverlay({ className }: { className?: string }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const shortcuts = useRegisteredShortcuts();
+  const returnFocus = useRef<(() => void) | undefined>(undefined);
+  useEffect(
+    () =>
+      registerShortcutsOverlay((focusAfter) => {
+        returnFocus.current = focusAfter;
+        setOpen(true);
+      }),
+    [],
+  );
   // Labels come from the registry as data, so their keys are only known at run time.
   const translate = t as unknown as (key: string, values?: Record<string, string>) => string;
 
@@ -85,6 +97,14 @@ export function ShortcutsOverlay({ className }: { className?: string }) {
           description={t("shortcuts.hint")}
           closeLabel={t("common.close")}
           className="md:max-w-lg"
+          onCloseAutoFocus={(event) => {
+            const focusAfter = returnFocus.current;
+            returnFocus.current = undefined;
+            if (focusAfter) {
+              event.preventDefault();
+              focusAfter();
+            }
+          }}
         >
           <div className="flex flex-col gap-4">
             {GROUPS.map((group) => {
