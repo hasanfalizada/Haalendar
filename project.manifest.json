@@ -19,7 +19,7 @@
   "atoms": [
     {
       "id": "calendar.week_ab_label.v1",
-      "status": "contract",
+      "status": "implemented",
       "purpose": "Returns the Week A/B label of a date counted from a user-chosen anchor week; correct across year boundaries and 53-week years.",
       "contract": "atoms/calendar.week_ab_label.v1/contract.json",
       "examples": "atoms/calendar.week_ab_label.v1/examples.md",
@@ -27,16 +27,24 @@
       "capabilities": [
         "labelWeek"
       ],
-      "tests_ref": {},
-      "impl_ref": {},
+      "tests_ref": {
+        "python": "backend/tests/test_week_ab_atom.py",
+        "typescript": "frontend/src/atoms/calendar/weekAbLabel.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/calendar/week_ab_label.py",
+        "typescript": "frontend/src/atoms/calendar/weekAbLabel.ts"
+      },
       "hash": "b3:633e7c0950699140910d8dd9d76b0c62cb31a15631c81f3ca0076473cdabedc3",
       "deps": [],
       "requirements": [
-        "FR-CAL-23",
+        "D-50",
+        "FR-ACC-09",
         "FR-CAL-05",
+        "FR-CAL-23",
         "U#12"
       ],
-      "notes": "Pure function. Never use ISO week number parity. Implementations follow in HAAL-085 (Python and TypeScript, both must pass vectors.json)."
+      "notes": "Pure function. Never use ISO week number parity. Implemented in HAAL-045 (Python and TypeScript, both pass vectors.json); the Settings preview uses it now, the calendar header in HAAL-085."
     },
     {
       "id": "accounts.password_policy.v1",
@@ -241,6 +249,13 @@
       "purpose": "Lists of events, notes and cards sort and filter by priority with the same rules on the server (SQL) and in the web app (local, offline) (FR-X-12).",
       "steps": [
         "items.priority.v1"
+      ]
+    },
+    {
+      "id": "settings.week_ab_preview",
+      "purpose": "Settings show this and next week's Week A/B label while the user edits it (FR-CAL-23, D-50).",
+      "steps": [
+        "calendar.week_ab_label.v1"
       ]
     }
   ]

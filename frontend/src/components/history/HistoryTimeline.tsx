@@ -1,13 +1,14 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-032. History of a record from the audit log (FR-X-03), newest first:
 // who did what and when, and for changes the fields "before → after". Used by item details (HAAL-064) and the card
 // activity (HAAL-114); the server limits records to what the viewer may read.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import type { AuditRecord } from "@/api/generated/types.gen";
 import { meQuery } from "@/api/session";
 import { displayValue, fieldLabel } from "@/lib/audit-format";
-import { formatInstant, formatRelative, useDisplayTimeZone } from "@/lib/datetime";
+import { useInstantFormat } from "@/lib/datetime";
 
 interface HistoryTimelineProps {
   records: AuditRecord[];
@@ -15,9 +16,9 @@ interface HistoryTimelineProps {
 }
 
 export function HistoryTimeline({ records, now }: HistoryTimelineProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { data: me } = useQuery(meQuery);
-  const timeZone = useDisplayTimeZone();
+  const format = useInstantFormat();
   const reference = now ?? new Date();
 
   if (records.length === 0) return <p className="text-[13px] text-muted">{t("history.empty")}</p>;
@@ -33,8 +34,8 @@ export function HistoryTimeline({ records, now }: HistoryTimelineProps) {
               <span className="font-medium">{actor}</span> {t(`history.actions.${record.action}`)}
               <span className="text-muted">
                 {" · "}
-                <time dateTime={record.occurred_at} title={formatInstant(record.occurred_at, timeZone, i18n.language)}>
-                  {formatRelative(record.occurred_at, reference, timeZone, i18n.language)}
+                <time dateTime={record.occurred_at} title={format.instant(record.occurred_at)}>
+                  {format.relative(record.occurred_at, reference)}
                 </time>
               </span>
             </span>

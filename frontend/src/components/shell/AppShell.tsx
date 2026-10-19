@@ -10,6 +10,7 @@
 // header and content are regions for F6 / Shift+F6.
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. The avatar opens the user menu (rail dropdown, drawer list). A
 // drawer entry that focuses its target keeps the focus there when the drawer closes.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The user's settings are applied on this device (theme sync).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -19,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { meQuery, meQueryKey } from "@/api/session";
 import { setSessionExpiredHandler } from "@/api/write";
 import { Button } from "@/components/ui/button";
+import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { ConnectionStatus } from "./ConnectionStatus";
@@ -85,6 +87,7 @@ export function AppShell() {
   const secondaryItems = SECONDARY_ITEMS.filter((item) => !item.adminOnly || me?.role === "admin");
   const userMenu = useUserMenu();
   useModuleShortcuts();
+  useSettingsSync();
   useUndoShortcuts(me?.id ?? null);
   const closeDrawer = () => {
     setDrawerOpen(false);

@@ -3,11 +3,12 @@
 // profile's time zone. The actor is named only when it is the current user ("by you"); other people's names arrive
 // with the audit history (HAAL-032). "Updated" is omitted while it equals "created".
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-033. Callers that know a name (the trash: deleted_by_name) pass it.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { meQuery } from "@/api/session";
-import { formatInstant, formatRelative, useDisplayTimeZone } from "@/lib/datetime";
+import { useInstantFormat } from "@/lib/datetime";
 
 export interface RecordTimes {
   created_at: string;
@@ -29,9 +30,9 @@ interface RecordTimestampsProps {
 const SAME_MOMENT_MS = 60_000;
 
 export function RecordTimestamps({ record, now, names, className }: RecordTimestampsProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { data: me } = useQuery(meQuery);
-  const timeZone = useDisplayTimeZone();
+  const format = useInstantFormat();
   const reference = now ?? new Date();
 
   const rows: { key: "created" | "updated" | "deleted"; iso: string; actor?: string | null | undefined }[] = [
@@ -49,8 +50,8 @@ export function RecordTimestamps({ record, now, names, className }: RecordTimest
         <div key={row.key} className="flex gap-1">
           <dt>{t(`records.${row.key}`)}</dt>
           <dd>
-            <time dateTime={row.iso} title={formatInstant(row.iso, timeZone, i18n.language)}>
-              {formatRelative(row.iso, reference, timeZone, i18n.language)}
+            <time dateTime={row.iso} title={format.instant(row.iso)}>
+              {format.relative(row.iso, reference)}
             </time>
             {me && row.actor && row.actor === me.id
               ? ` ${t("records.byYou")}`

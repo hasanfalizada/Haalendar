@@ -131,6 +131,7 @@ def clean_db(owner_db_url: str, db_url: str) -> Iterator[str]:
         conn.execute(
             "TRUNCATE attachment, item, export_request, procrastinate_events, procrastinate_jobs CASCADE"
         )
+        conn.execute("TRUNCATE user_settings")  # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045.
         conn.execute(
             "UPDATE instance_settings SET updated_by = NULL, registration_mode = 'invite', require_admin_2fa = false"
         )

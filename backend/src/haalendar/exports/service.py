@@ -30,6 +30,8 @@ from haalendar.exports.models import ExportRequest
 from haalendar.exports.schemas import ExportOut, Module
 from haalendar.exports.sections import SECTIONS, ExportContext
 from haalendar.logging import get_logger
+from haalendar.preferences.service import get_settings
+from haalendar.preferences.service import to_out as settings_to_out
 from haalendar.storage import Storage, create_storage
 
 log = get_logger(__name__)
@@ -179,6 +181,9 @@ async def _write_archive(
         assert row is not None and user is not None
         now = datetime.now(UTC)
         key = storage.export_key(owner_id, export_id)
+        # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The user's settings are part of "all my data" (schema 1.x,
+        # additive).
+        settings_row = await get_settings(db, owner_id)
         header = {
             "format": "haalendar-export",
             "schema_version": SCHEMA_VERSION,
@@ -189,6 +194,7 @@ async def _write_archive(
                 "display_name": user.display_name,
                 "time_zone": user.time_zone,
             },
+            "settings": settings_to_out(settings_row).model_dump(mode="json", exclude={"version"}),
             "modules": list(row.modules),
             "include_images": row.include_images,
         }

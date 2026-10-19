@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { json, me, renderApp, stubApi } from "@/test/fake-api";
+import { json, me, renderApp, settings, stubApi } from "@/test/fake-api";
 import { stubMatchMedia } from "@/test/setup";
 
 import { readPreference, resolveTheme, THEME_STORAGE_KEY, writePreference } from "./theme";
@@ -54,15 +54,39 @@ describe("theme in the app", () => {
     stubMatchMedia(false);
   });
 
-  it("switches and persists the theme from settings", async () => {
+  // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The theme is a user setting: a click previews it, Save stores it
+  // on the server and caches it on the device.
+  it("previews the theme at once and stores it with the preferences", async () => {
     const user = userEvent.setup();
-    renderSettings();
+    let saved = settings();
+    stubApi({
+      "GET /me": () => json(me()),
+      "GET /me/settings": () => json(saved),
+      "PATCH /me/settings": (call) => {
+        saved = { ...saved, ...(call.body as object), version: saved.version + 1 };
+        return json(saved);
+      },
+    });
+    renderApp("/settings");
     await user.click(await screen.findByRole("radio", { name: "Dark" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull(); // a preview is not stored
     expect(screen.getByRole("radio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
 
-    await user.click(screen.getByRole("radio", { name: "Light" }));
-    expect(document.documentElement.dataset.theme).toBe("light");
+    await user.click(screen.getByRole("button", { name: "Save preferences" }));
+    await waitFor(() => {
+      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+    });
+    expect(saved.theme).toBe("dark");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("applies the theme stored in the user's settings on this device", async () => {
+    stubApi({ "GET /me": () => json(me()), "GET /me/settings": () => json(settings({ theme: "dark" })) });
+    renderApp("/calendar");
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    });
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
   });
 });

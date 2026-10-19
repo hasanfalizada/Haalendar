@@ -1,6 +1,7 @@
 // +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042. Colour picker of the 8 palette colours (FR-X-13, D-47): native radio
 // buttons (arrow keys, one Tab stop), every colour named for screen readers and in the tooltip, the chosen one marked
 // with a check (not by colour alone). ColorSwatch is the plain sample used in menus and lists.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Optional legend (e.g. "Default color for new items").
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -19,14 +20,15 @@ interface ColorPickerProps {
   onChange: (color: Color) => void;
   name: string;
   disabled?: boolean;
+  legend?: string;
 }
 
-export function ColorPicker({ value, onChange, name, disabled = false }: ColorPickerProps) {
+export function ColorPicker({ value, onChange, name, disabled = false, legend }: ColorPickerProps) {
   const { t } = useTranslation();
   const current = value ?? DEFAULT_COLOR;
   return (
     <fieldset className="flex flex-col gap-1" disabled={disabled}>
-      <legend className="mb-1 text-[13px] font-medium">{t("palette.title")}</legend>
+      <legend className="mb-1 text-[13px] font-medium">{legend ?? t("palette.title")}</legend>
       <div className="flex flex-wrap gap-1.5">
         {COLORS.map((color) => {
           const label = t(`palette.colors.${color}`);

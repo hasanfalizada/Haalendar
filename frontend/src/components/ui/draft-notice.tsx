@@ -1,9 +1,10 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Offer to bring back a draft kept on this device (useDraft, D-39).
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
 import { useTranslation } from "react-i18next";
 
 import type { PendingDraft } from "@/lib/useDraft";
 import type { DraftFields } from "@/lib/drafts";
-import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
+import { useInstantFormat } from "@/lib/datetime";
 
 import { Button } from "./button";
 
@@ -14,17 +15,15 @@ interface DraftNoticeProps<F extends DraftFields> {
 }
 
 export function DraftNotice<F extends DraftFields>({ draft, onRestore, onDiscard }: DraftNoticeProps<F>) {
-  const { t, i18n } = useTranslation();
-  const timeZone = useDisplayTimeZone();
+  const { t } = useTranslation();
+  const format = useInstantFormat();
   if (!draft) return null;
   return (
     <div
       role="status"
       className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-sm bg-warn-bg px-3 py-2 text-[13px] text-warn-fg"
     >
-      <span className="min-w-0 flex-1">
-        {t("drafts.found", { time: formatInstant(draft.savedAt, timeZone, i18n.language) })}
-      </span>
+      <span className="min-w-0 flex-1">{t("drafts.found", { time: format.instant(draft.savedAt) })}</span>
       <Button variant="primary" onClick={onRestore}>
         {t("drafts.restore")}
       </Button>

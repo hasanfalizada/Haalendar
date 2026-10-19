@@ -1,5 +1,8 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. React context for the theme preference. Server-side persistence of the
 // preference (user settings, FR-ACC-09) replaces localStorage when settings sync exists (HAAL-045).
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The user's settings are the source of the preference (synced by the
+// shell); localStorage keeps the last one as a cache for the first paint and the sign-in pages. A preview (Settings
+// form before saving) is shown without being stored.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
@@ -17,14 +20,17 @@ interface ThemeContextValue {
   preference: ThemePreference;
   resolved: ResolvedTheme;
   setPreference: (preference: ThemePreference) => void;
+  /** Show a preference without storing it; null ends the preview. */
+  setPreview: (preview: ThemePreference | null) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>(() => readPreference());
+  const [preview, setPreview] = useState<ThemePreference | null>(null);
   const [prefersDark, setPrefersDark] = useState<boolean>(() => systemPrefersDark());
-  const resolved = resolveTheme(preference, prefersDark);
+  const resolved = resolveTheme(preview ?? preference, prefersDark);
 
   useEffect(() => {
     applyTheme(resolved);
@@ -36,7 +42,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setPreferenceState(next);
   }, []);
 
-  const value = useMemo(() => ({ preference, resolved, setPreference }), [preference, resolved, setPreference]);
+  const value = useMemo(
+    () => ({ preference, resolved, setPreference, setPreview }),
+    [preference, resolved, setPreference],
+  );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 

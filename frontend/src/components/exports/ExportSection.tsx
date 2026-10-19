@@ -3,6 +3,7 @@
 // download the ZIP while it is available (7 days). The archive is prepared in the background; when it becomes ready
 // while the page is open a notification says so (an e-mail is sent as well when mail is configured).
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. Focusable #export target of the user menu.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -14,7 +15,7 @@ import type { ExportRequest } from "@/api/generated/types.gen";
 import { runWrite } from "@/api/write";
 import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
-import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
+import { useInstantFormat } from "@/lib/datetime";
 import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,7 @@ export function ExportSection() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const withReauth = useReauth();
-  const timeZone = useDisplayTimeZone();
+  const format = useInstantFormat();
   const { data: requests = [] } = useQuery(exportsQuery);
   const [modules, setModules] = useState<Module[]>([...MODULES]);
   const [images, setImages] = useState(false);
@@ -132,9 +133,9 @@ export function ExportSection() {
                   {request.include_images ? ` · ${t("export.withImages")}` : ""}
                 </span>
                 <span className="block text-xs text-muted">
-                  {t("export.requested", { date: formatInstant(request.requested_at, timeZone, i18n.language) })}
+                  {t("export.requested", { date: format.instant(request.requested_at) })}
                   {request.status === "ready" && request.expires_at
-                    ? ` · ${t("export.until", { date: formatInstant(request.expires_at, timeZone, i18n.language) })}`
+                    ? ` · ${t("export.until", { date: format.instant(request.expires_at) })}`
                     : ""}
                   {request.size_bytes !== undefined ? ` · ${formatSize(request.size_bytes, i18n.language)}` : ""}
                 </span>

@@ -37,6 +37,7 @@ from haalendar.jobs import JobQueue
 from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
 from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
+from haalendar.preferences.api import router as settings_router
 from haalendar.security.guards import BodyGuard, CsrfOriginGuard, HostGuard, RateLimitGuard
 from haalendar.sharing.api import router as sharing_router
 from haalendar.storage import create_storage
@@ -126,6 +127,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(attachment_items_router, prefix=API_PREFIX)
     app.include_router(attachments_router, prefix=API_PREFIX)
     app.include_router(exports_router, prefix=API_PREFIX)
+    app.include_router(settings_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

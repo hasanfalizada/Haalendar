@@ -3,6 +3,7 @@
 // sizes: a table on ≥ md, stacked cards on phones. The own row has no actions ("not on yourself"); consequential
 // actions are confirmed; the server asks for re-authentication when needed.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results are reported through runWrite (one notification per write).
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -25,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input, Select } from "@/components/ui/input";
-import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
+import { useInstantFormat } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 import { useAdminReasons } from "./admin-errors";
@@ -61,7 +62,7 @@ function useDebounced<T>(value: T, ms: number): T {
 }
 
 export function AdminUsersPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const withReauth = useReauth();
   const adminReasons = useAdminReasons();
@@ -78,8 +79,8 @@ export function AdminUsersPage() {
   const [oneTime, setOneTime] = useState<OneTimePassword | null>(null);
 
   // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Instants are shown in the profile's time zone.
-  const timeZone = useDisplayTimeZone();
-  const formatDate = (value: string) => formatInstant(value, timeZone, i18n.language);
+  const format = useInstantFormat();
+  const formatDate = (value: string) => format.instant(value);
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: adminKeys.all });

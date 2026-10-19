@@ -673,5 +673,34 @@
     "author": "Author's website",
     "repository": "Source code on GitHub",
     "licenseText": "Licence text"
+  },
+  "preferences": {
+    "title": "Preferences",
+    "unavailable": "Your preferences could not be loaded. Check the connection and reload the page.",
+    "timeFormat": "Time format",
+    "timeFormats": {
+      "24h": "24-hour ({{sample}})",
+      "12h": "12-hour ({{sample}})"
+    },
+    "weekStart": "Week starts on",
+    "defaultColor": "Default color for new items",
+    "agendaDays": "Agenda shows (days)",
+    "agendaHint": "How many days ahead the agenda view lists, 1 to 365.",
+    "agendaInvalid": "Enter a whole number from 1 to 365",
+    "weekAb": {
+      "title": "Week A/B",
+      "enable": "Show a Week A/B label next to the week number",
+      "explain": "Weeks alternate between two labels, counted from a week you choose, also across new years.",
+      "anchor": "A date in a week labelled \"{{label}}\"",
+      "anchorHint": "Any day of that week. Weeks begin on the day chosen above.",
+      "anchorRequired": "Choose a date in a week that should get the first label",
+      "labelFirst": "First label",
+      "labelSecond": "Second label",
+      "labelsDistinct": "Use two different labels",
+      "preview": "This week: {{current}} · next week: {{next}}"
+    },
+    "save": "Save preferences",
+    "saved": "Preferences saved.",
+    "conflict": "Your preferences were changed on another device. The newer version is shown; your changes are kept as a draft."
   }
 }

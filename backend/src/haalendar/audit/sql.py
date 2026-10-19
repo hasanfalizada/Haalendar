@@ -53,6 +53,9 @@ AUDIT_EXEMPT_TABLES = frozenset(
         "procrastinate_periodic_defers",
         "procrastinate_events",
         "export_request",
+        # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Preferences: neither content nor an account change relevant
+        # to administrators (D-37, D-50); changes are in the structured logs (fields only, no values).
+        "user_settings",
     }
 )
 NOISE_COLUMNS = ("updated_at", "updated_by", "version", "sync_seq")

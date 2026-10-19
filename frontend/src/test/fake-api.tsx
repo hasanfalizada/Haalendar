@@ -8,7 +8,7 @@ import { vi } from "vitest";
 
 import "@/i18n";
 import { App } from "@/App";
-import type { Me } from "@/api/generated/types.gen";
+import type { Me, Settings } from "@/api/generated/types.gen";
 import { Notifications } from "@/components/ui/notifications";
 import { createAppRouter, createQueryClient } from "@/router";
 import { ThemeProvider } from "@/theme/ThemeProvider";
@@ -57,6 +57,8 @@ const DEFAULTS: Record<string, Handler> = {
   "GET /shares": () => json({ data: [] }),
   "GET /me/sessions": () => json({ data: [] }),
   "GET /exports": () => json({ data: [] }),
+  // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The signed-in user's settings (defaults).
+  "GET /me/settings": () => json(settings()),
   "GET /admin/settings": () =>
     json({
       registration_mode: "invite",
@@ -70,6 +72,20 @@ const DEFAULTS: Record<string, Handler> = {
 function matcher(pattern: string): RegExp {
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]+");
   return new RegExp(`^${escaped}$`);
+}
+
+/** User settings as the API returns them (HAAL-045 defaults unless overridden). */
+export function settings(overrides: Partial<Settings> = {}): Settings {
+  return {
+    week_start: 1,
+    time_format: "24h",
+    theme: "system",
+    default_color: "brown",
+    agenda_days: 30,
+    week_ab: { enabled: false, anchor: null, labels: ["A", "B"] },
+    version: 1,
+    ...overrides,
+  };
 }
 
 export function stubApi(routes: Record<string, Handler>): Call[] {

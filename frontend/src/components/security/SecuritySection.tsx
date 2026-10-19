@@ -4,6 +4,7 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results are reported through runWrite (one notification per write);
 // field-level errors stay next to the fields.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Leaving with a typed new password asks; Ctrl/Cmd+Enter saves.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type SubmitEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { QrCode } from "@/components/ui/qr-code";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
-import { formatInstant, useDisplayTimeZone } from "@/lib/datetime";
+import { useInstantFormat } from "@/lib/datetime";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 import { RecoveryCodesDialog } from "./RecoveryCodesDialog";
@@ -291,9 +292,9 @@ function TwoFactor({ me }: { me: Me }) {
 }
 
 function Sessions() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const timeZone = useDisplayTimeZone();
+  const format = useInstantFormat();
   const sessions = useQuery({
     queryKey: sessionsQueryKey,
     queryFn: async () => {
@@ -330,7 +331,7 @@ function Sessions() {
               </span>
               <span className="block text-xs text-muted">
                 {t("security.sessions.lastActive", {
-                  date: formatInstant(session.last_seen_at, timeZone, i18n.language),
+                  date: format.instant(session.last_seen_at),
                 })}
                 {session.ip_prefix ? ` · ${session.ip_prefix}` : ""}
               </span>

@@ -541,6 +541,8 @@ components:
         time_zone: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
         locale: { type: string, enum: [en] }
     Settings:
+      # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045 (D-50). Created with the defaults on first use; theme is the
+      # source of truth for every device (the browser keeps a cached copy for the first paint).
       type: object
       required: [week_start, time_format, theme, default_color, agenda_days, week_ab, version]
       properties:
@@ -554,12 +556,15 @@ components:
           required: [enabled]
           properties:
             enabled: { type: boolean }
-            anchor: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Date' }, { type: 'null' }] }
+            anchor:
+              oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Date' }, { type: 'null' }]
+              description: Any date of the week labelled first; weeks are cut by week_start (atom calendar.week_ab_label.v1). Required while enabled.
             labels:
               type: array
               items: { type: string, minLength: 1, maxLength: 10 }
               minItems: 2
               maxItems: 2
+              description: Trimmed; the two labels must differ (case-insensitive).
         version: { type: integer }
     SettingsPatch:
       type: object

@@ -192,6 +192,8 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         assert image == [f"calendar/attachments/{attachment['id'][:8]}-plan.png"]
 
     assert document["user"]["email"] == "ada@example.org"
+    # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The settings travel with the export.
+    assert document["settings"]["week_start"] == 1 and document["settings"]["week_ab"]["labels"] == ["A", "B"]
     calendars = {c["name"]: c for c in document["calendars"]}
     assert set(calendars) == {"Work", "Old"}  # not Bob's calendar, even though it is shared with Ada
     assert calendars["Old"]["deleted_at"] and "deleted_at" not in calendars["Work"]

@@ -8,6 +8,8 @@
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. Every navigation here (user menu: Profile, Settings, Export) shows
 // its target: #profile / #export are scrolled to and focused, without a hash the page scrolls back to the top — also
 // when Settings is already open.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The theme switch became part of Preferences (user settings stored on
+// the server, #preferences), the first section of the page.
 import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,16 +17,8 @@ import { useTranslation } from "react-i18next";
 import { ExportSection } from "@/components/exports/ExportSection";
 import { ProfileSection } from "@/components/profile/ProfileSection";
 import { SecuritySection } from "@/components/security/SecuritySection";
+import { PreferencesSection } from "@/components/settings/PreferencesSection";
 import { SharingSection } from "@/components/sharing/SharingSection";
-import { cn } from "@/lib/utils";
-import { useTheme } from "@/theme/ThemeProvider";
-import type { ThemePreference } from "@/theme/theme";
-
-const OPTIONS: { value: ThemePreference; labelKey: `pages.settings.theme${"System" | "Light" | "Dark"}` }[] = [
-  { value: "system", labelKey: "pages.settings.themeSystem" },
-  { value: "light", labelKey: "pages.settings.themeLight" },
-  { value: "dark", labelKey: "pages.settings.themeDark" },
-];
 
 /** Brings the section named by the URL hash into view and focus on every navigation (a new history entry). */
 function useSectionTarget() {
@@ -47,44 +41,13 @@ function useSectionTarget() {
 
 function SettingsPage() {
   const { t } = useTranslation();
-  const { preference, setPreference } = useTheme();
   const top = useSectionTarget();
   return (
     <div ref={top} className="flex flex-col">
       <div className="border-b border-line px-4 py-2.5">
         <h1 className="text-lg font-semibold">{t("pages.settings.title")}</h1>
       </div>
-      <div className="flex flex-col gap-2 p-4">
-        <span id="theme-label" className="text-[11px] font-semibold tracking-wider text-muted uppercase">
-          {t("pages.settings.theme")}
-        </span>
-        <div
-          role="radiogroup"
-          aria-labelledby="theme-label"
-          className="inline-flex w-fit overflow-hidden rounded-sm border border-line"
-        >
-          {OPTIONS.map((option) => {
-            const checked = preference === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={checked}
-                onClick={() => {
-                  setPreference(option.value);
-                }}
-                className={cn(
-                  "h-11 border-r border-line px-4 text-[13px] last:border-r-0 md:h-8",
-                  checked ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
-                )}
-              >
-                {t(option.labelKey)}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <PreferencesSection />
       <ProfileSection />
       <SecuritySection />
       <SharingSection />
