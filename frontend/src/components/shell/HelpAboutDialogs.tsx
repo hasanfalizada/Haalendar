@@ -2,7 +2,8 @@
 // Help: shortcut overlay, documentation, issue tracker. About: version, licence, the author's and repository links.
 // External links open in a new tab without access to this page (rel="noopener noreferrer"). Closing returns the focus
 // through returnFocus (the user menu's button).
-import { ExternalLink, Keyboard } from "lucide-react";
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. Help offers "Text formatting" (the Markdown cheat sheet).
+import { ExternalLink, Keyboard, Type } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -46,7 +47,12 @@ function closeFocus(returnFocus: () => void) {
   };
 }
 
-export function HelpDialog({ open, onOpenChange, returnFocus }: MenuDialogProps) {
+export function HelpDialog({
+  open,
+  onOpenChange,
+  returnFocus,
+  onFormatting,
+}: MenuDialogProps & { onFormatting: () => void }) {
   const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,6 +75,20 @@ export function HelpDialog({ open, onOpenChange, returnFocus }: MenuDialogProps)
             <span className="min-w-0 flex-1">
               <span className="block font-medium">{t("help.shortcuts")}</span>
               <span className="block text-xs text-muted">{t("help.shortcutsHint")}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="flex items-start gap-3 rounded-sm p-2 text-left hover:bg-surface"
+            onClick={() => {
+              onOpenChange(false);
+              onFormatting();
+            }}
+          >
+            <Type className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">{t("help.formatting")}</span>
+              <span className="block text-xs text-muted">{t("help.formattingHint")}</span>
             </span>
           </button>
           <OutLink href={DOCS_URL} hint={t("help.docsHint")}>

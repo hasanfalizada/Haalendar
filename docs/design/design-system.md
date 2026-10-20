@@ -62,7 +62,7 @@ Shell regions: rail (modules Calendar / To-Do / Kanban, then Trash, Notification
 | Calendar | EventChip (day/agenda), EventBlock (week grid, drag/resize), MonthCell (+N more), EventPopover, EventEditor, OverdueCounter, CalendarList (visibility, color), LayerToggles |
 | To-Do | NoteCard (color, pin, labels, due, checklist progress), Checklist (reorder, checked to bottom), LabelPicker |
 | Kanban | Board, Column (WIP indicator), Card (stripe, badges, assignees, progress), CardDetail, AssigneePicker, BoardFilters |
-| Cross-cutting | ColorPicker (8 swatches), PrioritySelect, MarkdownEditor (write/preview, sanitized), AttachmentDropzone (picker, drag, paste) + Thumbnail, BulkActionBar, TrashList, HistoryList, LinkList |
+| Cross-cutting | ColorPicker (8 swatches), PrioritySelect, MarkdownEditor (write/preview, Ctrl/Cmd+B/I, formatting help; renderer `Markdown`, sanitized — D-51), AttachmentDropzone (picker, drag, paste) + Thumbnail, BulkActionBar, TrashList, HistoryList, LinkList |
 | Icons | Lucide (shadcn default, ISC licence), 16/20 px, stroke 2 |
 
 ## 7. Interaction patterns

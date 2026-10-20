@@ -663,7 +663,9 @@
     "docsHint": "How Haalendar works, how to run it and its data formats.",
     "issues": "Report a problem",
     "issuesHint": "Describe what happened; please leave out personal data.",
-    "newTab": "(opens in a new tab)"
+    "newTab": "(opens in a new tab)",
+    "formatting": "Text formatting",
+    "formattingHint": "How to write bold text, lists, links and more in descriptions and notes."
   },
   "about": {
     "title": "About Haalendar",
@@ -702,5 +704,34 @@
     "save": "Save preferences",
     "saved": "Preferences saved.",
     "conflict": "Your preferences were changed on another device. The newer version is shown; your changes are kept as a draft."
+  },
+  "markdown": {
+    "write": "Write",
+    "preview": "Preview",
+    "empty": "Nothing to preview yet.",
+    "supported": "Markdown supported",
+    "help": "Formatting help",
+    "helpTitle": "Text formatting",
+    "helpIntro": "Descriptions, notes and comments understand Markdown. Type the left column to get the right one.",
+    "youType": "You type",
+    "youGet": "You get",
+    "safety": "HTML is shown as plain text, links open in a new tab and only web, e-mail and phone links work. Pictures are attached as files, not linked.",
+    "tryIt": "Try it here (nothing is saved)",
+    "examples": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "strike": "Strikethrough",
+      "code": "Code",
+      "link": "Link",
+      "heading": "Heading",
+      "list": "List",
+      "numbered": "Numbered list",
+      "task": "Task list",
+      "quote": "Quote",
+      "codeBlock": "Code block",
+      "table": "Table",
+      "lineBreak": "Line break"
+    },
+    "mode": "{{label}}: write or preview"
   }
 }

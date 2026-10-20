@@ -4,7 +4,7 @@
 // and repository links, Sign out asks first when drafts exist, and the drawer on phones offers the same items.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { APP_VERSION, AUTHOR_URL, DOCS_URL, ISSUES_URL, LICENSE_URL, REPOSITORY_URL } from "@/lib/about";
 import { saveDraft } from "@/lib/drafts";
@@ -24,6 +24,12 @@ async function openMenu() {
 }
 
 describe("user menu", () => {
+  // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. The Markdown renderer is a lazily loaded chunk; its first import
+  // under the test runner can take many seconds, so it is loaded once here instead of inside a single test.
+  beforeAll(async () => {
+    await import("@/components/markdown/MarkdownView");
+  }, 60_000);
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -106,6 +112,22 @@ describe("user menu", () => {
     await waitFor(() => {
       expect(overlay).toContainElement(document.activeElement as HTMLElement);
     });
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: MENU_BUTTON })).toHaveFocus();
+    });
+  });
+
+  // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. Help → Text formatting: the Markdown cheat sheet.
+  it("opens the text formatting help from Help", async () => {
+    stubApi({ "GET /me": () => json(me()) });
+    renderApp("/calendar");
+    const { user, menu } = await openMenu();
+    await user.click(within(menu).getByRole("menuitem", { name: "Help" }));
+    const help = await screen.findByRole("dialog", { name: "Help" });
+    await user.click(within(help).getByRole("button", { name: /Text formatting/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Text formatting" });
+    expect(await within(sheet).findAllByText("bold", { selector: "strong" })).toHaveLength(2);
     await user.keyboard("{Escape}");
     await waitFor(() => {
       expect(screen.getByRole("button", { name: MENU_BUTTON })).toHaveFocus();

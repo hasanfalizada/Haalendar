@@ -1,11 +1,13 @@
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. User menu actions (FR-X-15) and the dialogs they open: Profile,
 // Settings and Export lead to Settings (#profile, #export); Help and About open their dialogs; Sign out uses the shared
 // flow (useSignOut). Each choice is logged. Dialogs opened from the menu return the focus to the menu's button.
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. Help → Text formatting opens the Markdown cheat sheet.
 import { useNavigate } from "@tanstack/react-router";
 import { CircleHelp, Download, Info, LogOut, Settings, UserRound, type LucideIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { FormattingHelpDialog } from "@/components/markdown/MarkdownEditor";
 import { log } from "@/lib/log";
 import { useSignOut } from "@/lib/useSignOut";
 
@@ -37,6 +39,7 @@ export function useUserMenu(): { actions: MenuAction[]; dialogs: ReactNode } {
   const { requestSignOut, signOutDialog } = useSignOut(focusMenuButton);
   const [helpOpen, setHelpOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [formattingOpen, setFormattingOpen] = useState(false);
 
   const go = (id: MenuAction["id"], hash?: string) => () => {
     log.info("user_menu", { action: id });
@@ -79,7 +82,23 @@ export function useUserMenu(): { actions: MenuAction[]; dialogs: ReactNode } {
   ];
   const dialogs = (
     <>
-      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} returnFocus={focusMenuButton} />
+      <HelpDialog
+        open={helpOpen}
+        onOpenChange={setHelpOpen}
+        returnFocus={focusMenuButton}
+        onFormatting={() => {
+          log.info("user_menu", { action: "formatting_help" });
+          setFormattingOpen(true);
+        }}
+      />
+      <FormattingHelpDialog
+        open={formattingOpen}
+        onOpenChange={setFormattingOpen}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          focusMenuButton();
+        }}
+      />
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} returnFocus={focusMenuButton} />
       {signOutDialog}
     </>

@@ -30,7 +30,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 
 | Chapter | Status | Notes / task |
 |---|---|---|
-| V1 Encoding and Sanitization | 🟡 | ORM parameterised SQL only; React output encoding; Markdown sanitising ⏳ HAAL-047 |
+| V1 Encoding and Sanitization | ✅ | ORM parameterised SQL only; React output encoding; Markdown rendered to React elements without innerHTML, raw HTML shown as text, only http(s)/mailto/tel links, no remote images, XSS payload tests (HAAL-047, D-51) |
 | V2 Validation and Business Logic | 🟡 | `ApiModel` strict schemas; per-endpoint validation with each feature |
 | V3 Web Frontend Security | 🟡 | CSP, headers, CSRF layer 1 ✅; SPA served with CSP ⏳ HAAL-150; per-session CSRF token ✅ (server HAAL-160, sent by the SPA from HAAL-163, memory only) |
 | V4 API and Web Service | 🟡 | Content-type/body limits, RFC 9457, merge-patch, If-Match ✅/contract; per-endpoint enforcement with features |
@@ -56,7 +56,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | A02 Security Misconfiguration | ✅ secure defaults, production guards, headers, docs disabled outside dev, Host allow-list, first-run wizard closed once an admin exists and token-protected in production (HAAL-163) |
 | A03 Software Supply Chain Failures | ✅ pins, lockfiles, 7-day release age, blocked install scripts, audits; ⏳ SBOM/licence gate/signing (HAAL-151) |
 | A04 Cryptographic Failures | 🟡 TLS + HSTS; Argon2id and token hashing with HAAL-160 |
-| A05 Injection | ✅ ORM parameters, no shell/eval; 🟡 Markdown sanitising (HAAL-047) |
+| A05 Injection | ✅ ORM parameters, no shell/eval; Markdown sanitising with XSS payload tests (HAAL-047) |
 | A06 Insecure Design | ✅ threat-driven requirements, ADRs, contract-first, soft delete |
 | A07 Authentication Failures | ✅ HAAL-160..162 (see V6/V7) |
 | A08 Software or Data Integrity Failures | 🟡 lockfile hashes; optimistic concurrency (If-Match) in contract; ⏳ image signing (HAAL-151) |
