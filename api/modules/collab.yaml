@@ -433,11 +433,14 @@ components:
           additionalProperties: { type: integer }
           description: 'What was deleted together with it, per type (e.g. {"event": 37}); empty when nothing.'
     Notification:
+      # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048 (D-52). export_ready added; payload holds display data only —
+      # share_*: share_id, container_kind, container_id, container_name, by_name, permission; export_ready: export_id,
+      # size_bytes, expires_at. The client builds the text from kind + payload.
       type: object
       required: [id, kind, created_at, payload]
       properties:
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        kind: { type: string, enum: [reminder, share_received, share_revoked, sync_error, assigned, comment] }
+        kind: { type: string, enum: [reminder, share_received, share_revoked, sync_error, assigned, comment, export_ready] }
         item_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
         payload: { type: object }
         created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }

@@ -11,6 +11,7 @@
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. The avatar opens the user menu (rail dropdown, drawer list). A
 // drawer entry that focuses its target keeps the focus there when the drawer closes.
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The user's settings are applied on this device (theme sync).
+// +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Notification bell in the rail; "Notifications" in the drawer.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -20,6 +21,11 @@ import { useTranslation } from "react-i18next";
 import { meQuery, meQueryKey } from "@/api/session";
 import { setSessionExpiredHandler } from "@/api/write";
 import { Button } from "@/components/ui/button";
+import {
+  NotificationBell,
+  NotificationsDialog,
+  NotificationsEntry,
+} from "@/components/notifications/NotificationCenter";
 import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -70,6 +76,7 @@ export function AppShell() {
   const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerFocusMoved = useRef(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { data: me } = useQuery(meQuery);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -117,6 +124,7 @@ export function AppShell() {
         {secondaryItems.map((item) => (
           <RailLink key={item.to} item={item} />
         ))}
+        {me ? <NotificationBell /> : null}
         <ShortcutsOverlay className="size-10" />
         <UserMenuButton actions={userMenu.actions} />
         <div className="mt-2">
@@ -158,6 +166,15 @@ export function AppShell() {
               {secondaryItems.map((item) => (
                 <DrawerLink key={item.to} item={item} onNavigate={closeDrawer} />
               ))}
+              {me ? (
+                <NotificationsEntry
+                  onOpen={() => {
+                    drawerFocusMoved.current = true; // the dialog takes the focus
+                    closeDrawer();
+                    setNotificationsOpen(true);
+                  }}
+                />
+              ) : null}
             </nav>
             <div className="mt-auto flex flex-col gap-3">
               <UserMenuList
@@ -180,6 +197,7 @@ export function AppShell() {
         <Outlet />
       </main>
       {userMenu.dialogs}
+      <NotificationsDialog open={notificationsOpen} onOpenChange={setNotificationsOpen} />
     </div>
   );
 }

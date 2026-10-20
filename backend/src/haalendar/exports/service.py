@@ -30,6 +30,7 @@ from haalendar.exports.models import ExportRequest
 from haalendar.exports.schemas import ExportOut, Module
 from haalendar.exports.sections import SECTIONS, ExportContext
 from haalendar.logging import get_logger
+from haalendar.notifications.service import notify_self
 from haalendar.preferences.service import get_settings
 from haalendar.preferences.service import to_out as settings_to_out
 from haalendar.storage import Storage, create_storage
@@ -214,6 +215,17 @@ async def _write_archive(
         row.expires_at = row.finished_at + KEEP_FOR
         row.version += 1
         log.info("export_ready", export_id=str(export_id), size_bytes=row.size_bytes, counts=counts)
+        # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Announced in the notification center as well (D-48, D-52).
+        await notify_self(
+            db,
+            owner_id,
+            "export_ready",
+            {
+                "export_id": str(export_id),
+                "size_bytes": row.size_bytes,
+                "expires_at": row.expires_at.isoformat(),
+            },
+        )
 
 
 async def _notify(factory: Factory, settings: Settings, export_id: uuid.UUID, owner_id: uuid.UUID) -> None:

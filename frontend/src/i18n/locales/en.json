@@ -733,5 +733,32 @@
       "lineBreak": "Line break"
     },
     "mode": "{{label}}: write or preview"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "bellUnread_one": "Notifications, {{count}} unread",
+    "bellUnread_other": "Notifications, {{count}} unread",
+    "markAll": "Mark all read",
+    "more": "Show more",
+    "empty": "You're all caught up.",
+    "loading": "Loading…",
+    "unavailable": "Notifications could not be loaded. Check the connection.",
+    "unread": "Unread",
+    "someone": "Someone",
+    "unnamed": "(no name)",
+    "containers": {
+      "calendar": "calendar",
+      "other": "item"
+    },
+    "permissions": {
+      "view": "can view",
+      "edit": "can edit"
+    },
+    "shareReceived": "{{by}} shared the {{container}} “{{name}}” with you ({{permission}}).",
+    "shareRevoked": "{{by}} stopped sharing the {{container}} “{{name}}” with you.",
+    "exportReady": "Your data export is ready to download.",
+    "syncError": "Some changes made on this device could not be saved to the server.",
+    "reminder": "Reminder: {{title}}",
+    "generic": "You have a new notification."
   }
 }

@@ -22,7 +22,12 @@ export function SharingSection() {
   const kindLabel = (share: Share) => t(`sharing.kind.${share.container_kind}`);
 
   return (
-    <section aria-labelledby="sharing-title" className="flex flex-col gap-4 border-t border-line p-4">
+    <section
+      id="sharing"
+      tabIndex={-1}
+      aria-labelledby="sharing-title"
+      className="flex scroll-mt-2 flex-col gap-4 border-t border-line p-4 outline-none"
+    >
       <h2 id="sharing-title" className="text-[11px] font-semibold tracking-wider text-muted uppercase">
         {t("sharing.title")}
       </h2>

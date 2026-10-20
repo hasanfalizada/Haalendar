@@ -56,6 +56,9 @@ AUDIT_EXEMPT_TABLES = frozenset(
         # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Preferences: neither content nor an account change relevant
         # to administrators (D-37, D-50); changes are in the structured logs (fields only, no values).
         "user_settings",
+        # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Notifications are service data (D-52): who was told what
+        # follows from the audited share and export rows.
+        "notification",
     }
 )
 NOISE_COLUMNS = ("updated_at", "updated_by", "version", "sync_seq")

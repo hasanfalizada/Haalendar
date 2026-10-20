@@ -278,11 +278,13 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | version, sync_seq | bigint | |
 
 ### 5.17 `notification`
++++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Implemented in migration 0013 (D-52): the user column is `owner_id` (owner-only row-level security as for the other per-user tables); kind adds `export_ready`; rows for other users come from the share trigger; only read_at / delivered_push_at may change; never deleted.
+
 | Column | Type | Rules |
 |---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK user NN | |
-| kind | notification_kind NN | |
+| id | uuid PK | uuidv7() |
+| owner_id | uuid FK user NN | |
+| kind | notification_kind NN | reminder, share_received, share_revoked, sync_error, assigned, comment, export_ready |
 | item_id | uuid FK item | optional |
 | payload | jsonb NN | display data |
 | created_at | timestamptz NN | |

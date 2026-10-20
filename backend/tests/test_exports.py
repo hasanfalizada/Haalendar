@@ -174,6 +174,10 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
 
     listed = world.api.get("/api/v1/exports").json()["data"]
     assert listed[0]["status"] == "ready" and listed[0]["download_url"].endswith("/download")
+    # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. The ready export is announced in the notification center.
+    notes = world.api.get("/api/v1/notifications").json()
+    ready = [n for n in notes["data"] if n["kind"] == "export_ready"]
+    assert len(ready) == 1 and ready[0]["payload"]["export_id"] == export["id"] and notes["unread_count"] >= 1
     assert listed[0]["counts"] == {"calendars": 2, "attachments": 1}
     response = world.api.get(listed[0]["download_url"])
     assert response.status_code == 200 and response.headers["content-type"] == "application/zip"

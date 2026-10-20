@@ -59,6 +59,8 @@ const DEFAULTS: Record<string, Handler> = {
   "GET /exports": () => json({ data: [] }),
   // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The signed-in user's settings (defaults).
   "GET /me/settings": () => json(settings()),
+  // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. No notifications by default.
+  "GET /notifications": () => json({ data: [], unread_count: 0, next_cursor: null }),
   "GET /admin/settings": () =>
     json({
       registration_mode: "invite",
