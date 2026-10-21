@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Dropdown menu on Radix (roving focus, typeahead, Esc). Used for row
 // actions; items are at least 44 px high on touch screens.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. …and on any touch device (tablets too), compact only with a mouse from 768 px.
 import { DropdownMenu as RadixMenu } from "radix-ui";
 import type { ComponentProps } from "react";
 
@@ -29,7 +30,7 @@ export function DropdownMenuItem({
   return (
     <RadixMenu.Item
       className={cn(
-        "flex h-11 cursor-default items-center gap-2 rounded-sm px-2.5 text-[13px] outline-none select-none md:h-8",
+        "flex h-11 cursor-default items-center gap-2 rounded-sm px-2.5 text-[13px] outline-none select-none pointer-fine:md:h-8",
         "data-[highlighted]:bg-surface data-[disabled]:opacity-50 [&_svg]:size-4",
         danger ? "text-danger" : "text-fg",
         className,

@@ -66,7 +66,7 @@ export function PrioritySelect({ value, onChange, name, disabled = false }: Prio
             <label
               key={level}
               className={cn(
-                "inline-flex h-8 cursor-pointer items-center gap-1 rounded-sm px-2.5 text-[13px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary max-md:h-11",
+                "inline-flex h-11 cursor-pointer items-center gap-1 rounded-sm px-2.5 text-[13px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary pointer-fine:md:h-8",
                 checked ? TONE[level] : "text-muted hover:bg-surface",
               )}
             >
@@ -104,7 +104,7 @@ export function PriorityFilter({ value, onChange }: PriorityFilterProps) {
         type="button"
         aria-pressed={selected.size === 0}
         className={cn(
-          "h-8 rounded-sm px-2.5 text-[13px] max-md:h-11",
+          "h-11 rounded-sm px-2.5 text-[13px] pointer-fine:md:h-8",
           selected.size === 0 ? "bg-primary-tint text-primary" : "text-muted hover:bg-surface",
         )}
         onClick={() => {
@@ -122,7 +122,7 @@ export function PriorityFilter({ value, onChange }: PriorityFilterProps) {
             type="button"
             aria-pressed={on}
             className={cn(
-              "inline-flex h-8 items-center gap-1 rounded-sm px-2.5 text-[13px] max-md:h-11",
+              "inline-flex h-11 items-center gap-1 rounded-sm px-2.5 text-[13px] pointer-fine:md:h-8",
               on ? TONE[level] : "text-muted hover:bg-surface",
             )}
             onClick={() => {

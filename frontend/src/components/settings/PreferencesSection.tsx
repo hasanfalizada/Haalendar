@@ -117,7 +117,7 @@ function Segmented<T extends string>({
                 onChange(option.value);
               }}
               className={cn(
-                "h-11 border-r border-line px-4 text-[13px] last:border-r-0 md:h-8",
+                "h-11 border-r border-line px-4 text-[13px] last:border-r-0 pointer-fine:md:h-8",
                 checked ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
               )}
             >

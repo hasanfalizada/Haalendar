@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. "Forgot password": requests a reset link. The answer is the same
 // whether or not the address exists (no account enumeration); the link is valid for one hour and can be used once.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,10 +11,11 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { describeError, log } from "@/lib/log";
+import { STANDALONE_LINK } from "@/components/ui/link-styles";
 
 export const Route = createFileRoute("/forgot-password")({ component: ForgotPasswordPage });
 
-const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
+const linkClass = STANDALONE_LINK;
 
 function ForgotPasswordPage() {
   const { t } = useTranslation();

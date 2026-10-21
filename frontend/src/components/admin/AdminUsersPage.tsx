@@ -4,6 +4,8 @@
 // actions are confirmed; the server asks for re-authentication when needed.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Results are reported through runWrite (one notification per write).
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Phone cards no longer widen the page: long names and e-mail
+// addresses wrap, the first card column may shrink.
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -200,7 +202,7 @@ export function AdminUsersPage() {
       ) : null}
 
       <div className="px-4 pb-4">
-        <table className="w-full border-collapse text-left">
+        <table className="w-full border-collapse text-left max-md:block">
           <thead className="max-md:sr-only">
             <tr className="border-b border-line text-xs text-muted">
               <th scope="col" className="py-2 pr-3 font-medium">
@@ -223,16 +225,16 @@ export function AdminUsersPage() {
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="max-md:block">
             {rows.map((user) => {
               const self = user.id === me?.id;
               return (
                 <tr
                   key={user.id}
-                  className="border-b border-line align-middle max-md:grid max-md:grid-cols-[1fr_auto] max-md:gap-x-3 max-md:py-2"
+                  className="border-b border-line align-middle max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:gap-x-3 max-md:py-2"
                 >
-                  <td className="py-2 pr-3 max-md:col-start-1 max-md:py-0">
-                    <div className="font-medium">
+                  <td className="py-2 pr-3 max-md:col-start-1 max-md:min-w-0 max-md:py-0">
+                    <div className="font-medium wrap-anywhere">
                       {user.display_name}
                       {self ? (
                         <span className="ml-2 rounded-sm bg-surface-2 px-1.5 py-0.5 text-xs text-muted">
@@ -240,7 +242,7 @@ export function AdminUsersPage() {
                         </span>
                       ) : null}
                     </div>
-                    <div className="text-xs text-muted">{user.email}</div>
+                    <div className="text-xs text-muted wrap-anywhere">{user.email}</div>
                   </td>
                   <td className="py-2 pr-3 max-md:col-start-1 max-md:py-0 max-md:text-xs">
                     {t(`admin.role.${user.role}`)}

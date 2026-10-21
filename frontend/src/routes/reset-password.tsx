@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. New password from the reset link (single use, 1 hour). All sessions
 // of the account are signed out by the server; the user signs in again afterwards.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,6 +12,7 @@ import { isViolation, passwordViolations, useViolationText } from "@/components/
 import { PasswordField } from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
 import { describeError, log } from "@/lib/log";
+import { STANDALONE_LINK } from "@/components/ui/link-styles";
 
 interface ResetSearch {
   token?: string;
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
 });
 
-const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
+const linkClass = STANDALONE_LINK;
 
 function ResetPasswordPage() {
   const { t } = useTranslation();

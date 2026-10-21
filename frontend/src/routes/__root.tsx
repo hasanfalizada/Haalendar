@@ -1,12 +1,14 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Root route: not-found page.
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. Setup gate: while no administrator exists every route leads to /setup;
 // afterwards /setup leads to the calendar. If the server is unreachable the gate does nothing (offline-first).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
 import { createRootRouteWithContext, Link, Outlet, redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { setupStatusQuery } from "@/api/setup";
 import { describeError, log } from "@/lib/log";
+import { STANDALONE_LINK } from "@/components/ui/link-styles";
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -18,7 +20,7 @@ function NotFound() {
     <div className="grid h-full place-items-center p-6 text-center">
       <div className="flex flex-col items-center gap-3">
         <h1 className="text-lg font-semibold">{t("pages.notFound.title")}</h1>
-        <Link to="/calendar" className="font-medium text-primary underline-offset-4 hover:underline">
+        <Link to="/calendar" className={STANDALONE_LINK}>
           {t("pages.notFound.back")}
         </Link>
       </div>

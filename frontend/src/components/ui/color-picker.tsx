@@ -38,7 +38,7 @@ export function ColorPicker({ value, onChange, name, disabled = false, legend }:
               key={color}
               title={label}
               className={cn(
-                "relative grid size-8 cursor-pointer place-items-center rounded-full max-md:size-11",
+                "relative grid size-11 cursor-pointer place-items-center rounded-full pointer-fine:md:size-8",
                 swatchClasses(color),
                 "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
                 checked && "ring-2 ring-fg ring-offset-2 ring-offset-bg",

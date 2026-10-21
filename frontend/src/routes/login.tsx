@@ -3,6 +3,7 @@
 // exists. After sign-in the user returns to the page that required it (same-origin paths only).
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Links to password reset and (open mode) sign-up; an unconfirmed
 // e-mail offers a new confirmation link.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
@@ -17,6 +18,7 @@ import { ResendVerification } from "@/components/auth/ResendVerification";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { describeError, log } from "@/lib/log";
+import { STANDALONE_LINK } from "@/components/ui/link-styles";
 
 interface LoginSearch {
   redirect?: string;
@@ -169,11 +171,11 @@ function LoginPage() {
       {unverified ? <ResendVerification email={unverified} /> : null}
       {!secondFactor ? (
         <div className="flex flex-wrap justify-between gap-2 text-[13px]">
-          <Link to="/forgot-password" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link to="/forgot-password" className={STANDALONE_LINK}>
             {t("auth.login.forgot")}
           </Link>
           {status?.registration_mode === "open" ? (
-            <Link to="/register" className="font-medium text-primary underline-offset-4 hover:underline">
+            <Link to="/register" className={STANDALONE_LINK}>
               {t("auth.login.createAccount")}
             </Link>
           ) : null}

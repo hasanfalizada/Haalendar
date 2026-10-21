@@ -1,11 +1,13 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-163. Text input, select and field wrapper (shadcn/ui pattern, design system
 // form styles): label above, hint/error below, error wired to aria-invalid + aria-describedby.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. 44 px high and 16 px text on touch and narrow screens (16 px stops iOS Safari from zooming into a focused
+// field); the compact 36 px / 13 px only with a mouse from 768 px.
 import type { ComponentProps, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
 const controlClass =
-  "h-9 w-full rounded-sm border border-line bg-bg px-2.5 text-[13px] text-fg placeholder:text-muted disabled:opacity-50 aria-invalid:border-danger";
+  "h-11 w-full rounded-sm border border-line bg-bg px-2.5 text-base text-fg placeholder:text-muted disabled:opacity-50 aria-invalid:border-danger pointer-fine:md:h-9 pointer-fine:md:text-[13px]";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(controlClass, className)} {...props} />;

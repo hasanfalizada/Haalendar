@@ -3,6 +3,7 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. onOpenAutoFocus passes through (a dialog may focus its main button).
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. onCloseAutoFocus passes through (a dialog opened from a menu returns
 // the focus to the menu's button, the menu item that opened it is gone).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. The close button is a 44 px target on touch devices.
 import { Dialog as RadixDialog } from "radix-ui";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
@@ -53,7 +54,7 @@ export function DialogContent({
             ) : null}
           </div>
           <RadixDialog.Close
-            className="-m-2 inline-flex size-10 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-surface"
+            className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-surface pointer-fine:md:size-10"
             aria-label={closeLabel}
           >
             <X className="size-5" aria-hidden />

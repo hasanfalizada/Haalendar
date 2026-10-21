@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. User menu in every module (FR-X-15): the avatar in the rail opens
 // it as a dropdown; on phones the profile block in the drawer expands into the same items (actions: useUserMenu).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. 44 px rail target on touch devices.
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { useRef, useState } from "react";
@@ -31,7 +32,7 @@ export function UserMenuButton({ actions }: { actions: MenuAction[] }) {
         data-user-menu-button
         aria-label={t("userMenu.open", { name: me.display_name })}
         title={me.display_name}
-        className="mt-1 rounded-full"
+        className="mt-1 grid place-items-center rounded-full pointer-coarse:size-11"
       >
         <Avatar name={me.display_name} url={me.avatar_url} size={32} />
       </DropdownMenuTrigger>

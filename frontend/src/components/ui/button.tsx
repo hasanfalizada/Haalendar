@@ -1,4 +1,5 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Button (shadcn/ui pattern) with Haalendar variants from the design system.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Touch targets (FR-X-17, D-53): 44 px by default; the compact sizes only with a mouse from 768 px.
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import type { ComponentProps } from "react";
@@ -16,8 +17,8 @@ const buttonVariants = cva(
         danger: "border border-line bg-bg text-danger hover:bg-surface",
       },
       size: {
-        md: "h-8 px-3",
-        icon: "size-10",
+        md: "h-11 px-3 pointer-fine:md:h-8",
+        icon: "size-11 pointer-fine:md:size-10",
         touch: "h-11 px-3",
       },
     },

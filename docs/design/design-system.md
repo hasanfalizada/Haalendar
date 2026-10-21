@@ -52,6 +52,20 @@ Rendering rule: an event is a **tint (13–18 % of the color mixed into `bg`) + 
 
 Shell regions: rail (modules Calendar / To-Do / Kanban, then Trash, Notifications, Account), module sidebar, module header (navigation, view switch, search), content. Offline/demo banners sit above the header.
 
+### 5.1 Mobile rules (D-53, HAAL-170)
++++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Every screen and every module follows these rules; the base components already do.
+
+- **Widths:** 360 px and up; no sideways scrolling of the page or of the content area at any width. Long names, e-mail addresses and URLs wrap (`wrap-anywhere`); grid and flex children that hold text get `min-w-0`.
+- **Touch targets:** 44 × 44 px on touch devices of any size and on phones; compact sizes only with a mouse from 768 px. Write sizes as `h-11 pointer-fine:md:h-8` (base = touch, compact = mouse + md). Button, Input, Select, menu items, priority and colour pickers and the dialog close button already do; check boxes and radio buttons grow on touch and their label is the 44 px target (global rule in `styles.css`).
+- **Fields:** 16 px text on touch / phones (iOS Safari otherwise zooms into a focused field); 13 px only with a mouse from 768 px.
+- **Links:** a link that stands on its own uses `STANDALONE_LINK` (44 px); a link inside a sentence uses `INLINE_LINK`.
+- **Tables:** become cards on phones (grid rows, first column `minmax(0,1fr)`, actions on the right), as in Users.
+- **Overlays:** dialogs are bottom sheets on phones (max 90 dvh, scrolling inside); popovers that hold lists open as dialogs on phones (notification center); the drawer scrolls on short screens.
+- **Behaviour that CSS cannot express** (long press instead of hover, swipe hints) asks `useCoarsePointer()`.
+- **Module layouts** keep the rows of the breakpoint table above: floating New button, full-screen editors, swipe between periods, Kanban one column — built with their modules (first: HAAL-063).
+
+**Checklist per screen** (until the automated viewport checks of HAAL-143): 360 × 640, 390 × 844, 640 × 360 (landscape), 768 × 1024, light and dark — no sideways scroll, nothing cut off, no target under 44 px on touch, fields 16 px, the on-screen keyboard does not cover the focused field, safe areas respected.
+
 ## 6. Components (shadcn/ui based)
 | Group | Components |
 |---|---|

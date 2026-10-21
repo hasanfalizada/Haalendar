@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. E-mail confirmation (link from the verification e-mail): confirms
 // once on load; an invalid or expired link offers to send a new one.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
@@ -12,6 +13,7 @@ import { ResendVerification } from "@/components/auth/ResendVerification";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { log } from "@/lib/log";
+import { STANDALONE_LINK } from "@/components/ui/link-styles";
 
 interface VerifySearch {
   token?: string;
@@ -23,7 +25,7 @@ export const Route = createFileRoute("/verify-email")({
   component: VerifyEmailPage,
 });
 
-const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
+const linkClass = STANDALONE_LINK;
 
 function VerifyEmailPage() {
   const { t } = useTranslation();

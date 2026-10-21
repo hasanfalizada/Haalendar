@@ -247,3 +247,17 @@
   background: var(--color-surface);
   font-weight: 600;
 }
+
+/* +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170 (FR-X-17, D-53). Touch devices: check boxes and radio buttons are
+   larger and the label around them is a 44 px target (the whole label toggles the control). */
+@media (pointer: coarse) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    min-height: 44px;
+  }
+}

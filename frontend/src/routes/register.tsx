@@ -1,6 +1,7 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Open sign-up (only when the instance allows it): name, e-mail,
 // policy-checked password and time zone; then "check your inbox" with a resend button. The server answers 202 for
 // every accepted request, so an existing address is not revealed here.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
@@ -18,12 +19,13 @@ import { TimeZoneSelect } from "@/components/auth/TimeZoneSelect";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { describeError, log } from "@/lib/log";
+import { INLINE_LINK, STANDALONE_LINK } from "@/components/ui/link-styles";
 
 export const Route = createFileRoute("/register")({ component: RegisterPage });
 
 type FieldName = "display_name" | "email" | "password" | "time_zone";
 
-const linkClass = "font-medium text-primary underline-offset-4 hover:underline";
+const linkClass = STANDALONE_LINK;
 
 function RegisterPage() {
   const { t } = useTranslation();
@@ -157,7 +159,7 @@ function RegisterPage() {
       </Button>
       <p className="text-center text-[13px] text-muted">
         {t("auth.register.haveAccount")}{" "}
-        <Link to="/login" className={linkClass}>
+        <Link to="/login" className={INLINE_LINK}>
           {t("auth.login.submit")}
         </Link>
       </p>

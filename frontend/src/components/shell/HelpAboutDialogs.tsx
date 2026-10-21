@@ -3,6 +3,7 @@
 // External links open in a new tab without access to this page (rel="noopener noreferrer"). Closing returns the focus
 // through returnFocus (the user menu's button).
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. Help offers "Text formatting" (the Markdown cheat sheet).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Links are at least 44 px high (touch).
 import { ExternalLink, Keyboard, Type } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,7 +21,7 @@ function OutLink({ href, children, hint }: { href: string; children: ReactNode; 
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-start gap-3 rounded-sm p-2 hover:bg-surface"
+      className="flex min-h-11 items-start gap-3 rounded-sm p-2 hover:bg-surface"
     >
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 font-medium text-primary">

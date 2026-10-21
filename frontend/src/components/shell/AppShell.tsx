@@ -12,6 +12,7 @@
 // drawer entry that focuses its target keeps the focus there when the drawer closes.
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The user's settings are applied on this device (theme sync).
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Notification bell in the rail; "Notifications" in the drawer.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Rail targets are 44 px on touch tablets, 40 px with a mouse.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -49,7 +50,7 @@ function RailLink({ item }: { item: NavItem }) {
       to={item.to}
       aria-label={label}
       title={title}
-      className="flex size-10 items-center justify-center rounded-sm text-muted hover:bg-surface-2 hover:text-fg"
+      className="flex size-11 items-center justify-center rounded-sm text-muted hover:bg-surface-2 hover:text-fg pointer-fine:size-10"
       activeProps={{ className: "bg-primary-tint !text-primary", "aria-current": "page" }}
     >
       <item.icon className="size-5" aria-hidden />
@@ -125,7 +126,7 @@ export function AppShell() {
           <RailLink key={item.to} item={item} />
         ))}
         {me ? <NotificationBell /> : null}
-        <ShortcutsOverlay className="size-10" />
+        <ShortcutsOverlay className="pointer-fine:size-10" />
         <UserMenuButton actions={userMenu.actions} />
         <div className="mt-2">
           <ConnectionStatus compact />

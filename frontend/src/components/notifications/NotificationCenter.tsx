@@ -4,6 +4,7 @@
 // loads older ones, "Mark all read". Choosing a notification marks it read and opens what it is about (sharing → the
 // Sharing section of Settings, a ready export → Your data). Texts are built here from kind + payload and always
 // rendered as plain text.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. 44 px rail target on touch devices.
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Bell, BellRing, Download, Share2, UserMinus, type LucideIcon } from "lucide-react";
 import { useState } from "react";
@@ -158,7 +159,7 @@ export function NotificationBell() {
       <PopoverTrigger
         aria-label={label}
         title={label}
-        className="relative flex size-10 items-center justify-center rounded-sm text-muted hover:bg-surface-2 hover:text-fg"
+        className="relative flex size-11 items-center justify-center rounded-sm text-muted hover:bg-surface-2 hover:text-fg pointer-fine:size-10"
       >
         <Bell className="size-5" aria-hidden />
         <Badge count={unread} className="absolute -top-0.5 -right-0.5" />

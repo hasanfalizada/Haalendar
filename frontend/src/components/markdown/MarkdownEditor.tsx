@@ -2,6 +2,7 @@
 // plain text area with Write / Preview tabs, Ctrl/Cmd+B and Ctrl/Cmd+I wrap the selection in bold / italic (again
 // removes it), the preview uses the same renderer as every view. "Formatting help" opens a cheat sheet with examples
 // rendered by that renderer and a scratch area (FormattingHelpDialog, also offered in Help).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Cheat sheet columns have fixed shares and wrap on narrow screens.
 import { type KeyboardEvent, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -98,7 +99,7 @@ export function MarkdownEditor({
                 setTab(name);
               }}
               className={cn(
-                "h-8 px-2.5 md:h-7",
+                "h-11 px-2.5 pointer-fine:md:h-7",
                 tab === name ? "bg-primary-tint font-semibold text-primary" : "text-muted hover:bg-surface",
               )}
             >
@@ -121,7 +122,7 @@ export function MarkdownEditor({
           onChange={(e) => {
             onChange(e.target.value);
           }}
-          className="w-full resize-y rounded-sm border border-line bg-bg px-2.5 py-2 text-[13px] text-fg placeholder:text-muted aria-invalid:border-danger"
+          className="w-full resize-y rounded-sm border border-line bg-bg px-2.5 py-2 text-base text-fg placeholder:text-muted aria-invalid:border-danger pointer-fine:md:text-[13px]"
         />
       </div>
       <div
@@ -219,7 +220,7 @@ export function FormattingHelpDialog({
         className="md:max-w-2xl"
         {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
       >
-        <table className="w-full text-left text-[13px]">
+        <table className="w-full table-fixed text-left text-[13px]">
           <thead>
             <tr className="text-xs text-muted">
               <th className="py-1 pr-3 font-medium">{t("markdown.youType")}</th>
@@ -229,11 +230,11 @@ export function FormattingHelpDialog({
           <tbody className="divide-y divide-line">
             {EXAMPLES.map((example) => (
               <tr key={example.key} className="align-top">
-                <td className="py-1.5 pr-3">
+                <td className="w-[45%] py-1.5 pr-3 wrap-anywhere">
                   <span className="sr-only">{t(`markdown.examples.${example.key}`)}: </span>
                   <pre className="font-mono text-xs whitespace-pre-wrap">{example.source}</pre>
                 </td>
-                <td className="py-1.5">
+                <td className="min-w-0 py-1.5 wrap-anywhere">
                   <Markdown source={example.source} />
                 </td>
               </tr>
