@@ -48,6 +48,9 @@ function useText() {
       case "export_ready":
         return t("notifications.exportReady");
       case "sync_error":
+        // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. The sync engine says why (conflict / rejected).
+        if (text("reason") === "conflict") return t("sync.conflict");
+        if (text("reason") === "rejected") return t("sync.rejected");
         return t("notifications.syncError");
       case "reminder":
         return t("notifications.reminder", { title: text("title") || t("notifications.unnamed") });

@@ -19,6 +19,7 @@ import { cachedProfile, forgetProfile, rememberProfile } from "@/lib/profileCach
 import { wipeLocalNotifications } from "@/lib/localNotifications";
 import { bindUndoUser } from "@/lib/undo";
 import { describeError, log } from "@/lib/log";
+import { wipeLocalStore } from "@/sync";
 
 export const meQueryKey = ["session", "me"] as const;
 
@@ -72,6 +73,8 @@ export function rememberSession(queryClient: QueryClient, me: Me, csrfToken: str
 }
 
 /** Sign out: revoke the server session, forget the CSRF token and wipe all cached data on this device (ADR-0005). */
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. The local database with the outbox goes too (the caller has synced
+// and confirmed first: useSignOut).
 export async function signOut(queryClient: QueryClient): Promise<void> {
   const user = queryClient.getQueryData<Me | null>(meQueryKey)?.id;
   try {
@@ -83,6 +86,7 @@ export async function signOut(queryClient: QueryClient): Promise<void> {
   if (user) {
     await wipeDrafts(user);
     await wipeLocalNotifications(user);
+    await wipeLocalStore(user);
   }
   await forgetProfile();
   bindUndoUser(null);

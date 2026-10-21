@@ -24,6 +24,7 @@
     "@tanstack/react-router": "1.170.41",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "dexie": "4.4.6",
     "i18next": "26.4.2",
     "idb": "8.0.4",
     "lucide-react": "1.52.0",

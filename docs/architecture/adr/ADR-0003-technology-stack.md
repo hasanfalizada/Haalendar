@@ -12,6 +12,7 @@
 ## 1. Context
 Drivers from SRS v1.1 that shape the stack:
 - **Offline-first PWA** (FR-OFF-01..06): the client must boot and work with no server; data lives in the browser (IndexedDB) and syncs later.
+  <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. --> Implemented with Dexie 4 (local store and outbox, ADR-0009, D-57).
 - **Multi-user, on-prem** (FR-ACC-*, 2.4): simple Docker Compose install on 2 vCPU / 2 GB RAM, x86_64 + arm64; as few services as possible.
 - **Full-text search** (FR-X-10), **recurrence RRULE** (FR-CAL-10/30), **audit + soft delete** (FR-X-01/03), **push updates** (FR-X-18), **reminders with Web Push** (FR-CAL-29).
 - **LLM-native atomic architecture**, contract-first (JSON Schema + OpenAPI), Project Manifest.

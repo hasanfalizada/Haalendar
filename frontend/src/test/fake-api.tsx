@@ -61,6 +61,9 @@ const DEFAULTS: Record<string, Handler> = {
   "GET /me/settings": () => json(settings()),
   // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. No notifications by default.
   "GET /notifications": () => json({ data: [], unread_count: 0, next_cursor: null }),
+  // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. Nothing to sync by default.
+  "GET /sync/pull": () => json({ changes: [], cursor: "c0", has_more: false }),
+  "POST /sync/push": () => json({ results: [] }),
   "GET /admin/settings": () =>
     json({
       registration_mode: "invite",

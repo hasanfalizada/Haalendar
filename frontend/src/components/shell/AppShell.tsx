@@ -30,6 +30,7 @@ import {
 } from "@/components/notifications/NotificationCenter";
 import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { startSync } from "@/sync";
 
 import { ConnectionStatus } from "./ConnectionStatus";
 import { OfflineBanner } from "./OfflineBanner";
@@ -98,6 +99,12 @@ export function AppShell() {
   const userMenu = useUserMenu();
   useModuleShortcuts();
   useSettingsSync();
+  // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. The sync engine of the signed-in user (also with the profile
+  // cached on this device: offline it waits for the connection).
+  const userId = me?.id;
+  useEffect(() => {
+    if (userId) startSync(userId, queryClient);
+  }, [userId, queryClient]);
   useUndoShortcuts(me?.id ?? null);
   const closeDrawer = () => {
     setDrawerOpen(false);

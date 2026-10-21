@@ -19,7 +19,14 @@
     "online": "Connected",
     "offline": "Offline — changes stay on this device",
     "serverUnreachable": "Server unreachable",
-    "checking": "Checking connection"
+    "checking": "Checking connection",
+    "syncing": "Syncing…",
+    "pending_one": "{{count}} change not sent yet",
+    "pending_other": "{{count}} changes not sent yet",
+    "offlinePending_one": "Offline — {{count}} change waits on this device",
+    "offlinePending_other": "Offline — {{count}} changes wait on this device",
+    "syncError": "Sync failed — retrying",
+    "syncPaused": "Sync paused — sign in again"
   },
   "pages": {
     "calendar": {
@@ -490,7 +497,8 @@
       "duplicate": "Not saved — this already exists.",
       "invalidState": "Not saved — this is not possible in the current state.",
       "server": "Not saved — the server ran into an error. Try again; if it keeps happening, tell your administrator.",
-      "generic": "Not saved. Please try again."
+      "generic": "Not saved. Please try again.",
+      "storageFull": "Not saved — this device has no room left for offline data. Free up storage space, then try again."
     }
   },
   "drafts": {
@@ -500,6 +508,13 @@
     "signOutTitle": "Sign out and delete unsaved changes?",
     "signOutBody": "Changes that have not been saved yet are kept on this device. Signing out deletes them.",
     "signOutConfirm": "Sign out anyway"
+  },
+  "sync": {
+    "signOutTitle": "Sign out and lose unsent changes?",
+    "signOutBody_one": "{{count}} change has not reached the server yet (no connection). Signing out deletes it from this device.",
+    "signOutBody_other": "{{count}} changes have not reached the server yet (no connection). Signing out deletes them from this device.",
+    "conflict": "A change could not be applied as it was: someone changed the same fields. Both versions are kept.",
+    "rejected": "A change was not accepted by the server. It is kept on this device."
   },
   "undo": {
     "action": "Undo",
@@ -768,7 +783,7 @@
     "reload": "Reload"
   },
   "offlineBanner": {
-    "offline": "You are offline. What is loaded can be viewed; changes need a connection.",
-    "unreachable": "The server cannot be reached. What is loaded can be viewed; changes need a connection."
+    "offline": "You are offline. Changes to calendars and items are kept on this device and sync when the connection is back; settings and sharing need a connection.",
+    "unreachable": "The server cannot be reached. Changes to calendars and items are kept on this device and sync later; settings and sharing need a connection."
   }
 }

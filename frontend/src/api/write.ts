@@ -10,12 +10,16 @@
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. The tab-close guard also asks while an editor has unsaved changes.
 // onSuccess runs before the success notification, so the UI shows the saved state when "Saved" appears (otherwise an
 // editor could still count as unsaved for a moment and ask needlessly when the user moves on).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. A local write made without a connection (sync/mutate) reports
+// "Saved on this device…" instead of the success message; its arrival is announced later by the sync engine. A full
+// device storage (IndexedDB quota) is named as such, not as a missing connection.
 import i18n from "@/i18n";
 import { REAUTH_CANCELLED } from "@/components/auth/reauth";
 import { describeError, log } from "@/lib/log";
 import { notify } from "@/lib/notify";
 import { record, type UndoStep, undo } from "@/lib/undo";
 import { dirtyEditorCount } from "@/lib/unsaved";
+import { isQueuedWrite } from "@/sync";
 
 import type { Problem } from "./generated/types.gen";
 import { fieldErrorsOf, isProblem, type ProblemCode } from "./problem";
@@ -23,7 +27,7 @@ import { fieldErrorsOf, isProblem, type ProblemCode } from "./problem";
 /** A write that has not answered after this long is reported (the request itself may still finish). */
 export const WRITE_TIMEOUT_MS = 30_000;
 
-export type WriteFailureCode = ProblemCode | "network" | "timeout" | "http_error" | "cancelled";
+export type WriteFailureCode = ProblemCode | "network" | "timeout" | "http_error" | "cancelled" | "storage_full";
 
 export interface FieldError {
   field: string;
@@ -93,6 +97,13 @@ export function installUnloadGuard(): () => void {
 
 const TIMED_OUT = Symbol("timed_out");
 
+/** IndexedDB refused the write for lack of space (Dexie wraps it as QuotaExceededError with the inner cause). */
+function isQuotaError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const inner = (error as { inner?: unknown }).inner;
+  return error.name === "QuotaExceededError" || (inner instanceof Error && inner.name === "QuotaExceededError");
+}
+
 function withTimeout<R>(promise: Promise<R>, ms: number): Promise<R | typeof TIMED_OUT> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
@@ -139,6 +150,8 @@ export function reasonFor(code: WriteFailureCode, status: number | null, kept: b
       return t("write.reasons.duplicate");
     case "invalid_state":
       return t("write.reasons.invalidState");
+    case "storage_full":
+      return t("write.reasons.storageFull");
     default:
       return status !== null && status >= 500 ? t("write.reasons.server") + keptNote : t("write.reasons.generic");
   }
@@ -179,6 +192,7 @@ export async function runWrite<T>(options: WriteOptions<T>): Promise<WriteResult
   try {
     outcome = await withTimeout(options.run(), options.timeoutMs ?? WRITE_TIMEOUT_MS);
   } catch (error) {
+    if (isQuotaError(error)) return fail("storage_full", null, null);
     log.warn(`${options.name}_unreachable`, { error: describeError(error) });
     return fail("network", null, null);
   } finally {
@@ -205,7 +219,9 @@ export async function runWrite<T>(options: WriteOptions<T>): Promise<WriteResult
   const message = typeof options.success === "function" ? options.success(result) : options.success;
   const step = options.undo?.(result) ?? null;
   if (step) record(step);
-  if (typeof message === "string") {
+  if (typeof message === "string" && isQueuedWrite(result)) {
+    notify.queued();
+  } else if (typeof message === "string") {
     notify.success(
       message,
       step

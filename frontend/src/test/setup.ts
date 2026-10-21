@@ -5,9 +5,13 @@ import "@testing-library/jest-dom/vitest";
 // fresh for every test; open toasts are dismissed between tests.
 import "fake-indexeddb/auto";
 import { cleanup } from "@testing-library/react";
+import Dexie from "dexie";
 import { IDBFactory } from "fake-indexeddb";
 import { toast } from "sonner";
 import { afterEach, vi } from "vitest";
+
+import { stopSync } from "@/sync";
+import { closeLocalDbs } from "@/sync/db";
 
 export function stubMatchMedia(prefersDark: boolean): void {
   vi.stubGlobal(
@@ -49,7 +53,12 @@ Element.prototype.scrollIntoView = () => undefined;
 afterEach(() => {
   cleanup();
   toast.dismiss();
-  globalThis.indexedDB = new IDBFactory();
+  // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. The sync engine stops and Dexie gets the fresh IndexedDB too.
+  stopSync();
+  closeLocalDbs();
+  const factory = new IDBFactory();
+  globalThis.indexedDB = factory;
+  Dexie.dependencies.indexedDB = factory;
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
 });

@@ -1,6 +1,8 @@
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. Offline banner above the content (design system "Banner", warn
 // colours; FR-OFF-01/05, D-55): shown while the device has no network or the server cannot be reached. Until the local
 // database and outbox exist (HAAL-052) it says honestly that changes need a connection.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. Now changes to calendars and items are kept on this device and sent
+// later; settings, sharing and other account actions still need a connection.
 import { CloudOff, WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

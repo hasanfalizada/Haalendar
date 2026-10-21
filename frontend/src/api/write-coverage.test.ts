@@ -27,6 +27,12 @@ const PAGE_RESULT: Record<string, string> = {
     "the re-authentication dialog shows its own result; the action it guards uses runWrite",
 };
 
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. Background work that reports its results itself.
+const OWN_REPORTING: Record<string, string> = {
+  "sync/engine.ts":
+    "the sync engine pushes the outbox in the background; results go to the sync status, conflicts and notifications",
+};
+
 /** Request helpers under src/api and the exported functions that perform writes (their callers must use runWrite). */
 const REQUEST_HELPERS: Record<string, string[]> = {
   "api/attachments.ts": ["uploadAttachmentFile"],
@@ -96,7 +102,7 @@ describe("write coverage", () => {
 
   it("every UI module that writes reports through runWrite", () => {
     const offenders = files
-      .filter((f) => !f.rel.startsWith("api/") && !(f.rel in PAGE_RESULT))
+      .filter((f) => !f.rel.startsWith("api/") && !(f.rel in PAGE_RESULT) && !(f.rel in OWN_REPORTING))
       .filter((f) => bypassesRunWrite(f.text))
       .map((f) => f.rel);
     expect(offenders).toEqual([]);
@@ -104,6 +110,6 @@ describe("write coverage", () => {
 
   it("the listed exceptions still exist", () => {
     const present = new Set(files.map((f) => f.rel));
-    expect(Object.keys(PAGE_RESULT).filter((rel) => !present.has(rel))).toEqual([]);
+    expect(Object.keys({ ...PAGE_RESULT, ...OWN_REPORTING }).filter((rel) => !present.has(rel))).toEqual([]);
   });
 });
