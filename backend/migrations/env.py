@@ -21,7 +21,8 @@ import haalendar.audit.models
 import haalendar.exports.models
 import haalendar.notifications.models
 import haalendar.planning.models
-import haalendar.preferences.models  # noqa: F401 — registers the tables on Base.metadata
+import haalendar.preferences.models
+import haalendar.sync.models  # noqa: F401 — registers the tables on Base.metadata
 from haalendar.config import load_settings
 from haalendar.dbroles import apply_app_grants
 from haalendar.logging import configure_logging, get_logger

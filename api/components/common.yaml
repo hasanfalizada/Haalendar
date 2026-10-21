@@ -205,6 +205,7 @@ components:
             - unsupported_media_type
             - rate_limited
             - requires_connection
+            - cursor_invalid
             - internal_error
         request_id: { type: string, description: Correlation id for logs. }
         errors:

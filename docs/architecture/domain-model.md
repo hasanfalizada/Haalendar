@@ -292,7 +292,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | delivered_push_at | timestamptz | Web Push delivery |
 
 ### 5.17a `sync_mutation` (service data)
-+++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. ADR-0009: exactly-once application of offline mutations. Kept (service data under the owner rule; any clean-up would be a separate, explicitly listed exception). Implemented in HAAL-053.
++++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. ADR-0009: exactly-once application of offline mutations. Kept (service data under the owner rule; any clean-up would be a separate, explicitly listed exception). Implemented in HAAL-053 (migration 0014, with the global sequence `sync_seq_global`, the stamp trigger on calendar / share / item / attachment / user_settings and `haalendar_sync_high_water()`).
 
 | Column | Type | Rules |
 |---|---|---|

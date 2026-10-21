@@ -32,6 +32,7 @@ PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "s
     "export_request": "self",  # HAAL-043: self_policies
     "user_settings": "self",  # HAAL-045: self_policies
     "notification": "self",  # HAAL-048: self_policies
+    "sync_mutation": "self",  # HAAL-053: self_policies
 }
 
 CURRENT_USER_FUNCTION = """

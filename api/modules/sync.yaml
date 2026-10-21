@@ -2,13 +2,14 @@
 # +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. Semantics fixed by ADR-0009 (D-54): server-authoritative pull/push through the regular services (RLS, audit,
 # validation), cursor that never skips a slow transaction, exactly-once mutations by id, field-level conflict policy.
 # `x-status: planned` until HAAL-053 (pull/push) and HAAL-055 (stream) implement them.
+# +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. pull and push implemented (x-status removed); stream stays planned (HAAL-055). Entities today: calendar,
+# share, item, attachment (metadata), settings in pull; calendar and item in push (items: no create yet).
 paths:
   sync_pull:
     get:
       tags: [sync]
       operationId: syncPull
       summary: Changes visible to the user since a cursor (including soft deletes and revoked-share tombstones)
-      x-status: planned
       parameters:
         - { name: since, in: query, schema: { type: string, maxLength: 4096 }, description: 'Opaque cursor (last sync_seq handed out plus the transactions still in progress then, ADR-0009); omit for the initial sync' }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
@@ -32,7 +33,6 @@ paths:
       operationId: syncPush
       summary: Apply queued offline mutations in order; each mutation is idempotent by its id
       description: 'Each mutation runs through the same service code as the regular endpoints (authorisation, validation, audit, soft delete) in its own transaction; a failure does not stop the batch. A repeated mutation_id answers duplicate with the stored result. Conflicts follow ADR-0009: disjoint fields merge, the same field changed elsewhere answers conflict with the server state.'
-      x-status: planned
       requestBody:
         required: true
         content:
@@ -90,7 +90,7 @@ components:
       type: object
       required: [entity_type, entity_id, op, version]
       properties:
-        entity_type: { type: string, description: 'Table/resource name, e.g. event, note, card, share' }
+        entity_type: { type: string, enum: [calendar, share, item, attachment, settings, board, note], description: 'Resource; for a tombstone the container kind' }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         op: { type: string, enum: [upsert, delete, tombstone], description: 'upsert carries the full resource (deleted_at included); tombstone = a container no longer readable (share revoked or left): remove it and everything in it' }
         version: { type: integer }
@@ -100,9 +100,10 @@ components:
       required: [mutation_id, entity_type, entity_id, op]
       properties:
         mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        entity_type: { type: string }
+        entity_type: { type: string, enum: [calendar, item] }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         op: { type: string, enum: [create, update, delete, restore, move] }
+        base: { type: object, description: 'update / move: the values the client started from for each changed field (field-level merge, ADR-0009)' }
         base_version: { type: integer, description: Version the client edited (conflict detection); absent on create }
         data: { type: object, description: 'create: the resource; update: changed fields only; sets (labels, exceptions, assignees) as add/remove operations' }
         client_time: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }

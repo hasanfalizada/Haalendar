@@ -42,6 +42,7 @@ from haalendar.preferences.api import router as settings_router
 from haalendar.security.guards import BodyGuard, CsrfOriginGuard, HostGuard, RateLimitGuard
 from haalendar.sharing.api import router as sharing_router
 from haalendar.storage import create_storage
+from haalendar.sync.api import router as sync_router
 from haalendar.trash.api import router as trash_router
 
 log = get_logger(__name__)
@@ -130,6 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(exports_router, prefix=API_PREFIX)
     app.include_router(settings_router, prefix=API_PREFIX)
     app.include_router(notifications_router, prefix=API_PREFIX)
+    app.include_router(sync_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

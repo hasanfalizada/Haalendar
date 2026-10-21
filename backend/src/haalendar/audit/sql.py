@@ -59,9 +59,14 @@ AUDIT_EXEMPT_TABLES = frozenset(
         # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Notifications are service data (D-52): who was told what
         # follows from the audited share and export rows.
         "notification",
+        # +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. Bookkeeping of applied offline mutations (service data); the
+        # changes they make are audited on their own rows.
+        "sync_mutation",
     }
 )
-NOISE_COLUMNS = ("updated_at", "updated_by", "version", "sync_seq")
+# +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. sync_xid (writing transaction) is bookkeeping too; the function is
+# re-created by migration 0014 with this list, so fresh and upgraded databases end with the same function.
+NOISE_COLUMNS = ("updated_at", "updated_by", "version", "sync_seq", "sync_xid")
 
 AUDIT_FUNCTION = f"""
 CREATE OR REPLACE FUNCTION haalendar_audit() RETURNS trigger

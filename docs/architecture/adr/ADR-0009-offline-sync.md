@@ -1,6 +1,7 @@
 # ADR-0009: Offline-first and synchronisation
 
 +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. Accepted by owner 2026-10-21; recommended options chosen (decision D-54).
++++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. Amended by owner decision D-56 (section "Amendment HAAL-053").
 
 | Field | Value |
 |---|---|
@@ -101,6 +102,13 @@ Last-write-wins was rejected (it loses data silently, against FR-OFF-04); asking
   - administrators can revoke sessions (the outbox then waits for a new sign-in).
 - Pull never returns rows outside the user's RLS view. Push re-checks every mutation on the server: the client is never trusted for permissions or validation.
 - Mutation payloads are validated by the same Pydantic schemas as the regular endpoints; unknown fields are rejected.
+
+## Amendment HAAL-053 (D-56)
++++===+++ 2026-10-21 — Hasan Alizada — HAAL-053.
+- **Conflict detection uses base values, not the audit log.** An `update` / `move` mutation carries `base`: the value of every changed field as the client last saw it. The server compares the current value with it: equal → the new value applies; already equal to the new value → nothing to do; otherwise → conflict on that field (server value stays, reported in `fields` with `current`). It is an exact three-way merge per field and does not depend on the audit log's format.
+- **High-water mark.** The last page of a pull moves the cursor to the highest committed `sync_seq` over all synced tables (SECURITY DEFINER function `haalendar_sync_high_water()`, a number only, evaluated in the same snapshot). Otherwise a user who can see nothing keeps an old cursor and receives everything twice once a container is shared with them; the content sent along with a new share is de-duplicated against the batch as well.
+- **Stamp order.** The trigger takes the transaction id before the sequence number, so a transaction holding a number is always listed as in progress in a snapshot taken before it commits.
+- **Scope today:** pull sends calendars, shares, items (shared fields), attachment metadata and settings; push accepts calendar create / update / delete / restore and item update / move / delete / restore. Item creation arrives with the modules; attachments, shares and settings stay online-only.
 
 ## Consequences
 - **No new services, no logical replication, no new server dependency.** Client additions: `dexie` (Apache-2.0) in HAAL-052.

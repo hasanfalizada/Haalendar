@@ -31,7 +31,7 @@ api/
 | Dates and times | RFC 3339 timestamps in UTC; events use local `start_date`/`start_time` + IANA `tzid` |
 | Rate limits | `429` with `Retry-After` |
 
-Endpoints tagged `sync` follow ADR-0009 (offline sync) and are marked `x-status: planned` until implemented (HAAL-053 pull/push, HAAL-055 stream). <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. -->
+Endpoints tagged `sync` follow ADR-0009 (offline sync): pull and push are implemented (HAAL-053); the event stream is marked `x-status: planned` until HAAL-055. <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. -->
 
 ## Lint
 

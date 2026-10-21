@@ -46,6 +46,7 @@ class ProblemCode(StrEnum):
     UNSUPPORTED_MEDIA_TYPE = "unsupported_media_type"
     RATE_LIMITED = "rate_limited"
     REQUIRES_CONNECTION = "requires_connection"
+    CURSOR_INVALID = "cursor_invalid"  # +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. Sync cursor unknown or too old (410).
     INTERNAL_ERROR = "internal_error"
 
 
