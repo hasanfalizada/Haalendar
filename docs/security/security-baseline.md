@@ -54,7 +54,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 |---|---|
 | A01 Broken Access Control | ✅ authz atom + RLS + least-privilege DB role + permission/isolation tests (HAAL-165); CSRF layers 1–2 ✅; SSRF: no server-side fetch of user URLs in v1.0 |
 | A02 Security Misconfiguration | ✅ secure defaults, production guards, headers, docs disabled outside dev, Host allow-list, first-run wizard closed once an admin exists and token-protected in production (HAAL-163) |
-| A03 Software Supply Chain Failures | ✅ pins, lockfiles, 7-day release age, blocked install scripts, audits; ⏳ SBOM/licence gate/signing (HAAL-151) |
+| A03 Software Supply Chain Failures | ✅ pins, lockfiles, 7-day release age, blocked install scripts, audits; temporary audit exceptions only with reason and expiry in `backend/audit-ignores.json`, enforced by a test (2026-10-21: Pillow 12.3.0, 8 CVEs not reachable here, fix 13.0.0 too young — upgrade due 2026-10-23; certifi 2026.7.22, dev-only via pip-audit, fix 2026.10.19 too young — upgrade due 2026-10-26); ⏳ SBOM/licence gate/signing (HAAL-151) |
 | A04 Cryptographic Failures | 🟡 TLS + HSTS; Argon2id and token hashing with HAAL-160 |
 | A05 Injection | ✅ ORM parameters, no shell/eval; Markdown sanitising with XSS payload tests (HAAL-047) |
 | A06 Insecure Design | ✅ threat-driven requirements, ADRs, contract-first, soft delete |

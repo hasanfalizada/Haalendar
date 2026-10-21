@@ -1,0 +1,32 @@
+{
+  "$comment": "+++===+++ 2026-10-21 — Hasan Alizada — Temporary pip-audit exceptions (security baseline A03). Each entry must also be an --ignore-vuln flag of the root `security:audit` script, and expires: backend/tests/test_audit_ignores.py fails after the date or once the package is no longer at the listed version in uv.lock, so an exception can never outlive its reason.",
+  "ignores": [
+    {
+      "package": "pillow",
+      "version": "12.3.0",
+      "fixed_in": "13.0.0",
+      "expires": "2026-10-23",
+      "ids": [
+        "CVE-2026-112395",
+        "CVE-2026-112397",
+        "CVE-2026-112400",
+        "CVE-2026-112404",
+        "CVE-2026-112895",
+        "CVE-2026-112896",
+        "CVE-2026-112897",
+        "CVE-2026-112899"
+      ],
+      "reason": "The fix (Pillow 13.0.0, released 2026-10-16) is younger than the 7-day minimum release age; no 12.x patch exists. Not reachable here: uploads are opened with an explicit format list (avatars PNG/JPEG/WebP, attachments also GIF), so the TIFF, PPM/PGM, EPS and PDF parsers never run; the GIF issue follows a DecompressionBombError, on which the upload is rejected and processing stops. Upgrade to 13.0.0 on 2026-10-23 and remove this entry."
+    },
+    {
+      "package": "certifi",
+      "version": "2026.7.22",
+      "fixed_in": "2026.10.19",
+      "expires": "2026-10-26",
+      "ids": [
+        "PYSEC-2026-4320"
+      ],
+      "reason": "The fix (certifi 2026.10.19, released 2026-10-19) is younger than the 7-day minimum release age. certifi reaches us only through requests -> pip-audit in the dev group; the application and its image never load it. Upgrade on 2026-10-26 and remove this entry."
+    }
+  ]
+}
