@@ -36,7 +36,7 @@ tags:
   - { name: export, description: Data export }
   - { name: notifications, description: In-app notification center }
   - { name: bulk, description: Multi-select operations }
-  - { name: sync, description: Offline sync and live updates (provisional) }
+  - { name: sync, description: 'Offline sync and live updates (ADR-0009; planned, implemented in HAAL-053/055)' }
   - { name: system, description: Health and demo }
 
 paths:

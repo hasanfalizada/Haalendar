@@ -1,13 +1,16 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Offline sync and live updates (FR-OFF-03/04, FR-X-18). PROVISIONAL: payload semantics are finalised by the offline/sync ADR (HAAL-050) and implemented in HAAL-053/055.
+# +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. Semantics fixed by ADR-0009 (D-54): server-authoritative pull/push through the regular services (RLS, audit,
+# validation), cursor that never skips a slow transaction, exactly-once mutations by id, field-level conflict policy.
+# `x-status: planned` until HAAL-053 (pull/push) and HAAL-055 (stream) implement them.
 paths:
   sync_pull:
     get:
       tags: [sync]
       operationId: syncPull
       summary: Changes visible to the user since a cursor (including soft deletes and revoked-share tombstones)
-      x-status: provisional
+      x-status: planned
       parameters:
-        - { name: since, in: query, schema: { type: string, maxLength: 128 }, description: Opaque cursor; omit for initial sync }
+        - { name: since, in: query, schema: { type: string, maxLength: 4096 }, description: 'Opaque cursor (last sync_seq handed out plus the transactions still in progress then, ADR-0009); omit for the initial sync' }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
       responses:
         '200':
@@ -22,12 +25,14 @@ paths:
                   cursor: { type: string }
                   has_more: { type: boolean }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '410': { description: 'Cursor unknown or too old: start over with a full sync', content: { application/problem+json: { schema: { $ref: '../components/common.yaml#/components/schemas/Problem' } } } }
   sync_push:
     post:
       tags: [sync]
       operationId: syncPush
       summary: Apply queued offline mutations in order; each mutation is idempotent by its id
-      x-status: provisional
+      description: 'Each mutation runs through the same service code as the regular endpoints (authorisation, validation, audit, soft delete) in its own transaction; a failure does not stop the batch. A repeated mutation_id answers duplicate with the stored result. Conflicts follow ADR-0009: disjoint fields merge, the same field changed elsewhere answers conflict with the server state.'
+      x-status: planned
       requestBody:
         required: true
         content:
@@ -57,7 +62,9 @@ paths:
                       required: [mutation_id, status]
                       properties:
                         mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                        status: { type: string, enum: [applied, duplicate, conflict, rejected] }
+                        status: { type: string, enum: [applied, duplicate, conflict, rejected], description: 'rejected = validation, permission or not found; never retried' }
+                        version: { type: integer, description: New version when applied }
+                        fields: { type: array, items: { type: string }, description: Conflicting fields }
                         problem: { $ref: '../components/common.yaml#/components/schemas/Problem' }
                         current: { type: object, description: Server state on conflict }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
@@ -66,7 +73,7 @@ paths:
       tags: [sync]
       operationId: openEventStream
       summary: Server-Sent Events with change notifications for open sessions (no per-second polling)
-      x-status: provisional
+      x-status: planned
       parameters:
         - { name: Last-Event-ID, in: header, schema: { type: string } }
       responses:
@@ -85,7 +92,7 @@ components:
       properties:
         entity_type: { type: string, description: 'Table/resource name, e.g. event, note, card, share' }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        op: { type: string, enum: [upsert, delete, tombstone] }
+        op: { type: string, enum: [upsert, delete, tombstone], description: 'upsert carries the full resource (deleted_at included); tombstone = a container no longer readable (share revoked or left): remove it and everything in it' }
         version: { type: integer }
         data: { type: object, description: Full resource for upsert/delete }
     Mutation:
@@ -96,6 +103,6 @@ components:
         entity_type: { type: string }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         op: { type: string, enum: [create, update, delete, restore, move] }
-        base_version: { type: integer, description: Version the client edited (conflict detection) }
-        data: { type: object }
+        base_version: { type: integer, description: Version the client edited (conflict detection); absent on create }
+        data: { type: object, description: 'create: the resource; update: changed fields only; sets (labels, exceptions, assignees) as add/remove operations' }
         client_time: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }

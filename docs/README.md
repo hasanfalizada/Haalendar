@@ -9,7 +9,7 @@ How Haalendar is specified, designed and built — requirements and every owner 
 | Folder | Content |
 |---|---|
 | [`requirements/`](requirements/) | [SRS](requirements/SRS.md) with the decision log (D-xx), [legacy feature inventory](requirements/legacy-feature-inventory.md) (F-xx), [gap analysis](requirements/gap-analysis.md) |
-| [`architecture/adr/`](architecture/adr/) | Architecture Decision Records ADR-0001 … ADR-0008 |
+| [`architecture/adr/`](architecture/adr/) | Architecture Decision Records ADR-0001 … ADR-0009 |
 | [`architecture/`](architecture/) | [Domain model, ER diagrams and data dictionary](architecture/domain-model.md), [time handling](architecture/time-handling.md) |
 | [`design/`](design/) | [Brand guidelines](design/brand-guidelines.md), [design system](design/design-system.md), [wireframes](design/wireframes.html) |
 | [`security/`](security/) | [Security baseline](security/security-baseline.md) (OWASP ASVS 5.0 L2, Top 10, API Top 10 — status per control) |

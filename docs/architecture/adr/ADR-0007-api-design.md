@@ -34,7 +34,7 @@ Task HAAL-015 requires an OpenAPI contract for all modules with RFC 9457 errors,
 | Idempotency | Optional `Idempotency-Key` header on POST, 24 h retention |
 | Bulk | `/bulk`, all-or-nothing, one undo step |
 | Auth | Session cookie + `X-CSRF-Token` (ADR-0005) |
-| Real-time | SSE `/stream`; sync endpoints marked `x-status: provisional` until HAAL-050 |
+| Real-time | SSE `/stream`; sync semantics fixed by ADR-0009 (HAAL-050), endpoints `x-status: planned` until HAAL-053/055 |
 
 ### Source of truth (refines ADR-0003)
 ADR-0003 said "OpenAPI generated from Pydantic is the single source for the TS client". With contract-first, **the hand-written `api/openapi.yaml` is the source of truth**:
