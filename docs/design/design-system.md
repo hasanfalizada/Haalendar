@@ -71,7 +71,7 @@ Shell regions: rail (modules Calendar / To-Do / Kanban, then Trash, Notification
 |---|---|
 | Base (shadcn) | Button (primary / secondary / ghost / danger / icon), Input, Textarea, Select, Combobox, Checkbox, Switch, RadioGroup, SegmentedControl (Tabs), Badge, Avatar, Tooltip, Kbd, Skeleton, ScrollArea, Separator |
 | Overlays | Dialog, AlertDialog (delete, unsaved changes), Sheet (mobile editors, drawer), Popover (event details), DropdownMenu, ContextMenu (right-click), Command (palette, cmdk) |
-| Feedback | Toast (Sonner) with Undo action, Banner (offline, demo reset, sync error), SyncStatus indicator, EmptyState, NotificationBell + center (rail popover, drawer entry → full screen, unread count 99+ — D-52) |
+| Feedback | Toast (Sonner) with Undo action, Banner (offline — above the content, warn colours, role=status, D-55; demo reset, sync error), SyncStatus indicator, EmptyState, NotificationBell + center (rail popover, drawer entry → full screen, unread count 99+ — D-52) |
 | Date/time | MiniMonth (with ISO week numbers), DatePicker, TimeSelect (15-min steps), RecurrenceEditor (RRULE presets + custom), ReminderPicker, WeekLabel (week no · day no · Week A/B) |
 | Calendar | EventChip (day/agenda), EventBlock (week grid, drag/resize), MonthCell (+N more), EventPopover, EventEditor, OverdueCounter, CalendarList (visibility, color), LayerToggles |
 | To-Do | NoteCard (color, pin, labels, due, checklist progress), Checklist (reorder, checked to bottom), LabelPicker |

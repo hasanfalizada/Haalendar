@@ -75,7 +75,7 @@ Decision: **React + Vite SPA** with TanStack Router (type-safe routing) and TanS
 | Build tool | Vite | 8.3.x | |
 | Routing / server state | TanStack Router / TanStack Query | 1.170.x / 5.104.x | |
 | Styling / components | Tailwind CSS / shadcn/ui | 4.3.x / CLI 4.21.x | Brand tokens from ADR/brand guidelines |
-| PWA | vite-plugin-pwa (Workbox) | 2.0.x | |
+| PWA | vite-plugin-pwa (Workbox) | 2.0.x / 7.4.x | generateSW, app shell only, update on request (HAAL-051, D-55) |
 | Local DB (browser) | Dexie | 4.4.x | Custom outbox + server pull/push, no sync service (ADR-0009, HAAL-050) |
 | Lint / format (TS) | ESLint + typescript-eslint, Prettier | 10.x / 8.71.x | Alternative Biome 2.5 — decide in HAAL-017 |
 | API client generation | @hey-api/openapi-ts | 0.99.x | From OpenAPI; final in HAAL-015 |

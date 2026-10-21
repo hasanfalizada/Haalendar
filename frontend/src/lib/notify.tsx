@@ -4,6 +4,7 @@
 // and "synced" are emitted by the offline outbox (HAAL-052/053). UI code reports writes through runWrite
 // (api/write.ts); these functions are its single outlet and the outbox's. The toast region is a polite live region;
 // a failure is wrapped in role="alert" so screen readers announce it at once.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. `update`: a message that stays until acted on (new app version).
 import { toast } from "sonner";
 
 import i18n from "@/i18n";
@@ -58,6 +59,11 @@ export const notify = {
   /** Queued changes reached the server (HAAL-053). */
   synced(count: number): string | number {
     return toast.success(i18n.t("notify.synced", { count }), { duration: SUCCESS_MS });
+  },
+
+  /** Stays until acted on or closed, e.g. "A new version is available — Reload". */
+  update(text: string, action: NotifyAction): string | number {
+    return toast.info(text, { duration: Number.POSITIVE_INFINITY, closeButton: true, action: button(action) });
   },
 
   dismissAll(): void {

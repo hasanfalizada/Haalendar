@@ -652,7 +652,8 @@
     "export": "Export your data",
     "help": "Help",
     "about": "About Haalendar",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "install": "Install app"
   },
   "help": {
     "title": "Help",
@@ -665,7 +666,8 @@
     "issuesHint": "Describe what happened; please leave out personal data.",
     "newTab": "(opens in a new tab)",
     "formatting": "Text formatting",
-    "formattingHint": "How to write bold text, lists, links and more in descriptions and notes."
+    "formattingHint": "How to write bold text, lists, links and more in descriptions and notes.",
+    "iosInstall": "To install Haalendar on this iPhone or iPad: tap Share, then “Add to Home Screen”."
   },
   "about": {
     "title": "About Haalendar",
@@ -760,5 +762,13 @@
     "syncError": "Some changes made on this device could not be saved to the server.",
     "reminder": "Reminder: {{title}}",
     "generic": "You have a new notification."
+  },
+  "pwa": {
+    "updateReady": "A new version of Haalendar is available.",
+    "reload": "Reload"
+  },
+  "offlineBanner": {
+    "offline": "You are offline. What is loaded can be viewed; changes need a connection.",
+    "unreachable": "The server cannot be reached. What is loaded can be viewed; changes need a connection."
   }
 }

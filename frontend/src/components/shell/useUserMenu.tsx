@@ -2,19 +2,30 @@
 // Settings and Export lead to Settings (#profile, #export); Help and About open their dialogs; Sign out uses the shared
 // flow (useSignOut). Each choice is logged. Dialogs opened from the menu return the focus to the menu's button.
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. Help → Text formatting opens the Markdown cheat sheet.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. "Install app" while the browser allows installing (D-55).
 import { useNavigate } from "@tanstack/react-router";
-import { CircleHelp, Download, Info, LogOut, Settings, UserRound, type LucideIcon } from "lucide-react";
+import {
+  CircleHelp,
+  Download,
+  Info,
+  LogOut,
+  MonitorSmartphone,
+  Settings,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FormattingHelpDialog } from "@/components/markdown/MarkdownEditor";
 import { log } from "@/lib/log";
+import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { useSignOut } from "@/lib/useSignOut";
 
 import { AboutDialog, HelpDialog } from "./HelpAboutDialogs";
 
 export interface MenuAction {
-  id: "profile" | "settings" | "export" | "help" | "about" | "sign-out";
+  id: "profile" | "settings" | "export" | "help" | "about" | "install" | "sign-out";
   label: string;
   icon: LucideIcon;
   run: () => void;
@@ -37,6 +48,7 @@ export function useUserMenu(): { actions: MenuAction[]; dialogs: ReactNode } {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { requestSignOut, signOutDialog } = useSignOut(focusMenuButton);
+  const { installable, install } = useInstallPrompt();
   const [helpOpen, setHelpOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [formattingOpen, setFormattingOpen] = useState(false);
@@ -68,6 +80,19 @@ export function useUserMenu(): { actions: MenuAction[]; dialogs: ReactNode } {
         setAboutOpen(true);
       },
     },
+    ...(installable
+      ? [
+          {
+            id: "install" as const,
+            label: t("userMenu.install"),
+            icon: MonitorSmartphone,
+            run: () => {
+              log.info("user_menu", { action: "install" });
+              void install();
+            },
+          },
+        ]
+      : []),
     {
       id: "sign-out",
       label: t("userMenu.signOut"),

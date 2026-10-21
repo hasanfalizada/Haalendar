@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Connection state: browser online flag + backend liveness probe
 // (healthLive from the generated client, every 60 s). Replaced by the full sync status in HAAL-051/055.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. Also drives the offline banner; the sync status joins it in HAAL-052/053.
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 

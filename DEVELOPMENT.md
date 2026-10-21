@@ -325,6 +325,18 @@ The rules live in the atom `items.priority.v1` (`atoms/items.priority.v1`): serv
 
 User colors come from `frontend/src/lib/palette.ts` (order, default brown) and the `ev-*` classes in `styles.css`: `itemColorClasses(color)` gives a row the 16 % tint and the 4 px bar, `ColorSwatch` / `ColorPicker` (`components/ui/color-picker.tsx`) show and choose colors. Changing a `--ev-*` token is checked by `palette-contrast.test.ts` (text ≥ 4.5:1 on the tint, bar ≥ 3:1, both themes); the palette list itself is checked against the contract and the backend by `backend/tests/test_palette.py`.
 
+### Installable app (PWA) and offline start
+<!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. -->
+The service worker (`vite-plugin-pwa`, settings in `frontend/src/pwa-config.ts`) exists in production builds only — `pnpm dev` never registers one. It caches the app shell (built JS/CSS, fonts, icons, `index.html`) and never an API answer; user data offline is the local database (HAAL-052, ADR-0009). A new version waits until the user chooses "Reload". To try it locally:
+
+```bash
+cd frontend
+pnpm exec vite build
+VITE_API_TARGET=http://127.0.0.1:8080 pnpm exec vite preview   # http://localhost:4173, proxies /api/v1
+```
+
+Sign in, then stop the backend (or the network) and reload: the app opens with the last profile and the offline banner. Serving in production (HAAL-150): `sw.js`, `workbox-*.js`, `manifest.webmanifest` and `index.html` must be sent with `Cache-Control: no-cache` (otherwise updates do not arrive); hashed files under `assets/` may be cached for a year (`immutable`). DevTools → Application → Service workers shows the registration; "Unregister" resets it.
+
 ### Background jobs and data export
 
 Jobs run on Procrastinate (`haalendar/jobs.py`): define a task in `make_job_app`, defer it from the API through `request.app.state.jobs`, run them with `haalendar-worker`. Jobs connect as the application role — set `app.user_id` for the user the job works for, so row-level security applies. The export (`haalendar/exports/`, format in [docs/export](docs/export/README.md)) is built from sections: a module adds its rows and files to `SECTIONS` in `exports/sections.py` and, for new fields, extends the 1.x schema. Physical deletion is allowed only for service data listed in `haalendar.security.no_delete.SERVICE_TABLES` (and files such as expired archives); never for user content or its metadata.

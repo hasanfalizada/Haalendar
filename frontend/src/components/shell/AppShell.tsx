@@ -13,6 +13,7 @@
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The user's settings are applied on this device (theme sync).
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Notification bell in the rail; "Notifications" in the drawer.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Rail targets are 44 px on touch tablets, 40 px with a mouse.
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. Offline banner above the content.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
@@ -31,6 +32,7 @@ import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { ConnectionStatus } from "./ConnectionStatus";
+import { OfflineBanner } from "./OfflineBanner";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { TimeZoneMismatch } from "./TimeZoneMismatch";
 import { UserMenuButton, UserMenuList } from "./UserMenu";
@@ -194,6 +196,7 @@ export function AppShell() {
       </header>
 
       <main id="main" data-region="content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
+        <OfflineBanner />
         <TimeZoneMismatch />
         <Outlet />
       </main>

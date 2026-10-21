@@ -4,12 +4,14 @@
 // through returnFocus (the user menu's button).
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. Help offers "Text formatting" (the Markdown cheat sheet).
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Links are at least 44 px high (touch).
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. On iPhone / iPad Safari Help explains how to add the app to the home screen (no install prompt there).
 import { ExternalLink, Keyboard, Type } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { APP_VERSION, AUTHOR_URL, DOCS_URL, ISSUES_URL, LICENSE_NAME, LICENSE_URL, REPOSITORY_URL } from "@/lib/about";
+import { isIosBrowser } from "@/lib/pwa";
 import { openShortcutsOverlay } from "@/lib/shortcutsOverlay";
 
 const LOGO_SRC = "/icon.svg";
@@ -99,6 +101,7 @@ export function HelpDialog({
             {t("help.issues")}
           </OutLink>
         </div>
+        {isIosBrowser() ? <p className="text-xs text-muted">{t("help.iosInstall")}</p> : null}
       </DialogContent>
     </Dialog>
   );
