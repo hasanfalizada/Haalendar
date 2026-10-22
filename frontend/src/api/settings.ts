@@ -25,7 +25,9 @@ export const settingsQuery = queryOptions({
   queryFn: async (): Promise<Settings> => {
     const { data, error } = await getSettings();
     if (error !== undefined) throw new ApiError(error);
-    return data;
+    // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-061. Laid over the defaults: a field missing from the answer (an older
+    // server, a partial answer) gets its default instead of undefined, which crashed the mini month.
+    return { ...DEFAULT_SETTINGS, ...data };
   },
   staleTime: 5 * 60_000,
 });

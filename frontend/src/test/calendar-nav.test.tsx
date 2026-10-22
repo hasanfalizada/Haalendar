@@ -59,10 +59,14 @@ describe("month grid", () => {
       "2026-02-28",
       "2028-02-29",
     ]);
+    // A missing or broken week start (partial settings answer) falls back to Monday instead of crashing.
+    expect(monthGrid("2026-10", undefined as unknown as number)[0]).toBe("2026-09-28");
+    expect(monthGrid("2026-10", 9)[0]).toBe("2026-09-28");
   });
 });
 
-describe("desktop", () => {
+// Long click-and-key scenarios: the same 15 s budget as the other typing-heavy suites.
+describe("desktop", { timeout: 15_000 }, () => {
   it("day buttons, keys and the mini month change the date", async () => {
     screenWidth(1280);
     await localDb(USER).then((db) =>
@@ -158,7 +162,7 @@ describe("desktop", () => {
   });
 });
 
-describe("tablet and phone", () => {
+describe("tablet and phone", { timeout: 15_000 }, () => {
   it("tablet: the sidebar is an overlay", async () => {
     screenWidth(900);
     const { router, user } = await open("/calendar?date=2026-10-22");

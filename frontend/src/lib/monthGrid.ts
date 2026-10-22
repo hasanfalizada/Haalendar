@@ -28,9 +28,16 @@ export function weekdayOf(date: string): number {
   return new Date(Date.parse(`${date}T00:00:00Z`)).getUTCDay();
 }
 
+/** A usable first day of the week: 0..6, anything else falls back to Monday. */
+export function safeWeekStart(weekStart: unknown): number {
+  return typeof weekStart === "number" && Number.isInteger(weekStart) && weekStart >= 0 && weekStart <= 6
+    ? weekStart
+    : 1;
+}
+
 /** First day of the week that contains `date`. */
 export function weekStartOf(date: string, weekStart: number): string {
-  return addDays(date, -((weekdayOf(date) - weekStart + 7) % 7));
+  return addDays(date, -((weekdayOf(date) - safeWeekStart(weekStart) + 7) % 7));
 }
 
 /** The 42 dates shown for `month`. */
@@ -42,5 +49,5 @@ export function monthGrid(month: string, weekStart: number): string[] {
 
 /** Weekday indexes (0 = Sunday) in display order. */
 export function weekdayOrder(weekStart: number): number[] {
-  return Array.from({ length: 7 }, (_, i) => (weekStart + i) % 7);
+  return Array.from({ length: 7 }, (_, i) => (safeWeekStart(weekStart) + i) % 7);
 }
