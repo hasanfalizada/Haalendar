@@ -7,6 +7,10 @@
 // - Runs start on sign-in, on reconnect, after a local write, when the tab becomes visible and every 60 s while
 //   visible; failures retry with a growing pause (2 s … 5 min); 401 pauses the engine until the same user signs in.
 // - Changes that were written offline are announced once they arrive ("N changes synced").
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Live updates (D-59): the leader keeps one EventSource on /stream.
+//   `changes` starts a sync, `notification` refreshes the notification center (in every tab). While the stream is
+//   open the 60 s timer does nothing (no polling); when it fails it is opened again with a growing pause (5 s … 5 min)
+//   and the timer takes over meanwhile. A paused engine (401) closes it; signing in again opens it.
 import { syncPull, syncPush } from "@/api/generated/sdk.gen";
 import { addLocalNotification } from "@/lib/localNotifications";
 import { describeError, log } from "@/lib/log";
@@ -22,6 +26,8 @@ export interface SyncStatus {
   pending: number;
   conflicts: number;
   lastSyncAt: string | null;
+  /** The live stream is open: changes arrive without polling. */
+  live: boolean;
 }
 
 interface PushResult {
@@ -42,6 +48,9 @@ const PAGE = 500;
 const MAX_PAGES = 100;
 const TICK_MS = 60_000;
 const DEBOUNCE_MS = 400;
+const STREAM_URL = "/api/v1/stream";
+const LIVE_RETRY_MS = 5_000;
+const LIVE_RETRY_MAX_MS = 300_000;
 
 function wire(entry: OutboxEntry) {
   const { mutation_id, entity_type, entity_id, op, base, base_version, data, client_time } = entry;
@@ -73,7 +82,7 @@ async function call<T>(request: () => Promise<{ data?: T; response?: Response }>
 
 export class SyncEngine {
   readonly user: string;
-  status: SyncStatus = { state: "idle", pending: 0, conflicts: 0, lastSyncAt: null };
+  status: SyncStatus = { state: "idle", pending: 0, conflicts: 0, lastSyncAt: null, live: false };
   private readonly listeners = new Set<() => void>();
   private readonly channel: BroadcastChannel | null;
   private readonly onChanged: () => void;
@@ -85,16 +94,22 @@ export class SyncEngine {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private tick: ReturnType<typeof setInterval> | null = null;
   private releaseLock: (() => void) | null = null;
+  private readonly onNotification: () => void;
+  private source: EventSource | null = null;
+  private liveRetry: ReturnType<typeof setTimeout> | null = null;
+  private liveFailures = 0;
   private readonly onOnline = () => {
     this.request();
+    this.openLive();
   };
   private readonly onVisible = () => {
     if (document.visibilityState === "visible") this.request();
   };
 
-  constructor(user: string, onChanged: () => void) {
+  constructor(user: string, onChanged: () => void, onNotification: () => void = () => undefined) {
     this.user = user;
     this.onChanged = onChanged;
+    this.onNotification = onNotification;
     this.channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`haalendar-sync-${user}`);
   }
 
@@ -134,6 +149,8 @@ export class SyncEngine {
         if (event.data.type === "changed") {
           this.onChanged();
           void this.refreshCounts();
+        } else if (event.data.type === "notification") {
+          this.onNotification();
         } else if (event.data.type === "sync" && this.leader) {
           this.request();
         } else if (event.data.type === "status" && !this.leader && event.data.status) {
@@ -144,7 +161,7 @@ export class SyncEngine {
     window.addEventListener("online", this.onOnline);
     document.addEventListener("visibilitychange", this.onVisible);
     this.tick = setInterval(() => {
-      if (document.visibilityState === "visible") this.request();
+      if (document.visibilityState === "visible" && !this.status.live) this.request();
     }, TICK_MS);
     // Not every browser (or test environment) has the Storage API.
     const storage = navigator.storage as StorageManager | undefined;
@@ -156,6 +173,7 @@ export class SyncEngine {
       this.leader = true;
       log.info("sync_leader");
       this.request(0);
+      this.openLive();
     };
     if (typeof navigator.locks === "undefined") {
       becomeLeader();
@@ -174,11 +192,60 @@ export class SyncEngine {
     this.stopped = true;
     if (this.timer) clearTimeout(this.timer);
     if (this.tick) clearInterval(this.tick);
+    this.closeLive();
     window.removeEventListener("online", this.onOnline);
     document.removeEventListener("visibilitychange", this.onVisible);
     this.releaseLock?.();
     this.channel?.close();
     this.listeners.clear();
+  }
+
+  /** Opens the live stream (leader only, once). */
+  openLive(): void {
+    if (this.stopped || !this.leader || this.source || typeof EventSource === "undefined") return;
+    if (this.liveRetry) clearTimeout(this.liveRetry);
+    this.liveRetry = null;
+    const source = new EventSource(STREAM_URL);
+    this.source = source;
+    // No debounce here: the server already merged the burst, and hidden tabs delay timers to about a second.
+    source.addEventListener("changes", () => {
+      void this.run();
+    });
+    source.addEventListener("notification", () => {
+      this.onNotification();
+      this.post({ type: "notification" });
+    });
+    source.onopen = () => {
+      this.liveFailures = 0;
+      log.info("live_open");
+      this.setStatus({ live: true });
+    };
+    source.onerror = () => {
+      if (this.status.live) {
+        this.setStatus({ live: false });
+        this.onNotification(); // the notification center polls again until the stream is back
+      }
+      // CONNECTING: the browser retries by itself; CLOSED (401, 429, server gone): we retry later.
+      if (source.readyState === EventSource.CLOSED) {
+        this.closeLive();
+        this.liveFailures += 1;
+        const delay = Math.min(LIVE_RETRY_MAX_MS, LIVE_RETRY_MS * 2 ** (this.liveFailures - 1));
+        log.warn("live_closed", { retry_ms: delay });
+        if (this.status.state !== "paused") {
+          this.liveRetry = setTimeout(() => {
+            this.openLive();
+          }, delay);
+        }
+      }
+    };
+  }
+
+  private closeLive(): void {
+    this.source?.close();
+    this.source = null;
+    if (this.liveRetry) clearTimeout(this.liveRetry);
+    this.liveRetry = null;
+    if (this.status.live) this.setStatus({ live: false });
   }
 
   /** Something changed on this device: other tabs re-read, the leader syncs soon. */
@@ -244,6 +311,7 @@ export class SyncEngine {
     } else if (outcome === "auth") {
       log.info("sync_paused_signed_out");
       this.setStatus({ state: "paused" });
+      this.closeLive();
     } else {
       this.failures += 1;
       const delay = Math.min(300_000, 2_000 * 2 ** (this.failures - 1));

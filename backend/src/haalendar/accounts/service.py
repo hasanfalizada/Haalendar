@@ -352,6 +352,24 @@ async def resolve_session(
     return session, user
 
 
+async def session_is_active(db: AsyncSession, session_id: uuid.UUID) -> bool:
+    """+++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Still valid (not revoked, not expired, user active) — without
+    sliding the idle expiry: an open live connection is no user activity and must not keep a session alive."""
+    now = utcnow()
+    found = await db.scalar(
+        select(AuthSession.id)
+        .join(UserAccount, UserAccount.id == AuthSession.user_id)
+        .where(
+            AuthSession.id == session_id,
+            AuthSession.revoked_at.is_(None),
+            AuthSession.idle_expires_at > now,
+            AuthSession.absolute_expires_at > now,
+            UserAccount.deactivated_at.is_(None),
+        )
+    )
+    return found is not None
+
+
 async def logout(session: AuthSession) -> None:
     session.revoked_at = utcnow()
     log.info("logout", user_id=str(session.user_id), session_id=str(session.id))

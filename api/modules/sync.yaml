@@ -75,16 +75,19 @@ paths:
       tags: [sync]
       operationId: openEventStream
       summary: Server-Sent Events with change notifications for open sessions (no per-second polling)
-      x-status: planned
-      parameters:
-        - { name: Last-Event-ID, in: header, schema: { type: string } }
+      # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Ready (D-59): events carry no data — the client pulls with its
+      # cursor; the first event is `changes`, so Last-Event-ID is not needed.
+      description: 'Session cookie. The first event is `changes`. Events: `changes` (run a sync pull), `notification` (a new notification), `ping` (every 25 s; the session is checked then — a revoked or expired session ends the stream, the reconnect gets 401). Data is always `{}`. `retry: 5000`. At most 10 streams per user.'
+      x-status: ready
       responses:
         '200':
-          description: 'text/event-stream; events: `changes` (data: {"cursor": "..."}), `notification`, `demo_reset`, `ping`'
+          description: 'text/event-stream; events: `changes`, `notification`, `ping` (data `{}`); `demo_reset` is reserved for the demo mode'
           content:
             text/event-stream:
               schema: { type: string }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
 
 components:
   schemas:

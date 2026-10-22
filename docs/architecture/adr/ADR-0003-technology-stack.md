@@ -66,7 +66,7 @@ Decision: **React + Vite SPA** with TanStack Router (type-safe routing) and TanS
 | Password hashing | argon2-cffi | 25.1.x | Argon2id (ASVS L2) |
 | Background jobs | Procrastinate (PostgreSQL-based queue) | 3.10.x | Reminders, e-mail, demo reset — no Redis needed; final in HAAL-011 |
 | Web Push | pywebpush | 2.5.x | VAPID, self-hosted |
-| Push updates | SSE (sse-starlette) | 3.5.x | Final in HAAL-055 |
+| Push updates | SSE (sse-starlette) | 3.5.0 | Final (HAAL-055, D-59): events over PostgreSQL LISTEN/NOTIFY, no Redis <!-- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. --> |
 | Python tooling | uv / Ruff / mypy | 0.13.x / 0.17.x / 2.4.x | |
 | Backend tests | Pytest | 9.1.x | |
 | Frontend runtime | Node.js | **24 LTS** for tooling | 26 becomes LTS 2026-10-28 — switch then |

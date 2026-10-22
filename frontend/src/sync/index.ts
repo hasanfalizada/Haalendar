@@ -31,12 +31,20 @@ export function startSync(user: string, queryClient: QueryClient): void {
   if (engine?.user === user) {
     // The same user again (e.g. signed in after the session expired): a paused engine resumes.
     engine.request(0);
+    engine.openLive();
     return;
   }
   engine?.stop();
-  engine = new SyncEngine(user, () => {
-    void queryClient.invalidateQueries({ queryKey: localKeys.all });
-  });
+  engine = new SyncEngine(
+    user,
+    () => {
+      void queryClient.invalidateQueries({ queryKey: localKeys.all });
+    },
+    // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. A notification arrived live (or the stream dropped).
+    () => {
+      void queryClient.invalidateQueries({ queryKey: ["session", "notifications"] });
+    },
+  );
   engine.subscribe(notifyStatus);
   engine.start();
   notifyStatus();
@@ -84,7 +92,7 @@ export async function localRows(user: string, entity: EntityType): Promise<Row[]
   return db[ENTITY_TABLE[entity]].toArray();
 }
 
-const IDLE: SyncStatus = { state: "idle", pending: 0, conflicts: 0, lastSyncAt: null };
+const IDLE: SyncStatus = { state: "idle", pending: 0, conflicts: 0, lastSyncAt: null, live: false };
 const statusListeners = new Set<() => void>();
 
 function notifyStatus(): void {

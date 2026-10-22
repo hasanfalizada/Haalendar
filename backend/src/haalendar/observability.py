@@ -62,6 +62,12 @@ class Metrics:
             "SQL statements slower than the configured threshold.",
             registry=self.registry,
         )
+        # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Open live-update streams (SSE) in this process.
+        self.live_connections = Gauge(
+            "haalendar_sse_connections",
+            "Open Server-Sent Events streams in this process.",
+            registry=self.registry,
+        )
         info = Info("haalendar_build", "Build and runtime information.", registry=self.registry)
         info.info({"version": __version__, "env": settings.env.value})
 

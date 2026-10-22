@@ -12,10 +12,14 @@ token-protected /metrics endpoint are wired here.
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036. Bulk router.
 +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Attachment routers.
 +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Export router; the job queue is opened for the app's lifetime.
++++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Live updates: the stream hub, the LISTEN task for the app's lifetime and
+the /stream router.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -34,6 +38,9 @@ from haalendar.db import create_engine, create_session_factory, role_bypasses_rl
 from haalendar.errors import install_error_handlers
 from haalendar.exports.api import router as exports_router
 from haalendar.jobs import JobQueue
+from haalendar.live.api import router as live_router
+from haalendar.live.hub import Hub
+from haalendar.live.listener import listen
 from haalendar.logging import configure_logging, get_logger
 from haalendar.middleware import RequestContextMiddleware
 from haalendar.notifications.api import router as notifications_router
@@ -82,9 +89,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         jobs = JobQueue(settings)
         app.state.jobs = jobs
+        listener = asyncio.create_task(listen(app.state.live_hub, app.state.session_factory, settings))
         try:
             yield
         finally:
+            listener.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await listener
             await jobs.close()
             await engine.dispose()
             log.info("app_stopped")
@@ -101,6 +112,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     app.state.metrics = metrics
+    app.state.live_hub = Hub()
     app.state.mailer = create_mailer(settings)
     app.state.storage = create_storage(settings)
     install_error_handlers(app)
@@ -132,6 +144,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(settings_router, prefix=API_PREFIX)
     app.include_router(notifications_router, prefix=API_PREFIX)
     app.include_router(sync_router, prefix=API_PREFIX)
+    app.include_router(live_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
     return app
 

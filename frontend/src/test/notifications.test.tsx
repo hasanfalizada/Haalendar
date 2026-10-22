@@ -163,8 +163,9 @@ describe("notification center", () => {
 });
 
 describe("notification helpers", () => {
-  it("checks for new notifications every minute and when the tab is back", () => {
-    expect(notificationsQuery.refetchInterval).toBe(NOTIFICATION_POLL_MS);
+  // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Every minute only while there is no live stream (live.test.tsx).
+  it("checks for new notifications every minute (without a live stream) and when the tab is back", () => {
+    expect((notificationsQuery.refetchInterval as () => number | false)()).toBe(NOTIFICATION_POLL_MS);
     expect(NOTIFICATION_POLL_MS).toBe(60_000);
     expect(notificationsQuery.refetchOnWindowFocus).toBe(true);
   });

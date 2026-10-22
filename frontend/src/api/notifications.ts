@@ -7,6 +7,7 @@ import { infiniteQueryOptions } from "@tanstack/react-query";
 import { listNotifications } from "./generated/sdk.gen";
 import type { ListNotificationsResponse } from "./generated/types.gen";
 import { ApiError } from "./problem";
+import { syncStatus } from "@/sync";
 
 export const notificationKeys = { all: ["session", "notifications"] as const };
 export const NOTIFICATION_PAGE = 20;
@@ -24,6 +25,7 @@ export const notificationsQuery = infiniteQueryOptions({
   },
   initialPageParam: null as string | null,
   getNextPageParam: (last) => last.next_cursor ?? null,
-  refetchInterval: NOTIFICATION_POLL_MS,
+  // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. No polling while the live stream is open (D-59).
+  refetchInterval: () => (syncStatus().live ? false : NOTIFICATION_POLL_MS),
   refetchOnWindowFocus: true,
 });

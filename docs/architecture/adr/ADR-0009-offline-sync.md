@@ -126,3 +126,12 @@ Last-write-wins was rejected (it loses data silently, against FR-OFF-04); asking
 - **Rule 3 on the wire:** "deleted elsewhere" arrives as `rejected` with problem `invalid_state` and `current` (the deleted server row); the client offers restore with my changes or discard.
 - **Rule 4 on the wire:** a `delete` carrying `base_version` applies even when the record changed since; the result then says `edited_elsewhere: true` and the client shows a notification leading to the trash.
 - **Resolved conflict records are kept** (marked `resolved_at`, `resolution`) — they hold the user's text; they leave the device with the local database at sign-out.
+
+## Amendment HAAL-055 (D-59)
++++===+++ 2026-10-22 — Hasan Alizada — HAAL-055.
+- **Transport:** SSE `GET /stream` (sse-starlette), session cookie, `retry: 5000`, `X-Accel-Buffering: no`. Events carry no data (`changes`, `notification`, `ping` every 25 s); the client pulls with its cursor, so row-level security stays the only read gate and `Last-Event-ID` is not needed — the first event is always `changes`.
+- **Bus:** PostgreSQL LISTEN/NOTIFY on channel `haalendar_sync`. An AFTER trigger on the synced tables and `notification` names a container and/or users; messages arrive only for committed transactions (also from the worker), identical messages of one transaction are merged. Each API process keeps one listening connection; after it reconnects every open stream gets `changes`.
+- **Audience:** `haalendar_sync_audience(kind, id)` (SECURITY DEFINER, ids only) — owner and current grantees; a share change also names grantee and granter directly (a revoked share reaches the person who lost access).
+- **Sessions:** checked at every ping without sliding the idle expiry (an open tab is not activity); a revoked or expired session ends the stream. At most 10 streams per user and 1000 per process (429). Gauge `haalendar_sse_connections`.
+- **Client:** only the syncing tab holds the stream; while it is open the 60 s sync timer and the notification polling stop; a stream refused or lost is opened again after 5 s … 5 min, polling covers the gap.
+

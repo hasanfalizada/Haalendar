@@ -26,6 +26,8 @@ dependencies = [
   "tzdata==2026.5",
   # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Background jobs on PostgreSQL (ADR-0003): data export archives.
   "procrastinate==3.10.0",
+  # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Server-Sent Events for live updates (ADR-0003, ADR-0009).
+  "sse-starlette==3.5.0",
 ]
 
 [dependency-groups]
