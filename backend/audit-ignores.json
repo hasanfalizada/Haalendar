@@ -14,9 +14,25 @@
         "CVE-2026-112895",
         "CVE-2026-112896",
         "CVE-2026-112897",
-        "CVE-2026-112899"
+        "CVE-2026-112899",
+        "CVE-2026-112892",
+        "CVE-2026-112393",
+        "CVE-2026-112396",
+        "CVE-2026-112402",
+        "CVE-2026-112900",
+        "CVE-2026-112893",
+        "CVE-2026-112392",
+        "CVE-2026-112891",
+        "CVE-2026-112405",
+        "CVE-2026-112390",
+        "CVE-2026-112401",
+        "CVE-2026-112901",
+        "CVE-2026-112391",
+        "CVE-2026-112894",
+        "CVE-2026-112406",
+        "CVE-2026-112399"
       ],
-      "reason": "The fix (Pillow 13.0.0, released 2026-10-16) is younger than the 7-day minimum release age; no 12.x patch exists. Not reachable here: uploads are opened with an explicit format list (avatars PNG/JPEG/WebP, attachments also GIF), so the TIFF, PPM/PGM, EPS and PDF parsers never run; the GIF issue follows a DecompressionBombError, on which the upload is rejected and processing stops. Upgrade to 13.0.0 on 2026-10-23 and remove this entry."
+      "reason": "The fix (Pillow 13.0.0, released 2026-10-16) is younger than the 7-day minimum release age; no 12.x patch exists. Not reachable here: uploads are opened with an explicit format list (avatars PNG/JPEG/WebP, attachments also GIF), so the TIFF, PPM/PGM, EPS and PDF parsers never run; the GIF issue follows a DecompressionBombError, on which the upload is rejected and processing stops. Added 2026-10-22 (HAAL-054): the MSP decoder never runs (explicit format list) and the two TIFF issues are in TIFF writing, while we only save WebP, PNG and JPEG. Also added 2026-10-22: thirteen more ids; EPS, MIC, XBM, IPTC, FreeType, PDF, rank filters, transform and GIF saving are not used, but two are reachable by a signed-in user uploading a file — CVE-2026-112401 (quadratic GIF comment parsing, CPU) and CVE-2026-112399 (APNG canvas allocated before the decompression-bomb check, memory); accepted for one day because no deployment exists yet. Upgrade to 13.0.0 on 2026-10-23 and remove this entry."
     },
     {
       "package": "certifi",
