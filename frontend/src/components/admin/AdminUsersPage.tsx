@@ -36,6 +36,7 @@ import { InstanceSettingsCard } from "./InstanceSettingsCard";
 import { InviteDialog } from "./InviteDialog";
 import { type OneTimePassword, OneTimePasswordDialog } from "./OneTimePasswordDialog";
 import { PendingInvites } from "./PendingInvites";
+import type { TFunction } from "i18next";
 
 type Action = "deactivate" | "reactivate" | "unlock" | "reset-password";
 type Pending =
@@ -308,7 +309,9 @@ export function AdminUsersPage() {
   );
 }
 
-type T = ReturnType<typeof useTranslation>["t"];
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. i18next's own TFunction type: the derived one became too deep for
+// TypeScript once the string catalogue grew.
+type T = TFunction;
 
 function confirmTitle(p: Pending, t: T): string {
   if (p.kind === "role") return t("admin.confirm.roleTitle", { name: p.user.display_name });

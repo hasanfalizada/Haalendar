@@ -30,11 +30,22 @@
     "conflicts_one": "{{count}} sync conflict — resolve",
     "conflicts_other": "{{count}} sync conflicts — resolve"
   },
+  "calendar": {
+    "day": {
+      "allDay": "All day",
+      "allDayContinues": "Continues all day",
+      "until": "Until {{time}}",
+      "from": "From {{time}}",
+      "noTitle": "(No title)",
+      "repeats": "Repeats",
+      "listLabel": "Events on {{date}}",
+      "emptyTitle": "Nothing planned for this day",
+      "emptyBody": "Events of this day, recurring ones included, appear here."
+    }
+  },
   "pages": {
     "calendar": {
-      "title": "Calendar",
-      "emptyTitle": "Plan your first day",
-      "emptyBody": "Events, recurring plans and reminders will appear here."
+      "title": "Calendar"
     },
     "todo": {
       "title": "To-Do",

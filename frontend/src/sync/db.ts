@@ -96,14 +96,11 @@ export function dbName(user: string): string {
   return `haalendar-${user}`;
 }
 
-const open = new Map<string, LocalDb>();
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. The open promise is shared, not the bare instance: every caller waits
+// until the schema check is done, so a write made right after start can no longer be wiped by the rebuild.
+const open = new Map<string, { db: LocalDb; ready: Promise<LocalDb> }>();
 
-/** The user's local database (one instance per tab), checked against LOCAL_SCHEMA on first use. */
-export async function localDb(user: string): Promise<LocalDb> {
-  const existing = open.get(user);
-  if (existing) return existing;
-  const db = new LocalDb(user);
-  open.set(user, db);
+async function prepare(db: LocalDb): Promise<LocalDb> {
   const stored = (await db.meta.get("schema"))?.value;
   if (stored !== LOCAL_SCHEMA) {
     await db.transaction("rw", [db.calendars, db.items, db.attachments, db.shares, db.settings, db.meta], async () => {
@@ -122,16 +119,25 @@ export async function localDb(user: string): Promise<LocalDb> {
   return db;
 }
 
+/** The user's local database (one instance per tab), checked against LOCAL_SCHEMA on first use. */
+export function localDb(user: string): Promise<LocalDb> {
+  const existing = open.get(user);
+  if (existing) return existing.ready;
+  const db = new LocalDb(user);
+  const ready = prepare(db);
+  open.set(user, { db, ready });
+  return ready;
+}
+
 /** Closes and forgets the open databases (tests start each case with an empty IndexedDB). */
 export function closeLocalDbs(): void {
-  for (const db of open.values()) db.close();
+  for (const { db } of open.values()) db.close();
   open.clear();
 }
 
 /** Sign-out: the user's local database leaves the device (ADR-0005 §8). */
 export async function deleteLocalDb(user: string): Promise<void> {
-  const db = open.get(user);
-  db?.close();
+  open.get(user)?.db.close();
   open.delete(user);
   await Dexie.delete(dbName(user));
   log.info("local_db_deleted");
