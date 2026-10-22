@@ -72,6 +72,8 @@ class MutationResultOut(BaseModel):
     fields: list[str] | None = None
     current: dict[str, Any] | None = None
     problem: ProblemOut | None = None
+    # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. A delete that applied although the record changed meanwhile.
+    edited_elsewhere: bool | None = None
 
 
 class PushOut(BaseModel):

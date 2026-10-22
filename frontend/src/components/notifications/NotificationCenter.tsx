@@ -51,6 +51,7 @@ function useText() {
         // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. The sync engine says why (conflict / rejected).
         if (text("reason") === "conflict") return t("sync.conflict");
         if (text("reason") === "rejected") return t("sync.rejected");
+        if (text("reason") === "deleted_changed") return t("sync.deletedChanged");
         return t("notifications.syncError");
       case "reminder":
         return t("notifications.reminder", { title: text("title") || t("notifications.unnamed") });
@@ -71,7 +72,20 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
   function open(item: CenterItem) {
     log.info("notification_opened", { kind: item.kind, source: item.source });
     void center.markRead(item);
-    const hash = item.kind.startsWith("share_") ? "sharing" : item.kind === "export_ready" ? "export" : null;
+    // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. A sync problem opens Settings → Sync; a delete of something
+    // changed elsewhere opens the trash.
+    if (item.kind === "sync_error" && item.payload.reason === "deleted_changed") {
+      onNavigate();
+      void navigate({ to: "/trash" });
+      return;
+    }
+    const hash = item.kind.startsWith("share_")
+      ? "sharing"
+      : item.kind === "export_ready"
+        ? "export"
+        : item.kind === "sync_error"
+          ? "sync"
+          : null;
     if (hash) {
       onNavigate();
       void navigate({ to: "/settings", hash });

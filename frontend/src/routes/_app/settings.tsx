@@ -10,6 +10,7 @@
 // when Settings is already open.
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The theme switch became part of Preferences (user settings stored on
 // the server, #preferences), the first section of the page.
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. "Sync" (#sync): status and unresolved conflicts, after "Your data".
 import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +20,7 @@ import { ProfileSection } from "@/components/profile/ProfileSection";
 import { SecuritySection } from "@/components/security/SecuritySection";
 import { PreferencesSection } from "@/components/settings/PreferencesSection";
 import { SharingSection } from "@/components/sharing/SharingSection";
+import { SyncSection } from "@/components/sync/SyncSection";
 
 /** Brings the section named by the URL hash into view and focus on every navigation (a new history entry). */
 function useSectionTarget() {
@@ -52,6 +54,7 @@ function SettingsPage() {
       <SecuritySection />
       <SharingSection />
       <ExportSection />
+      <SyncSection />
     </div>
   );
 }

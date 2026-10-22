@@ -21,6 +21,8 @@ export type { SyncStatus } from "./engine";
 export const localKeys = {
   all: ["local"] as const,
   table: (entity: EntityType) => ["local", entity] as const,
+  // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. Open conflicts of a user.
+  conflicts: (user: string) => ["local", "conflicts", user] as const,
 };
 
 let engine: SyncEngine | null = null;
@@ -54,6 +56,16 @@ export interface LocalWrite {
 
 export function isQueuedWrite(value: unknown): boolean {
   return typeof value === "object" && value !== null && "entry" in value && (value as LocalWrite).queued;
+}
+
+/** Something changed in the local database without a mutation (a conflict resolved): views and counts refresh. */
+export function localChanged(user: string): void {
+  if (engine?.user === user) engine.localChange();
+}
+
+/** Sync now (the "Sync now" button); a paused engine tries again. */
+export function syncNow(): void {
+  engine?.request(0);
 }
 
 /** A content change of the user, for runWrite({ run: () => mutate(user, change), … }). */

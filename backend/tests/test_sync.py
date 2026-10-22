@@ -226,6 +226,28 @@ def test_field_level_conflicts_and_merges(people: People, clean_db: str) -> None
     assert (current["name"], current["color"]) == ("Family (new)", "red")
 
 
+# +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. ADR-0009 rule 4: the delete applies; the client is told when the
+# record had changed since the version it deleted.
+def test_delete_of_a_record_changed_elsewhere_applies_and_says_so(people: People, clean_db: str) -> None:
+    changed, untouched = _items(clean_db, people.ids["ada"], people.calendar, ["Dentist", "Gym"])
+    ada = people.as_("ada")
+    versions = {c["entity_id"]: c["version"] for c in _pull(people.api)["changes"]}
+    seen = versions[changed]
+    edit = _m("item", changed, "update", base={"title": "Dentist"}, data={"title": "Dentist 9:00"})
+    assert _push(people.api, ada, edit)[0]["status"] == "applied"  # another device
+
+    stale, fresh = _push(
+        people.api,
+        ada,
+        _m("item", changed, "delete", base_version=seen),
+        _m("item", untouched, "delete", base_version=versions[untouched]),
+    )
+    assert stale["status"] == "applied" and stale["edited_elsewhere"] is True
+    assert fresh["status"] == "applied" and "edited_elsewhere" not in fresh
+    deleted = {c["entity_id"]: c["data"]["deleted_at"] for c in _pull(people.api)["changes"]}
+    assert deleted[changed] is not None and deleted[untouched] is not None
+
+
 def test_rights_validation_and_unsupported_changes(people: People, clean_db: str) -> None:
     (item_id,) = _items(clean_db, people.ids["ada"], people.calendar, ["Dentist"])
     ada = people.as_("ada")

@@ -31,6 +31,7 @@ interface PushResult {
   fields?: string[];
   current?: Record<string, unknown>;
   problem?: { code: string; detail?: string };
+  edited_elsewhere?: boolean;
 }
 
 type Outcome<T> =
@@ -120,7 +121,8 @@ export class SyncEngine {
     if (this.stopped) return;
     try {
       const db = await localDb(this.user);
-      this.setStatus({ pending: await db.outbox.count(), conflicts: await db.conflicts.count() });
+      const open = await db.conflicts.filter((c) => !c.resolved_at).count();
+      this.setStatus({ pending: await db.outbox.count(), conflicts: open });
     } catch (error) {
       log.warn("sync_counts_failed", { error: describeError(error) });
     }
@@ -269,12 +271,24 @@ export class SyncEngine {
       }
       const { results: answers } = outcome.value as { results: PushResult[] };
       const results = new Map(answers.map((r) => [r.mutation_id, r]));
+      let settled = 0;
       for (const entry of batch) {
         const result = results.get(entry.mutation_id);
         if (!result) continue;
         announced += await this.settle(db, entry, result);
+        settled += 1;
       }
       this.localChange();
+      // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. An answer without results for this batch would send it again
+      // and again: the rest waits for the next run (with the retry pause).
+      if (settled < batch.length) {
+        await db.outbox.bulkPut(
+          batch.filter((e) => !results.has(e.mutation_id)).map((e) => ({ ...e, sending: false })),
+        );
+        log.warn("sync_push_unanswered", { missing: batch.length - settled });
+        if (announced > 0) notify.synced(announced);
+        return "error";
+      }
     }
     if (announced > 0) notify.synced(announced);
     return "ok";
@@ -287,6 +301,15 @@ export class SyncEngine {
     if (result.status === "applied" || result.status === "duplicate") {
       const row = await table.get(entry.entity_id);
       if (row && result.version !== undefined) await table.put({ ...row, version: result.version });
+      // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. ADR-0009 rule 4: deleted although changed elsewhere — told.
+      if (result.edited_elsewhere) {
+        await addLocalNotification(this.user, "sync_error", {
+          entity_type: entry.entity_type,
+          entity_id: entry.entity_id,
+          reason: "deleted_changed",
+        });
+        log.info("sync_deleted_changed_elsewhere", { entity_type: entry.entity_type });
+      }
       return entry.queued_offline ? 1 : 0;
     }
     if (result.current) await table.put(result.current);
@@ -294,6 +317,7 @@ export class SyncEngine {
       id: entry.mutation_id,
       entity_type: entry.entity_type,
       entity_id: entry.entity_id,
+      op: entry.op,
       reason: result.status,
       fields: result.fields ?? Object.keys(entry.data ?? {}),
       mine: entry.data ?? { op: entry.op },
@@ -301,7 +325,11 @@ export class SyncEngine {
       ...(result.problem ? { problem: result.problem } : {}),
       created_at: new Date().toISOString(),
     });
-    await addLocalNotification(this.user, "sync_error", { entity_type: entry.entity_type, reason: result.status });
+    await addLocalNotification(this.user, "sync_error", {
+      entity_type: entry.entity_type,
+      entity_id: entry.entity_id,
+      reason: result.status,
+    });
     log.warn("sync_change_not_applied", { status: result.status, entity_type: entry.entity_type });
     return 0;
   }

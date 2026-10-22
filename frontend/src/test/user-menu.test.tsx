@@ -43,7 +43,7 @@ describe("user menu", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Profile", "Settings", "Export your data", "Help", "About Haalendar", "Sign out"]);
+    ).toEqual(["Profile", "Settings", "Export your data", "Sync and conflicts", "Help", "About Haalendar", "Sign out"]);
   });
 
   it("opens from the keyboard and returns the focus to the avatar on Escape", async () => {

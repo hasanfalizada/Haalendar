@@ -6,6 +6,8 @@
 - Exactly once: a mutation id seen before answers `duplicate` with the stored result and changes nothing.
 - Results: `applied` (new version), `conflict` (fields kept at the server value; `current` is the server state),
   `rejected` (validation, permission, not found, deleted elsewhere — with an RFC 9457 problem; never retried).
+- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. A delete that applied although the record changed after
+  `base_version` says `edited_elsewhere` (ADR-0009 rule 4: the user is told; the record is in the trash).
 - Supported now: calendars (create, update, delete, restore) and the shared item fields (update, move, delete,
   restore). Creating items arrives with their modules.
 """
@@ -72,7 +74,7 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
                 db, user_id, m.entity_id, m.base or {}, _fields(CalendarData, m.data), current
             )
         if m.op == "delete":
-            return await planning.delete_calendar(db, user_id, m.entity_id)
+            return await planning.delete_calendar(db, user_id, m.entity_id, m.base_version)
         if m.op == "restore":
             return await planning.restore_calendar(db, user_id, m.entity_id)
         raise _unsupported(m)
@@ -89,7 +91,7 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             db, user_id, m.entity_id, m.base or {}, target.container_kind, target.container_id, current
         )
     if m.op == "delete":
-        return await planning.delete_item(db, user_id, m.entity_id)
+        return await planning.delete_item(db, user_id, m.entity_id, m.base_version)
     if m.op == "restore":
         return await planning.restore_item(db, user_id, m.entity_id)
     raise _unsupported(m)
@@ -137,6 +139,8 @@ async def push(db: AsyncSession, user_id: uuid.UUID, mutations: list[MutationIn]
                         "status": "applied",
                         "version": outcome.version,
                     }
+                    if outcome.edited_elsewhere:
+                        result["edited_elsewhere"] = True
                     if outcome.conflicts:
                         result.update(
                             status="conflict",

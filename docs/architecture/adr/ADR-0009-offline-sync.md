@@ -119,3 +119,10 @@ Last-write-wins was rejected (it loses data silently, against FR-OFF-04); asking
 
 ## References
 [PowerSync licensing](https://powersync.com/legal/licensing-terms), [PowerSync self-hosting](https://docs.powersync.com/intro/self-hosting), [ElectricSQL 1.0](https://electric.ax/blog/2025/03/17/electricsql-1.0-released.md), [Electric shapes](https://electric-sql.com/docs/guides/shapes), [RxDB premium](https://rxdb.info/premium/), [Replicache](https://replicache.dev/), [@tanstack/offline-transactions](https://unpkg.com/@tanstack/offline-transactions@1.0.56/README.md), [Dexie releases](https://github.com/dexie/Dexie.js/releases).
+
+## Amendment HAAL-054 (D-58)
++++===+++ 2026-10-22 — Hasan Alizada — HAAL-054.
+- **Where conflicts are resolved:** Settings → Sync (`#sync`), reached from the connection indicator, the notification center and the user menu; a record with an open conflict shows a notice leading there.
+- **Rule 3 on the wire:** "deleted elsewhere" arrives as `rejected` with problem `invalid_state` and `current` (the deleted server row); the client offers restore with my changes or discard.
+- **Rule 4 on the wire:** a `delete` carrying `base_version` applies even when the record changed since; the result then says `edited_elsewhere: true` and the client shows a notification leading to the trash.
+- **Resolved conflict records are kept** (marked `resolved_at`, `resolution`) — they hold the user's text; they leave the device with the local database at sign-out.

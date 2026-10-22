@@ -66,7 +66,9 @@ paths:
                         version: { type: integer, description: New version when applied }
                         fields: { type: array, items: { type: string }, description: Conflicting fields }
                         problem: { $ref: '../components/common.yaml#/components/schemas/Problem' }
-                        current: { type: object, description: Server state on conflict }
+                        current: { type: object, description: 'Server state on conflict, and on rejected when the record was deleted on another device' }
+                        # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. ADR-0009 rule 4: the user is told.
+                        edited_elsewhere: { type: boolean, description: 'delete: applied, but the record had been changed since base_version (it can be restored from the trash)' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
   stream:
     get:

@@ -3,6 +3,7 @@
 // flow (useSignOut). Each choice is logged. Dialogs opened from the menu return the focus to the menu's button.
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047. Help → Text formatting opens the Markdown cheat sheet.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. "Install app" while the browser allows installing (D-55).
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. "Sync and conflicts" leads to Settings (#sync).
 import { useNavigate } from "@tanstack/react-router";
 import {
   CircleHelp,
@@ -10,6 +11,7 @@ import {
   Info,
   LogOut,
   MonitorSmartphone,
+  RefreshCw,
   Settings,
   UserRound,
   type LucideIcon,
@@ -25,7 +27,7 @@ import { useSignOut } from "@/lib/useSignOut";
 import { AboutDialog, HelpDialog } from "./HelpAboutDialogs";
 
 export interface MenuAction {
-  id: "profile" | "settings" | "export" | "help" | "about" | "install" | "sign-out";
+  id: "profile" | "settings" | "export" | "sync" | "help" | "about" | "install" | "sign-out";
   label: string;
   icon: LucideIcon;
   run: () => void;
@@ -61,6 +63,7 @@ export function useUserMenu(): { actions: MenuAction[]; dialogs: ReactNode } {
     { id: "profile", label: t("userMenu.profile"), icon: UserRound, run: go("profile", "profile"), movesFocus: true },
     { id: "settings", label: t("userMenu.settings"), icon: Settings, run: go("settings") },
     { id: "export", label: t("userMenu.export"), icon: Download, run: go("export", "export"), movesFocus: true },
+    { id: "sync", label: t("userMenu.sync"), icon: RefreshCw, run: go("sync", "sync"), movesFocus: true },
     {
       id: "help",
       label: t("userMenu.help"),

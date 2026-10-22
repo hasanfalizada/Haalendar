@@ -33,17 +33,25 @@ export interface OutboxEntry {
   sending?: boolean;
 }
 
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. A conflict record is the user's text: resolving it never deletes it,
+// it is marked resolved (with how) and leaves the device only with the whole local database at sign-out.
+export type Resolution = "mine" | "theirs" | "mixed" | "restored" | "discarded" | "dismissed";
+
 export interface ConflictRecord {
   /** The mutation id of the change that could not be applied as it was. */
   id: string;
   entity_type: MutableEntity;
   entity_id: string;
+  /** The change that was sent (records from before HAAL-054 have none). */
+  op?: MutationOp;
   reason: "conflict" | "rejected";
   fields: string[];
   mine: Record<string, unknown>;
   theirs: Record<string, unknown> | null;
   problem?: { code: string; detail?: string };
   created_at: string;
+  resolved_at?: string | null;
+  resolution?: Resolution;
 }
 
 export interface MetaRow {

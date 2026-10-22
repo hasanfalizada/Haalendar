@@ -9,6 +9,8 @@
 - Delete is soft and takes what belongs to the record into the same batch (a calendar's items and attachments, an
   item's attachments); restore brings the batch back. Repeating either is harmless.
 - Every change raises the version and records who made it; the database stamps sync numbers and writes the audit log.
++++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. A delete carrying the version it was made on applies anyway (ADR-0009
+rule 4) and says when the record had changed since (`edited_elsewhere`), so the user can be told.
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ class Outcome:
 
     version: int
     conflicts: list[str] = field(default_factory=list)
+    edited_elsewhere: bool = False
 
 
 def merge(
@@ -117,9 +120,12 @@ async def update_calendar(
     return Outcome(version=calendar.version, conflicts=conflicts)
 
 
-async def delete_calendar(db: AsyncSession, user_id: uuid.UUID, calendar_id: uuid.UUID) -> Outcome:
+async def delete_calendar(
+    db: AsyncSession, user_id: uuid.UUID, calendar_id: uuid.UUID, base_version: int | None = None
+) -> Outcome:
     calendar = await _calendar(db, calendar_id)
     _owner_only(calendar, user_id)
+    edited = calendar.deleted_at is None and base_version is not None and calendar.version != base_version
     if calendar.deleted_at is None:
         batch = new_batch()
         now = datetime.now(UTC)
@@ -139,7 +145,7 @@ async def delete_calendar(db: AsyncSession, user_id: uuid.UUID, calendar_id: uui
         calendar.version += 1
         await db.flush()
         log.info("calendar_deleted", calendar_id=str(calendar_id), batch_id=str(batch), user_id=str(user_id))
-    return Outcome(version=calendar.version)
+    return Outcome(version=calendar.version, edited_elsewhere=edited)
 
 
 async def restore_calendar(db: AsyncSession, user_id: uuid.UUID, calendar_id: uuid.UUID) -> Outcome:
@@ -226,9 +232,12 @@ async def move_item(
     return Outcome(version=item.version, conflicts=conflicts)
 
 
-async def delete_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> Outcome:
+async def delete_item(
+    db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID, base_version: int | None = None
+) -> Outcome:
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
+    edited = item.deleted_at is None and base_version is not None and item.version != base_version
     if item.deleted_at is None:
         batch, now = new_batch(), datetime.now(UTC)
         await db.execute(
@@ -241,7 +250,7 @@ async def delete_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) 
         item.version += 1
         await db.flush()
         log.info("item_deleted", item_id=str(item_id), batch_id=str(batch), user_id=str(user_id))
-    return Outcome(version=item.version)
+    return Outcome(version=item.version, edited_elsewhere=edited)
 
 
 async def restore_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> Outcome:

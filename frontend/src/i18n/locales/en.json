@@ -26,7 +26,9 @@
     "offlinePending_one": "Offline — {{count}} change waits on this device",
     "offlinePending_other": "Offline — {{count}} changes wait on this device",
     "syncError": "Sync failed — retrying",
-    "syncPaused": "Sync paused — sign in again"
+    "syncPaused": "Sync paused — sign in again",
+    "conflicts_one": "{{count}} sync conflict — resolve",
+    "conflicts_other": "{{count}} sync conflicts — resolve"
   },
   "pages": {
     "calendar": {
@@ -514,7 +516,72 @@
     "signOutBody_one": "{{count}} change has not reached the server yet (no connection). Signing out deletes it from this device.",
     "signOutBody_other": "{{count}} changes have not reached the server yet (no connection). Signing out deletes them from this device.",
     "conflict": "A change could not be applied as it was: someone changed the same fields. Both versions are kept.",
-    "rejected": "A change was not accepted by the server. It is kept on this device."
+    "rejected": "A change was not accepted by the server. It is kept on this device.",
+    "deletedChanged": "Something you deleted had been changed on another device. It is in the trash if you need it back.",
+    "title": "Sync",
+    "intro": "Changes made on this device are sent to the server in the background. When the same thing was changed elsewhere, or a change cannot be applied, it waits here until you decide — nothing is lost.",
+    "state": "Status",
+    "states": {
+      "idle": "Up to date",
+      "syncing": "Syncing…",
+      "offline": "Offline",
+      "error": "Failed — retrying",
+      "paused": "Paused — sign in again"
+    },
+    "lastSync": "Last sync",
+    "never": "Not yet",
+    "pendingLabel": "Changes not sent yet",
+    "now": "Sync now",
+    "conflictsTitle_one": "{{count}} conflict to resolve",
+    "conflictsTitle_other": "{{count}} conflicts to resolve",
+    "noConflicts": "No conflicts — every change made on this device has been applied.",
+    "entity": {
+      "calendar": "Calendar",
+      "item": "Item"
+    },
+    "kind": {
+      "fields": "Changed here and on another device",
+      "deleted": "Changed here, deleted on another device",
+      "rejected": "Not accepted by the server"
+    },
+    "op": {
+      "create": "Creating it",
+      "update": "Changing it",
+      "move": "Moving it",
+      "delete": "Deleting it",
+      "restore": "Restoring it"
+    },
+    "fields": {
+      "name": "Name",
+      "title": "Title",
+      "body": "Notes",
+      "color": "Color",
+      "priority": "Priority",
+      "container_kind": "Moved to (kind)",
+      "container_id": "Moved to"
+    },
+    "mine": "Mine (this device)",
+    "theirs": "Theirs (server)",
+    "empty": "empty",
+    "showAll": "Show all",
+    "showLess": "Show less",
+    "chooseLegend": "Which value to keep for {{name}}",
+    "applyChoice": "Apply my choice",
+    "keepAllMine": "Keep all mine",
+    "keepAllTheirs": "Keep all theirs",
+    "restoreWithMine": "Restore with my changes",
+    "discard": "Discard my changes",
+    "dismiss": "Dismiss",
+    "copy": "Copy my changes",
+    "copied": "Copied.",
+    "copyFailed": "Could not copy — select the text and copy it yourself.",
+    "discardTitle": "Discard your changes?",
+    "dismissTitle": "Dismiss this change?",
+    "letGoBody": "Your values will no longer be shown here. The other version stays as it is.",
+    "resolved": "Conflict resolved.",
+    "notice_one": "This has a sync conflict.",
+    "notice_other": "This has {{count}} sync conflicts.",
+    "resolve": "Resolve"
   },
   "undo": {
     "action": "Undo",
@@ -665,6 +732,7 @@
     "profile": "Profile",
     "settings": "Settings",
     "export": "Export your data",
+    "sync": "Sync and conflicts",
     "help": "Help",
     "about": "About Haalendar",
     "signOut": "Sign out",

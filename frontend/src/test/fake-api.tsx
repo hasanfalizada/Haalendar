@@ -63,7 +63,15 @@ const DEFAULTS: Record<string, Handler> = {
   "GET /notifications": () => json({ data: [], unread_count: 0, next_cursor: null }),
   // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. Nothing to sync by default.
   "GET /sync/pull": () => json({ changes: [], cursor: "c0", has_more: false }),
-  "POST /sync/push": () => json({ results: [] }),
+  // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. Every pushed change applies (version 1 more than its base).
+  "POST /sync/push": (call) =>
+    json({
+      results: (call.body as { mutations: { mutation_id: string; base_version?: number }[] }).mutations.map((m) => ({
+        mutation_id: m.mutation_id,
+        status: "applied",
+        version: (m.base_version ?? 0) + 1,
+      })),
+    }),
   "GET /admin/settings": () =>
     json({
       registration_mode: "invite",
