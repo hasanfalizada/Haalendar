@@ -33,6 +33,8 @@ PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "s
     "user_settings": "self",  # HAAL-045: self_policies
     "notification": "self",  # HAAL-048: self_policies
     "sync_mutation": "self",  # HAAL-053: self_policies
+    "event": "content",  # HAAL-066: content_child_policies
+    "recurrence_exception": "content",  # HAAL-066: content_policies
 }
 
 CURRENT_USER_FUNCTION = """
@@ -111,6 +113,21 @@ def content_policies(table: str, author_column: str) -> list[str]:
         f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
         f"CREATE POLICY {table}_read ON {table} FOR SELECT USING ({owns} OR {shared} IS NOT NULL)",
         f"CREATE POLICY {table}_insert ON {table} FOR INSERT WITH CHECK ({writable} AND {author_column} = {me})",
+        f"CREATE POLICY {table}_update ON {table} FOR UPDATE USING ({writable}) WITH CHECK ({writable})",
+    ]
+
+
+# +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. A subtype row of an item (e.g. `event`) carries the item's
+# container_kind / container_id like an attachment, but has no author of its own: read = whoever reads the container,
+# insert and update = owner or an edit share (the item row it belongs to was checked when it was written).
+def content_child_policies(table: str) -> list[str]:
+    owns = "haalendar_owns_container(container_kind, container_id)"
+    shared = "haalendar_share_permission(container_kind, container_id)"
+    writable = f"({owns} OR {shared} = 'edit')"
+    return [
+        f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+        f"CREATE POLICY {table}_read ON {table} FOR SELECT USING ({owns} OR {shared} IS NOT NULL)",
+        f"CREATE POLICY {table}_insert ON {table} FOR INSERT WITH CHECK ({writable})",
         f"CREATE POLICY {table}_update ON {table} FOR UPDATE USING ({writable}) WITH CHECK ({writable})",
     ]
 

@@ -6,23 +6,27 @@ and HAAL-167 (sharing). Rows are never deleted: containers get `deleted_at`, sha
 +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Domain model 5.4 `item`, the supertype of events, notes and cards
 (owner decision D-45: created now, before its modules, because attachments hang off it). The subtype tables and the
 item endpoints arrive with the modules; the full-text column comes with search (HAAL-039).
++++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Domain model 5.5 `event` (the event details of an item, same id, the
+item's container copied) and 5.6 `recurrence_exception` (migration 0016, D-60).
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
     Integer,
     String,
     Text,
+    Time,
     func,
     text,
 )
@@ -128,3 +132,41 @@ class Item(Base):
     delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+class Event(Base):
+    __tablename__ = "event"
+
+    id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), primary_key=True)
+    container_kind: Mapped[str] = mapped_column(String(10), default="calendar")
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    all_day: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    start_date: Mapped[date] = mapped_column(Date)
+    start_time: Mapped[time | None] = mapped_column(Time)
+    end_date: Mapped[date] = mapped_column(Date)
+    end_time: Mapped[time | None] = mapped_column(Time)
+    tzid: Mapped[str] = mapped_column(String(64))
+    start_utc: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    end_utc: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    location: Mapped[str | None] = mapped_column(String(500))
+    rrule: Mapped[str | None] = mapped_column(String(500))
+
+
+class RecurrenceException(Base):
+    __tablename__ = "recurrence_exception"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("event.id"))
+    container_kind: Mapped[str] = mapped_column(String(10), default="calendar")
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    occurrence_date: Mapped[date] = mapped_column(Date)
+    kind: Mapped[str] = mapped_column(String(10))
+    override_event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("event.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")

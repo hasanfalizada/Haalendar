@@ -2,6 +2,8 @@
 
 +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. Mutation data is validated per entity by the same rules as the
 database (lengths, colours, priorities); unknown fields are refused.
++++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Items carry the event fields (checked as a whole event by
+haalendar.planning.events); ItemCreateData creates an item — only events so far.
 """
 
 from __future__ import annotations
@@ -35,6 +37,20 @@ class ItemData(ApiModel):
     body: str | None = Field(default=None, max_length=100_000)
     color: Color | None = None
     priority: Priority | None = None
+    location: str | None = Field(default=None, max_length=500)
+    all_day: bool | None = None
+    start_date: str | None = Field(default=None, max_length=10)
+    start_time: str | None = Field(default=None, max_length=8)
+    end_date: str | None = Field(default=None, max_length=10)
+    end_time: str | None = Field(default=None, max_length=8)
+    tzid: str | None = Field(default=None, max_length=64)
+    rrule: str | None = Field(default=None, max_length=500)
+
+
+class ItemCreateData(ItemData):
+    kind: Literal["event"]
+    container_kind: Literal["calendar"]
+    container_id: uuid.UUID
 
 
 class MoveData(ApiModel):

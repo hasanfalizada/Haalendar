@@ -10,6 +10,8 @@
   `base_version` says `edited_elsewhere` (ADR-0009 rule 4: the user is told; the record is in the trash).
 - Supported now: calendars (create, update, delete, restore) and the shared item fields (update, move, delete,
   restore). Creating items arrives with their modules.
+- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Items of kind `event` can be created, and their event fields
+  changed (planning.events checks the whole event; time fields conflict as a group).
 """
 
 from __future__ import annotations
@@ -28,7 +30,7 @@ from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
 from haalendar.sync.pull import current_state
-from haalendar.sync.schemas import CalendarData, ItemData, MoveData, MutationIn
+from haalendar.sync.schemas import CalendarData, ItemCreateData, ItemData, MoveData, MutationIn
 
 log = get_logger(__name__)
 
@@ -51,7 +53,9 @@ def _unsupported(mutation: MutationIn) -> ProblemError:
     )
 
 
-def _fields(model: type[CalendarData] | type[ItemData], raw: dict[str, Any] | None) -> dict[str, Any]:
+def _fields(
+    model: type[CalendarData] | type[ItemData] | type[ItemCreateData], raw: dict[str, Any] | None
+) -> dict[str, Any]:
     try:
         return model.model_validate(raw or {}).model_dump(exclude_unset=True)
     except ValidationError as error:
@@ -78,6 +82,8 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
         if m.op == "restore":
             return await planning.restore_calendar(db, user_id, m.entity_id)
         raise _unsupported(m)
+    if m.op == "create":
+        return await planning.create_item(db, user_id, m.entity_id, _fields(ItemCreateData, m.data))
     if m.op == "update":
         return await planning.update_item(
             db, user_id, m.entity_id, m.base or {}, _fields(ItemData, m.data), current

@@ -9,6 +9,9 @@
 - Delete is soft and takes what belongs to the record into the same batch (a calendar's items and attachments, an
   item's attachments); restore brings the batch back. Repeating either is harmless.
 - Every change raises the version and records who made it; the database stamps sync numbers and writes the audit log.
++++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Events (haalendar.planning.events): created through `create_item`
+(kind `event` only for now); `update_item` also merges the event fields (time fields as one group) and checks the
+whole event afterwards; moving an event is possible between calendars only, its event row moves along.
 +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. A delete carrying the version it was made on applies anyway (ADR-0009
 rule 4) and says when the record had changed since (`edited_elsewhere`), so the user can be told.
 """
@@ -27,7 +30,8 @@ from haalendar.attachments.models import Attachment
 from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Calendar, Item
+from haalendar.planning import events
+from haalendar.planning.models import Calendar, Event, Item
 from haalendar.security.rls import ContainerKind
 from haalendar.softdelete import new_batch, restore_batch
 
@@ -177,6 +181,19 @@ def _container_kind(kind: str) -> ContainerKind:
 ITEM_FIELDS = ("title", "body", "color", "priority")
 
 
+async def create_item(
+    db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID, data: dict[str, Any]
+) -> Outcome:
+    """A new item; only events can be created through sync so far (notes and cards arrive with their modules)."""
+    container_id = uuid.UUID(str(data["container_id"]))
+    await _writable(db, user_id, "calendar", container_id)
+    await _calendar(db, container_id)
+    item_values = {name: data[name] for name in ITEM_FIELDS if name in data}
+    event_values = {name: data[name] for name in events.EVENT_FIELDS if name in data}
+    version = await events.create_event(db, user_id, item_id, container_id, item_values, event_values)
+    return Outcome(version=version)
+
+
 async def update_item(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -189,10 +206,27 @@ async def update_item(
     await _writable(db, user_id, item.container_kind, item.container_id)
     if item.deleted_at is not None:
         raise _deleted(current_state)
-    apply, conflicts = merge({name: getattr(item, name) for name in ITEM_FIELDS}, base, new)
+    event = await db.get(Event, item_id) if item.kind == "event" else None
+    if event is None and any(name in events.EVENT_FIELDS for name in new):
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only events have event fields")
+    current = {name: getattr(item, name) for name in ITEM_FIELDS}
+    if event is not None:
+        current.update(events.state_of(event))
+    new, base = events.normalize(new), events.normalize(base)
+    apply, conflicts = merge(current, base, new)
+    if event is not None:
+        changed = [name for name, value in new.items() if current.get(name) != value]
+        conflicts = events.group_conflicts(changed, conflicts)
+        apply = {name: value for name, value in apply.items() if name not in conflicts}
+        event_changes = {name: value for name, value in apply.items() if name in events.EVENT_FIELDS}
+        if event_changes:
+            events.apply(event, events.checked({**events.state_of(event), **event_changes}))
+        if "title" in apply:
+            apply["title"] = events.title_of(apply["title"])
     if apply:
         for name, value in apply.items():
-            setattr(item, name, value)
+            if name in ITEM_FIELDS:
+                setattr(item, name, value)
         item.version += 1
         item.updated_by = user_id
         await db.flush()
@@ -217,8 +251,17 @@ async def move_item(
     current = {"container_kind": item.container_kind, "container_id": str(item.container_id)}
     new = {"container_kind": target_kind, "container_id": str(target_id)}
     apply, conflicts = merge(current, {k: str(v) for k, v in base.items()}, new)
+    if item.kind == "event" and target_kind != "calendar":
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "An event belongs to a calendar")
     if apply and not conflicts:
         item.container_kind, item.container_id = target_kind, target_id
+        if item.kind == "event":
+            await db.execute(
+                update(Event)
+                .where(Event.id == item_id)
+                .values(container_kind=target_kind, container_id=target_id)
+                .execution_options(synchronize_session=False)
+            )
         item.version += 1
         item.updated_by = user_id
         await db.execute(

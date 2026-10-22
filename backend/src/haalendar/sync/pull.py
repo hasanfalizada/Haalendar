@@ -39,16 +39,28 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
 }
 
 
-def _data_expr(alias: str, hidden: tuple[str, ...]) -> str:
+# +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. An item of kind `event` carries its event fields (times as "HH:MM";
+# the derived UTC columns and the copied container stay on the server). Read under the same row-level security.
+EVENT_FIELDS_SQL = (
+    "coalesce((SELECT (to_jsonb(e) - 'id' - 'container_kind' - 'container_id' - 'start_utc' - 'end_utc') "
+    "|| jsonb_build_object('start_time', to_char(e.start_time, 'HH24:MI'), "
+    "'end_time', to_char(e.end_time, 'HH24:MI')) FROM event e WHERE e.id = {alias}.id), '{{}}'::jsonb)"
+)
+
+
+def _data_expr(alias: str, hidden: tuple[str, ...], entity: str = "") -> str:
     drops = "".join(f" - '{column}'" for column in ("sync_seq", "sync_xid", *hidden))
-    return f"to_jsonb({alias}){drops}"
+    expression = f"to_jsonb({alias}){drops}"
+    if entity == "item":
+        expression = f"({expression}) || {EVENT_FIELDS_SQL.format(alias=alias)}"
+    return expression
 
 
 def _changed_rows_sql() -> str:
     parts = []
     for entity, (table, id_column, hidden) in ENTITIES.items():
         parts.append(
-            f"(SELECT '{entity}' AS entity, t.{id_column} AS id, t.sync_seq AS seq, {_data_expr('t', hidden)} AS data "  # noqa: S608 — constant identifiers
+            f"(SELECT '{entity}' AS entity, t.{id_column} AS id, t.sync_seq AS seq, {_data_expr('t', hidden, entity)} AS data "  # noqa: S608 — constant identifiers
             f"FROM {table} t WHERE t.sync_seq > :seq OR t.sync_xid = ANY(CAST(:xip AS xid8[])) "
             f"ORDER BY t.sync_seq LIMIT :fetch)"
         )
@@ -71,7 +83,7 @@ def _container_content_sql() -> str:
     return (
         f"SELECT 'calendar' AS entity, t.{calendar_id} AS id, t.sync_seq AS seq, {_data_expr('t', calendar_hidden)} AS data "  # noqa: S608 — constant identifiers
         f"FROM {calendar_table} t WHERE :kind = 'calendar' AND t.id = :container "
-        f"UNION ALL SELECT 'item', t.id, t.sync_seq, {_data_expr('t', item_hidden)} FROM {item_table} t "
+        f"UNION ALL SELECT 'item', t.id, t.sync_seq, {_data_expr('t', item_hidden, 'item')} FROM {item_table} t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container "
         f"UNION ALL SELECT 'attachment', t.id, t.sync_seq, {_data_expr('t', attachment_hidden)} FROM {attachment_table} t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container"
@@ -84,7 +96,7 @@ CONTAINER_CONTENT = text(_container_content_sql())
 async def current_state(db: AsyncSession, entity: str, row_id: uuid.UUID) -> dict[str, Any] | None:
     """The row as a pull would send it (None when unknown or not readable)."""
     table, id_column, hidden = ENTITIES[entity]
-    query = text(f"SELECT {_data_expr('t', hidden)} FROM {table} t WHERE t.{id_column} = :id")  # noqa: S608 — constant identifiers
+    query = text(f"SELECT {_data_expr('t', hidden, entity)} FROM {table} t WHERE t.{id_column} = :id")  # noqa: S608 — constant identifiers
     value = await db.scalar(query, {"id": row_id})
     return dict(value) if value is not None else None
 

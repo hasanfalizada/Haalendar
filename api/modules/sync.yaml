@@ -110,5 +110,6 @@ components:
         op: { type: string, enum: [create, update, delete, restore, move] }
         base: { type: object, description: 'update / move: the values the client started from for each changed field (field-level merge, ADR-0009)' }
         base_version: { type: integer, description: Version the client edited (conflict detection); absent on create }
-        data: { type: object, description: 'create: the resource; update: changed fields only; sets (labels, exceptions, assignees) as add/remove operations' }
+        # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Item create (kind event) and event fields (D-60).
+        data: { type: object, description: 'create: the resource (item create: kind `event`, container_kind `calendar`, container_id, title, body, color, priority and the event fields all_day, start_date, start_time, end_date, end_time (HH:MM), tzid (default: profile zone), location, rrule); update: changed fields only — event time fields conflict as a group; sets (labels, exceptions, assignees) as add/remove operations' }
         client_time: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }

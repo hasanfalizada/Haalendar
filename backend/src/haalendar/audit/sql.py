@@ -36,6 +36,9 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     # +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Items and attachments (storage keys are internal).
     "item": ("ref", ()),
     "attachment": ("ref", ("storage_key", "thumbnail_key")),
+    # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Event details and recurrence exceptions.
+    "event": ("ref", ()),
+    "recurrence_exception": ("ref", ()),
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.

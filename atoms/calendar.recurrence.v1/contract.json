@@ -1,0 +1,58 @@
+{
+  "$comment": "+++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Recurrence of events (FR-CAL-10, F-20, owner decision D-60). Dates only: the wall-clock time of an occurrence is applied per date afterwards (time.local_to_utc.v1) and the viewer's days come from time.event_days.v1, so DST never shifts a series. Needed on the client (offline day/week/month views) and on the server (validation now; agenda, reminders, export later).",
+  "id": "calendar.recurrence.v1",
+  "version": "1.0.0",
+  "purpose": "Lists the dates on which an event occurs inside a window of at most 367 days, and tells whether an RRULE is one this version supports.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["start_date", "rrule", "exceptions", "from", "to"],
+    "additionalProperties": false,
+    "properties": {
+      "start_date": { "type": "string", "format": "date", "description": "First occurrence (the event's start date in its own zone)." },
+      "rrule": {
+        "type": ["string", "null"],
+        "description": "null = one-off event. Supported in v1, exactly as written: FREQ=DAILY, FREQ=WEEKLY, FREQ=MONTHLY, FREQ=YEARLY (RFC 5545 RRULE value without the 'RRULE:' prefix)."
+      },
+      "exceptions": {
+        "type": "array",
+        "items": { "type": "string", "format": "date" },
+        "description": "Occurrence dates removed from the series (recurrence exceptions); dates that are no occurrence are ignored."
+      },
+      "from": { "type": "string", "format": "date", "description": "First date of the window (inclusive)." },
+      "to": { "type": "string", "format": "date", "description": "Last date of the window (inclusive); to − from ≤ 366 days." }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["dates"],
+    "additionalProperties": false,
+    "properties": {
+      "dates": {
+        "type": "array",
+        "items": { "type": "string", "format": "date" },
+        "description": "Occurrence dates inside the window, ascending, without exceptions."
+      }
+    }
+  },
+  "errors": [
+    { "code": "UNSUPPORTED_RRULE", "when": "rrule is not null and not one of the four supported values (case and spacing count)" },
+    { "code": "INVALID_WINDOW", "when": "to is before from" },
+    { "code": "WINDOW_TOO_LARGE", "when": "to − from is more than 366 days" }
+  ],
+  "events": [],
+  "invariants": [
+    "no date before start_date is ever returned",
+    "rrule = null → [start_date] when start_date is inside the window, else []",
+    "FREQ=DAILY → every date from start_date on",
+    "FREQ=WEEKLY → start_date + 7·k days (the weekday of start_date)",
+    "FREQ=MONTHLY → the day of month of start_date in every month that has it; months without it are skipped (RFC 5545), never moved to the last day",
+    "FREQ=YEARLY → the day and month of start_date every year; 29 February only in leap years",
+    "a series has no end in v1 (FR-CAL-10); every occurrence spans one day",
+    "the result depends on dates only — no time zone, no clock"
+  ],
+  "requirements": ["FR-CAL-10", "F-20", "FR-CAL-01", "D-60"]
+}

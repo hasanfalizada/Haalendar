@@ -271,8 +271,10 @@ def test_rights_validation_and_unsupported_changes(people: People, clean_db: str
     assert editor[0]["status"] == "applied"
     invalid = _push(people.api, cid, _m("item", item_id, "update", data={"color": "pink"}))[0]
     assert invalid["status"] == "rejected" and invalid["problem"]["code"] == "validation_failed"
+    # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Items can be created now (events); without kind and container
+    # the change is invalid (test_events.py covers creating events).
     create_item = _push(people.api, cid, _m("item", str(uuid.uuid7()), "create", data={"title": "new"}))[0]
-    assert create_item["problem"]["code"] == "invalid_state"
+    assert create_item["problem"]["code"] == "validation_failed"
 
     ada = people.as_("ada")
     _push(people.api, ada, _m("item", item_id, "delete"))

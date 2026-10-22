@@ -142,6 +142,7 @@ Legend: PK primary key, FK foreign key, NN not null, U unique. Common columns (P
 | [common] | | |
 
 ### 5.5 `event` (subtype)
+<!-- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. As built (migration 0016, D-60): the key column is `id` (= item.id) and the row carries the item's `container_kind` / `container_id` (copied like attachments) instead of `calendar_id`, so row-level security, the authz atom and the audit log treat it like other content; `recurrence_parent_id` / `split_from_id` arrive with HAAL-067 / HAAL-093. RRULE limited to the four values of calendar.recurrence.v1 by a CHECK; a series spans one day. `recurrence_exception` also carries the container columns. -->
 | Column | Type | Rules |
 |---|---|---|
 | item_id | uuid PK FK item | |

@@ -47,6 +47,35 @@
       "notes": "Pure function. Never use ISO week number parity. Implemented in HAAL-045 (Python and TypeScript, both pass vectors.json); the Settings preview uses it now, the calendar header in HAAL-085."
     },
     {
+      "id": "calendar.recurrence.v1",
+      "status": "implemented",
+      "purpose": "Occurrence dates of an event inside a window (≤ 367 days): one-off, daily, weekly, monthly (short months skipped), yearly (29 February only in leap years), without exceptions; tells whether an RRULE is supported.",
+      "contract": "atoms/calendar.recurrence.v1/contract.json",
+      "examples": "atoms/calendar.recurrence.v1/examples.md",
+      "vectors": "atoms/calendar.recurrence.v1/vectors.json",
+      "capabilities": [
+        "occurrences",
+        "isSupportedRrule"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_recurrence_atom.py",
+        "typescript": "frontend/src/atoms/calendar/recurrence.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/calendar/recurrence.py",
+        "typescript": "frontend/src/atoms/calendar/recurrence.ts"
+      },
+      "hash": "b3:718cbab2cdea86e1f77d963db7db525643bf8b0e8ec2c110d9112b56e057c4ab",
+      "deps": [],
+      "requirements": [
+        "D-60",
+        "F-20",
+        "FR-CAL-01",
+        "FR-CAL-10"
+      ],
+      "notes": "Pure function on dates; times are applied per occurrence with time.local_to_utc.v1 and viewer days come from time.event_days.v1. The server validates rrule with it (HAAL-066); the day/week/month views expand series with it (HAAL-060, 087, 088). Extended rules (HAAL-092) arrive as v2."
+    },
+    {
       "id": "accounts.password_policy.v1",
       "status": "implemented",
       "purpose": "Checks a new password against the Haalendar password policy (15..128 chars, not common, no e-mail/name, enough variety) and returns every violated rule.",
