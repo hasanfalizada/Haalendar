@@ -41,6 +41,21 @@
       "listLabel": "Events on {{date}}",
       "emptyTitle": "Nothing planned for this day",
       "emptyBody": "Events of this day, recurring ones included, appear here."
+    },
+    "nav": {
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "today": "Today",
+      "goToday": "Go to today",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "sidebar": "Calendar sidebar",
+      "showSidebar": "Show the sidebar",
+      "hideSidebar": "Hide the sidebar",
+      "chooseDate": "{{date}} — choose another date",
+      "pickDate": "Choose a date",
+      "todayMark": "today",
+      "hasEvents": "has events"
     }
   },
   "pages": {

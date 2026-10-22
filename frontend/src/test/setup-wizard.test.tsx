@@ -64,7 +64,9 @@ async function fillForm(password = "correct horse battery staple") {
   return user;
 }
 
-describe("first-run setup wizard", () => {
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-061. These cases type whole forms with user-event, which takes close to
+// the default 5 s in jsdom on WSL drives (and more under machine load): a longer budget, not a weaker test.
+describe("first-run setup wizard", { timeout: 15_000 }, () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -115,7 +117,10 @@ describe("first-run setup wizard", () => {
     expect(typeof body.time_zone).toBe("string");
 
     await logout();
-    expect(requests.at(-1)?.headers.get(CSRF_HEADER)).toBe("csrf-from-setup");
+    // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-061. The logout request itself, not simply the last one: the sync
+    // engine of the calendar page may send a pull at the same moment.
+    const logoutRequest = requests.filter((r) => r.url.endsWith("/auth/logout")).at(-1);
+    expect(logoutRequest?.headers.get(CSRF_HEADER)).toBe("csrf-from-setup");
   });
 
   it("maps a rejected setup token onto the token field", async () => {

@@ -11,7 +11,9 @@ import { json, me, problem, renderApp, stubApi } from "./fake-api";
 
 const AVATAR_URL = "/api/v1/users/0199f000-0000-7000-8000-000000000001/avatar?v=abc";
 
-describe("profile settings", () => {
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-061. These cases type whole forms with user-event, which takes close to
+// the default 5 s in jsdom on WSL drives (and more under machine load): a longer budget, not a weaker test.
+describe("profile settings", { timeout: 15_000 }, () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });

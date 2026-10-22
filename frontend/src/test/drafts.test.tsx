@@ -11,7 +11,9 @@ import { json, me, noContent, problem, renderApp, stubApi } from "./fake-api";
 
 const ADA = me({ display_name: "Ada Admin" });
 
-describe("drafts on the profile form", () => {
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-061. These cases type whole forms with user-event, which takes close to
+// the default 5 s in jsdom on WSL drives (and more under machine load): a longer budget, not a weaker test.
+describe("drafts on the profile form", { timeout: 15_000 }, () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });

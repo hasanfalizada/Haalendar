@@ -53,7 +53,9 @@ async function openActions(name: string) {
   return user;
 }
 
-describe("admin panel", () => {
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-061. These cases type whole forms with user-event, which takes close to
+// the default 5 s in jsdom on WSL drives (and more under machine load): a longer budget, not a weaker test.
+describe("admin panel", { timeout: 15_000 }, () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
