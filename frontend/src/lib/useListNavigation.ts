@@ -3,6 +3,8 @@
 // selects, Enter or E opens, Delete deletes the selection — or the focused row — through the caller (who confirms, as
 // the legacy app did: F-16). Keys pressed on a row's own controls (checkbox, buttons) keep their native meaning; only
 // the arrows move on from there. The keys are listed in the "?" overlay while the list is shown.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The selection is optional: a list without multi-select (the day
+// view, D-66) gets the focus keys, Enter / E and Delete on the focused row; Space and Shift keep their native meaning.
 import { type KeyboardEvent, useCallback, useRef, useState } from "react";
 
 import { useShortcut } from "./shortcuts";
@@ -14,10 +16,16 @@ interface ListNavigationOptions {
   onDelete?: (ids: string[]) => void;
   /** Label of what Enter does in this list (translation key), e.g. "shortcuts.restore". */
   openLabel?: string;
+  /** Label of what Delete does (translation key). */
+  deleteLabel?: string;
 }
 
-export function useListNavigation(ids: readonly string[], selection: Selection, options: ListNavigationOptions = {}) {
-  const { onOpen, onDelete, openLabel = "shortcuts.open" } = options;
+export function useListNavigation(
+  ids: readonly string[],
+  selection: Selection | null,
+  options: ListNavigationOptions = {},
+) {
+  const { onOpen, onDelete, openLabel = "shortcuts.open", deleteLabel = "shortcuts.listDelete" } = options;
   const [active, setActive] = useState<string | null>(null);
   const container = useRef<HTMLElement | null>(null);
   const current = active !== null && ids.includes(active) ? active : (ids[0] ?? null);
@@ -39,7 +47,7 @@ export function useListNavigation(ids: readonly string[], selection: Selection, 
         const next = ids[Math.max(0, Math.min(ids.length - 1, to))];
         if (next === undefined) return;
         event.preventDefault();
-        if (event.shiftKey) {
+        if (event.shiftKey && selection) {
           if (!selection.isSelected(id)) selection.toggle(id);
           selection.toggle(next, { range: true });
         }
@@ -62,7 +70,7 @@ export function useListNavigation(ids: readonly string[], selection: Selection, 
           break;
       }
       if (!onRow || event.shiftKey) return;
-      if (event.key === " ") {
+      if (event.key === " " && selection) {
         event.preventDefault();
         selection.toggle(id);
       } else if ((event.key === "Enter" || event.code === "KeyE") && onOpen) {
@@ -70,7 +78,7 @@ export function useListNavigation(ids: readonly string[], selection: Selection, 
         onOpen(id);
       } else if (event.key === "Delete" && onDelete) {
         event.preventDefault();
-        onDelete(selection.count > 0 ? selection.selectedIds : [id]);
+        onDelete(selection && selection.count > 0 ? selection.selectedIds : [id]);
       }
     },
     [ids, selection, focusRow, onOpen, onDelete],
@@ -81,23 +89,37 @@ export function useListNavigation(ids: readonly string[], selection: Selection, 
   }, []);
 
   // Listed in the overlay; the list handles the keys itself (they depend on the focused row).
-  useShortcut({ id: "list-move", keys: ["Up", "Down"], group: "items", label: "shortcuts.listMove" });
-  useShortcut({ id: "list-jump", keys: ["Home", "End"], group: "items", label: "shortcuts.listJump" });
-  useShortcut({ id: "list-extend", keys: ["Shift+Up", "Shift+Down"], group: "items", label: "shortcuts.listExtend" });
-  useShortcut({ id: "list-select", keys: ["Space"], group: "items", label: "shortcuts.listSelect" });
+  // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. Only while the list has rows (an empty day lists none of them).
+  const rows = ids.length > 0;
+  useShortcut({ id: "list-move", keys: ["Up", "Down"], group: "items", label: "shortcuts.listMove", enabled: rows });
+  useShortcut({ id: "list-jump", keys: ["Home", "End"], group: "items", label: "shortcuts.listJump", enabled: rows });
+  useShortcut({
+    id: "list-extend",
+    keys: ["Shift+Up", "Shift+Down"],
+    group: "items",
+    label: "shortcuts.listExtend",
+    enabled: rows && selection !== null,
+  });
+  useShortcut({
+    id: "list-select",
+    keys: ["Space"],
+    group: "items",
+    label: "shortcuts.listSelect",
+    enabled: rows && selection !== null,
+  });
   useShortcut({
     id: "list-open",
     keys: ["Enter", "E"],
     group: "items",
     label: openLabel,
-    enabled: onOpen !== undefined,
+    enabled: rows && onOpen !== undefined,
   });
   useShortcut({
     id: "list-delete",
     keys: ["Delete"],
     group: "items",
-    label: "shortcuts.listDelete",
-    enabled: onDelete !== undefined,
+    label: deleteLabel,
+    enabled: rows && onDelete !== undefined,
   });
 
   return {

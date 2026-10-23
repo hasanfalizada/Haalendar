@@ -14,6 +14,11 @@
 +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Attachments are a source (owner of the container or an edit share may
 restore them). Restoring also checks the source's may_restore condition in SQL, so a visible row that the user may
 not restore is refused as forbidden instead of silently not changing.
++++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. Events are a source (items of kind "event"; `scope` keeps the other
+kinds out of the list and of restoring): restored with their attachments by the owner of the calendar or an edit share,
+refused with parent_in_trash while their calendar is in the trash. An attachment deleted together with its event, and
+an event deleted together with its calendar, are shown inside that entry; a calendar restores its events and their
+attachments with it (the batch it was deleted in).
 """
 
 from __future__ import annotations
@@ -26,14 +31,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, func, or_, select, tuple_
+from sqlalchemy import ColumnElement, exists, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts.models import UserAccount
 from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Calendar
+from haalendar.planning.models import Calendar, Item
 from haalendar.softdelete import restore_batch
 from haalendar.trash.schemas import (
     FailureCode,
@@ -64,6 +69,24 @@ class TrashSource:
     root_only: Callable[[], ColumnElement[bool] | None] = field(default=lambda: None)
     # Container of an item that is itself in the trash, or None.
     parent_in_trash: Callable[[AsyncSession, Any], Awaitable[ParentOut | None]] | None = None
+    # SQL condition: the rows of the model that belong to this source (a table shared by several kinds).
+    scope: Callable[[], ColumnElement[bool] | None] = field(default=lambda: None)
+
+
+def _edit_access(model: Any) -> ColumnElement[bool]:
+    return or_(
+        func.haalendar_owns_container(model.container_kind, model.container_id),
+        func.haalendar_share_permission(model.container_kind, model.container_id) == "edit",
+    )
+
+
+async def _calendar_in_trash(db: AsyncSession, item: Any) -> ParentOut | None:
+    if item.container_kind != "calendar":
+        return None
+    calendar = await db.get(Calendar, item.container_id)
+    if calendar is None or calendar.deleted_at is None:
+        return None
+    return ParentOut(type="calendar", id=calendar.id, title=calendar.name)
 
 
 SOURCES: dict[str, TrashSource] = {
@@ -73,16 +96,32 @@ SOURCES: dict[str, TrashSource] = {
         title=lambda row: row.name,
         may_restore=lambda user_id: Calendar.owner_id == user_id,
         refuse=lambda row, user_id: None if row.owner_id == user_id else "forbidden",
+        children=(("event", Item), ("attachment", Attachment)),
+    ),
+    "event": TrashSource(
+        kind="event",
+        model=Item,
+        title=lambda row: row.title or "",
+        may_restore=lambda user_id: _edit_access(Item),
+        refuse=lambda row, user_id: None,
+        children=(("attachment", Attachment),),
+        root_only=lambda: (
+            ~exists().where(
+                Calendar.id == Item.container_id, Calendar.delete_batch_id == Item.delete_batch_id
+            )
+        ),
+        parent_in_trash=_calendar_in_trash,
+        scope=lambda: Item.kind == "event",
     ),
     "attachment": TrashSource(
         kind="attachment",
         model=Attachment,
         title=lambda row: row.file_name,
-        may_restore=lambda user_id: or_(
-            func.haalendar_owns_container(Attachment.container_kind, Attachment.container_id),
-            func.haalendar_share_permission(Attachment.container_kind, Attachment.container_id) == "edit",
-        ),
+        may_restore=lambda user_id: _edit_access(Attachment),
         refuse=lambda row, user_id: None,
+        root_only=lambda: (
+            ~exists().where(Item.id == Attachment.item_id, Item.delete_batch_id == Attachment.delete_batch_id)
+        ),
     ),
 }
 
@@ -128,9 +167,9 @@ async def list_trash(
             .order_by(model.deleted_at.desc(), model.id.desc())
             .limit(limit + 1)
         )
-        root = source.root_only()
-        if root is not None:
-            statement = statement.where(root)
+        for condition in (source.root_only(), source.scope()):
+            if condition is not None:
+                statement = statement.where(condition)
         if after is not None:
             statement = statement.where(tuple_(model.deleted_at, model.id) < tuple_(*after))
         rows = (await db.execute(statement)).all()
@@ -170,11 +209,11 @@ async def restore(db: AsyncSession, user_id: uuid.UUID, entries: list[RestoreEnt
             failed.append(RestoreFailureOut(type=entry.type, id=entry.id, code="unsupported"))
             continue
         model = source.model
-        row = await db.scalar(
-            select(model)
-            .where(model.id == entry.id, model.deleted_at.is_not(None))
-            .execution_options(populate_existing=True)
-        )
+        statement = select(model).where(model.id == entry.id, model.deleted_at.is_not(None))
+        scope = source.scope()
+        if scope is not None:
+            statement = statement.where(scope)
+        row = await db.scalar(statement.execution_options(populate_existing=True))
         if row is None:
             failed.append(RestoreFailureOut(type=entry.type, id=entry.id, code="not_found"))
             continue

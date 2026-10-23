@@ -10,25 +10,34 @@
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. Header (FR-CAL-05, D-63): the date title ("Today" or the long date) is
 // the page heading (the module name is read before it), with the weekday, the live clock and the ISO week of the
 // selected date; on phones the title is the button that opens the mini month, clock and week on a second line.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. Delete (FR-CAL-09, F-16/F-17, D-66): from the details card or with the
+// Delete key on the focused row, after a confirmation whose focused button makes it Delete → Enter; a series goes as a
+// whole (one occurrence: HAAL-067). Soft and offline through the local store; undo restores it, so does the trash. A
+// calendar shared for viewing says so instead. The list has one Tab stop: ↑/↓, Home/End, Enter / E open the card.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus, Repeat } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
+import { runWrite } from "@/api/write";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
+import { notify } from "@/lib/notify";
 import { itemColorClasses } from "@/lib/palette";
 import { useShortcut } from "@/lib/shortcuts";
+import { newStep } from "@/lib/undo";
+import { useListNavigation } from "@/lib/useListNavigation";
 import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
-import { localKeys, localRows } from "@/sync";
+import { localKeys, localRows, mutate } from "@/sync";
 
 import { IsoWeekLabel, LiveClock } from "./HeaderInfo";
 import { EventDetails } from "./EventDetails";
@@ -78,13 +87,32 @@ interface DayListProps {
   /** Details next to the row (popover); false on phones, where the page shows them in a sheet. */
   inPopover: boolean;
   details: (entry: DayEntry) => ReactNode;
+  /** Delete key on a row. */
+  onDelete: (entry: DayEntry) => void;
 }
 
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. A row opens the details card (click, tap, Enter / Space, right-click
 // without the browser's menu): as a popover next to the row, or — on phones — in the page's sheet.
-function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details }: DayListProps) {
+function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details, onDelete }: DayListProps) {
   const { t, i18n } = useTranslation();
   const label = dayLabel(date, i18n.language);
+  const byKey = (key: string | undefined) => entries.find((entry) => entry.key === key);
+  const navigation = useListNavigation(
+    entries.map((entry) => entry.key),
+    null,
+    {
+      openLabel: "calendar.day.openDetails",
+      deleteLabel: "shortcuts.listDeleteFocused",
+      onOpen: (key) => {
+        const entry = byKey(key);
+        if (entry) onOpen(entry);
+      },
+      onDelete: ([key]) => {
+        const entry = byKey(key);
+        if (entry) onDelete(entry);
+      },
+    },
+  );
   if (entries.length === 0) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
@@ -99,11 +127,16 @@ function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details }
     );
   }
   return (
-    <ol aria-label={t("calendar.day.listLabel", { date: label })} className="flex flex-col gap-1.5 p-3 md:p-4">
+    <ol
+      aria-label={t("calendar.day.listLabel", { date: label })}
+      className="flex flex-col gap-1.5 p-3 md:p-4"
+      {...navigation.listProps}
+    >
       {entries.map((entry) => {
         const row = (
           <button
             type="button"
+            {...navigation.itemProps(entry.key)}
             aria-label={t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") })}
             aria-haspopup="dialog"
             aria-expanded={openKey === entry.key}
@@ -199,6 +232,36 @@ export function DayView({ date }: { date: string }) {
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
   const [details, setDetails] = useState<DayEntry | null>(null);
   const calendars = useCalendars(user);
+  // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
+  const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
+  // After the confirmation closes the focus returns to the list — once a deleted row has left it ("" = cancelled).
+  const refocus = useRef<string | null>(null);
+  const titleOf = (row: Record<string, unknown>) =>
+    typeof row.title === "string" && row.title !== "" ? row.title : t("calendar.day.noTitle");
+  const requestDelete = (row: Record<string, unknown>) => {
+    if (!calendars.canWrite(row.container_id)) {
+      notify.info(t("calendar.delete.viewOnly"));
+      return;
+    }
+    setDetails(null);
+    setDeleting(row);
+  };
+  async function deleteEvent(row: Record<string, unknown>) {
+    if (!user) return;
+    const id = String(row.id);
+    const title = titleOf(row);
+    const version = typeof row.version === "number" ? { base_version: row.version } : {};
+    const result = await runWrite({
+      name: "event_delete",
+      run: () => mutate(user, { entity_type: "item", entity_id: id, op: "delete", ...version }),
+      success: t("calendar.delete.done", { title }),
+      undo: () => newStep("event.delete", { key: "undo.labels.eventDeleted", values: { title } }, { user, id }),
+    });
+    if (result.ok) {
+      refocus.current = id;
+      setDeleting(null);
+    }
+  }
   const detailsOf = (entry: DayEntry) => {
     const row = rows.find((candidate) => candidate.id === entry.id);
     if (!row || !user) return null;
@@ -214,9 +277,18 @@ export function DayView({ date }: { date: string }) {
           setDetails(null);
           setEditing({ event: row });
         }}
+        onDelete={() => {
+          requestDelete(row);
+        }}
       />
     );
   };
+  useEffect(() => {
+    const id = refocus.current;
+    if (deleting !== null || id === null || (id !== "" && entries.some((entry) => entry.id === id))) return;
+    refocus.current = null;
+    document.querySelector<HTMLElement>('[data-nav-id][tabindex="0"]')?.focus();
+  }, [deleting, entries]);
   const [shownDays, setShownDays] = useState<readonly string[]>([]);
   const marked = useMemo(
     () => new Set(shownDays.filter((day) => entriesOn(rows, day, viewerTz).length > 0)),
@@ -263,7 +335,7 @@ export function DayView({ date }: { date: string }) {
     keys: ["N"],
     group: "items",
     label: "calendar.editor.newButton",
-    enabled: editing === null && details === null,
+    enabled: editing === null && details === null && deleting === null,
     handler: () => {
       setEditing({ event: null });
     },
@@ -399,6 +471,10 @@ export function DayView({ date }: { date: string }) {
               setDetails(null);
             }}
             details={detailsOf}
+            onDelete={(entry) => {
+              const row = rows.find((candidate) => candidate.id === entry.id);
+              if (row) requestDelete(row);
+            }}
           />
         </div>
       </div>
@@ -438,6 +514,28 @@ export function DayView({ date }: { date: string }) {
           ) : null}
         </Dialog>
       ) : null}
+      <ConfirmDialog
+        open={deleting !== null}
+        title={t("calendar.delete.title")}
+        body={
+          deleting
+            ? t(deleting.rrule ? "calendar.delete.bodySeries" : "calendar.delete.body", { title: titleOf(deleting) })
+            : ""
+        }
+        confirmLabel={t("calendar.delete.confirm")}
+        danger
+        focusConfirm
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+        }}
+        onConfirm={async () => {
+          if (deleting) await deleteEvent(deleting);
+        }}
+        onClose={() => {
+          refocus.current = "";
+          setDeleting(null);
+        }}
+      />
       {editing ? (
         <EventEditor
           date={date}

@@ -32,3 +32,15 @@ registerUndo<EventEdited>("event.update", {
     run: () => mutate(user, { ...target(id), op: "update", base: before, data: after }),
   }),
 });
+
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. A delete (soft, with its attachments in one batch on the server) is
+// undone by a restore of that batch and redone by deleting again.
+export interface EventDeleted {
+  user: string;
+  id: string;
+}
+
+registerUndo<EventDeleted>("event.delete", {
+  undo: ({ user, id }) => ({ run: () => mutate(user, { ...target(id), op: "restore" }) }),
+  redo: ({ user, id }) => ({ run: () => mutate(user, { ...target(id), op: "delete" }) }),
+});

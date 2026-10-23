@@ -41,7 +41,8 @@
       "details": "Details of {{title}}",
       "listLabel": "Events on {{date}}",
       "emptyTitle": "Nothing planned for this day",
-      "emptyBody": "Events of this day, recurring ones included, appear here."
+      "emptyBody": "Events of this day, recurring ones included, appear here.",
+      "openDetails": "Open the event's details"
     },
     "nav": {
       "previousDay": "Previous day",
@@ -74,7 +75,16 @@
       "attachments_one": "{{count}} attachment",
       "attachments_other": "{{count}} attachments",
       "openAttachment": "Open {{name}}",
-      "edit": "Edit"
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "delete": {
+      "title": "Delete event?",
+      "body": "“{{title}}” will be moved to the trash. You can undo this or restore it from the trash.",
+      "bodySeries": "All occurrences of the repeating event “{{title}}” will be moved to the trash. You can undo this or restore it from the trash.",
+      "confirm": "Delete",
+      "done": "Deleted {{title}}",
+      "viewOnly": "This calendar is view only — the event cannot be deleted."
     },
     "editor": {
       "newButton": "New event",
@@ -538,7 +548,9 @@
       "card_one": "{{count}} card",
       "card_other": "{{count}} cards",
       "column_one": "{{count}} column",
-      "column_other": "{{count}} columns"
+      "column_other": "{{count}} columns",
+      "attachment_one": "{{count}} image",
+      "attachment_other": "{{count}} images"
     },
     "select": "Select {{title}}",
     "restore": "Restore",
@@ -675,6 +687,7 @@
       "shareCreated": "sharing with {{email}}",
       "eventCreated": "creating {{title}}",
       "eventEdited": "the changes to {{title}}",
+      "eventDeleted": "deleting {{title}}",
       "sharePermission": "the permission change for {{name}}",
       "shareRemoved": "removing access for {{name}}",
       "attachmentAdded": "adding “{{name}}”",
@@ -729,6 +742,7 @@
     "open": "Open the item",
     "restore": "Restore the entry",
     "listDelete": "Delete the selection (asks first)",
+    "listDeleteFocused": "Delete the focused row (asks first)",
     "save": "Save"
   },
   "unsaved": {
