@@ -56,6 +56,13 @@
       "pickDate": "Choose a date",
       "todayMark": "today",
       "hasEvents": "has events"
+    },
+    "header": {
+      "today": "Today",
+      "clock": "Current time",
+      "week": "Week {{week}}",
+      "weekOfYear": "Week {{week}} · {{year}}",
+      "weekTitle": "ISO week {{week}} of {{year}}"
     }
   },
   "pages": {

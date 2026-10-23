@@ -7,6 +7,9 @@
 // and the keys ← / → / T (D-42); the date stays in the URL and moving between days replaces the history entry (Back
 // leaves the calendar instead of stepping through days). The mini month sits in a sidebar: inline and collapsible on
 // desktops (remembered on this device), an overlay on tablets, a bottom sheet behind the date button on phones.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. Header (FR-CAL-05, D-63): the date title ("Today" or the long date) is
+// the page heading (the module name is read before it), with the weekday, the live clock and the ISO week of the
+// selected date; on phones the title is the button that opens the mini month, clock and week on a second line.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Repeat } from "lucide-react";
@@ -19,13 +22,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { type TimeFormat, addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
-import { type DayEntry, dayLabel, entriesOn } from "@/lib/dayView";
+import { type DayEntry, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
 import { itemColorClasses } from "@/lib/palette";
 import { useShortcut } from "@/lib/shortcuts";
 import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 
+import { IsoWeekLabel, LiveClock } from "./HeaderInfo";
 import { MiniMonth } from "./MiniMonth";
 
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
@@ -134,6 +138,8 @@ export function DayView({ date }: { date: string }) {
   const entries = useMemo(() => entriesOn(rows, date, viewerTz), [rows, date, viewerTz]);
   const today = todayIn(viewerTz);
   const label = dayLabel(date, i18n.language);
+  const title = dateTitle(date, today, i18n.language, t("calendar.header.today"));
+  const weekday = weekdayName(date, i18n.language);
 
   const [pinned, setPinned] = useState(storedSidebarOpen);
   const [overlayOpen, setOverlayOpen] = useState(false);
@@ -229,7 +235,30 @@ export function DayView({ date }: { date: string }) {
               <PanelLeft aria-hidden />
             </Button>
           ) : null}
-          <h1 className="text-lg font-semibold">{t("pages.calendar.title")}</h1>
+          {tablet ? (
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h1 className="text-lg font-semibold">
+                <span className="sr-only">{t("pages.calendar.title")}: </span>
+                {title}
+              </h1>
+              <span className="text-[13px] text-muted">{weekday}</span>
+            </div>
+          ) : (
+            <h1 className="min-w-0 text-base font-semibold">
+              <span className="sr-only">{t("pages.calendar.title")}: </span>
+              <Button
+                variant="ghost"
+                className="-ml-2 px-2 text-base font-semibold"
+                aria-label={t("calendar.nav.chooseDate", { date: label })}
+                onClick={() => {
+                  setPickerOpen(true);
+                }}
+              >
+                {title}
+                <ChevronDown aria-hidden />
+              </Button>
+            </h1>
+          )}
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -260,20 +289,10 @@ export function DayView({ date }: { date: string }) {
               <ChevronRight aria-hidden />
             </Button>
           </div>
-          {tablet ? (
-            <p className="text-[13px] text-muted">{label}</p>
-          ) : (
-            <Button
-              variant="ghost"
-              aria-label={t("calendar.nav.chooseDate", { date: label })}
-              onClick={() => {
-                setPickerOpen(true);
-              }}
-            >
-              {label}
-              <ChevronDown aria-hidden />
-            </Button>
-          )}
+          <div className="flex w-full items-center gap-3 text-xs text-muted md:ml-auto md:w-auto md:text-[13px]">
+            <LiveClock timeZone={viewerTz} />
+            <IsoWeekLabel date={date} />
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <DayList date={date} entries={entries} />

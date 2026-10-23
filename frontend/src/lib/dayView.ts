@@ -133,3 +133,15 @@ export function dayLabel(date: string, locale: string): string {
     Date.parse(`${date}T00:00:00Z`),
   );
 }
+
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. Header title: "Today" or the long date, and the weekday.
+export function dateTitle(date: string, today: string, locale: string, todayLabel: string): string {
+  if (date === today) return todayLabel;
+  return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(
+    Date.parse(`${date}T00:00:00Z`),
+  );
+}
+
+export function weekdayName(date: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(Date.parse(`${date}T00:00:00Z`));
+}

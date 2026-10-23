@@ -5,7 +5,7 @@
       "package": "pillow",
       "version": "12.3.0",
       "fixed_in": "13.0.0",
-      "expires": "2026-10-23",
+      "expires": "2026-10-24",
       "ids": [
         "CVE-2026-112395",
         "CVE-2026-112397",
@@ -43,7 +43,7 @@
         "CVE-2026-96644",
         "GHSA-78g4-xqwv-q3g8"
       ],
-      "reason": "The fix (Pillow 13.0.0, released 2026-10-16) is younger than the 7-day minimum release age; no 12.x patch exists. Not reachable here: uploads are opened with an explicit format list (avatars PNG/JPEG/WebP, attachments also GIF), so the TIFF, PPM/PGM, EPS and PDF parsers never run; the GIF issue follows a DecompressionBombError, on which the upload is rejected and processing stops. Added 2026-10-22 (HAAL-054): the MSP decoder never runs (explicit format list) and the two TIFF issues are in TIFF writing, while we only save WebP, PNG and JPEG. Also added 2026-10-22: thirteen more ids; EPS, MIC, XBM, IPTC, FreeType, PDF, rank filters, transform and GIF saving are not used, but two are reachable by a signed-in user uploading a file — CVE-2026-112401 (quadratic GIF comment parsing, CPU) and CVE-2026-112399 (APNG canvas allocated before the decompression-bomb check, memory); accepted for one day because no deployment exists yet. Also added 2026-10-22 (HAAL-061): eleven more ids; BMP, SPIDER, EMF/WMF, PDF, TarIO, font drawing and OpenJPEG are not used and later frames are never decoded (seek(0) only), but two are reachable by a signed-in uploader — CVE-2026-96778 (heap overflow when an attachment is re-saved as JPEG: Pillow carries the uploaded ICC profile and comment over) and CVE-2026-96643 (quadratic PNG eXIf parsing in exif_transpose, CPU); accepted until the planned upgrade the next day because no deployment exists yet. Upgrade to 13.0.0 on 2026-10-23 and remove this entry."
+      "reason": "The fix (Pillow 13.0.0, released 2026-10-16) is younger than the 7-day minimum release age; no 12.x patch exists. Not reachable here: uploads are opened with an explicit format list (avatars PNG/JPEG/WebP, attachments also GIF), so the TIFF, PPM/PGM, EPS and PDF parsers never run; the GIF issue follows a DecompressionBombError, on which the upload is rejected and processing stops. Added 2026-10-22 (HAAL-054): the MSP decoder never runs (explicit format list) and the two TIFF issues are in TIFF writing, while we only save WebP, PNG and JPEG. Also added 2026-10-22: thirteen more ids; EPS, MIC, XBM, IPTC, FreeType, PDF, rank filters, transform and GIF saving are not used, but two are reachable by a signed-in user uploading a file — CVE-2026-112401 (quadratic GIF comment parsing, CPU) and CVE-2026-112399 (APNG canvas allocated before the decompression-bomb check, memory); accepted for one day because no deployment exists yet. Also added 2026-10-22 (HAAL-061): eleven more ids; BMP, SPIDER, EMF/WMF, PDF, TarIO, font drawing and OpenJPEG are not used and later frames are never decoded (seek(0) only), but two are reachable by a signed-in uploader — CVE-2026-96778 (heap overflow when an attachment is re-saved as JPEG: Pillow carries the uploaded ICC profile and comment over) and CVE-2026-96643 (quadratic PNG eXIf parsing in exif_transpose, CPU); accepted until the planned upgrade the next day because no deployment exists yet. Extended by one day on 2026-10-23 (owner decision): 13.0.0 was published 2026-10-16 22:15 UTC and passes the 7-day minimum only at 2026-10-23 22:15 UTC. Upgrade to 13.0.0 on 2026-10-24 and remove this entry."
     },
     {
       "package": "certifi",

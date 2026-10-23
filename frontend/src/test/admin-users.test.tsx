@@ -63,7 +63,7 @@ describe("admin panel", { timeout: 15_000 }, () => {
   it("is not reachable for regular users", async () => {
     stubApi({ "GET /me": () => json(me({ role: "user" })) });
     const { router } = renderApp("/admin");
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/calendar");
   });
 

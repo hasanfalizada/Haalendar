@@ -88,8 +88,9 @@ describe("desktop", { timeout: 15_000 }, () => {
     const { router, user } = await open("/calendar?date=2026-10-22");
     const sidebar = await screen.findByRole("complementary", { name: "Calendar sidebar" });
     const grid = within(sidebar).getByRole("grid", { name: "October 2026" });
+    // "today" is part of the name when the test runs on that day.
     expect(
-      await within(grid).findByRole("button", { name: "Friday, October 23, 2026, has events" }),
+      await within(grid).findByRole("button", { name: /^Friday, October 23, 2026, (today, )?has events$/ }),
     ).toBeInTheDocument();
     expect(within(grid).getByRole("gridcell", { selected: true })).toHaveTextContent("22");
 

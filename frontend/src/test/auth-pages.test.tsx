@@ -55,7 +55,7 @@ describe("session gate and sign-in", () => {
 
     await user.type(await screen.findByLabelText("Code from your authenticator app"), "12a3456");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     expect(calls.filter((c) => c.path === "/auth/login").at(-1)?.body).toMatchObject({ totp_code: "123456" });
   });
 
@@ -107,7 +107,7 @@ describe("one-time password and sign-out", () => {
     await user.clear(screen.getByLabelText("New password"));
     await user.type(screen.getByLabelText("New password"), PASSPHRASE);
     await user.click(screen.getByRole("button", { name: "Save password" }));
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     const sent = calls.find((c) => c.path === "/me/password");
     expect(sent?.body).toEqual({ new_password: PASSPHRASE });
     expect(sent?.headers.get("X-CSRF-Token")).toBe("csrf-1");
@@ -157,7 +157,7 @@ describe("invitation page", () => {
     await user.type(screen.getByLabelText("Password"), PASSPHRASE);
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     expect(calls.find((c) => c.path === "/auth/register")?.body).toMatchObject({
       email: "ivy@example.org",
       display_name: "Ivy",

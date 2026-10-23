@@ -29,7 +29,7 @@ describe("time zone mismatch notice", () => {
   it("is not shown when device and profile agree", async () => {
     stubApi({ "GET /me": () => json(me()) });
     renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar", level: 1 });
+    await screen.findByRole("heading", { name: /^Calendar:/, level: 1 });
     expect(screen.queryByText(/This device is set to/)).not.toBeInTheDocument();
   });
 

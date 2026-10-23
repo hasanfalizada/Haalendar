@@ -34,7 +34,7 @@ describe("keyboard in the app", () => {
   it("lists the shortcuts of the current page", async () => {
     stubApi({ "GET /me": () => json(ADA), "GET /trash": () => json({ data: [entry(1)], next_cursor: null }) });
     const { router } = renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar" });
+    await screen.findByRole("heading", { name: /^Calendar:/ });
     fireEvent.keyDown(document.body, { code: "Slash", key: "?", shiftKey: true });
     let dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
     expect(within(dialog).getByText("Go to To-Do")).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe("keyboard in the app", () => {
   it("switches modules with Alt+digit and moves between regions with F6", async () => {
     stubApi({ "GET /me": () => json(ADA) });
     const { router } = renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar" });
+    await screen.findByRole("heading", { name: /^Calendar:/ });
     fireEvent.keyDown(document.body, { code: "Digit2", key: "2", altKey: true });
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/todo");

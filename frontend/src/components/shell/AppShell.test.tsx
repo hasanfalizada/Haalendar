@@ -39,7 +39,7 @@ describe("AppShell", () => {
 
   it("redirects / to the calendar and marks it active", async () => {
     const { router } = renderApp("/");
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/calendar");
     expect(within(railNav()).getByRole("link", { name: "Calendar" })).toHaveAttribute("aria-current", "page");
   });
@@ -47,7 +47,7 @@ describe("AppShell", () => {
   it("navigates between the three modules by clicking the rail", async () => {
     const user = userEvent.setup();
     renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar", level: 1 });
+    await screen.findByRole("heading", { name: /^Calendar:/, level: 1 });
 
     await user.click(within(railNav()).getByRole("link", { name: "Kanban" }));
     expect(await screen.findByRole("heading", { name: "Kanban", level: 1 })).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe("AppShell", () => {
   it("switches modules with Alt+1/2/3", async () => {
     const user = userEvent.setup();
     const { router } = renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar", level: 1 });
+    await screen.findByRole("heading", { name: /^Calendar:/, level: 1 });
 
     await user.keyboard("{Alt>}3{/Alt}");
     await waitFor(() => {
@@ -78,7 +78,7 @@ describe("AppShell", () => {
 
   it("ignores module shortcuts while typing in a field", async () => {
     const { router } = renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar", level: 1 });
+    await screen.findByRole("heading", { name: /^Calendar:/, level: 1 });
     const input = document.createElement("input");
     document.body.appendChild(input);
     input.focus();
@@ -92,7 +92,7 @@ describe("AppShell", () => {
   it("opens the mobile drawer and navigates from it", async () => {
     const user = userEvent.setup();
     const { router } = renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar", level: 1 });
+    await screen.findByRole("heading", { name: /^Calendar:/, level: 1 });
 
     await user.click(screen.getByRole("button", { name: "Open menu" }));
     const drawer = await screen.findByRole("dialog", { name: "Haalendar" });

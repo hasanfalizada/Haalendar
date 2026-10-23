@@ -80,7 +80,7 @@ describe("profile on the device", () => {
       "GET /health/live": () => Promise.reject(new TypeError("Failed to fetch")),
     });
     renderApp("/calendar");
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     // The health check retries once before it calls the server unreachable.
     expect(await screen.findByText(/The server cannot be reached/, undefined, { timeout: 5_000 })).toBeInTheDocument();
   });
@@ -102,7 +102,7 @@ describe("offline banner", () => {
   it("is absent while the server answers", async () => {
     stubApi({ "GET /me": () => json(me()) });
     renderApp("/calendar");
-    await screen.findByRole("heading", { name: "Calendar", level: 1 });
+    await screen.findByRole("heading", { name: /^Calendar:/, level: 1 });
     await waitFor(() => {
       expect(screen.queryByText(/You are offline|cannot be reached/)).not.toBeInTheDocument();
     });

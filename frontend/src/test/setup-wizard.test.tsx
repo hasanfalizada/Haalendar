@@ -82,7 +82,7 @@ describe("first-run setup wizard", { timeout: 15_000 }, () => {
   it("sends /setup to the calendar once setup is complete", async () => {
     stubBackend({ setup_required: false, setup_token_required: false });
     const { router } = renderApp("/setup");
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/calendar");
   });
 
@@ -104,7 +104,7 @@ describe("first-run setup wizard", { timeout: 15_000 }, () => {
     await user.type(await screen.findByLabelText("Setup token"), "token-from-env");
     await user.click(screen.getByRole("button", { name: "Create administrator" }));
 
-    expect(await screen.findByRole("heading", { name: "Calendar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/calendar");
     const sent = requests.find((r) => r.url.endsWith("/setup/admin"));
     expect(sent?.method).toBe("POST");

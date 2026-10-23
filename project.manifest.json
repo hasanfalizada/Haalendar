@@ -103,6 +103,33 @@
       "notes": "Pure function; plain code-point comparisons so both implementations agree. The day view uses it (HAAL-060); agenda and export later."
     },
     {
+      "id": "calendar.iso_week.v1",
+      "status": "implemented",
+      "purpose": "ISO 8601 week number (1..53) and ISO week-based year of a date — the selected date, never today.",
+      "contract": "atoms/calendar.iso_week.v1/contract.json",
+      "examples": "atoms/calendar.iso_week.v1/examples.md",
+      "vectors": "atoms/calendar.iso_week.v1/vectors.json",
+      "capabilities": [
+        "isoWeek"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_iso_week_atom.py",
+        "typescript": "frontend/src/atoms/calendar/isoWeek.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/calendar/iso_week.py",
+        "typescript": "frontend/src/atoms/calendar/isoWeek.ts"
+      },
+      "hash": "b3:f5ee53e4917301c2c2de895a761649714d0336777cb32e0d0f1cf14ff6963ecc",
+      "deps": [],
+      "requirements": [
+        "D-63",
+        "F-05",
+        "FR-CAL-05"
+      ],
+      "notes": "Pure function on dates. The calendar header uses it (HAAL-062); mini month week numbers (HAAL-097), week view and exports later."
+    },
+    {
       "id": "accounts.password_policy.v1",
       "status": "implemented",
       "purpose": "Checks a new password against the Haalendar password policy (15..128 chars, not common, no e-mail/name, enough variety) and returns every violated rule.",
