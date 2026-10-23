@@ -38,6 +38,7 @@
       "from": "From {{time}}",
       "noTitle": "(No title)",
       "repeats": "Repeats",
+      "edit": "Edit {{title}}",
       "listLabel": "Events on {{date}}",
       "emptyTitle": "Nothing planned for this day",
       "emptyBody": "Events of this day, recurring ones included, appear here."
@@ -63,6 +64,40 @@
       "week": "Week {{week}}",
       "weekOfYear": "Week {{week}} · {{year}}",
       "weekTitle": "ISO week {{week}} of {{year}}"
+    },
+    "editor": {
+      "newButton": "New event",
+      "newTitle": "New event",
+      "editTitle": "Edit event",
+      "title": "Title",
+      "titleHint": "{{count}} / {{max}}",
+      "tooLong": "At most {{max}} characters",
+      "allDay": "All day",
+      "startDate": "From",
+      "startTime": "Start time",
+      "endDate": "To",
+      "endTime": "End time",
+      "endBeforeStart": "The end cannot be before the start.",
+      "zoneNote": "Times are in {{zone}}, the time zone of this event.",
+      "repeat": "Repeat",
+      "repeatHint": "A repeating event lasts one day; it repeats without an end.",
+      "repeats": {
+        "none": "Does not repeat",
+        "daily": "Every day",
+        "weekly": "Every week",
+        "monthly": "Every month",
+        "yearly": "Every year"
+      },
+      "calendar": "Calendar",
+      "newCalendar": "My calendar (created with this event)",
+      "defaultCalendar": "My calendar",
+      "location": "Location",
+      "description": "Description",
+      "color": "Color",
+      "attachmentsLater": "Save the event to add attachments.",
+      "save": "Save",
+      "created": "Event created: {{title}}",
+      "saved": "Event saved: {{title}}"
     }
   },
   "pages": {
@@ -627,6 +662,8 @@
     "nothingToRedo": "Nothing to redo.",
     "labels": {
       "shareCreated": "sharing with {{email}}",
+      "eventCreated": "creating {{title}}",
+      "eventEdited": "the changes to {{title}}",
       "sharePermission": "the permission change for {{name}}",
       "shareRemoved": "removing access for {{name}}",
       "attachmentAdded": "adding “{{name}}”",

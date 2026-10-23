@@ -1,0 +1,36 @@
+{
+  "$comment": "+++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. ISO 8601 week of a date (FR-CAL-05: the week of the SELECTED date — the legacy app showed the week of today). Needed on the client (calendar header, offline; mini month week numbers in HAAL-097) and on the server (exports, agenda), hence two implementations against one contract.",
+  "id": "calendar.iso_week.v1",
+  "version": "1.0.0",
+  "purpose": "Returns the ISO 8601 week number (1..53) of a date and the ISO week-based year it belongs to.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["date"],
+    "additionalProperties": false,
+    "properties": {
+      "date": { "type": "string", "format": "date", "description": "A calendar date (YYYY-MM-DD)." }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["week", "week_year"],
+    "additionalProperties": false,
+    "properties": {
+      "week": { "type": "integer", "minimum": 1, "maximum": 53 },
+      "week_year": { "type": "integer", "description": "ISO week-based year; differs from the calendar year around 1 January." }
+    }
+  },
+  "errors": [],
+  "events": [],
+  "invariants": [
+    "weeks start on Monday",
+    "week 1 is the week that contains the year's first Thursday (equivalently 4 January)",
+    "a year has 53 weeks when it starts on a Thursday, or is a leap year starting on a Wednesday",
+    "the result depends on the date only — never on a time zone, the user's week start or the current day"
+  ],
+  "requirements": ["FR-CAL-05", "F-05", "D-63"]
+}

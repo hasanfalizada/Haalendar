@@ -12,7 +12,7 @@
 // selected date; on phones the title is the button that opens the mini month, clock and week on a second line.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Repeat } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus, Repeat } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,8 +21,8 @@ import { meQuery } from "@/api/session";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { type TimeFormat, addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
-import { type DayEntry, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
+import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
+import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
 import { itemColorClasses } from "@/lib/palette";
 import { useShortcut } from "@/lib/shortcuts";
 import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 
 import { IsoWeekLabel, LiveClock } from "./HeaderInfo";
+import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
 
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
@@ -50,28 +51,21 @@ function storeSidebarOpen(open: boolean): void {
   }
 }
 
-function clock(hhmm: string, locale: string, timeFormat: TimeFormat): string {
-  const [hour = 0, minute = 0] = hhmm.split(":").map(Number);
-  return new Intl.DateTimeFormat(locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-    hourCycle: timeFormat === "12h" ? "h12" : "h23",
-  }).format(Date.UTC(2000, 0, 1, hour, minute));
-}
-
 function When({ entry }: { entry: DayEntry }) {
   const { t, i18n } = useTranslation();
   const { time_format: timeFormat } = useSettings();
   if (entry.allDay || entry.start === null || entry.end === null) return <>{t("calendar.day.allDay")}</>;
-  const [start, end] = [clock(entry.start, i18n.language, timeFormat), clock(entry.end, i18n.language, timeFormat)];
+  const [start, end] = [
+    clockText(entry.start, i18n.language, timeFormat),
+    clockText(entry.end, i18n.language, timeFormat),
+  ];
   if (entry.continues && entry.goesOn) return <>{t("calendar.day.allDayContinues")}</>;
   if (entry.continues) return <>{t("calendar.day.until", { time: end })}</>;
   if (entry.goesOn) return <>{t("calendar.day.from", { time: start })}</>;
   return <>{start === end ? start : `${start}–${end}`}</>;
 }
 
-function DayList({ date, entries }: { date: string; entries: DayEntry[] }) {
+function DayList({ date, entries, onOpen }: { date: string; entries: DayEntry[]; onOpen: (id: string) => void }) {
   const { t, i18n } = useTranslation();
   const label = dayLabel(date, i18n.language);
   if (entries.length === 0) {
@@ -90,30 +84,35 @@ function DayList({ date, entries }: { date: string; entries: DayEntry[] }) {
   return (
     <ol aria-label={t("calendar.day.listLabel", { date: label })} className="flex flex-col gap-1.5 p-3 md:p-4">
       {entries.map((entry) => (
-        <li
-          key={entry.key}
-          className={cn(
-            "flex min-h-11 items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-[13px]",
-            itemColorClasses(entry.color),
-          )}
-        >
-          <span className="w-28 shrink-0 text-muted tabular-nums">
-            <When entry={entry} />
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="flex items-center gap-1.5 font-medium wrap-anywhere">
-              {entry.title || t("calendar.day.noTitle")}
-              {entry.recurring ? (
-                <Repeat className="size-3.5 shrink-0 text-muted" aria-label={t("calendar.day.repeats")} />
+        <li key={entry.key} className={cn("rounded-sm text-[13px]", itemColorClasses(entry.color))}>
+          {/* +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. The row opens the editor (the details popover of HAAL-064
+              will take this over and offer Edit). */}
+          <button
+            type="button"
+            aria-label={t("calendar.day.edit", { title: entry.title || t("calendar.day.noTitle") })}
+            onClick={() => {
+              onOpen(entry.id);
+            }}
+            className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="w-28 shrink-0 text-muted tabular-nums">
+              <When entry={entry} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="flex items-center gap-1.5 font-medium wrap-anywhere">
+                {entry.title || t("calendar.day.noTitle")}
+                {entry.recurring ? (
+                  <Repeat className="size-3.5 shrink-0 text-muted" aria-label={t("calendar.day.repeats")} />
+                ) : null}
+              </span>
+              {entry.location ? (
+                <span className="flex items-center gap-1 text-xs text-muted wrap-anywhere">
+                  <MapPin className="size-3 shrink-0" aria-hidden />
+                  {entry.location}
+                </span>
               ) : null}
             </span>
-            {entry.location ? (
-              <span className="flex items-center gap-1 text-xs text-muted wrap-anywhere">
-                <MapPin className="size-3 shrink-0" aria-hidden />
-                {entry.location}
-              </span>
-            ) : null}
-          </span>
+          </button>
         </li>
       ))}
     </ol>
@@ -144,6 +143,8 @@ export function DayView({ date }: { date: string }) {
   const [pinned, setPinned] = useState(storedSidebarOpen);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. The open editor: a new event (null) or the event row to edit.
+  const [editing, setEditing] = useState<{ event: Record<string, unknown> | null } | null>(null);
   const [shownDays, setShownDays] = useState<readonly string[]>([]);
   const marked = useMemo(
     () => new Set(shownDays.filter((day) => entriesOn(rows, day, viewerTz).length > 0)),
@@ -183,6 +184,16 @@ export function DayView({ date }: { date: string }) {
     label: "calendar.nav.goToday",
     handler: () => {
       go(today);
+    },
+  });
+  useShortcut({
+    id: "calendar:new-event",
+    keys: ["N"],
+    group: "items",
+    label: "calendar.editor.newButton",
+    enabled: editing === null,
+    handler: () => {
+      setEditing({ event: null });
     },
   });
 
@@ -293,9 +304,26 @@ export function DayView({ date }: { date: string }) {
             <LiveClock timeZone={viewerTz} />
             <IsoWeekLabel date={date} />
           </div>
+          {tablet ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditing({ event: null });
+              }}
+            >
+              <Plus aria-hidden />
+              {t("calendar.editor.newButton")}
+            </Button>
+          ) : null}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <DayList date={date} entries={entries} />
+          <DayList
+            date={date}
+            entries={entries}
+            onOpen={(id) => {
+              setEditing({ event: rows.find((row) => row.id === id) ?? null });
+            }}
+          />
         </div>
       </div>
       {tablet && !desktop ? (
@@ -306,6 +334,28 @@ export function DayView({ date }: { date: string }) {
             })}
           </SheetContent>
         </Sheet>
+      ) : null}
+      {!tablet ? (
+        <Button
+          variant="primary"
+          size="icon"
+          aria-label={t("calendar.editor.newButton")}
+          className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg"
+          onClick={() => {
+            setEditing({ event: null });
+          }}
+        >
+          <Plus className="size-6" aria-hidden />
+        </Button>
+      ) : null}
+      {editing ? (
+        <EventEditor
+          date={date}
+          event={editing.event}
+          onClose={() => {
+            setEditing(null);
+          }}
+        />
       ) : null}
       {!tablet ? (
         <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>

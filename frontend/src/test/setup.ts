@@ -61,4 +61,7 @@ afterEach(() => {
   Dexie.dependencies.indexedDB = factory;
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
+  // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. A dialog closed while the test ends can leave Radix's
+  // "pointer-events: none" on the body, which would block clicks in the next test.
+  document.body.style.pointerEvents = "";
 });

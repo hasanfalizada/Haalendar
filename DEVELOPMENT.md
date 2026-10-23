@@ -357,6 +357,9 @@ Navigation and the mini month: `components/calendar/MiniMonth.tsx` over `lib/mon
 <!-- +++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. -->
 The header (`components/calendar/HeaderInfo.tsx`): live clock and the ISO week from atom `calendar.iso_week.v1`. The clock is tested with fake timers (`setTimeout`, `Date`) and a mocked `document.visibilityState`. Tests must not depend on the day they run: a date may be "today" in its accessible name.
 
+<!-- +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. -->
+The event editor is `components/calendar/EventEditor.tsx` over the pure form model `lib/eventForm.ts` (defaults, 15-minute slots, end ≥ start, what an edit sends). It writes with `mutate` inside `runWrite`; its undo handlers are `components/calendar/undo-events.ts` (registered in `App.tsx`). Tests that want to inspect the outbox stub `POST /sync/push` with a promise that never resolves, so the changes stay there.
+
 ### Live updates (SSE)
 <!-- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. -->
 `GET /api/v1/stream` (`backend/src/haalendar/live/`) tells open sessions when to sync: a database trigger sends `pg_notify('haalendar_sync', …)` on commit, the API process listening on that channel wakes the streams of the owner and grantees, and the client pulls. Events carry no data. To watch it: open the app, then DevTools → Network → `stream` (EventStream tab); a change from another browser or `curl` shows `changes` within a second. A reverse proxy must not buffer the stream: Caddy passes it as is; for nginx the response already sends `X-Accel-Buffering: no` (or set `proxy_buffering off` for `/api/v1/stream`). Logs: `live_listening`, `live_stream_opened`, `live_stream_closed` (with `reason`); metric `haalendar_sse_connections`. Backend tests read the stream from a real uvicorn server (`tests/test_live.py`), because TestClient cannot read an endless response.

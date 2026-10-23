@@ -145,3 +145,15 @@ export function dateTitle(date: string, today: string, locale: string, todayLabe
 export function weekdayName(date: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(Date.parse(`${date}T00:00:00Z`));
 }
+
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. A wall-clock time ("HH:MM") in the 12/24-hour setting (list and
+// editor share it).
+export function clockText(hhmm: string, locale: string, timeFormat: "12h" | "24h"): string {
+  const [hour = 0, minute = 0] = hhmm.split(":").map(Number);
+  return new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+    hourCycle: timeFormat === "12h" ? "h12" : "h23",
+  }).format(Date.UTC(2000, 0, 1, hour, minute));
+}

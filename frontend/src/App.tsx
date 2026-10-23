@@ -13,6 +13,8 @@ import "@/i18n";
 import { installUnloadGuard } from "@/api/write";
 import { ReauthProvider } from "@/components/auth/ReauthProvider";
 import "@/components/attachments/undo-attachments";
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. Undo / redo of the event editor.
+import "@/components/calendar/undo-events";
 import "@/components/sharing/undo-sharing";
 import "@/lib/bulk";
 import { Notifications } from "@/components/ui/notifications";

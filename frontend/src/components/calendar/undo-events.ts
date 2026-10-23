@@ -1,0 +1,34 @@
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. Undo / redo for the event editor (FR-X-06, D-64): creating is undone
+// by a soft delete and redone by a restore; an edit is undone by sending the previous values back (with the new ones
+// as the base, so a change made meanwhile on another device becomes a conflict instead of being overwritten).
+// Changes go through the local store and outbox like every content write. Registered at start-up (App.tsx).
+import { registerUndo } from "@/lib/undo";
+import { mutate } from "@/sync";
+
+export interface EventCreated {
+  user: string;
+  id: string;
+}
+
+export interface EventEdited {
+  user: string;
+  id: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+}
+
+const target = (id: string) => ({ entity_type: "item" as const, entity_id: id });
+
+registerUndo<EventCreated>("event.create", {
+  undo: ({ user, id }) => ({ run: () => mutate(user, { ...target(id), op: "delete" }) }),
+  redo: ({ user, id }) => ({ run: () => mutate(user, { ...target(id), op: "restore" }) }),
+});
+
+registerUndo<EventEdited>("event.update", {
+  undo: ({ user, id, before, after }) => ({
+    run: () => mutate(user, { ...target(id), op: "update", base: after, data: before }),
+  }),
+  redo: ({ user, id, before, after }) => ({
+    run: () => mutate(user, { ...target(id), op: "update", base: before, data: after }),
+  }),
+});
