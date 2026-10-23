@@ -8,6 +8,7 @@ How Haalendar is specified, designed and built — requirements and every owner 
 ## Contents
 | Folder | Content |
 |---|---|
+| [`backlog/`](backlog/) | [Backlog](backlog/BACKLOG.md) — the single source of tasks with their status and the rules for agents (managed by the agent) <!-- +++===+++ 2026-10-23 — Hasan Alizada — backlog moved into the project. --> |
 | [`requirements/`](requirements/) | [SRS](requirements/SRS.md) with the decision log (D-xx), [legacy feature inventory](requirements/legacy-feature-inventory.md) (F-xx), [gap analysis](requirements/gap-analysis.md) |
 | [`architecture/adr/`](architecture/adr/) | Architecture Decision Records ADR-0001 … ADR-0009 |
 | [`architecture/`](architecture/) | [Domain model, ER diagrams and data dictionary](architecture/domain-model.md), [time handling](architecture/time-handling.md) |
