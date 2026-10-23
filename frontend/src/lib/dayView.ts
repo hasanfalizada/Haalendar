@@ -157,3 +157,38 @@ export function clockText(hhmm: string, locale: string, timeFormat: "12h" | "24h
     hourCycle: timeFormat === "12h" ? "h12" : "h23",
   }).format(Date.UTC(2000, 0, 1, hour, minute));
 }
+
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The date range of one occurrence for the details card: all-day events
+// as dates ("Oct 27 – 29, 2026"), timed ones as instants in the viewer's zone and 12/24-hour setting, the browser
+// collapsing what both ends share ("Oct 27, 2026, 11:00 – 12:00").
+export function eventRange(
+  row: Record<string, unknown>,
+  occurrence: string,
+  viewerTz: string,
+  locale: string,
+  timeFormat: "12h" | "24h",
+): string {
+  const recurring = typeof row.rrule === "string";
+  const endDate = recurring ? occurrence : typeof row.end_date === "string" ? row.end_date : occurrence;
+  const startDate = recurring ? occurrence : typeof row.start_date === "string" ? row.start_date : occurrence;
+  const [startTime, endTime, tzid] = [row.start_time, row.end_time, row.tzid];
+  if (
+    row.all_day !== false ||
+    typeof startTime !== "string" ||
+    typeof endTime !== "string" ||
+    typeof tzid !== "string"
+  ) {
+    const days = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
+    const [from, to] = [Date.parse(`${startDate}T00:00:00Z`), Date.parse(`${endDate}T00:00:00Z`)];
+    return from === to ? days.format(from) : days.formatRange(from, to);
+  }
+  const instants = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: viewerTz,
+    hourCycle: timeFormat === "12h" ? "h12" : "h23",
+  });
+  const from = Date.parse(localToUtc(startDate, startTime, tzid).utc);
+  const to = Date.parse(localToUtc(endDate, endTime, tzid).utc);
+  return from === to ? instants.format(from) : instants.formatRange(from, to);
+}

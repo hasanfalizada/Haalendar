@@ -13,13 +13,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus, Repeat } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
@@ -30,8 +31,10 @@ import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 
 import { IsoWeekLabel, LiveClock } from "./HeaderInfo";
+import { EventDetails } from "./EventDetails";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
+import { useCalendars } from "./useCalendars";
 
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
 
@@ -65,7 +68,21 @@ function When({ entry }: { entry: DayEntry }) {
   return <>{start === end ? start : `${start}–${end}`}</>;
 }
 
-function DayList({ date, entries, onOpen }: { date: string; entries: DayEntry[]; onOpen: (id: string) => void }) {
+interface DayListProps {
+  date: string;
+  entries: DayEntry[];
+  /** The entry whose details are open (its key). */
+  openKey: string | null;
+  onOpen: (entry: DayEntry) => void;
+  onClose: () => void;
+  /** Details next to the row (popover); false on phones, where the page shows them in a sheet. */
+  inPopover: boolean;
+  details: (entry: DayEntry) => ReactNode;
+}
+
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. A row opens the details card (click, tap, Enter / Space, right-click
+// without the browser's menu): as a popover next to the row, or — on phones — in the page's sheet.
+function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details }: DayListProps) {
   const { t, i18n } = useTranslation();
   const label = dayLabel(date, i18n.language);
   if (entries.length === 0) {
@@ -83,15 +100,23 @@ function DayList({ date, entries, onOpen }: { date: string; entries: DayEntry[];
   }
   return (
     <ol aria-label={t("calendar.day.listLabel", { date: label })} className="flex flex-col gap-1.5 p-3 md:p-4">
-      {entries.map((entry) => (
-        <li key={entry.key} className={cn("rounded-sm text-[13px]", itemColorClasses(entry.color))}>
-          {/* +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. The row opens the editor (the details popover of HAAL-064
-              will take this over and offer Edit). */}
+      {entries.map((entry) => {
+        const row = (
           <button
             type="button"
-            aria-label={t("calendar.day.edit", { title: entry.title || t("calendar.day.noTitle") })}
-            onClick={() => {
-              onOpen(entry.id);
+            aria-label={t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") })}
+            aria-haspopup="dialog"
+            aria-expanded={openKey === entry.key}
+            onClick={
+              inPopover
+                ? undefined
+                : () => {
+                    onOpen(entry);
+                  }
+            }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              onOpen(entry);
             }}
             className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
@@ -113,8 +138,34 @@ function DayList({ date, entries, onOpen }: { date: string; entries: DayEntry[];
               ) : null}
             </span>
           </button>
-        </li>
-      ))}
+        );
+        return (
+          <li key={entry.key} className={cn("rounded-sm text-[13px]", itemColorClasses(entry.color))}>
+            {inPopover ? (
+              <Popover
+                open={openKey === entry.key}
+                onOpenChange={(open) => {
+                  if (open) onOpen(entry);
+                  else onClose();
+                }}
+              >
+                <PopoverTrigger asChild>{row}</PopoverTrigger>
+                <PopoverContent
+                  side="bottom"
+                  align="start"
+                  sideOffset={6}
+                  aria-label={t("calendar.details.title")}
+                  className="max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
+                >
+                  {openKey === entry.key ? details(entry) : null}
+                </PopoverContent>
+              </Popover>
+            ) : (
+              row
+            )}
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -145,6 +196,27 @@ export function DayView({ date }: { date: string }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. The open editor: a new event (null) or the event row to edit.
   const [editing, setEditing] = useState<{ event: Record<string, unknown> | null } | null>(null);
+  // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
+  const [details, setDetails] = useState<DayEntry | null>(null);
+  const calendars = useCalendars(user);
+  const detailsOf = (entry: DayEntry) => {
+    const row = rows.find((candidate) => candidate.id === entry.id);
+    if (!row || !user) return null;
+    const calendar = calendars.byId.get(String(row.container_id));
+    return (
+      <EventDetails
+        user={user}
+        row={row}
+        occurrence={entry.key.slice(entry.key.lastIndexOf(":") + 1)}
+        calendarName={typeof calendar?.name === "string" ? calendar.name : null}
+        writable={calendars.canWrite(row.container_id)}
+        onEdit={() => {
+          setDetails(null);
+          setEditing({ event: row });
+        }}
+      />
+    );
+  };
   const [shownDays, setShownDays] = useState<readonly string[]>([]);
   const marked = useMemo(
     () => new Set(shownDays.filter((day) => entriesOn(rows, day, viewerTz).length > 0)),
@@ -191,7 +263,7 @@ export function DayView({ date }: { date: string }) {
     keys: ["N"],
     group: "items",
     label: "calendar.editor.newButton",
-    enabled: editing === null,
+    enabled: editing === null && details === null,
     handler: () => {
       setEditing({ event: null });
     },
@@ -320,9 +392,13 @@ export function DayView({ date }: { date: string }) {
           <DayList
             date={date}
             entries={entries}
-            onOpen={(id) => {
-              setEditing({ event: rows.find((row) => row.id === id) ?? null });
+            openKey={details?.key ?? null}
+            inPopover={tablet}
+            onOpen={setDetails}
+            onClose={() => {
+              setDetails(null);
             }}
+            details={detailsOf}
           />
         </div>
       </div>
@@ -347,6 +423,20 @@ export function DayView({ date }: { date: string }) {
         >
           <Plus className="size-6" aria-hidden />
         </Button>
+      ) : null}
+      {!tablet ? (
+        <Dialog
+          open={details !== null}
+          onOpenChange={(open) => {
+            if (!open) setDetails(null);
+          }}
+        >
+          {details ? (
+            <DialogContent title={t("calendar.details.title")} closeLabel={t("common.close")}>
+              {detailsOf(details)}
+            </DialogContent>
+          ) : null}
+        </Dialog>
       ) : null}
       {editing ? (
         <EventEditor

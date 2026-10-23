@@ -45,7 +45,9 @@ import { newStep } from "@/lib/undo";
 import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { uuidv7 } from "@/lib/uuid";
-import { localKeys, localRows, mutate } from "@/sync";
+import { mutate } from "@/sync";
+
+import { useCalendars } from "./useCalendars";
 
 type Row = Record<string, unknown>;
 
@@ -63,34 +65,13 @@ function nowIn(timeZone: string): string {
   );
 }
 
-/** Calendars the user may add events to: own ones and those shared with "edit". */
-function useWritableCalendars(user: string | undefined): Row[] {
-  const rows = (entity: "calendar" | "share") => ({
-    queryKey: [...localKeys.table(entity), user ?? ""],
-    queryFn: () => (user ? localRows(user, entity) : Promise.resolve([])),
-    enabled: Boolean(user),
-  });
-  const { data: calendars = [] } = useQuery(rows("calendar"));
-  const { data: shares = [] } = useQuery(rows("share"));
-  return useMemo(() => {
-    const editable = new Set(
-      shares
-        .filter((s) => s.grantee_id === user && s.permission === "edit" && !s.revoked_at)
-        .map((s) => s.container_id),
-    );
-    return calendars
-      .filter((c) => !c.deleted_at && !c.archived_at && (c.owner_id === user || editable.has(c.id)))
-      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
-  }, [calendars, shares, user]);
-}
-
 export function EventEditor({ date, event, onClose }: EventEditorProps) {
   const { t, i18n } = useTranslation();
   const { data: me } = useQuery(meQuery);
   const user = me?.id ?? "";
   const settings = useSettings();
   const viewerTz = useDisplayTimeZone();
-  const calendars = useWritableCalendars(me?.id);
+  const calendars = useCalendars(me?.id).writable;
   const firstCalendar = typeof calendars[0]?.id === "string" ? calendars[0].id : "";
   const baseline = useMemo(
     () => (event ? formFromRow(event) : newEventForm(date, settings.default_color, firstCalendar)),

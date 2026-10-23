@@ -38,7 +38,7 @@
       "from": "From {{time}}",
       "noTitle": "(No title)",
       "repeats": "Repeats",
-      "edit": "Edit {{title}}",
+      "details": "Details of {{title}}",
       "listLabel": "Events on {{date}}",
       "emptyTitle": "Nothing planned for this day",
       "emptyBody": "Events of this day, recurring ones included, appear here."
@@ -64,6 +64,17 @@
       "week": "Week {{week}}",
       "weekOfYear": "Week {{week}} · {{year}}",
       "weekTitle": "ISO week {{week}} of {{year}}"
+    },
+    "details": {
+      "title": "Event details",
+      "repeats": "Repeats: {{rule}}",
+      "viewOnly": "View only",
+      "more": "more",
+      "less": "less",
+      "attachments_one": "{{count}} attachment",
+      "attachments_other": "{{count}} attachments",
+      "openAttachment": "Open {{name}}",
+      "edit": "Edit"
     },
     "editor": {
       "newButton": "New event",

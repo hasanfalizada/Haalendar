@@ -134,7 +134,7 @@ describe("editor", { timeout: 15_000 }, () => {
         rrule: null,
       },
     });
-    expect(await screen.findByRole("button", { name: "Edit Dentist" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Details of Dentist" })).toBeInTheDocument();
   });
 
   it("timed: 15-minute defaults, end before start blocks Save, the start takes the end along; repeat hides To", async () => {
@@ -184,7 +184,11 @@ describe("editor", { timeout: 15_000 }, () => {
       deleted_at: null,
     });
     const { user } = await openApp();
-    await user.click(await screen.findByRole("button", { name: "Edit Dentist" }));
+    // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The row opens the details card; Edit is there.
+    await user.click(await screen.findByRole("button", { name: "Details of Dentist" }));
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Event details" })).getByRole("button", { name: "Edit" }),
+    );
     const dialog = await screen.findByRole("dialog", { name: "Edit event" });
     expect(within(dialog).getByLabelText("Title")).toHaveValue("Dentist");
     expect(within(dialog).getByRole("combobox", { name: "Calendar" })).toHaveDisplayValue("Family");

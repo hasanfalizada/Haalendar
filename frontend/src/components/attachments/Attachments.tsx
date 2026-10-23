@@ -175,7 +175,8 @@ export function Attachments({ itemId, editable }: AttachmentsProps) {
   );
 }
 
-function AttachmentPreview({
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. Also used by the event details card (read-only thumbnails).
+export function AttachmentPreview({
   attachments,
   index,
   onIndex,
