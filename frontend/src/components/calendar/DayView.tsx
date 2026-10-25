@@ -19,6 +19,8 @@
 // editor works on a one-off copy of the date; all: the series).
 // +++===+++ 2026-10-25 — Hasan Alizada — HAAL-068. The overdue counter sits under the mini month wherever it is shown
 // (sidebar, tablet overlay, phone date sheet).
+// +++===+++ 2026-10-25 — Hasan Alizada — HAAL-080. "Show" in the editor's duplicate warning goes to that event's day
+// and opens its details card.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus, Repeat } from "lucide-react";
@@ -608,6 +610,10 @@ export function DayView({ date }: { date: string }) {
           date={date}
           event={editing.event}
           {...(editing.occurrence ? { occurrence: editing.occurrence } : {})}
+          onShowEvent={(id, day) => {
+            go(day);
+            setDetails(entriesOn(rows, day, viewerTz).find((entry) => entry.id === id) ?? null);
+          }}
           onClose={() => {
             setEditing(null);
           }}

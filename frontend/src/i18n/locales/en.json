@@ -134,6 +134,17 @@
       "editorTitle": "Edit the occurrence on {{date}}",
       "copyNote": "Saving makes this a separate event on its own date; the series skips {{date}}. Attachments stay with the series.",
       "saved": "Saved {{title}} as a separate event"
+    },
+    "duplicate": {
+      "title": "An event with this title already exists",
+      "body_one": "Another event has the same title. Save anyway?",
+      "body_other": "{{count}} other events have the same title. Save anyway?",
+      "listLabel": "Events with the same title",
+      "show": "Show",
+      "showLabel": "Show {{title}}",
+      "more": "and {{count}} more",
+      "saveAnyway": "Save anyway",
+      "back": "Back to editing"
     }
   },
   "pages": {

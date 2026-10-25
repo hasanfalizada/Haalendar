@@ -5,6 +5,8 @@
 // - closing or reloading the tab triggers the browser's own prompt (api/write.ts tab-close guard).
 // Answers: keep editing (default), leave (only for editors with a local draft: the draft stays and is offered next
 // time) or discard the changes. Without changes nothing is asked. Ctrl/Cmd+Enter saves (`onSave`), listed in "?".
+// +++===+++ 2026-10-25 — Hasan Alizada — HAAL-080. leave(): the editor itself leaves on purpose (e.g. to show another
+// event) — the same as answering "Leave" (onLeave, then nothing is held any more), without asking.
 import { type AnyRouter, type RouterHistory, useRouter } from "@tanstack/react-router";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
@@ -122,6 +124,12 @@ export function useUnsavedGuard({
     enabled: onSave !== undefined && dirty,
   });
 
+  const leave = useCallback(async () => {
+    await onLeave?.();
+    dirtyRef.current = false;
+    log.info("unsaved_left", { choice: "leave", asked: false });
+  }, [onLeave]);
+
   const prompt: UnsavedPrompt = {
     open: closing !== null || held !== null,
     hasDraft,
@@ -129,5 +137,5 @@ export function useUnsavedGuard({
     leave: () => void finish("leave"),
     discard: () => void finish("discard"),
   };
-  return { requestClose, prompt };
+  return { requestClose, prompt, leave };
 }

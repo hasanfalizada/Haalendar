@@ -9,6 +9,9 @@
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. With `occurrence`, the editor works on a one-off copy of that date of
 // the series (FR-CAL-13, D-67): nothing is written until Save, which creates the copy and excludes the date from the
 // series in one undo step; Cancel leaves both untouched. The copy has no repeat and starts without attachments.
+// +++===+++ 2026-10-25 — Hasan Alizada — HAAL-080. Save first looks for other active events with the same title (new
+// event, or a changed title; the event itself and a copied series never count) and asks before saving a duplicate
+// (D-69); "Show" closes the editor — the draft stays on this device — and opens that event.
 import { useQuery } from "@tanstack/react-query";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,6 +31,7 @@ import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { clockText, dayLabel } from "@/lib/dayView";
+import { dayToShow, findDuplicates, titleKey } from "@/lib/duplicates";
 import {
   type EventForm,
   LOCATION_MAX,
@@ -48,8 +52,9 @@ import { batchStep, newStep } from "@/lib/undo";
 import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { uuidv7 } from "@/lib/uuid";
-import { mutate } from "@/sync";
+import { localKeys, localRows, mutate } from "@/sync";
 
+import { type DuplicateMatch, DuplicateWarning } from "./DuplicateWarning";
 import { useCalendars } from "./useCalendars";
 
 type Row = Record<string, unknown>;
@@ -62,6 +67,8 @@ interface EventEditorProps {
   /** With a series: edit a one-off copy of this occurrence ("YYYY-MM-DD") instead of the series. */
   occurrence?: string;
   onClose: () => void;
+  /** "Show" in the duplicate warning: open that event on that day (the editor has closed). */
+  onShowEvent?: (id: string, day: string) => void;
 }
 
 function nowIn(timeZone: string): string {
@@ -70,13 +77,20 @@ function nowIn(timeZone: string): string {
   );
 }
 
-export function EventEditor({ date, event, occurrence, onClose }: EventEditorProps) {
+export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: EventEditorProps) {
   const { t, i18n } = useTranslation();
   const { data: me } = useQuery(meQuery);
   const user = me?.id ?? "";
   const settings = useSettings();
   const viewerTz = useDisplayTimeZone();
-  const calendars = useCalendars(me?.id).writable;
+  const visibleCalendars = useCalendars(me?.id);
+  const calendars = visibleCalendars.writable;
+  const { data: rows = [] } = useQuery({
+    queryKey: [...localKeys.table("item"), user],
+    queryFn: () => (user ? localRows(user, "item") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[] | null>(null);
   const firstCalendar = typeof calendars[0]?.id === "string" ? calendars[0].id : "";
   const baseline = useMemo(
     () => (event ? formFromRow(event, occurrence) : newEventForm(date, settings.default_color, firstCalendar)),
@@ -242,10 +256,34 @@ export function EventEditor({ date, event, occurrence, onClose }: EventEditorPro
     return ok;
   }
 
+  /** Other events with the title being saved — only for a new event or a changed title. */
+  function duplicatesOf(): DuplicateMatch[] {
+    const unchanged = event !== null && titleKey(form.title) === titleKey(event.title);
+    if (unchanged) return [];
+    return findDuplicates(rows, form.title, eventId ? [eventId] : []).map((row) => {
+      const calendar = visibleCalendars.byId.get(String(row.container_id));
+      return {
+        id: String(row.id),
+        title: typeof row.title === "string" ? row.title : "",
+        day: dayToShow(row, todayIn(viewerTz), viewerTz),
+        calendarName: typeof calendar?.name === "string" ? calendar.name : null,
+      };
+    });
+  }
+
   async function onSubmit(submitted: SubmitEvent<HTMLFormElement>) {
     submitted.preventDefault();
     setTouched(true);
     if (invalid || busy) return;
+    const found = duplicatesOf();
+    if (found.length > 0) {
+      setDuplicates(found);
+      return;
+    }
+    await commitSave();
+  }
+
+  async function commitSave() {
     setBusy(true);
     await draft.flush();
     const ok = await save();
@@ -488,6 +526,25 @@ export function EventEditor({ date, event, occurrence, onClose }: EventEditorPro
         </form>
       </DialogContent>
       <UnsavedChangesDialog prompt={guard.prompt} />
+      <DuplicateWarning
+        open={duplicates !== null}
+        matches={duplicates ?? []}
+        onBack={() => {
+          setDuplicates(null);
+        }}
+        onSaveAnyway={async () => {
+          setDuplicates(null);
+          await commitSave();
+        }}
+        onShow={(match) => {
+          setDuplicates(null);
+          // Leaving on purpose: the draft is written and the unsaved-changes guard holds nothing any more.
+          void guard.leave().then(() => {
+            onClose();
+            if (match.day) onShowEvent?.(match.id, match.day);
+          });
+        }}
+      />
     </Dialog>
   );
 }
