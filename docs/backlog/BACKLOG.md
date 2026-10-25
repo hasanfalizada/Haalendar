@@ -17,8 +17,9 @@
 
 | Due | What | Where it is enforced |
 |---|---|---|
-| 2026-10-24 | Upgrade Pillow 12.3.0 → 13.0.0 and remove its exception (36 advisories; 13.0.0 passes the 7-day minimum on 2026-10-23 22:15 UTC) | `backend/audit-ignores.json`, `backend/tests/test_audit_ignores.py` |
-| 2026-10-26 | Upgrade certifi 2026.7.22 → ≥ 2026.10.19 and remove its exception (PYSEC-2026-4320) | same |
+| 2026-10-27 | Upgrade certifi 2026.7.22 → ≥ 2026.10.19 and remove its exception (PYSEC-2026-4320; PyPI published 2026.10.19 on 2026-10-20 02:24 UTC, so it passes the 7-day minimum only at 2026-10-27 02:24 UTC — extended by one day on 2026-10-25) | `backend/audit-ignores.json`, `backend/tests/test_audit_ignores.py` |
+| 2026-10-27 | Override fast-uri 3.1.8 → 3.1.9 and remove its exception (4 GHSAs, build time only; 3.1.9 passes the 7-day minimum on 2026-10-26 23:05 UTC) | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, same test |
+| 2026-10-30 | Override serialize-javascript 7.1.2 → 7.1.3 and remove its exception (GHSA-m5mm-p8h7-m29v, build time only; 7.1.3 passes the 7-day minimum on 2026-10-29 21:24 UTC) | same |
 
 ## Open tasks
 
@@ -138,7 +139,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-064 | 2026-10-23 | 6baa911 | feat(calendar): event details — popover with this occurrence, description preview, attachments and Edit (HAAL-064) |
 | HAAL-065 | 2026-10-23 | 757a35d | feat(calendar): delete events — confirmation, Delete key, soft delete with undo, events in the trash (HAAL-065) |
 | HAAL-066 | 2026-10-22 | 3b9dd9e | feat(calendar): events and recurrence — event table, RRULE daily/weekly/monthly/yearly, recurrence atom, events through sync (HAAL-066) |
-| HAAL-067 | 2026-10-23 | (after owner commit) | feat(calendar): single occurrences — delete or edit only this occurrence, effective series start (HAAL-067) |
+| HAAL-067 | 2026-10-23 | 1a64291 | feat(calendar): single occurrences — delete or edit only this occurrence, effective series start (HAAL-067) |
 | HAAL-160 | 2026-10-15 | 27255ce | docs(architecture): note user_account table name in domain model (HAAL-160) |
 | HAAL-161 | 2026-10-15 | fd59738 | feat(accounts): add password reset, re-authentication and admin reset (HAAL-161) |
 | HAAL-162 | 2026-10-15 | 30a39d2 | docs(security): mark ASVS V6/V7, A07 and API2 as implemented (HAAL-162) |

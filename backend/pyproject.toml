@@ -20,7 +20,7 @@ dependencies = [
   "pyotp==2.10.0",
   "cryptography==50.0.2",
   # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Avatar re-encoding (metadata stripping) and content-addressed storage (ADR-0004).
-  "pillow==12.3.0",
+  "pillow==13.0.0",
   "blake3==1.0.10",
   # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Pinned IANA time zone database (same rules on every host).
   "tzdata==2026.5",
