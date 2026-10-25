@@ -44,6 +44,8 @@
       "emptyBody": "Events of this day, recurring ones included, appear here.",
       "openDetails": "Open the event's details"
     },
+    "overdue_one": "{{count}} overdue event",
+    "overdue_other": "{{count}} overdue events",
     "nav": {
       "previousDay": "Previous day",
       "nextDay": "Next day",

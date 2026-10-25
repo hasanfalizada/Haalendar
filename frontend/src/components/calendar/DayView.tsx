@@ -17,6 +17,8 @@
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. A repeating event asks "only this occurrence or all?" (D-67) before
 // Delete (this: the date leaves the series, undoable; all: the series goes to the trash) and before Edit (this: the
 // editor works on a one-off copy of the date; all: the series).
+// +++===+++ 2026-10-25 — Hasan Alizada — HAAL-068. The overdue counter sits under the mini month wherever it is shown
+// (sidebar, tablet overlay, phone date sheet).
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus, Repeat } from "lucide-react";
@@ -47,6 +49,7 @@ import { EventDetails } from "./EventDetails";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
+import { OverdueCounter } from "./OverdueCounter";
 import { useCalendars } from "./useCalendars";
 
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
@@ -393,17 +396,20 @@ export function DayView({ date }: { date: string }) {
   }
 
   const miniMonth = (onPicked?: () => void) => (
-    <MiniMonth
-      selected={date}
-      today={today}
-      weekStart={weekStart}
-      marked={marked}
-      onMonthShown={setShownDays}
-      onSelect={(picked) => {
-        go(picked);
-        onPicked?.();
-      }}
-    />
+    <>
+      <MiniMonth
+        selected={date}
+        today={today}
+        weekStart={weekStart}
+        marked={marked}
+        onMonthShown={setShownDays}
+        onSelect={(picked) => {
+          go(picked);
+          onPicked?.();
+        }}
+      />
+      <OverdueCounter rows={rows} viewerTz={viewerTz} />
+    </>
   );
   const sidebarOpen = desktop ? pinned : overlayOpen;
 

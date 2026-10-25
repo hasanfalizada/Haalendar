@@ -369,6 +369,9 @@ Deleting an event: `DayView` asks with `ConfirmDialog` (`focusConfirm`) and writ
 <!-- +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. -->
 Single occurrences: the server side is `planning/occurrences.py` (sync ops `exclude` / `include`, `effective_start`); the pulled event data lists the excluded dates in `exceptions` (`sync/pull.py`). On the client `applyLocal` updates `exceptions` at once, the outbox cancels opposite ops of one date, `lib/dayView.ts` leaves excluded dates out and has `effectiveStart`; the question "this or all?" is `components/calendar/OccurrenceChoice.tsx`, the copy of an occurrence is `EventEditor` with `occurrence`.
 
+<!-- +++===+++ 2026-10-25 — Hasan Alizada — HAAL-068. -->
+The overdue counter is `lib/overdue.ts` (the rule) and `components/calendar/OverdueCounter.tsx` (shown under the mini month); its midnight step is tested with fake `setInterval` and `Date`.
+
 ### Live updates (SSE)
 <!-- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. -->
 `GET /api/v1/stream` (`backend/src/haalendar/live/`) tells open sessions when to sync: a database trigger sends `pg_notify('haalendar_sync', …)` on commit, the API process listening on that channel wakes the streams of the owner and grantees, and the client pulls. Events carry no data. To watch it: open the app, then DevTools → Network → `stream` (EventStream tab); a change from another browser or `curl` shows `changes` within a second. A reverse proxy must not buffer the stream: Caddy passes it as is; for nginx the response already sends `X-Accel-Buffering: no` (or set `proxy_buffering off` for `/api/v1/stream`). Logs: `live_listening`, `live_stream_opened`, `live_stream_closed` (with `reason`); metric `haalendar_sse_connections`. Backend tests read the stream from a real uvicorn server (`tests/test_live.py`), because TestClient cannot read an endless response.

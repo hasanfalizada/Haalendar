@@ -27,7 +27,6 @@
 |---|---|---|---|---|---|---|---|---|
 | HAAL-039 | E02 Cross-cutting | Full-text search across all modules with highlighting, offline local index; keeps title autocomplete and YYYY-MM-DD jump | Must | 016, 052 | — | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-046 | E02 Cross-cutting | Search filters: date range, module, calendar, color, priority, label | Must | 039 | C-14 | Postponed | — | owner, 2026-10-19 (chat) |
-| HAAL-068 | E04 Calendar parity | Overdue counter per legacy rule (one-off before today + series with effective start before today) | Must | 060 | F-32 | To do | — | owner backlog file |
 | HAAL-069 | E04 Calendar parity | Single editor instance guard | Should | 063 | F-19 | To do | — | owner backlog file |
 | HAAL-080 | E05 Calendar new | Duplicate title warning: exact, case-insensitive, active events only; on create and on title change; user may proceed | Must | 063 | U#2 | To do | — | owner backlog file |
 | HAAL-081 | E05 Calendar new | Change color directly in details popover | Must | 064, 042 | U#3 | To do | — | owner backlog file |
@@ -140,6 +139,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-065 | 2026-10-23 | 757a35d | feat(calendar): delete events — confirmation, Delete key, soft delete with undo, events in the trash (HAAL-065) |
 | HAAL-066 | 2026-10-22 | 3b9dd9e | feat(calendar): events and recurrence — event table, RRULE daily/weekly/monthly/yearly, recurrence atom, events through sync (HAAL-066) |
 | HAAL-067 | 2026-10-23 | 1a64291 | feat(calendar): single occurrences — delete or edit only this occurrence, effective series start (HAAL-067) |
+| HAAL-068 | 2026-10-25 | (after owner commit) | feat(calendar): overdue counter — legacy rule with effective series start, under the mini month (HAAL-068) |
 | HAAL-160 | 2026-10-15 | 27255ce | docs(architecture): note user_account table name in domain model (HAAL-160) |
 | HAAL-161 | 2026-10-15 | fd59738 | feat(accounts): add password reset, re-authentication and admin reset (HAAL-161) |
 | HAAL-162 | 2026-10-15 | 30a39d2 | docs(security): mark ASVS V6/V7, A07 and API2 as implemented (HAAL-162) |
