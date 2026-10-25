@@ -107,7 +107,9 @@ describe("one occurrence or all", { timeout: 20_000 }, () => {
 
     await user.click(within(toast.closest("li") ?? document.body).getByRole("button", { name: "Undo" }));
     expect(await screen.findByRole("button", { name: "Details of Standup" })).toBeInTheDocument();
-    expect(await outbox()).toHaveLength(0); // not sent yet: exclude and include cancel out
+    // Not sent yet: exclude and include cancel out. If the sync engine already took the exclude, the include follows it.
+    const ops = (await outbox()).map((entry) => entry.op);
+    expect(ops.length === 0 || (ops[0] === "exclude" && ops[1] === "include" && ops.length === 2)).toBe(true);
   });
 
   it("all occurrences deletes the series", async () => {

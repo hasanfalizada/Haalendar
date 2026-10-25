@@ -375,6 +375,9 @@ The overdue counter is `lib/overdue.ts` (the rule) and `components/calendar/Over
 <!-- +++===+++ 2026-10-25 — Hasan Alizada — HAAL-080. -->
 The duplicate-title warning: matching in `lib/duplicates.ts` (`titleKey`, `findDuplicates`, `dayToShow`), the question in `components/calendar/DuplicateWarning.tsx`, asked from `EventEditor` on Save.
 
+<!-- +++===+++ 2026-10-25 — Hasan Alizada — HAAL-081. -->
+Colour from the details card: `components/calendar/EventColor.tsx` (debounced write, flushed on unmount). In component tests the phone sheet is modal, so a toast's Undo can be clicked only after the card is closed.
+
 ### Live updates (SSE)
 <!-- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. -->
 `GET /api/v1/stream` (`backend/src/haalendar/live/`) tells open sessions when to sync: a database trigger sends `pg_notify('haalendar_sync', …)` on commit, the API process listening on that channel wakes the streams of the owner and grantees, and the client pulls. Events carry no data. To watch it: open the app, then DevTools → Network → `stream` (EventStream tab); a change from another browser or `curl` shows `changes` within a second. A reverse proxy must not buffer the stream: Caddy passes it as is; for nginx the response already sends `X-Accel-Buffering: no` (or set `proxy_buffering off` for `/api/v1/stream`). Logs: `live_listening`, `live_stream_opened`, `live_stream_closed` (with `reason`); metric `haalendar_sse_connections`. Backend tests read the stream from a real uvicorn server (`tests/test_live.py`), because TestClient cannot read an endless response.

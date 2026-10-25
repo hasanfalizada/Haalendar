@@ -78,7 +78,9 @@
       "attachments_other": "{{count}} attachments",
       "openAttachment": "Open {{name}}",
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Delete",
+      "colorChanged": "Color changed: {{title}}",
+      "colorSeries": "Applies to all occurrences."
     },
     "delete": {
       "title": "Delete event?",

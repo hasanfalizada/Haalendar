@@ -5,6 +5,7 @@
 // E) when the calendar is writable, otherwise "View only"; delete, occurrences, colour, next day and duplicate join
 // with their tasks (HAAL-065/067/081/084/096). Rendered in a popover next to the row, or in a sheet on phones.
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. Delete (button and the Delete key) next to Edit; the page asks first.
+// +++===+++ 2026-10-25 — Hasan Alizada — HAAL-081. The colour picker, saving at once (EventColor).
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Eye, MapPin, Paperclip, Pencil, Repeat, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -23,6 +24,8 @@ import { repeatOf } from "@/lib/eventForm";
 import { toPlainText } from "@/lib/markdown-text";
 import { useShortcut } from "@/lib/shortcuts";
 import { localKeys, localRows } from "@/sync";
+
+import { EventColor } from "./EventColor";
 
 type Row = Record<string, unknown>;
 
@@ -127,6 +130,7 @@ export function EventDetails({ user, row, occurrence, calendarName, writable, on
           {calendarName}
         </p>
       ) : null}
+      <EventColor user={user} row={row} writable={writable} />
 
       {body ? (
         <div className="flex flex-col gap-1">
