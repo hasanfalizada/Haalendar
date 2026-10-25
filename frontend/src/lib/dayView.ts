@@ -6,6 +6,8 @@
 // - times are shown in the viewer's zone; a timed event that started on an earlier day "continues", one that ends on
 //   a later day "goes on";
 // - the order is calendar.day_order.v1 (all-day, start, title — never colour).
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. Excluded dates of a series (`exceptions`, D-67) are left out; the
+// effective start of a series is its first occurrence that is not excluded (F-23), derived only.
 import type { Color } from "@/api/generated/types.gen";
 import { dayOrder } from "@/atoms/calendar/dayOrder";
 import { occurrences } from "@/atoms/calendar/recurrence";
@@ -49,10 +51,36 @@ function local(epochMs: number, tzid: string): { date: string; time: string } {
 
 const reported = new Set<string>();
 
+/** The excluded dates of a series row. */
+export function exceptionsOf(row: Row): string[] {
+  return Array.isArray(row.exceptions) ? row.exceptions.filter((day): day is string => typeof day === "string") : [];
+}
+
+// Whole windows of the recurrence atom searched for the effective start (as on the server).
+const LOOKAHEAD_WINDOWS = 5;
+
+/** Where a series starts for the user: its first occurrence that is not excluded (F-23); the stored start otherwise. */
+export function effectiveStart(start: string, rrule: string | null, exceptions: readonly string[]): string {
+  if (rrule === null || exceptions.length === 0) return start;
+  let from = start;
+  try {
+    for (let window = 0; window < LOOKAHEAD_WINDOWS; window += 1) {
+      const to = addDays(from, 366);
+      const found = occurrences({ start_date: start, rrule, exceptions: [...exceptions], from, to });
+      if (found[0] !== undefined) return found[0];
+      from = addDays(to, 1);
+    }
+  } catch {
+    // A rule this version cannot expand: the stored start stays.
+  }
+  return start;
+}
+
 function occurrenceDates(row: Row, start: string, rrule: string | null, date: string): string[] {
   if (rrule === null) return [start];
   try {
-    return occurrences({ start_date: start, rrule, exceptions: [], from: addDays(date, -1), to: addDays(date, 1) });
+    const exceptions = exceptionsOf(row);
+    return occurrences({ start_date: start, rrule, exceptions, from: addDays(date, -1), to: addDays(date, 1) });
   } catch (error) {
     // A rule this version cannot expand (e.g. written by a newer client): left out, reported once.
     const id = text(row.id) ?? "";

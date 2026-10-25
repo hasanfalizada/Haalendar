@@ -14,6 +14,9 @@
 // Delete key on the focused row, after a confirmation whose focused button makes it Delete → Enter; a series goes as a
 // whole (one occurrence: HAAL-067). Soft and offline through the local store; undo restores it, so does the trash. A
 // calendar shared for viewing says so instead. The list has one Tab stop: ↑/↓, Home/End, Enter / E open the card.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. A repeating event asks "only this occurrence or all?" (D-67) before
+// Delete (this: the date leaves the series, undoable; all: the series goes to the trash) and before Edit (this: the
+// editor works on a one-off copy of the date; all: the series).
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus, Repeat } from "lucide-react";
@@ -43,6 +46,7 @@ import { IsoWeekLabel, LiveClock } from "./HeaderInfo";
 import { EventDetails } from "./EventDetails";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
+import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
 import { useCalendars } from "./useCalendars";
 
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
@@ -228,26 +232,62 @@ export function DayView({ date }: { date: string }) {
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. The open editor: a new event (null) or the event row to edit.
-  const [editing, setEditing] = useState<{ event: Record<string, unknown> | null } | null>(null);
+  const [editing, setEditing] = useState<{ event: Record<string, unknown> | null; occurrence?: string } | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
   const [details, setDetails] = useState<DayEntry | null>(null);
   const calendars = useCalendars(user);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
+  // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The "this occurrence or all?" question waiting for an answer.
+  const [choice, setChoice] = useState<{ kind: "delete" | "edit"; row: Record<string, unknown>; date: string } | null>(
+    null,
+  );
   // After the confirmation closes the focus returns to the list — once a deleted row has left it ("" = cancelled).
   const refocus = useRef<string | null>(null);
   const titleOf = (row: Record<string, unknown>) =>
     typeof row.title === "string" && row.title !== "" ? row.title : t("calendar.day.noTitle");
-  const requestDelete = (row: Record<string, unknown>) => {
+  const requestDelete = (row: Record<string, unknown>, date: string) => {
     if (!calendars.canWrite(row.container_id)) {
       notify.info(t("calendar.delete.viewOnly"));
       return;
     }
     setDetails(null);
-    setDeleting(row);
+    if (row.rrule) setChoice({ kind: "delete", row, date });
+    else setDeleting(row);
   };
-  async function deleteEvent(row: Record<string, unknown>) {
-    if (!user) return;
+  const requestEdit = (row: Record<string, unknown>, date: string) => {
+    setDetails(null);
+    if (row.rrule) setChoice({ kind: "edit", row, date });
+    else setEditing({ event: row });
+  };
+  async function excludeOccurrence(row: Record<string, unknown>, date: string): Promise<boolean> {
+    if (!user) return false;
+    const id = String(row.id);
+    const values = { title: titleOf(row), date: dayLabel(date, i18n.language) };
+    const result = await runWrite({
+      name: "occurrence_delete",
+      run: () => mutate(user, { entity_type: "item", entity_id: id, op: "exclude", data: { occurrence_date: date } }),
+      success: t("calendar.occurrence.deleted", values),
+      undo: () => newStep("event.exclude", { key: "undo.labels.occurrenceDeleted", values }, { user, id, date }),
+    });
+    return result.ok;
+  }
+  async function answer(scope: OccurrenceScope) {
+    if (!choice) return;
+    const { kind, row, date } = choice;
+    if (kind === "edit") {
+      setChoice(null);
+      setEditing(scope === "this" ? { event: row, occurrence: date } : { event: row });
+      return;
+    }
+    const ok = scope === "this" ? await excludeOccurrence(row, date) : await deleteEvent(row);
+    if (ok) {
+      refocus.current = String(row.id);
+      setChoice(null);
+    }
+  }
+  async function deleteEvent(row: Record<string, unknown>): Promise<boolean> {
+    if (!user) return false;
     const id = String(row.id);
     const title = titleOf(row);
     const version = typeof row.version === "number" ? { base_version: row.version } : {};
@@ -261,7 +301,9 @@ export function DayView({ date }: { date: string }) {
       refocus.current = id;
       setDeleting(null);
     }
+    return result.ok;
   }
+  const occurrenceOf = (entry: DayEntry) => entry.key.slice(entry.key.lastIndexOf(":") + 1);
   const detailsOf = (entry: DayEntry) => {
     const row = rows.find((candidate) => candidate.id === entry.id);
     if (!row || !user) return null;
@@ -270,25 +312,25 @@ export function DayView({ date }: { date: string }) {
       <EventDetails
         user={user}
         row={row}
-        occurrence={entry.key.slice(entry.key.lastIndexOf(":") + 1)}
+        occurrence={occurrenceOf(entry)}
         calendarName={typeof calendar?.name === "string" ? calendar.name : null}
         writable={calendars.canWrite(row.container_id)}
         onEdit={() => {
-          setDetails(null);
-          setEditing({ event: row });
+          requestEdit(row, occurrenceOf(entry));
         }}
         onDelete={() => {
-          requestDelete(row);
+          requestDelete(row, occurrenceOf(entry));
         }}
       />
     );
   };
   useEffect(() => {
     const id = refocus.current;
-    if (deleting !== null || id === null || (id !== "" && entries.some((entry) => entry.id === id))) return;
+    const asking = deleting !== null || choice !== null;
+    if (asking || id === null || (id !== "" && entries.some((entry) => entry.id === id))) return;
     refocus.current = null;
     document.querySelector<HTMLElement>('[data-nav-id][tabindex="0"]')?.focus();
-  }, [deleting, entries]);
+  }, [deleting, choice, entries]);
   const [shownDays, setShownDays] = useState<readonly string[]>([]);
   const marked = useMemo(
     () => new Set(shownDays.filter((day) => entriesOn(rows, day, viewerTz).length > 0)),
@@ -335,7 +377,7 @@ export function DayView({ date }: { date: string }) {
     keys: ["N"],
     group: "items",
     label: "calendar.editor.newButton",
-    enabled: editing === null && details === null && deleting === null,
+    enabled: editing === null && details === null && deleting === null && choice === null,
     handler: () => {
       setEditing({ event: null });
     },
@@ -473,7 +515,7 @@ export function DayView({ date }: { date: string }) {
             details={detailsOf}
             onDelete={(entry) => {
               const row = rows.find((candidate) => candidate.id === entry.id);
-              if (row) requestDelete(row);
+              if (row) requestDelete(row, occurrenceOf(entry));
             }}
           />
         </div>
@@ -517,11 +559,7 @@ export function DayView({ date }: { date: string }) {
       <ConfirmDialog
         open={deleting !== null}
         title={t("calendar.delete.title")}
-        body={
-          deleting
-            ? t(deleting.rrule ? "calendar.delete.bodySeries" : "calendar.delete.body", { title: titleOf(deleting) })
-            : ""
-        }
+        body={deleting ? t("calendar.delete.body", { title: titleOf(deleting) }) : ""}
         confirmLabel={t("calendar.delete.confirm")}
         danger
         focusConfirm
@@ -536,10 +574,34 @@ export function DayView({ date }: { date: string }) {
           setDeleting(null);
         }}
       />
+      <OccurrenceChoice
+        open={choice !== null}
+        title={t(choice?.kind === "edit" ? "calendar.occurrence.editTitle" : "calendar.occurrence.deleteTitle")}
+        body={
+          choice
+            ? t(choice.kind === "edit" ? "calendar.occurrence.editBody" : "calendar.occurrence.deleteBody", {
+                title: titleOf(choice.row),
+                date: dayLabel(choice.date, i18n.language),
+              })
+            : ""
+        }
+        thisLabel={t(choice?.kind === "edit" ? "calendar.occurrence.editThis" : "calendar.occurrence.deleteThis")}
+        allLabel={t(choice?.kind === "edit" ? "calendar.occurrence.editAll" : "calendar.occurrence.deleteAll")}
+        danger={choice?.kind !== "edit"}
+        onChoose={answer}
+        onClose={() => {
+          refocus.current = "";
+          setChoice(null);
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+        }}
+      />
       {editing ? (
         <EventEditor
           date={date}
           event={editing.event}
+          {...(editing.occurrence ? { occurrence: editing.occurrence } : {})}
           onClose={() => {
             setEditing(null);
           }}

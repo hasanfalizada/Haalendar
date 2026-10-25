@@ -126,7 +126,7 @@ describe("deleting events", { timeout: 15_000 }, () => {
     expect((await db.items.get(DENTIST))?.deleted_at).toBeFalsy();
   });
 
-  it("Delete key on the focused row; a series names all its occurrences; arrows move the focus", async () => {
+  it("Delete key on the focused row; a series asks this or all (HAAL-067); arrows move the focus", async () => {
     const { user } = await openDay();
     const party = await screen.findByRole("button", { name: "Details of Party" });
     const dentist = screen.getByRole("button", { name: "Details of Dentist" });
@@ -138,9 +138,8 @@ describe("deleting events", { timeout: 15_000 }, () => {
     expect(standup).toHaveFocus();
 
     await user.keyboard("{Delete}");
-    const ask = await screen.findByRole("dialog", { name: "Delete event?" });
-    expect(ask).toHaveTextContent("All occurrences of the repeating event “Standup” will be moved to the trash.");
-    await user.keyboard("{Enter}");
+    const ask = await screen.findByRole("dialog", { name: "Delete repeating event?" });
+    await user.click(within(ask).getByRole("button", { name: "All occurrences" }));
     await screen.findByText("Deleted Standup");
     expect(await outbox()).toMatchObject([{ entity_id: STANDUP, op: "delete" }]);
     await waitFor(() => {

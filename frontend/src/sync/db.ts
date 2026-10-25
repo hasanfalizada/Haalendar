@@ -13,7 +13,8 @@ export const LOCAL_SCHEMA = 1;
 
 export type EntityType = "calendar" | "item" | "attachment" | "share" | "settings";
 export type MutableEntity = "calendar" | "item";
-export type MutationOp = "create" | "update" | "delete" | "restore" | "move";
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
+export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
 export type Row = Record<string, unknown> & { version?: number };
 

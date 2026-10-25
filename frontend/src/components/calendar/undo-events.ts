@@ -44,3 +44,20 @@ registerUndo<EventDeleted>("event.delete", {
   undo: ({ user, id }) => ({ run: () => mutate(user, { ...target(id), op: "restore" }) }),
   redo: ({ user, id }) => ({ run: () => mutate(user, { ...target(id), op: "delete" }) }),
 });
+
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. One occurrence left the series (deleted, or replaced by a one-off
+// copy — that copy is undone by its own "event.create" step in the same batch): undone by including the date again.
+export interface OccurrenceExcluded {
+  user: string;
+  id: string;
+  date: string;
+}
+
+registerUndo<OccurrenceExcluded>("event.exclude", {
+  undo: ({ user, id, date }) => ({
+    run: () => mutate(user, { ...target(id), op: "include", data: { occurrence_date: date } }),
+  }),
+  redo: ({ user, id, date }) => ({
+    run: () => mutate(user, { ...target(id), op: "exclude", data: { occurrence_date: date } }),
+  }),
+});

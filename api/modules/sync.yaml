@@ -99,7 +99,7 @@ components:
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         op: { type: string, enum: [upsert, delete, tombstone], description: 'upsert carries the full resource (deleted_at included); tombstone = a container no longer readable (share revoked or left): remove it and everything in it' }
         version: { type: integer }
-        data: { type: object, description: Full resource for upsert/delete }
+        data: { type: object, description: 'Full resource for upsert/delete; an item of kind event carries its event fields, a series also `exceptions` (excluded dates, YYYY-MM-DD, ascending)' }
     Mutation:
       type: object
       required: [mutation_id, entity_type, entity_id, op]
@@ -107,7 +107,8 @@ components:
         mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         entity_type: { type: string, enum: [calendar, item] }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        op: { type: string, enum: [create, update, delete, restore, move] }
+        # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include one occurrence of a series (D-67).
+        op: { type: string, enum: [create, update, delete, restore, move, exclude, include], description: 'exclude / include (item, a repeating event): data `{occurrence_date, override_event_id?}` — the date leaves the series (or is replaced by that one-off event in the same calendar) or comes back; the series version rises and its pulled data lists the excluded dates in `exceptions`' }
         base: { type: object, description: 'update / move: the values the client started from for each changed field (field-level merge, ADR-0009)' }
         base_version: { type: integer, description: Version the client edited (conflict detection); absent on create }
         # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Item create (kind event) and event fields (D-60).

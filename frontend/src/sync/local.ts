@@ -3,6 +3,7 @@
 // - applyServerChanges: rows from a pull (upsert) and tombstones (a container no longer readable: it and everything in
 //   it leave the device); afterwards the changes still waiting in the outbox are laid over again, so a pull never
 //   hides an edit the server has not received yet.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include change the excluded dates of a series at once.
 import type { Change } from "@/api/generated/types.gen";
 
 import { ENTITY_TABLE, type EntityType, type LocalDb, type OutboxEntry } from "./db";
@@ -29,6 +30,15 @@ export async function applyLocal(db: LocalDb, entry: OutboxEntry): Promise<void>
     case "restore":
       if (row) await table.put({ ...row, deleted_at: null });
       return;
+    case "exclude":
+    case "include": {
+      const day = entry.data?.occurrence_date;
+      if (!row || typeof day !== "string") return;
+      const others = (Array.isArray(row.exceptions) ? (row.exceptions as unknown[]) : []).filter((d) => d !== day);
+      const exceptions = entry.op === "exclude" ? [...others, day].map(String).sort() : others;
+      await table.put({ ...row, exceptions });
+      return;
+    }
   }
 }
 

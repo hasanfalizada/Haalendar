@@ -14,6 +14,8 @@
 whole event afterwards; moving an event is possible between calendars only, its event row moves along.
 +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. A delete carrying the version it was made on applies anyway (ADR-0009
 rule 4) and says when the record had changed since (`edited_elsewhere`), so the user can be told.
++++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. Moving a series moves its recurrence exceptions along (they copy the
+calendar for row-level security); excluding and including occurrences live in haalendar.planning.occurrences.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
 from haalendar.planning import events
-from haalendar.planning.models import Calendar, Event, Item
+from haalendar.planning.models import Calendar, Event, Item, RecurrenceException
 from haalendar.security.rls import ContainerKind
 from haalendar.softdelete import new_batch, restore_batch
 
@@ -260,6 +262,12 @@ async def move_item(
                 update(Event)
                 .where(Event.id == item_id)
                 .values(container_kind=target_kind, container_id=target_id)
+                .execution_options(synchronize_session=False)
+            )
+            await db.execute(
+                update(RecurrenceException)
+                .where(RecurrenceException.event_id == item_id)
+                .values(container_id=target_id)
                 .execution_options(synchronize_session=False)
             )
         item.version += 1

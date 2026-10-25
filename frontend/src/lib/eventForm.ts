@@ -8,6 +8,7 @@
 // - changes of an existing event are sent as changed fields with the values they started from (field-level merge),
 //   a new calendar as a move.
 import { addDays } from "@/lib/datetime";
+import { effectiveStart, exceptionsOf } from "@/lib/dayView";
 
 export const TITLE_MAX = 150;
 export const LOCATION_MAX = 500;
@@ -99,20 +100,23 @@ export function repeatOf(rrule: unknown): Repeat {
   return found ?? "none";
 }
 
-export function formFromRow(row: Row): EventForm {
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. A series opens at its effective start (its first dates may be
+// excluded, F-23); saving an edit then stores that start. `occurrence`: the form of a one-off copy of that date.
+export function formFromRow(row: Row, occurrence?: string): EventForm {
+  const start = occurrence ?? effectiveStart(text(row.start_date), text(row.rrule) || null, exceptionsOf(row));
   return {
     title: text(row.title) === NO_TITLE ? "" : text(row.title),
     all_day: row.all_day === false ? "false" : "true",
-    start_date: text(row.start_date),
+    start_date: start,
     start_time: text(row.start_time),
-    end_date: text(row.end_date) || text(row.start_date),
+    end_date: occurrence ?? (row.rrule ? start : text(row.end_date) || start),
     end_time: text(row.end_time),
     location: text(row.location),
     body: text(row.body),
     color: text(row.color) || "brown",
     priority: text(row.priority) || "medium",
     calendar_id: text(row.container_id),
-    repeat: repeatOf(row.rrule),
+    repeat: occurrence ? "none" : repeatOf(row.rrule),
   };
 }
 

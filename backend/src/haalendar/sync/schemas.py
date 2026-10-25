@@ -9,7 +9,7 @@ haalendar.planning.events); ItemCreateData creates an item — only events so fa
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -53,6 +53,12 @@ class ItemCreateData(ItemData):
     container_id: uuid.UUID
 
 
+# +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include one occurrence of a series (D-67).
+class OccurrenceData(ApiModel):
+    occurrence_date: date
+    override_event_id: uuid.UUID | None = None
+
+
 class MoveData(ApiModel):
     container_kind: Literal["calendar", "board", "note"]
     container_id: uuid.UUID
@@ -62,7 +68,7 @@ class MutationIn(ApiModel):
     mutation_id: uuid.UUID
     entity_type: Literal["calendar", "item"]
     entity_id: uuid.UUID
-    op: Literal["create", "update", "delete", "restore", "move"]
+    op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]
     base_version: int | None = None
     base: dict[str, Any] | None = None
     data: dict[str, Any] | None = None

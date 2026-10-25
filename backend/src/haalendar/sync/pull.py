@@ -44,7 +44,11 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
 EVENT_FIELDS_SQL = (
     "coalesce((SELECT (to_jsonb(e) - 'id' - 'container_kind' - 'container_id' - 'start_utc' - 'end_utc') "
     "|| jsonb_build_object('start_time', to_char(e.start_time, 'HH24:MI'), "
-    "'end_time', to_char(e.end_time, 'HH24:MI')) FROM event e WHERE e.id = {alias}.id), '{{}}'::jsonb)"
+    "'end_time', to_char(e.end_time, 'HH24:MI'), "
+    # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The excluded dates of a series (active exceptions), ascending.
+    "'exceptions', coalesce((SELECT jsonb_agg(to_char(x.occurrence_date, 'YYYY-MM-DD') ORDER BY x.occurrence_date) "
+    "FROM recurrence_exception x WHERE x.event_id = e.id AND x.deleted_at IS NULL), '[]'::jsonb)) "
+    "FROM event e WHERE e.id = {alias}.id), '{{}}'::jsonb)"
 )
 
 

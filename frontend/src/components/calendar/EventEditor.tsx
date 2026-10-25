@@ -6,6 +6,9 @@
 // past the end moves the end along. Saving goes through the local store (offline too) with undo; an edit sends only
 // what changed with the values it started from. Typed values are kept as a draft on this device; closing with changes
 // asks first; Ctrl+Enter saves. With no writable calendar yet, "My calendar" is created on the first save.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. With `occurrence`, the editor works on a one-off copy of that date of
+// the series (FR-CAL-13, D-67): nothing is written until Save, which creates the copy and excludes the date from the
+// series in one undo step; Cancel leaves both untouched. The copy has no repeat and starts without attachments.
 import { useQuery } from "@tanstack/react-query";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +27,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { todayIn, useDisplayTimeZone } from "@/lib/datetime";
-import { clockText } from "@/lib/dayView";
+import { clockText, dayLabel } from "@/lib/dayView";
 import {
   type EventForm,
   LOCATION_MAX,
@@ -41,7 +44,7 @@ import {
   withStart,
 } from "@/lib/eventForm";
 import { log } from "@/lib/log";
-import { newStep } from "@/lib/undo";
+import { batchStep, newStep } from "@/lib/undo";
 import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { uuidv7 } from "@/lib/uuid";
@@ -56,6 +59,8 @@ interface EventEditorProps {
   date: string;
   /** The event to edit; null = a new one. */
   event: Row | null;
+  /** With a series: edit a one-off copy of this occurrence ("YYYY-MM-DD") instead of the series. */
+  occurrence?: string;
   onClose: () => void;
 }
 
@@ -65,7 +70,7 @@ function nowIn(timeZone: string): string {
   );
 }
 
-export function EventEditor({ date, event, onClose }: EventEditorProps) {
+export function EventEditor({ date, event, occurrence, onClose }: EventEditorProps) {
   const { t, i18n } = useTranslation();
   const { data: me } = useQuery(meQuery);
   const user = me?.id ?? "";
@@ -74,8 +79,8 @@ export function EventEditor({ date, event, onClose }: EventEditorProps) {
   const calendars = useCalendars(me?.id).writable;
   const firstCalendar = typeof calendars[0]?.id === "string" ? calendars[0].id : "";
   const baseline = useMemo(
-    () => (event ? formFromRow(event) : newEventForm(date, settings.default_color, firstCalendar)),
-    [event, date, settings.default_color, firstCalendar],
+    () => (event ? formFromRow(event, occurrence) : newEventForm(date, settings.default_color, firstCalendar)),
+    [event, occurrence, date, settings.default_color, firstCalendar],
   );
   const [form, setForm] = useState<EventForm>(baseline);
   // The starting values can change after opening (the calendars arrive from the local database): an untouched form
@@ -88,12 +93,19 @@ export function EventEditor({ date, event, onClose }: EventEditorProps) {
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const id = typeof event?.id === "string" ? event.id : null;
+  const eventId = typeof event?.id === "string" ? event.id : null;
+  const copyOf = eventId !== null && occurrence !== undefined ? { series: eventId, date: occurrence } : null;
+  // The record being edited: none for a new event or for the copy of an occurrence (both are created on Save).
+  const id = copyOf ? null : eventId;
   const eventTz = typeof event?.tzid === "string" ? event.tzid : viewerTz;
   const today = todayIn(eventTz);
 
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
-  const draft = useDraft({ scope: id ? `event:${id}` : "event:new", values: form, baseline });
+  const draft = useDraft({
+    scope: copyOf ? `event:${copyOf.series}:${copyOf.date}` : id ? `event:${id}` : "event:new",
+    values: form,
+    baseline,
+  });
   const errors = validate(form);
   const invalid = Object.keys(errors).length > 0;
   const guard = useUnsavedGuard({
@@ -132,6 +144,44 @@ export function EventEditor({ date, event, onClose }: EventEditorProps) {
       log.info("calendar_created_for_event");
     }
     const title = form.title.trim() || t("calendar.day.noTitle");
+    if (copyOf) {
+      const newId = uuidv7();
+      const values = { title, date: dayLabel(copyOf.date, i18n.language) };
+      const result = await runWrite({
+        name: "occurrence_edit",
+        run: async () => {
+          await mutate(user, {
+            entity_type: "item",
+            entity_id: newId,
+            op: "create",
+            data: {
+              kind: "event",
+              container_kind: "calendar",
+              container_id: calendarId,
+              tzid: eventTz,
+              ...eventData(form),
+            },
+          });
+          return mutate(user, {
+            entity_type: "item",
+            entity_id: copyOf.series,
+            op: "exclude",
+            data: { occurrence_date: copyOf.date, override_event_id: newId },
+          });
+        },
+        success: t("calendar.occurrence.saved", { title }),
+        undo: () =>
+          batchStep({ key: "undo.labels.occurrenceEdited", values }, [
+            newStep("event.create", { key: "undo.labels.eventCreated", values: { title } }, { user, id: newId }),
+            newStep(
+              "event.exclude",
+              { key: "undo.labels.occurrenceDeleted", values },
+              { user, id: copyOf.series, date: copyOf.date },
+            ),
+          ]),
+      });
+      return result.ok;
+    }
     if (!event || !id) {
       const newId = uuidv7();
       const result = await runWrite({
@@ -242,7 +292,11 @@ export function EventEditor({ date, event, onClose }: EventEditorProps) {
       }}
     >
       <DialogContent
-        title={t(event ? "calendar.editor.editTitle" : "calendar.editor.newTitle")}
+        title={
+          copyOf
+            ? t("calendar.occurrence.editorTitle", { date: dayLabel(copyOf.date, i18n.language) })
+            : t(event ? "calendar.editor.editTitle" : "calendar.editor.newTitle")
+        }
         closeLabel={t("common.close")}
         className="max-md:top-0 max-md:max-h-dvh max-md:rounded-none md:max-w-2xl"
       >
@@ -324,46 +378,51 @@ export function EventEditor({ date, event, onClose }: EventEditorProps) {
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field
-              id="event-repeat"
-              label={t("calendar.editor.repeat")}
-              hint={series ? t("calendar.editor.repeatHint") : undefined}
-            >
-              {(aria) => (
-                <Select
-                  {...aria}
-                  value={form.repeat}
-                  onChange={(e) => {
-                    const repeat = e.target.value as Repeat;
-                    set({ repeat, ...(repeat !== "none" ? { end_date: form.start_date } : {}) });
-                  }}
-                >
-                  {REPEATS.map((repeat) => (
-                    <option key={repeat} value={repeat}>
-                      {t(`calendar.editor.repeats.${repeat}`)}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-            <Field id="event-calendar" label={t("calendar.editor.calendar")}>
-              {(aria) => (
-                <Select
-                  {...aria}
-                  value={form.calendar_id}
-                  onChange={(e) => {
-                    set({ calendar_id: e.target.value });
-                  }}
-                >
-                  {calendars.length === 0 ? <option value="">{t("calendar.editor.newCalendar")}</option> : null}
-                  {calendars.map((calendar) => (
-                    <option key={String(calendar.id)} value={String(calendar.id)}>
-                      {String(calendar.name)}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
+            {copyOf ? null : (
+              <Field
+                id="event-repeat"
+                label={t("calendar.editor.repeat")}
+                hint={series ? t("calendar.editor.repeatHint") : undefined}
+              >
+                {(aria) => (
+                  <Select
+                    {...aria}
+                    value={form.repeat}
+                    onChange={(e) => {
+                      const repeat = e.target.value as Repeat;
+                      set({ repeat, ...(repeat !== "none" ? { end_date: form.start_date } : {}) });
+                    }}
+                  >
+                    {REPEATS.map((repeat) => (
+                      <option key={repeat} value={repeat}>
+                        {t(`calendar.editor.repeats.${repeat}`)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            )}
+            {/* The copy stays in the series' calendar (the server checks it). */}
+            {copyOf ? null : (
+              <Field id="event-calendar" label={t("calendar.editor.calendar")}>
+                {(aria) => (
+                  <Select
+                    {...aria}
+                    value={form.calendar_id}
+                    onChange={(e) => {
+                      set({ calendar_id: e.target.value });
+                    }}
+                  >
+                    {calendars.length === 0 ? <option value="">{t("calendar.editor.newCalendar")}</option> : null}
+                    {calendars.map((calendar) => (
+                      <option key={String(calendar.id)} value={String(calendar.id)}>
+                        {String(calendar.name)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            )}
           </div>
 
           <Field
@@ -410,7 +469,11 @@ export function EventEditor({ date, event, onClose }: EventEditorProps) {
             }}
           />
 
-          {id ? (
+          {copyOf ? (
+            <p className="text-xs text-muted">
+              {t("calendar.occurrence.copyNote", { date: dayLabel(copyOf.date, i18n.language) })}
+            </p>
+          ) : id ? (
             <Attachments itemId={id} editable />
           ) : (
             <p className="text-xs text-muted">{t("calendar.editor.attachmentsLater")}</p>

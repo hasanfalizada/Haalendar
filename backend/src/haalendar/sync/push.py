@@ -26,11 +26,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
+from haalendar.planning import occurrences
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
 from haalendar.sync.pull import current_state
-from haalendar.sync.schemas import CalendarData, ItemCreateData, ItemData, MoveData, MutationIn
+from haalendar.sync.schemas import (
+    CalendarData,
+    ItemCreateData,
+    ItemData,
+    MoveData,
+    MutationIn,
+    OccurrenceData,
+)
 
 log = get_logger(__name__)
 
@@ -100,6 +108,19 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
         return await planning.delete_item(db, user_id, m.entity_id, m.base_version)
     if m.op == "restore":
         return await planning.restore_item(db, user_id, m.entity_id)
+    # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. One occurrence of a series leaves it or comes back.
+    if m.op in ("exclude", "include"):
+        try:
+            occurrence = OccurrenceData.model_validate(m.data or {})
+        except ValidationError as error:
+            raise _invalid(error) from None
+        if m.op == "exclude":
+            version = await occurrences.exclude(
+                db, user_id, m.entity_id, occurrence.occurrence_date, occurrence.override_event_id, current
+            )
+        else:
+            version = await occurrences.include(db, user_id, m.entity_id, occurrence.occurrence_date, current)
+        return Outcome(version=version)
     raise _unsupported(m)
 
 

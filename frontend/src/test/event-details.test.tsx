@@ -169,8 +169,11 @@ describe("details card", { timeout: 15_000 }, () => {
     });
 
     await user.click(within(card).getByRole("button", { name: "Edit" }));
-    expect(await screen.findByRole("dialog", { name: "Edit event" })).toBeInTheDocument();
+    // A series asks first (HAAL-067).
+    const ask = await screen.findByRole("dialog", { name: "Edit repeating event?" });
     expect(screen.queryByRole("dialog", { name: "Event details" })).not.toBeInTheDocument();
+    await user.click(within(ask).getByRole("button", { name: "All occurrences" }));
+    expect(await screen.findByRole("dialog", { name: "Edit event" })).toBeInTheDocument();
   });
 
   it("opens on right-click without the browser menu, and with the keyboard; E edits", async () => {
@@ -188,7 +191,7 @@ describe("details card", { timeout: 15_000 }, () => {
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("dialog", { name: "Event details" })).toBeInTheDocument();
     await user.keyboard("e");
-    expect(await screen.findByRole("dialog", { name: "Edit event" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Edit repeating event?" })).toBeInTheDocument();
   });
 
   it("is read-only for a calendar shared for viewing", async () => {

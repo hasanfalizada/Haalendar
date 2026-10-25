@@ -81,7 +81,6 @@
     "delete": {
       "title": "Delete event?",
       "body": "“{{title}}” will be moved to the trash. You can undo this or restore it from the trash.",
-      "bodySeries": "All occurrences of the repeating event “{{title}}” will be moved to the trash. You can undo this or restore it from the trash.",
       "confirm": "Delete",
       "done": "Deleted {{title}}",
       "viewOnly": "This calendar is view only — the event cannot be deleted."
@@ -119,6 +118,20 @@
       "save": "Save",
       "created": "Event created: {{title}}",
       "saved": "Event saved: {{title}}"
+    },
+    "occurrence": {
+      "deleteTitle": "Delete repeating event?",
+      "deleteBody": "“{{title}}” repeats. Delete only the occurrence on {{date}}, or all occurrences (they go to the trash)? Either can be undone.",
+      "deleteThis": "Only this occurrence",
+      "deleteAll": "All occurrences",
+      "deleted": "Deleted {{title}} on {{date}}",
+      "editTitle": "Edit repeating event?",
+      "editBody": "“{{title}}” repeats. Change only the occurrence on {{date}} (it becomes a separate event), or all occurrences?",
+      "editThis": "Only this occurrence",
+      "editAll": "All occurrences",
+      "editorTitle": "Edit the occurrence on {{date}}",
+      "copyNote": "Saving makes this a separate event on its own date; the series skips {{date}}. Attachments stay with the series.",
+      "saved": "Saved {{title}} as a separate event"
     }
   },
   "pages": {
@@ -640,7 +653,9 @@
       "update": "Changing it",
       "move": "Moving it",
       "delete": "Deleting it",
-      "restore": "Restoring it"
+      "restore": "Restoring it",
+      "exclude": "Removing one occurrence",
+      "include": "Bringing back one occurrence"
     },
     "fields": {
       "name": "Name",
@@ -691,7 +706,9 @@
       "sharePermission": "the permission change for {{name}}",
       "shareRemoved": "removing access for {{name}}",
       "attachmentAdded": "adding “{{name}}”",
-      "attachmentDeleted": "deleting “{{name}}”"
+      "attachmentDeleted": "deleting “{{name}}”",
+      "occurrenceDeleted": "deleting {{title}} on {{date}}",
+      "occurrenceEdited": "the change to {{title}} on {{date}}"
     }
   },
   "bulk": {

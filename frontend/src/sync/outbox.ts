@@ -4,6 +4,8 @@
 // - update after update: newest values per field, the base values of the first edit (what the server last had);
 // - update after create: folded into the create (the server has never seen the record);
 // - restore right after delete (or the reverse): both go, nothing to send.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. - include right after exclude of the same date (or the reverse): the
+//   same, both go.
 // Merging is per record and never touches a change already on its way.
 import { uuidv7 } from "@/lib/uuid";
 
@@ -27,8 +29,12 @@ function merged(previous: OutboxEntry, next: NewMutation): OutboxEntry | "cancel
       base: previous.op === "create" ? undefined : { ...(next.base ?? {}), ...(previous.base ?? {}) },
     };
   }
+  const sameDate = previous.data?.occurrence_date === next.data?.occurrence_date;
   const opposite =
-    (previous.op === "delete" && next.op === "restore") || (previous.op === "restore" && next.op === "delete");
+    (previous.op === "delete" && next.op === "restore") ||
+    (previous.op === "restore" && next.op === "delete") ||
+    (sameDate && previous.op === "exclude" && next.op === "include") ||
+    (sameDate && previous.op === "include" && next.op === "exclude");
   return opposite ? "cancel" : null;
 }
 
