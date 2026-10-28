@@ -28,7 +28,7 @@
 | HAAL-039 | E02 Cross-cutting | Full-text search across all modules with highlighting, offline local index; keeps title autocomplete and YYYY-MM-DD jump | Must | 016, 052 | — | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-046 | E02 Cross-cutting | Search filters: date range, module, calendar, color, priority, label | Must | 039 | C-14 | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-069 | E04 Calendar parity | Single editor instance guard | Should | 063 | F-19 | To do | — | owner backlog file |
-| HAAL-082 | E05 Calendar new | Day Number = day of year (1-366) next to week number | Must | 062 | U#8 | To do | — | owner backlog file |
+| HAAL-082 | E05 Calendar new | Day Number = day of year (1-366) next to week number | Must | 062 | U#8 | In progress | — | owner backlog file |
 | HAAL-083 | E05 Calendar new | Description (and attachment) indicator icon on event in list | Must | 060 | U#10 | To do | — | owner backlog file |
 | HAAL-084 | E05 Calendar new | Move to next day: popover button + bulk; recurring occurrence becomes exception | Must | 064, 067 | U#11 | To do | — | owner backlog file |
 | HAAL-085 | E05 Calendar new | Week A/B label next to week number, fully configured by user in settings; correct across year boundaries | Must | 045, 062 | U#12 | To do | — | owner backlog file |
@@ -139,7 +139,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-067 | 2026-10-23 | 1a64291 | feat(calendar): single occurrences — delete or edit only this occurrence, effective series start (HAAL-067) |
 | HAAL-068 | 2026-10-25 | 9aa81d0 | feat(calendar): overdue counter — legacy rule with effective series start, under the mini month (HAAL-068) |
 | HAAL-080 | 2026-10-25 | 3a76281 | feat(calendar): duplicate-title warning — other active events with the same title, asked on Save (HAAL-080) |
-| HAAL-081 | 2026-10-25 | (after owner commit) | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
+| HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
 | HAAL-160 | 2026-10-15 | 27255ce | docs(architecture): note user_account table name in domain model (HAAL-160) |
 | HAAL-161 | 2026-10-15 | fd59738 | feat(accounts): add password reset, re-authentication and admin reset (HAAL-161) |
 | HAAL-162 | 2026-10-15 | 30a39d2 | docs(security): mark ASVS V6/V7, A07 and API2 as implemented (HAAL-162) |
