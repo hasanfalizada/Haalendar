@@ -29,6 +29,9 @@
 // keys D / W; the view is in the URL (`?view=`) and remembered on this device for the next visit. In the week view
 // ‹ › and ← / → move by a week, the title is the week's range, the Day Number is left out (it belongs to one day) and
 // the content is the week grid (WeekView); the selection of the day list does not apply there.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-088. Month view (FR-CAL-26, D-76): key M; ‹ › and ← / → move by a month
+// keeping the day of month (the last day when the month is shorter); title "October 2026"; no Day Number; the content
+// is the month grid (MonthView), whose days open the day view.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import {
@@ -66,10 +69,13 @@ import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { type Selection, useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
+import { addMonths, monthOf, sameDayIn } from "@/lib/monthGrid";
+import { monthTitle, monthWeeks } from "@/lib/monthView";
 import { weekDays, weekTitle } from "@/lib/weekView";
 import { localKeys, localRows, mutate } from "@/sync";
 
 import { DayNumberLabel, IsoWeekLabel, LiveClock, WeekAbBadge } from "./HeaderInfo";
+import { MonthGrid } from "./MonthView";
 import { WeekGrid } from "./WeekView";
 import { EventDetails } from "./EventDetails";
 import { EventEditor } from "./EventEditor";
@@ -388,12 +394,25 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
   const today = todayIn(viewerTz);
   const label = dayLabel(date, i18n.language);
   const week = view === "week";
+  const month = view === "month";
   const days = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
+  const weeks = useMemo(() => monthWeeks(monthOf(date), weekStart), [date, weekStart]);
   const title = week
     ? weekTitle(days, i18n.language)
-    : dateTitle(date, today, i18n.language, t("calendar.header.today"));
-  const weekday = week ? null : weekdayName(date, i18n.language);
-  const step = week ? 7 : 1;
+    : month
+      ? monthTitle(monthOf(date), i18n.language)
+      : dateTitle(date, today, i18n.language, t("calendar.header.today"));
+  const weekday = view === "day" ? weekdayName(date, i18n.language) : null;
+  /** The date one period (day, week or month) before or after `from`. */
+  const shift = (from: string, direction: 1 | -1) =>
+    month ? sameDayIn(from, addMonths(monthOf(from), direction)) : addDays(from, direction * (week ? 7 : 1));
+  const showsToday = week ? days.includes(today) : month ? monthOf(today) === monthOf(date) : date === today;
+  const navLabel = (direction: "previous" | "next") =>
+    week
+      ? (`calendar.nav.${direction}Week` as const)
+      : month
+        ? (`calendar.nav.${direction}Month` as const)
+        : (`calendar.nav.${direction}Day` as const);
 
   const [pinned, setPinned] = useState(storedSidebarOpen);
   const [overlayOpen, setOverlayOpen] = useState(false);
@@ -472,7 +491,9 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
   }
   const occurrenceOf = (entry: DayEntry) => entry.key.slice(entry.key.lastIndexOf(":") + 1);
   const rowOf = (entry: DayEntry) => rows.find((candidate) => candidate.id === entry.id);
-  const selection = useSelection(week ? [] : entries.map((entry) => entry.key), { selectAllShortcut: !week });
+  const selection = useSelection(view === "day" ? entries.map((entry) => entry.key) : [], {
+    selectAllShortcut: view === "day",
+  });
   const { clear: clearSelection } = selection;
   useEffect(() => {
     clearSelection();
@@ -540,26 +561,26 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
     },
     [navigate, view],
   );
-  const switchView = (next: CalendarViewKind) => {
+  const switchView = (next: CalendarViewKind, day: string = current()) => {
     storeView(next);
-    go(current(), next);
+    go(day, next);
   };
   useShortcut({
     id: "calendar:previous-day",
     keys: ["Left"],
     group: "navigation",
-    label: week ? "calendar.nav.previousWeek" : "calendar.nav.previousDay",
+    label: navLabel("previous"),
     handler: () => {
-      go(addDays(current(), -step));
+      go(shift(current(), -1));
     },
   });
   useShortcut({
     id: "calendar:next-day",
     keys: ["Right"],
     group: "navigation",
-    label: week ? "calendar.nav.nextWeek" : "calendar.nav.nextDay",
+    label: navLabel("next"),
     handler: () => {
-      go(addDays(current(), step));
+      go(shift(current(), 1));
     },
   });
   useShortcut({
@@ -587,6 +608,15 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
     label: "calendar.views.weekKey",
     handler: () => {
       switchView("week");
+    },
+  });
+  useShortcut({
+    id: "calendar:view-month",
+    keys: ["M"],
+    group: "navigation",
+    label: "calendar.views.monthKey",
+    handler: () => {
+      switchView("month");
     },
   });
   useShortcut({
@@ -680,15 +710,15 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
             <Button
               variant="ghost"
               size="icon"
-              aria-label={t(week ? "calendar.nav.previousWeek" : "calendar.nav.previousDay")}
+              aria-label={t(navLabel("previous"))}
               onClick={() => {
-                go(addDays(date, -step));
+                go(shift(date, -1));
               }}
             >
               <ChevronLeft aria-hidden />
             </Button>
             <Button
-              disabled={week ? days.includes(today) : date === today}
+              disabled={showsToday}
               onClick={() => {
                 go(today);
               }}
@@ -698,9 +728,9 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
             <Button
               variant="ghost"
               size="icon"
-              aria-label={t(week ? "calendar.nav.nextWeek" : "calendar.nav.nextDay")}
+              aria-label={t(navLabel("next"))}
               onClick={() => {
-                go(addDays(date, step));
+                go(shift(date, 1));
               }}
             >
               <ChevronRight aria-hidden />
@@ -710,7 +740,7 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
             <LiveClock timeZone={viewerTz} />
             <IsoWeekLabel date={date} />
             <WeekAbBadge date={date} />
-            {week ? null : <DayNumberLabel date={date} />}
+            {view === "day" ? <DayNumberLabel date={date} /> : null}
           </div>
           <div className="max-md:ml-auto">
             <ViewSwitch view={view} onChange={switchView} />
@@ -727,7 +757,31 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
             </Button>
           ) : null}
         </div>
-        {week ? (
+        {month ? (
+          <div className="min-h-0 flex-1">
+            <MonthGrid
+              weeks={weeks}
+              month={monthOf(date)}
+              date={date}
+              today={today}
+              rows={rows}
+              viewerTz={viewerTz}
+              anchor={{
+                openKey: details?.key ?? null,
+                onOpen: setDetails,
+                onClose: () => {
+                  setDetails(null);
+                },
+                inPopover: tablet,
+                details: detailsOf,
+              }}
+              compact={!tablet}
+              onDay={(day) => {
+                switchView("day", day);
+              }}
+            />
+          </div>
+        ) : week ? (
           <div className="min-h-0 flex-1">
             <WeekGrid
               days={days}

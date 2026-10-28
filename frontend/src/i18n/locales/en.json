@@ -171,11 +171,22 @@
       "day": "Day",
       "week": "Week",
       "dayKey": "Day view",
-      "weekKey": "Week view"
+      "weekKey": "Week view",
+      "month": "Month",
+      "monthKey": "Month view"
     },
     "week": {
       "allDay": "all day",
       "allDayOf": "All day, {{date}}"
+    },
+    "month": {
+      "openDay": "Open {{date}}",
+      "openDayCount_one": "Open {{date}}, {{count}} event",
+      "openDayCount_other": "Open {{date}}, {{count}} events",
+      "more_one": "+{{count}} more",
+      "more_other": "+{{count}} more",
+      "moreOn_one": "{{count}} more on {{date}}",
+      "moreOn_other": "{{count}} more on {{date}}"
     }
   },
   "pages": {

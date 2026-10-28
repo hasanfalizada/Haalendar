@@ -1,11 +1,11 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Calendar module placeholder; day view arrives in HAAL-060.
 // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. The day view of `?date=YYYY-MM-DD` (default: today in the profile
 // time zone); a malformed date falls back to today.
-// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-087. `?view=day|week`; without it the view last chosen on this device.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-087. `?view=day|week` (HAAL-088: |month); without it the view last chosen on this device.
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DayView } from "@/components/calendar/DayView";
-import { type CalendarViewKind, storedView } from "@/lib/calendarView";
+import { type CalendarViewKind, asView, storedView } from "@/lib/calendarView";
 import { todayIn, useDisplayTimeZone } from "@/lib/datetime";
 
 interface CalendarSearch {
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_app/calendar")({
   // An explicit undefined: the router merges the parent's raw search params, so a dropped key would come back.
   validateSearch: (search: Record<string, unknown>): CalendarSearch => ({
     date: typeof search.date === "string" && isRealDate(search.date) ? search.date : undefined,
-    view: search.view === "day" || search.view === "week" ? search.view : undefined,
+    view: asView(search.view),
   }),
   component: CalendarPage,
 });

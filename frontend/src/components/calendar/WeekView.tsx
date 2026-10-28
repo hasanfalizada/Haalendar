@@ -10,11 +10,13 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type DayEntry, clockText, dayLabel, entriesOn } from "@/lib/dayView";
 import { itemColorClasses } from "@/lib/palette";
+import { useEntryTime } from "@/lib/entryTime";
 import { cn } from "@/lib/utils";
 import { DAY_MINUTES, MIN_MINUTES, layoutDay } from "@/lib/weekView";
+
+import { type DetailsAnchor, EventButton } from "./EventButton";
 
 type Row = Record<string, unknown>;
 
@@ -79,58 +81,8 @@ export function WeekGrid({ days, rows, viewerTz, today, openKey, onOpen, onClose
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the week changes
   }, [firstDay]);
 
-  const name = (entry: DayEntry) => t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") });
-  const time = (entry: DayEntry) => {
-    if (entry.allDay || entry.start === null || entry.end === null) return t("calendar.day.allDay");
-    const [start, end] = [
-      clockText(entry.start, i18n.language, timeFormat),
-      clockText(entry.end, i18n.language, timeFormat),
-    ];
-    if (entry.continues && entry.goesOn) return t("calendar.day.allDayContinues");
-    if (entry.continues) return t("calendar.day.until", { time: end });
-    if (entry.goesOn) return t("calendar.day.from", { time: start });
-    return start === end ? start : `${start}–${end}`;
-  };
-  const withDetails = (entry: DayEntry, button: ReactNode) =>
-    inPopover ? (
-      <Popover
-        open={openKey === entry.key}
-        onOpenChange={(open) => {
-          if (open) onOpen(entry);
-          else onClose();
-        }}
-      >
-        <PopoverTrigger asChild>{button}</PopoverTrigger>
-        <PopoverContent
-          side="right"
-          align="start"
-          sideOffset={6}
-          collisionPadding={8}
-          aria-label={t("calendar.details.title")}
-          className="max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
-        >
-          {openKey === entry.key ? details(entry) : null}
-        </PopoverContent>
-      </Popover>
-    ) : (
-      button
-    );
-  const eventProps = (entry: DayEntry, describedBy: string) => ({
-    type: "button" as const,
-    "aria-label": name(entry),
-    "aria-describedby": describedBy,
-    "aria-haspopup": "dialog" as const,
-    "aria-expanded": openKey === entry.key,
-    onClick: inPopover
-      ? undefined
-      : () => {
-          onOpen(entry);
-        },
-    onContextMenu: (event: React.MouseEvent) => {
-      event.preventDefault();
-      onOpen(entry);
-    },
-  });
+  const { range: time } = useEntryTime();
+  const anchor: DetailsAnchor = { openKey, onOpen, onClose, inPopover, details };
 
   const columns = "grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] md:grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
   return (
@@ -164,21 +116,20 @@ export function WeekGrid({ days, rows, viewerTz, today, openKey, onOpen, onClose
               const id = `week-${day}-${entry.key}`;
               return (
                 <li key={entry.key} className="min-w-0">
-                  {withDetails(
-                    entry,
-                    <button
-                      {...eventProps(entry, id)}
-                      className={cn(
-                        "w-full truncate rounded-sm py-0.5 pr-1 pl-2 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                        itemColorClasses(entry.color),
-                      )}
-                    >
-                      {entry.title || t("calendar.day.noTitle")}
-                      <span id={id} className="sr-only">
-                        {time(entry)}
-                      </span>
-                    </button>,
-                  )}
+                  <EventButton
+                    entry={entry}
+                    anchor={anchor}
+                    describedBy={id}
+                    className={cn(
+                      "w-full truncate rounded-sm py-0.5 pr-1 pl-2 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      itemColorClasses(entry.color),
+                    )}
+                  >
+                    {entry.title || t("calendar.day.noTitle")}
+                    <span id={id} className="sr-only">
+                      {time(entry)}
+                    </span>
+                  </EventButton>
                 </li>
               );
             })}
@@ -222,21 +173,20 @@ export function WeekGrid({ days, rows, viewerTz, today, openKey, onOpen, onClose
                       width: `${String(100 / block.columns)}%`,
                     }}
                   >
-                    {withDetails(
-                      block.entry,
-                      <button
-                        {...eventProps(block.entry, id)}
-                        className={cn(
-                          "flex size-full flex-col overflow-hidden rounded-sm py-0.5 pr-1 pl-2 text-left leading-tight outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                          itemColorClasses(block.entry.color),
-                        )}
-                      >
-                        <span className="truncate font-medium">{block.entry.title || t("calendar.day.noTitle")}</span>
-                        <span id={id} className={cn("truncate text-muted", height < 36 && "sr-only")}>
-                          {time(block.entry)}
-                        </span>
-                      </button>,
-                    )}
+                    <EventButton
+                      entry={block.entry}
+                      anchor={anchor}
+                      describedBy={id}
+                      className={cn(
+                        "flex size-full flex-col overflow-hidden rounded-sm py-0.5 pr-1 pl-2 text-left leading-tight outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                        itemColorClasses(block.entry.color),
+                      )}
+                    >
+                      <span className="truncate font-medium">{block.entry.title || t("calendar.day.noTitle")}</span>
+                      <span id={id} className={cn("truncate text-muted", height < 36 && "sr-only")}>
+                        {time(block.entry)}
+                      </span>
+                    </EventButton>
                   </li>
                 );
               })}
