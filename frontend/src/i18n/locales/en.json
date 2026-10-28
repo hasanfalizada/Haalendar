@@ -47,7 +47,8 @@
       "listLabel": "Events on {{date}}",
       "emptyTitle": "Nothing planned for this day",
       "emptyBody": "Events of this day, recurring ones included, appear here.",
-      "openDetails": "Open the event's details"
+      "openDetails": "Open the event's details",
+      "select": "Select {{title}}"
     },
     "overdue_one": "{{count}} overdue event",
     "overdue_other": "{{count}} overdue events",
@@ -87,7 +88,8 @@
       "edit": "Edit",
       "delete": "Delete",
       "colorChanged": "Color changed: {{title}}",
-      "colorSeries": "Applies to all occurrences."
+      "colorSeries": "Applies to all occurrences.",
+      "moveNextDay": "Move to next day"
     },
     "delete": {
       "title": "Delete event?",
@@ -154,6 +156,11 @@
       "more": "and {{count}} more",
       "saveAnyway": "Save anyway",
       "back": "Back to editing"
+    },
+    "move": {
+      "done": "Moved {{title}} to {{date}}",
+      "doneMany_one": "Moved {{count}} event to the next day",
+      "doneMany_other": "Moved {{count}} events to the next day"
     }
   },
   "pages": {
@@ -730,7 +737,9 @@
       "attachmentAdded": "adding “{{name}}”",
       "attachmentDeleted": "deleting “{{name}}”",
       "occurrenceDeleted": "deleting {{title}} on {{date}}",
-      "occurrenceEdited": "the change to {{title}} on {{date}}"
+      "occurrenceEdited": "the change to {{title}} on {{date}}",
+      "eventMoved": "moving {{title}} to {{date}}",
+      "eventsMoved": "moving {{count}} events to the next day"
     }
   },
   "bulk": {

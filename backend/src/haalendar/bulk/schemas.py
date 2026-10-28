@@ -1,12 +1,12 @@
 """Request and response models of the bulk endpoint (contract: api/modules/collab.yaml — bulk).
 
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036.
++++===+++ 2026-10-28 — Hasan Alizada — HAAL-084 (D-73). No move_next_day: events move through sync (offline too).
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from haalendar.security.schemas import ApiModel
 
 BulkType = Literal["event", "note", "card", "calendar"]
-BulkAction = Literal["delete", "restore", "set_color", "set_priority", "move_next_day"]
+BulkAction = Literal["delete", "restore", "set_color", "set_priority"]
 Color = Literal["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"]
 Priority = Literal["low", "medium", "high"]
 TargetFailure = Literal["not_found", "forbidden", "version_conflict", "unsupported", "invalid_state"]
@@ -24,7 +24,6 @@ class BulkTargetIn(ApiModel):
     type: BulkType
     id: uuid.UUID
     version: int
-    occurrence_date: date | None = None
     color: Color | None = None
     priority: Priority | None = None
 

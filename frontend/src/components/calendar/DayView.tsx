@@ -21,6 +21,10 @@
 // (sidebar, tablet overlay, phone date sheet).
 // +++===+++ 2026-10-25 — Hasan Alizada — HAAL-080. "Show" in the editor's duplicate warning goes to that event's day
 // and opens its details card.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084. Move to next day (FR-CAL-20, D-73) from the details card and for a
+// selection (FR-X-07, D-41): a checkbox per row, Ctrl/Cmd+click, Shift+click range, Ctrl/Cmd+A, Esc, long press on
+// touch; a plain click still opens the card. The bar offers the move when every selected event is writable. Changing
+// the day clears the selection.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import {
@@ -42,6 +46,7 @@ import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
 import { runWrite } from "@/api/write";
 import { Button } from "@/components/ui/button";
+import { BulkBar } from "@/components/ui/bulk-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -54,6 +59,7 @@ import { useShortcut } from "@/lib/shortcuts";
 import { newStep } from "@/lib/undo";
 import { useListNavigation } from "@/lib/useListNavigation";
 import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
+import { type Selection, useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows, mutate } from "@/sync";
 
@@ -61,6 +67,7 @@ import { DayNumberLabel, IsoWeekLabel, LiveClock } from "./HeaderInfo";
 import { EventDetails } from "./EventDetails";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
+import { moveToNextDay } from "./moveNextDay";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
 import { OverdueCounter } from "./OverdueCounter";
 import { useCalendars } from "./useCalendars";
@@ -111,6 +118,11 @@ interface DayListProps {
   details: (entry: DayEntry) => ReactNode;
   /** Delete key on a row. */
   onDelete: (entry: DayEntry) => void;
+  selection: Selection;
+  /** Every selected event may be changed (the bar offers the move). */
+  canMoveSelected: boolean;
+  moving: boolean;
+  onMoveSelected: () => void;
 }
 
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. A row opens the details card (click, tap, Enter / Space, right-click
@@ -134,8 +146,24 @@ function useAttachmentCounts(user: string | undefined): Map<string, number> {
   }, [data]);
 }
 
-function DayList({ user, date, entries, openKey, onOpen, onClose, inPopover, details, onDelete }: DayListProps) {
+function DayList({
+  user,
+  date,
+  entries,
+  openKey,
+  onOpen,
+  onClose,
+  inPopover,
+  details,
+  onDelete,
+  selection,
+  canMoveSelected,
+  moving,
+  onMoveSelected,
+}: DayListProps) {
   const { t, i18n } = useTranslation();
+  // A long press on touch selects; the context menu it also raises must not open the card.
+  const pointer = useRef("mouse");
   const label = dayLabel(date, i18n.language);
   const attachmentCounts = useAttachmentCounts(user);
   const byKey = (key: string | undefined) => entries.find((entry) => entry.key === key);
@@ -169,105 +197,140 @@ function DayList({ user, date, entries, openKey, onOpen, onClose, inPopover, det
     );
   }
   return (
-    <ol
-      aria-label={t("calendar.day.listLabel", { date: label })}
-      className="flex flex-col gap-1.5 p-3 md:p-4"
-      {...navigation.listProps}
-    >
-      {entries.map((entry) => {
-        const attachments = attachmentCounts.get(entry.id) ?? 0;
-        // The row's name stays "Details of <title>"; what the icons show is its accessible description (D-72).
-        const flags = [
-          entry.recurring ? t("calendar.day.flagRepeats") : null,
-          entry.hasDescription ? t("calendar.day.flagDescription") : null,
-          attachments > 0 ? t("calendar.day.flagAttachments", { count: attachments }) : null,
-        ].filter((flag): flag is string => flag !== null);
-        const flagsId = `day-row-flags-${entry.key}`;
-        const row = (
-          <button
-            type="button"
-            {...navigation.itemProps(entry.key)}
-            aria-label={t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") })}
-            aria-describedby={flags.length > 0 ? flagsId : undefined}
-            aria-haspopup="dialog"
-            aria-expanded={openKey === entry.key}
-            onClick={
-              inPopover
-                ? undefined
-                : () => {
-                    onOpen(entry);
-                  }
-            }
-            onContextMenu={(event) => {
-              event.preventDefault();
-              onOpen(entry);
-            }}
-            className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <span className="w-28 shrink-0 text-muted tabular-nums">
-              <When entry={entry} />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="flex items-center gap-1.5 font-medium wrap-anywhere">
-                {entry.title || t("calendar.day.noTitle")}
-                {entry.recurring ? (
-                  <span title={t("calendar.day.repeats")} className="shrink-0">
-                    <Repeat className="size-3.5 text-muted" aria-hidden />
-                  </span>
-                ) : null}
-                {entry.hasDescription ? (
-                  <span title={t("calendar.day.hasDescription")} className="shrink-0">
-                    <FileText className="size-3.5 text-muted" aria-hidden />
-                  </span>
-                ) : null}
-                {attachments > 0 ? (
-                  <span title={t("calendar.details.attachments", { count: attachments })} className="shrink-0">
-                    <Paperclip className="size-3.5 text-muted" aria-hidden />
+    <>
+      <BulkBar
+        selection={selection}
+        total={entries.length}
+        actions={canMoveSelected ? ["move_next_day"] : []}
+        busy={moving}
+        onAction={onMoveSelected}
+        className="px-3 md:px-4"
+      />
+      <ol
+        aria-label={t("calendar.day.listLabel", { date: label })}
+        className="flex flex-col gap-1.5 p-3 md:p-4"
+        {...navigation.listProps}
+      >
+        {entries.map((entry) => {
+          const attachments = attachmentCounts.get(entry.id) ?? 0;
+          // The row's name stays "Details of <title>"; what the icons show is its accessible description (D-72).
+          const flags = [
+            entry.recurring ? t("calendar.day.flagRepeats") : null,
+            entry.hasDescription ? t("calendar.day.flagDescription") : null,
+            attachments > 0 ? t("calendar.day.flagAttachments", { count: attachments }) : null,
+          ].filter((flag): flag is string => flag !== null);
+          const flagsId = `day-row-flags-${entry.key}`;
+          const selected = selection.isSelected(entry.key);
+          const selectProps = selection.rowProps(
+            entry.key,
+            inPopover
+              ? undefined
+              : () => {
+                  onOpen(entry);
+                },
+          );
+          const row = (
+            <button
+              type="button"
+              {...navigation.itemProps(entry.key)}
+              {...selectProps}
+              onPointerDown={(event) => {
+                pointer.current = event.pointerType;
+                selectProps.onPointerDown(event);
+              }}
+              aria-label={t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") })}
+              aria-describedby={flags.length > 0 ? flagsId : undefined}
+              aria-haspopup="dialog"
+              aria-expanded={openKey === entry.key}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                if (pointer.current !== "touch") onOpen(entry);
+              }}
+              className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-sm py-2 pr-3 pl-1 text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <span className="w-28 shrink-0 text-muted tabular-nums">
+                <When entry={entry} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="flex items-center gap-1.5 font-medium wrap-anywhere">
+                  {entry.title || t("calendar.day.noTitle")}
+                  {entry.recurring ? (
+                    <span title={t("calendar.day.repeats")} className="shrink-0">
+                      <Repeat className="size-3.5 text-muted" aria-hidden />
+                    </span>
+                  ) : null}
+                  {entry.hasDescription ? (
+                    <span title={t("calendar.day.hasDescription")} className="shrink-0">
+                      <FileText className="size-3.5 text-muted" aria-hidden />
+                    </span>
+                  ) : null}
+                  {attachments > 0 ? (
+                    <span title={t("calendar.details.attachments", { count: attachments })} className="shrink-0">
+                      <Paperclip className="size-3.5 text-muted" aria-hidden />
+                    </span>
+                  ) : null}
+                </span>
+                {entry.location ? (
+                  <span className="flex items-center gap-1 text-xs text-muted wrap-anywhere">
+                    <MapPin className="size-3 shrink-0" aria-hidden />
+                    {entry.location}
                   </span>
                 ) : null}
               </span>
-              {entry.location ? (
-                <span className="flex items-center gap-1 text-xs text-muted wrap-anywhere">
-                  <MapPin className="size-3 shrink-0" aria-hidden />
-                  {entry.location}
+              {flags.length > 0 ? (
+                <span id={flagsId} className="sr-only">
+                  {flags.join(", ")}
                 </span>
               ) : null}
-            </span>
-            {flags.length > 0 ? (
-              <span id={flagsId} className="sr-only">
-                {flags.join(", ")}
-              </span>
-            ) : null}
-          </button>
-        );
-        return (
-          <li key={entry.key} className={cn("rounded-sm text-[13px]", itemColorClasses(entry.color))}>
-            {inPopover ? (
-              <Popover
-                open={openKey === entry.key}
-                onOpenChange={(open) => {
-                  if (open) onOpen(entry);
-                  else onClose();
+            </button>
+          );
+          return (
+            <li
+              key={entry.key}
+              className={cn(
+                "flex items-start rounded-sm text-[13px]",
+                itemColorClasses(entry.color),
+                selected && "ring-2 ring-primary",
+              )}
+            >
+              <input
+                type="checkbox"
+                className="mt-2.5 ml-3 size-4 shrink-0"
+                aria-label={t("calendar.day.select", { title: entry.title || t("calendar.day.noTitle") })}
+                checked={selected}
+                // A prevented click on a controlled checkbox leaves the box drawn in its old state; Shift comes from
+                // the click that changed it.
+                onChange={(event) => {
+                  selection.toggle(entry.key, { range: (event.nativeEvent as MouseEvent).shiftKey });
                 }}
-              >
-                <PopoverTrigger asChild>{row}</PopoverTrigger>
-                <PopoverContent
-                  side="bottom"
-                  align="start"
-                  sideOffset={6}
-                  aria-label={t("calendar.details.title")}
-                  className="max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
+              />
+              {inPopover ? (
+                <Popover
+                  open={openKey === entry.key}
+                  onOpenChange={(open) => {
+                    if (open) onOpen(entry);
+                    else onClose();
+                  }}
                 >
-                  {openKey === entry.key ? details(entry) : null}
-                </PopoverContent>
-              </Popover>
-            ) : (
-              row
-            )}
-          </li>
-        );
-      })}
-    </ol>
+                  <PopoverTrigger asChild>{row}</PopoverTrigger>
+                  <PopoverContent
+                    side="bottom"
+                    align="start"
+                    sideOffset={6}
+                    aria-label={t("calendar.details.title")}
+                    className="max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
+                  >
+                    {openKey === entry.key ? details(entry) : null}
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                row
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </>
   );
 }
 
@@ -368,6 +431,34 @@ export function DayView({ date }: { date: string }) {
     return result.ok;
   }
   const occurrenceOf = (entry: DayEntry) => entry.key.slice(entry.key.lastIndexOf(":") + 1);
+  const rowOf = (entry: DayEntry) => rows.find((candidate) => candidate.id === entry.id);
+  const selection = useSelection(
+    entries.map((entry) => entry.key),
+    { selectAllShortcut: true },
+  );
+  const { clear: clearSelection } = selection;
+  useEffect(() => {
+    clearSelection();
+  }, [date, clearSelection]);
+  const selectedEntries = entries.filter((entry) => selection.isSelected(entry.key));
+  const canMoveSelected = selectedEntries.every((entry) => calendars.canWrite(rowOf(entry)?.container_id));
+  const [moving, setMoving] = useState(false);
+  async function moveSelected() {
+    if (!user || moving) return;
+    const targets = selectedEntries.flatMap((entry) => {
+      const row = rowOf(entry);
+      return row ? [{ row, occurrence: occurrenceOf(entry) }] : [];
+    });
+    setMoving(true);
+    const ok = await moveToNextDay(user, targets);
+    setMoving(false);
+    if (ok) clearSelection();
+  }
+  async function moveOne(row: Record<string, unknown>, occurrence: string) {
+    if (!user) return;
+    setDetails(null);
+    if (await moveToNextDay(user, [{ row, occurrence }])) refocus.current = String(row.id);
+  }
   const detailsOf = (entry: DayEntry) => {
     const row = rows.find((candidate) => candidate.id === entry.id);
     if (!row || !user) return null;
@@ -384,6 +475,9 @@ export function DayView({ date }: { date: string }) {
         }}
         onDelete={() => {
           requestDelete(row, occurrenceOf(entry));
+        }}
+        onMoveNextDay={() => {
+          void moveOne(row, occurrenceOf(entry));
         }}
       />
     );
@@ -586,6 +680,12 @@ export function DayView({ date }: { date: string }) {
               const row = rows.find((candidate) => candidate.id === entry.id);
               if (row) requestDelete(row, occurrenceOf(entry));
             }}
+            selection={selection}
+            canMoveSelected={canMoveSelected}
+            moving={moving}
+            onMoveSelected={() => {
+              void moveSelected();
+            }}
           />
         </div>
       </div>
@@ -598,7 +698,8 @@ export function DayView({ date }: { date: string }) {
           </SheetContent>
         </Sheet>
       ) : null}
-      {!tablet ? (
+      {/* The selection bar sits at the bottom on phones; the new-event button would cover it. */}
+      {!tablet && selection.count === 0 ? (
         <Button
           variant="primary"
           size="icon"

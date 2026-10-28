@@ -8,6 +8,8 @@
 // mode after a long press). The click that ends a long press is swallowed. Ctrl/Cmd+A selects every loaded row of the
 // list (option selectAllShortcut; one list per page), not in text fields and not behind a dialog.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-037. Ctrl/Cmd+A and Esc go through the shortcut registry ("?" overlay).
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084. The row may itself be a button (the day list, a popover trigger):
+// clicks that select are prevented, so the trigger does not open its popover as well.
 import { type MouseEvent, type PointerEvent, useCallback, useMemo, useRef, useState } from "react";
 
 import { useShortcut } from "./shortcuts";
@@ -125,11 +127,14 @@ export function useSelection(ids: readonly string[], options: SelectionOptions =
       onClick: (event: MouseEvent) => {
         if (pressed.current) {
           pressed.current = false; // the click that ends a long press
+          event.preventDefault();
           return;
         }
-        // Checkboxes, buttons and links inside the row handle their own clicks.
-        if (event.target instanceof Element && event.target.closest("button, a, input, select, textarea, label"))
-          return;
+        // Checkboxes, buttons and links inside the row handle their own clicks (the row may be a button itself).
+        const control =
+          event.target instanceof Element ? event.target.closest("button, a, input, select, textarea, label") : null;
+        if (control && control !== event.currentTarget) return;
+        // A prevented click does not reach handlers composed after this one (e.g. a popover trigger).
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           toggle(id);
@@ -137,6 +142,7 @@ export function useSelection(ids: readonly string[], options: SelectionOptions =
           event.preventDefault();
           toggle(id, { range: true });
         } else if (count > 0 && lastPointer.current === "touch") {
+          event.preventDefault();
           toggle(id);
         } else {
           onOpen?.();

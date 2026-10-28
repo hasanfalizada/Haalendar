@@ -3,6 +3,8 @@
 // with every row's previous value in one request. The versions of the answer go into the undo step (If-Match
 // semantics per row). All-or-nothing: when the server refuses, the reason says how many of the selection blocked it
 // and refusedIds() names them, so the list can be refreshed and the selection kept.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084 (D-73). "Move to next day" is not sent here: events move through the
+// local store and sync (moveToNextDay in the calendar), offline too.
 import { bulkOperation } from "@/api/generated/sdk.gen";
 import type { BulkItemResult, BulkType, Color, Priority, Problem } from "@/api/generated/types.gen";
 import { runWrite, type WriteResult } from "@/api/write";
@@ -10,7 +12,7 @@ import i18n from "@/i18n";
 
 import { newStep, registerUndo, type UndoLabel, type UndoStep } from "./undo";
 
-export type BulkAction = "delete" | "restore" | "set_color" | "set_priority" | "move_next_day";
+export type BulkAction = "delete" | "restore" | "set_color" | "set_priority";
 
 export interface BulkSelected {
   type: BulkType;
@@ -19,7 +21,6 @@ export interface BulkSelected {
   /** Current color / priority: needed to undo a color / priority change. */
   color?: Color;
   priority?: Priority;
-  occurrence_date?: string;
 }
 
 interface UndoTarget {
@@ -41,7 +42,7 @@ interface BulkAnswer {
   items: BulkItemResult[];
 }
 
-function send(action: Exclude<BulkAction, "move_next_day">, targets: UndoTarget[], value: "before" | "after") {
+function send(action: BulkAction, targets: UndoTarget[], value: "before" | "after") {
   const field = action === "set_color" ? "color" : action === "set_priority" ? "priority" : null;
   return () =>
     bulkOperation({
@@ -86,7 +87,6 @@ function undoStep(
   data: BulkAnswer,
   label: UndoLabel,
 ) {
-  if (action === "move_next_day") return null; // undone by the events module once it exists (HAAL-08x)
   const versions = new Map(data.items.map((item) => [`${item.type}:${item.id}`, item.version]));
   const field = action === "set_color" ? "color" : action === "set_priority" ? "priority" : null;
   const targets: UndoTarget[] = items.map((item) => ({
@@ -130,7 +130,6 @@ export function runBulk(request: BulkRequest): Promise<WriteResult<BulkAnswer>> 
             type: item.type,
             id: item.id,
             version: item.version,
-            ...(item.occurrence_date ? { occurrence_date: item.occurrence_date } : {}),
           })),
           ...(field && value ? { [field]: value } : {}),
         },

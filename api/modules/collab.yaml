@@ -305,6 +305,8 @@ paths:
   bulk:
     # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036 (D-41). Typed targets (containers too), per-target values (one
     # request can undo a bulk change of mixed colors), new versions in the answer (If-Match of the undo step).
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084 (D-73). move_next_day and the target's occurrence_date are gone:
+    # moving events goes through the local store and sync like every event change (offline too).
     post:
       tags: [bulk]
       operationId: bulkOperation
@@ -326,7 +328,7 @@ paths:
               type: object
               required: [action, targets]
               properties:
-                action: { type: string, enum: [delete, restore, set_color, set_priority, move_next_day] }
+                action: { type: string, enum: [delete, restore, set_color, set_priority] }
                 targets:
                   type: array
                   minItems: 1
@@ -370,7 +372,6 @@ components:
         type: { $ref: '#/components/schemas/BulkType' }
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         version: { type: integer, description: Version the client saw; a different current version is a conflict. }
-        occurrence_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
         color:
           $ref: '../components/common.yaml#/components/schemas/Color'
           description: set_color — value for this target (overrides the request's color).

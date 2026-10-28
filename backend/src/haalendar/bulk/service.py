@@ -13,6 +13,8 @@
   items arrive with their modules (their delete batches include attachments and other children).
 - delete puts all targets into one delete batch (one undo step: restoring the batch); restore brings back the batch
   of each target. Changes are audited by the database triggers. The answer lists the new versions.
++++===+++ 2026-10-28 — Hasan Alizada — HAAL-084 (D-73). "Move to next day" is not a bulk action here: events move
+  through the local store and sync (offline too), like every other event change.
 """
 
 from __future__ import annotations
@@ -197,14 +199,12 @@ async def apply(db: AsyncSession, user_id: uuid.UUID, body: BulkIn) -> BulkOut:
         batches: dict[uuid.UUID, BulkSource] = {row.delete_batch_id: source for source, _, row in rows}
         for batch_id, source in batches.items():
             await restore_batch(db, [source.model, *source.children], batch_id, user_id)
-    elif body.action in ("set_color", "set_priority"):
+    else:  # set_color / set_priority
         attribute = "color" if body.action == "set_color" else "priority"
         for _, target, row in rows:
             setattr(row, attribute, _value(body, target))
             row.version += 1
             row.updated_by = user_id
-    else:  # move_next_day: registered by the events module (HAAL-08x); no source supports it yet
-        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Action not available")
 
     await db.flush()
     items: list[BulkItemOut] = []

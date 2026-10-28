@@ -4,6 +4,7 @@
 // Sticks to the bottom on phones so it stays reachable with a thumb.
 // +++===+++ 2026-10-17 — Hasan Alizada — HAAL-041. The priority menu shows the priority badges (atom order).
 // +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042. Colours come from the shared palette.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084 (D-73). "Move to next day" is a bar action, not a POST /bulk one.
 import { CalendarArrowUp, Palette, RotateCcw, Signal, Trash2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,13 +21,15 @@ import { ColorSwatch } from "./color-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
 import { PriorityBadge } from "./priority";
 
+export type BarAction = BulkAction | "move_next_day";
+
 interface BulkBarProps {
   selection: Selection;
   /** Rows shown (loaded) in the list. */
   total: number;
-  actions: readonly BulkAction[];
+  actions: readonly BarAction[];
   busy?: boolean;
-  onAction: (action: BulkAction, value?: Color | Priority) => void;
+  onAction: (action: BarAction, value?: Color | Priority) => void;
   className?: string;
 }
 
@@ -54,7 +57,7 @@ function SelectAllBox({ selection, label }: { selection: Selection; label: strin
 export function BulkBar({ selection, total, actions, busy = false, onAction, className }: BulkBarProps) {
   const { t } = useTranslation();
   const some = selection.count > 0;
-  const has = (action: BulkAction) => actions.includes(action);
+  const has = (action: BarAction) => actions.includes(action);
   return (
     <div
       role="toolbar"

@@ -27,7 +27,6 @@
 | HAAL-039 | E02 Cross-cutting | Full-text search across all modules with highlighting, offline local index; keeps title autocomplete and YYYY-MM-DD jump | Must | 016, 052 | — | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-046 | E02 Cross-cutting | Search filters: date range, module, calendar, color, priority, label | Must | 039 | C-14 | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-069 | E04 Calendar parity | Single editor instance guard | Should | 063 | F-19 | To do | — | owner backlog file |
-| HAAL-084 | E05 Calendar new | Move to next day: popover button + bulk; recurring occurrence becomes exception | Must | 064, 067 | U#11 | To do | — | owner backlog file |
 | HAAL-085 | E05 Calendar new | Week A/B label next to week number, fully configured by user in settings; correct across year boundaries | Must | 045, 062 | U#12 | To do | — | owner backlog file |
 | HAAL-087 | E05 Calendar new | Week view: 7 columns from week start, all-day row, timed events by time, overlaps side by side, current-time line | Must | 060, 066 | C-01 | To do | — | owner backlog file |
 | HAAL-088 | E05 Calendar new | Month view: week grid, events per day, +N more, click day opens day view | Must | 060 | C-02 | To do | — | owner backlog file |
@@ -136,7 +135,8 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-067 | 2026-10-23 | 1a64291 | feat(calendar): single occurrences — delete or edit only this occurrence, effective series start (HAAL-067) |
 | HAAL-068 | 2026-10-25 | 9aa81d0 | feat(calendar): overdue counter — legacy rule with effective series start, under the mini month (HAAL-068) |
 | HAAL-080 | 2026-10-25 | 3a76281 | feat(calendar): duplicate-title warning — other active events with the same title, asked on Save (HAAL-080) |
-| HAAL-083 | 2026-10-28 | — | feat(calendar): description and attachment icons in the day list, read out as the row's description (HAAL-083) |
+| HAAL-083 | 2026-10-28 | bb23bdb | feat(calendar): description and attachment icons in the day list, read out as the row's description (HAAL-083) |
+| HAAL-084 | 2026-10-28 | — | feat(calendar): move to next day from the details card and for a selection in the day list (HAAL-084) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
 | HAAL-160 | 2026-10-15 | 27255ce | docs(architecture): note user_account table name in domain model (HAAL-160) |

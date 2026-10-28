@@ -8,7 +8,7 @@
 // Delete does nothing here: the trash keeps everything (no purge, D-38).
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { type MouseEvent, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { restoreFromTrash } from "@/api/generated/sdk.gen";
@@ -165,11 +165,11 @@ export function TrashPage() {
                     className="mt-1 size-4"
                     aria-label={t("trash.select", { title: entry.title })}
                     checked={selection.isSelected(entry.id)}
-                    onClick={(event: MouseEvent<HTMLInputElement>) => {
-                      event.preventDefault();
-                      selection.toggle(entry.id, { range: event.shiftKey });
+                    // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084. A prevented click on a controlled checkbox
+                    // left the box drawn unchecked; Shift comes from the click that changed it.
+                    onChange={(event) => {
+                      selection.toggle(entry.id, { range: (event.nativeEvent as MouseEvent).shiftKey });
                     }}
-                    onChange={() => undefined}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="font-medium">{entry.title}</div>
