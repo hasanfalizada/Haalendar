@@ -16,13 +16,13 @@ overrides:
   # undici (via jsdom, GHSA-xjj6-f33q-929c, GHSA-4qv8-2p9j-2685, GHSA-f72v-6w45-q472); both fixes are older than 7 days.
   "zod@>=4.0.0 <4.6.6": "4.6.7"
   "undici@>=8.0.0 <8.12.2": "8.12.2"
+  # +++===+++ 2026-10-28 — Hasan Alizada — Dependency deadline: fast-uri via vite-plugin-pwa > workbox-build > ajv
+  # (GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr, GHSA-xhq7-xmqj-769h, GHSA-333x-w4r6-6crp); 3.1.9 is older than 7 days.
+  "fast-uri@>=3.0.0 <3.1.9": "3.1.9"
 
 # +++===+++ 2026-10-25 — Hasan Alizada — Temporary pnpm audit exceptions whose fixes are younger than 7 days. Listed with
 # reason and expiry in backend/audit-ignores.json (npm_ignores); backend/tests/test_audit_ignores.py keeps both in step.
 auditConfig:
   ignoreGhsas:
-    - GHSA-w74x-v6f9-j3xg
-    - GHSA-wjr9-j795-jxcr
-    - GHSA-xhq7-xmqj-769h
-    - GHSA-333x-w4r6-6crp
     - GHSA-m5mm-p8h7-m29v
+    - GHSA-gcqx-w48m-w2h4

@@ -17,9 +17,8 @@
 
 | Due | What | Where it is enforced |
 |---|---|---|
-| 2026-10-27 | Upgrade certifi 2026.7.22 → ≥ 2026.10.19 and remove its exception (PYSEC-2026-4320; PyPI published 2026.10.19 on 2026-10-20 02:24 UTC, so it passes the 7-day minimum only at 2026-10-27 02:24 UTC — extended by one day on 2026-10-25) | `backend/audit-ignores.json`, `backend/tests/test_audit_ignores.py` |
-| 2026-10-27 | Override fast-uri 3.1.8 → 3.1.9 and remove its exception (4 GHSAs, build time only; 3.1.9 passes the 7-day minimum on 2026-10-26 23:05 UTC) | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, same test |
-| 2026-10-30 | Override serialize-javascript 7.1.2 → 7.1.3 and remove its exception (GHSA-m5mm-p8h7-m29v, build time only; 7.1.3 passes the 7-day minimum on 2026-10-29 21:24 UTC) | same |
+| 2026-10-30 | Override serialize-javascript 7.1.2 → 7.1.3 and remove its exception (GHSA-m5mm-p8h7-m29v, build time only; 7.1.3 passes the 7-day minimum on 2026-10-29 21:24 UTC) | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
+| 2026-11-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 
 ## Open tasks
 
