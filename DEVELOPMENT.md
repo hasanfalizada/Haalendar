@@ -183,7 +183,7 @@ scripts/dev/stack-up.sh     # PostgreSQL 18 (port 55434), API 8081, worker, Vite
 scripts/dev/stack-down.sh   # stops everything and drops the database and the uploads
 ```
 
-The stack listens on all interfaces and opens the API host/origin guards and Vite's host check for this machine's FQDN (`hostname -f`), so it can be used from another computer at `http://<fqdn>:5173`. Logs are in `.dev/` (git-ignored). The database starts empty: the app opens the first-administrator wizard.
+The stack listens on `127.0.0.1` only; open it at `http://localhost:5173`. From another computer use an SSH tunnel (`ssh -N -L 5173:localhost:5173 <user>@<dev host>`, or the port forwarding of JetBrains Gateway) and open the same `localhost` address: plain `http` on a host name is not a secure context, and the app needs browser APIs that exist only there (`crypto.randomUUID`, service worker). Logs are in `.dev/` (git-ignored). The database starts empty: the app opens the first-administrator wizard.
 
 ### Backend (from `backend/`)
 

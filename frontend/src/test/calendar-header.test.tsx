@@ -1,6 +1,6 @@
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. Calendar header (FR-CAL-05, F-05, D-63): "Today" or the long date as
 // the page heading with the weekday, the ISO week of the SELECTED date (also across New Year, with the ISO year when it
-// differs), and the live clock (ticks on the second, stops in a hidden tab, 12/24 hours, profile zone).
+// differs), the Day Number of the SELECTED date (HAAL-082) and the live clock (ticks on the second, stops in a hidden tab, 12/24 hours, profile zone).
 import "@/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
@@ -36,6 +36,24 @@ describe("title and week", () => {
   it("names the ISO year when it differs from the calendar year", async () => {
     await open("2027-01-01");
     expect(await screen.findByText("Week 53 · 2026")).toBeInTheDocument();
+  });
+});
+
+describe("day number", () => {
+  it("shows the day of the year of the selected date, with the year length for the tooltip and screen readers", async () => {
+    await open("2026-12-31");
+    const label = screen.getByTitle("Day 365 of 365");
+    expect(label).toHaveTextContent("Day 365");
+    expect(screen.getByText("Day 365 of 365")).toHaveClass("sr-only");
+  });
+
+  it("counts the leap day and follows navigation into the next year", async () => {
+    await open("2028-12-31");
+    expect(screen.getByTitle("Day 366 of 366")).toBeInTheDocument();
+    act(() => {
+      screen.getByRole("button", { name: "Next day" }).click();
+    });
+    expect(await screen.findByTitle("Day 1 of 365")).toBeInTheDocument();
   });
 });
 

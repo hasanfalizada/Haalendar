@@ -46,7 +46,7 @@ import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows, mutate } from "@/sync";
 
-import { IsoWeekLabel, LiveClock } from "./HeaderInfo";
+import { DayNumberLabel, IsoWeekLabel, LiveClock } from "./HeaderInfo";
 import { EventDetails } from "./EventDetails";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
@@ -497,6 +497,7 @@ export function DayView({ date }: { date: string }) {
           <div className="flex w-full items-center gap-3 text-xs text-muted md:ml-auto md:w-auto md:text-[13px]">
             <LiveClock timeZone={viewerTz} />
             <IsoWeekLabel date={date} />
+            <DayNumberLabel date={date} />
           </div>
           {tablet ? (
             <Button

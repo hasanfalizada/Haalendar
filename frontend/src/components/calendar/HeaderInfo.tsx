@@ -4,11 +4,14 @@
 //   while the tab is hidden and is right again the moment the tab is back; role="timer" without announcements;
 // - the ISO 8601 week of the SELECTED date (calendar.iso_week.v1; the legacy app showed the week of today), with the
 //   ISO year when it differs from the calendar year ("Week 53 · 2026" on 1 January 2027).
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-082, D-71. Day Number of the SELECTED date after the week ("Day 301");
+// the tooltip and screen readers get the full "Day 301 of 365".
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { isoWeek } from "@/atoms/calendar/isoWeek";
+import { dayOfYear } from "@/lib/dayOfYear";
 
 /** The current time, updated on every second boundary while the tab is visible. */
 function useNow(): Date {
@@ -59,6 +62,18 @@ export function IsoWeekLabel({ date }: { date: string }) {
   return (
     <span title={t("calendar.header.weekTitle", { week, year: weekYear })}>
       {sameYear ? t("calendar.header.week", { week }) : t("calendar.header.weekOfYear", { week, year: weekYear })}
+    </span>
+  );
+}
+
+export function DayNumberLabel({ date }: { date: string }) {
+  const { t } = useTranslation();
+  const { day, daysInYear } = dayOfYear(date);
+  const full = t("calendar.header.dayTitle", { day, total: daysInYear });
+  return (
+    <span title={full}>
+      <span aria-hidden>{t("calendar.header.day", { day })}</span>
+      <span className="sr-only">{full}</span>
     </span>
   );
 }

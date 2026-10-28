@@ -66,7 +66,9 @@
       "clock": "Current time",
       "week": "Week {{week}}",
       "weekOfYear": "Week {{week}} · {{year}}",
-      "weekTitle": "ISO week {{week}} of {{year}}"
+      "weekTitle": "ISO week {{week}} of {{year}}",
+      "day": "Day {{day}}",
+      "dayTitle": "Day {{day}} of {{total}}"
     },
     "details": {
       "title": "Event details",

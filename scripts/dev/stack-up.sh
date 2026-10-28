@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # +++===+++ 2026-10-28 CET — Hasan Alizada — Throw-away full stack for live checks: PostgreSQL 18 (container
-# haalendar-dev-db, port 55434, data lost on stack-down), API on 8081, job worker, Vite on 5173.
-# Reachable from other machines at http://<this host's FQDN>:5173 (the API host/origin guards and Vite's
-# host check are opened for that name only). Logs, uploads and the session ids live in <repo>/.dev (git-ignored);
+# haalendar-dev-db, port 55434, data lost on stack-down), API on 8081, job worker, Vite on 5173 — all bound to
+# 127.0.0.1. Open it at http://localhost:5173: from another computer through an SSH tunnel
+# (ssh -N -L 5173:localhost:5173 <user>@<this host>; JetBrains Gateway can forward the port too). Not by host name:
+# plain http on a host name is not a secure context, so browser APIs the app needs (crypto.randomUUID, service
+# worker) are missing there. Logs, uploads and the session ids live in <repo>/.dev (git-ignored);
 # each process runs in its own session (setsid), so stack-down stops it with all its children.
 # Usage: scripts/dev/stack-up.sh   then open the printed URL; stop with scripts/dev/stack-down.sh
 set -uo pipefail
@@ -14,8 +16,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 DB=haalendar-dev-db
 DEV_DIR="$ROOT/.dev"
-HOST_FQDN="$(hostname -f)"
-URL="http://$HOST_FQDN:5173"
+URL="http://localhost:5173"
 mkdir -p "$DEV_DIR/storage" "$DEV_DIR/mail"
 
 "$ROOT/scripts/dev/stack-down.sh" >/dev/null 2>&1
@@ -27,7 +28,7 @@ set -a; source .env.example; set +a
 export HAALENDAR_DATABASE_URL=postgresql+psycopg://haalendar_app:haalendar_app@localhost:55434/haalendar
 export HAALENDAR_MIGRATION_DATABASE_URL=postgresql+psycopg://haalendar:haalendar@localhost:55434/haalendar
 export HAALENDAR_STORAGE_DIR="$DEV_DIR/storage" HAALENDAR_MAIL_DIR="$DEV_DIR/mail"
-export HAALENDAR_PORT=8081 HAALENDAR_PUBLIC_URL="$URL" HAALENDAR_EXTRA_ALLOWED_HOSTS="$HOST_FQDN"
+export HAALENDAR_BIND_HOST=127.0.0.1 HAALENDAR_PORT=8081 HAALENDAR_PUBLIC_URL="$URL"
 cd backend
 uv run haalendar-db-bootstrap >"$DEV_DIR/bootstrap.log" 2>&1 || { echo "bootstrap failed, see $DEV_DIR/bootstrap.log"; exit 1; }
 uv run alembic upgrade head >"$DEV_DIR/migrate.log" 2>&1 || { echo "migrations failed, see $DEV_DIR/migrate.log"; exit 1; }
@@ -37,12 +38,11 @@ rm -f "$DEV_DIR/sessions"
 start api.log uv run haalendar-api
 start worker.log uv run haalendar-worker
 cd ../frontend
-# Vite blocks unknown Host headers; this environment variable adds our FQDN to its allow list.
-__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS="$HOST_FQDN" VITE_API_TARGET=http://127.0.0.1:8081 \
-  start vite.log pnpm exec vite --host 0.0.0.0 --port 5173 --strictPort
+VITE_API_TARGET=http://127.0.0.1:8081 start vite.log pnpm exec vite --host 127.0.0.1 --port 5173 --strictPort
 
 for _ in $(seq 1 90); do curl -s -o /dev/null "http://127.0.0.1:5173/api/v1/health/live" && break; sleep 1; done
 echo "api:   $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8081/api/v1/health/ready)"
-echo "web:   $(curl -s -o /dev/null -w '%{http_code}' -H "Host: $HOST_FQDN:5173" http://127.0.0.1:5173/)"
+echo "web:   $(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/)"
 echo "setup: $(curl -s http://127.0.0.1:5173/api/v1/setup/status)"
 echo "open:  $URL   (logs: $DEV_DIR)"
+echo "from another computer: ssh -N -L 5173:localhost:5173 $USER@$(hostname -f)   then open $URL there"
