@@ -5,14 +5,16 @@
 //   take as they were; `meta` the sync cursor and bookkeeping.
 // - LOCAL_SCHEMA: when the shape of the local rows changes in a way old rows cannot follow, raising it makes the next
 //   start empty the entity tables and the cursor (a fresh pull rebuilds them) — the outbox and conflicts are kept.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's reminders (D-79) in their own table (Dexie version 2);
+//   LOCAL_SCHEMA 2: earlier clients skipped reminder rows of a pull, so devices pull everything once more.
 import Dexie, { type Table } from "dexie";
 
 import { log } from "@/lib/log";
 
-export const LOCAL_SCHEMA = 1;
+export const LOCAL_SCHEMA = 2;
 
-export type EntityType = "calendar" | "item" | "attachment" | "share" | "settings";
-export type MutableEntity = "calendar" | "item";
+export type EntityType = "calendar" | "item" | "attachment" | "share" | "settings" | "reminder";
+export type MutableEntity = "calendar" | "item" | "reminder";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
 export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
@@ -66,6 +68,7 @@ export class LocalDb extends Dexie {
   attachments!: Table<Row, string>;
   shares!: Table<Row, string>;
   settings!: Table<Row, string>;
+  reminders!: Table<Row, string>;
   outbox!: Table<OutboxEntry, number>;
   conflicts!: Table<ConflictRecord, string>;
   meta!: Table<MetaRow, string>;
@@ -82,15 +85,25 @@ export class LocalDb extends Dexie {
       conflicts: "id, entity_id",
       meta: "key",
     });
+    this.version(2).stores({ reminders: "id, item_id" });
+  }
+
+  /** Every table of server rows (for transactions over all of them). */
+  entityTables(): Table<Row, string>[] {
+    return [this.calendars, this.items, this.attachments, this.shares, this.settings, this.reminders];
   }
 }
 
-export const ENTITY_TABLE: Record<EntityType, "calendars" | "items" | "attachments" | "shares" | "settings"> = {
+export const ENTITY_TABLE: Record<
+  EntityType,
+  "calendars" | "items" | "attachments" | "shares" | "settings" | "reminders"
+> = {
   calendar: "calendars",
   item: "items",
   attachment: "attachments",
   share: "shares",
   settings: "settings",
+  reminder: "reminders",
 };
 
 export function dbName(user: string): string {
@@ -104,14 +117,8 @@ const open = new Map<string, { db: LocalDb; ready: Promise<LocalDb> }>();
 async function prepare(db: LocalDb): Promise<LocalDb> {
   const stored = (await db.meta.get("schema"))?.value;
   if (stored !== LOCAL_SCHEMA) {
-    await db.transaction("rw", [db.calendars, db.items, db.attachments, db.shares, db.settings, db.meta], async () => {
-      await Promise.all([
-        db.calendars.clear(),
-        db.items.clear(),
-        db.attachments.clear(),
-        db.shares.clear(),
-        db.settings.clear(),
-      ]);
+    await db.transaction("rw", [...db.entityTables(), db.meta], async () => {
+      await Promise.all(db.entityTables().map((table) => table.clear()));
       await db.meta.delete("cursor");
       await db.meta.put({ key: "schema", value: LOCAL_SCHEMA });
     });

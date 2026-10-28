@@ -52,7 +52,7 @@ async function removeContainer(db: LocalDb, kind: string, id: string): Promise<v
 
 /** Applies a page of server changes, then lays the waiting local changes over them again. */
 export async function applyServerChanges(db: LocalDb, changes: Change[]): Promise<void> {
-  await db.transaction("rw", [db.calendars, db.items, db.attachments, db.shares, db.settings, db.outbox], async () => {
+  await db.transaction("rw", [...db.entityTables(), db.outbox], async () => {
     for (const change of changes) {
       if (change.op === "tombstone") {
         await removeContainer(db, change.entity_type, change.entity_id);

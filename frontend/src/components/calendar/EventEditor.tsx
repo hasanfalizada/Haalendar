@@ -12,6 +12,9 @@
 // +++===+++ 2026-10-25 — Hasan Alizada — HAAL-080. Save first looks for other active events with the same title (new
 // event, or a changed title; the event itself and a copied series never count) and asks before saving a duplicate
 // (D-69); "Show" closes the editor — the draft stays on this device — and opens that event.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders (FR-CAL-29, D-79): the user's own reminders of the
+// event are part of the form (ReminderPicker); saving writes the removed and new ones in the same undo step as the
+// event. A new event and the copy of an occurrence get the reminders of the form (the copy starts with the series').
 import { useQuery } from "@tanstack/react-query";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,6 +51,7 @@ import {
   withStart,
 } from "@/lib/eventForm";
 import { log } from "@/lib/log";
+import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
 import { batchStep, newStep } from "@/lib/undo";
 import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
@@ -55,6 +59,8 @@ import { uuidv7 } from "@/lib/uuid";
 import { localKeys, localRows, mutate } from "@/sync";
 
 import { type DuplicateMatch, DuplicateWarning } from "./DuplicateWarning";
+import { ReminderPicker } from "./ReminderPicker";
+import { reminderChanges } from "./reminderWrites";
 import { useCalendars } from "./useCalendars";
 
 type Row = Record<string, unknown>;
@@ -77,6 +83,9 @@ function nowIn(timeZone: string): string {
   );
 }
 
+// A stable empty list while the reminders load (a new [] on every render would change the form's baseline each time).
+const NO_ROWS: Record<string, unknown>[] = [];
+
 export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: EventEditorProps) {
   const { t, i18n } = useTranslation();
   const { data: me } = useQuery(meQuery);
@@ -90,12 +99,22 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
     queryFn: () => (user ? localRows(user, "item") : Promise.resolve([])),
     enabled: Boolean(user),
   });
+  const { data: reminderRows = NO_ROWS } = useQuery({
+    queryKey: [...localKeys.table("reminder"), user],
+    queryFn: () => (user ? localRows(user, "reminder") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
   const [duplicates, setDuplicates] = useState<DuplicateMatch[] | null>(null);
   const firstCalendar = typeof calendars[0]?.id === "string" ? calendars[0].id : "";
-  const baseline = useMemo(
-    () => (event ? formFromRow(event, occurrence) : newEventForm(date, settings.default_color, firstCalendar)),
-    [event, occurrence, date, settings.default_color, firstCalendar],
+  const eventKey = typeof event?.id === "string" ? event.id : null;
+  const existingReminders = useMemo(
+    () => (eventKey ? remindersOf(reminderRows, eventKey) : []),
+    [reminderRows, eventKey],
   );
+  const baseline = useMemo(() => {
+    const form = event ? formFromRow(event, occurrence) : newEventForm(date, settings.default_color, firstCalendar);
+    return { ...form, reminders: specsText(existingReminders.map((reminder) => reminder.spec)) };
+  }, [event, occurrence, date, settings.default_color, firstCalendar, existingReminders]);
   const [form, setForm] = useState<EventForm>(baseline);
   // The starting values can change after opening (the calendars arrive from the local database): an untouched form
   // follows them — adjusted while rendering, React's pattern for state derived from changed inputs.
@@ -158,9 +177,12 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
       log.info("calendar_created_for_event");
     }
     const title = form.title.trim() || t("calendar.day.noTitle");
+    const wantedReminders = specsFromText(form.reminders);
+    const reminderLabel = { key: "undo.labels.eventEdited", values: { title } };
     if (copyOf) {
       const newId = uuidv7();
       const values = { title, date: dayLabel(copyOf.date, i18n.language) };
+      const reminders = reminderChanges(user, newId, [], wantedReminders, reminderLabel);
       const result = await runWrite({
         name: "occurrence_edit",
         run: async () => {
@@ -176,12 +198,14 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
               ...eventData(form),
             },
           });
-          return mutate(user, {
+          const excluded = await mutate(user, {
             entity_type: "item",
             entity_id: copyOf.series,
             op: "exclude",
             data: { occurrence_date: copyOf.date, override_event_id: newId },
           });
+          await reminders.run();
+          return excluded;
         },
         success: t("calendar.occurrence.saved", { title }),
         undo: () =>
@@ -192,16 +216,19 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
               { key: "undo.labels.occurrenceDeleted", values },
               { user, id: copyOf.series, date: copyOf.date },
             ),
+            ...reminders.steps,
           ]),
       });
       return result.ok;
     }
     if (!event || !id) {
       const newId = uuidv7();
+      const reminders = reminderChanges(user, newId, [], wantedReminders, reminderLabel);
+      const created = { key: "undo.labels.eventCreated", values: { title } };
       const result = await runWrite({
         name: "event_create",
-        run: () =>
-          mutate(user, {
+        run: async () => {
+          const written = await mutate(user, {
             entity_type: "item",
             entity_id: newId,
             op: "create",
@@ -214,27 +241,40 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
               tzid: me?.time_zone ?? viewerTz,
               ...eventData(form),
             },
-          }),
+          });
+          await reminders.run();
+          return written;
+        },
         success: t("calendar.editor.created", { title }),
-        undo: () =>
-          newStep("event.create", { key: "undo.labels.eventCreated", values: { title } }, { user, id: newId }),
+        undo: () => {
+          const step = newStep("event.create", created, { user, id: newId });
+          return reminders.count > 0 ? batchStep(created, [step, ...reminders.steps]) : step;
+        },
       });
       return result.ok;
     }
     const { data, base, moveTo } = changesOf(event, form);
+    const reminders = reminderChanges(user, id, existingReminders, wantedReminders, reminderLabel);
+    const fields = Object.keys(data).length > 0;
     let ok = true;
-    if (Object.keys(data).length > 0) {
+    if (fields || reminders.count > 0) {
       const version = typeof event.version === "number" ? { base_version: event.version } : {};
+      const edited = { key: "undo.labels.eventEdited", values: { title } };
       const result = await runWrite({
         name: "event_update",
-        run: () => mutate(user, { entity_type: "item", entity_id: id, op: "update", ...version, base, data }),
+        run: async () => {
+          if (fields) await mutate(user, { entity_type: "item", entity_id: id, op: "update", ...version, base, data });
+          await reminders.run();
+          return { data: true };
+        },
         success: t("calendar.editor.saved", { title }),
-        undo: () =>
-          newStep(
-            "event.update",
-            { key: "undo.labels.eventEdited", values: { title } },
-            { user, id, before: base, after: data },
-          ),
+        undo: () => {
+          const steps = [
+            ...(fields ? [newStep("event.update", edited, { user, id, before: base, after: data })] : []),
+            ...reminders.steps,
+          ];
+          return steps.length === 1 && steps[0] ? steps[0] : batchStep(edited, steps);
+        },
       });
       ok = result.ok;
     }
@@ -462,6 +502,14 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
               </Field>
             )}
           </div>
+
+          <ReminderPicker
+            value={specsFromText(form.reminders)}
+            allDay={form.all_day === "true"}
+            onChange={(next) => {
+              set({ reminders: specsText(next) });
+            }}
+          />
 
           <Field
             id="event-location"

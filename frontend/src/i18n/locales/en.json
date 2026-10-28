@@ -713,7 +713,8 @@
     "noConflicts": "No conflicts — every change made on this device has been applied.",
     "entity": {
       "calendar": "Calendar",
-      "item": "Item"
+      "item": "Item",
+      "reminder": "Reminder"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -736,7 +737,10 @@
       "color": "Color",
       "priority": "Priority",
       "container_kind": "Moved to (kind)",
-      "container_id": "Moved to"
+      "container_id": "Moved to",
+      "offset_minutes": "Reminder time",
+      "all_day_time": "Reminder time",
+      "all_day_days_before": "Reminder day"
     },
     "mine": "Mine (this device)",
     "theirs": "Theirs (server)",
@@ -1030,8 +1034,9 @@
     "shareRevoked": "{{by}} stopped sharing the {{container}} “{{name}}” with you.",
     "exportReady": "Your data export is ready to download.",
     "syncError": "Some changes made on this device could not be saved to the server.",
-    "reminder": "Reminder: {{title}}",
-    "generic": "You have a new notification."
+    "reminder": "Reminder: {{title}} — {{when}}",
+    "generic": "You have a new notification.",
+    "reminderLate": "Reminder: {{title}} — {{when}} (sent late)"
   },
   "pwa": {
     "updateReady": "A new version of Haalendar is available.",
@@ -1040,5 +1045,41 @@
   "offlineBanner": {
     "offline": "You are offline. Changes to calendars and items are kept on this device and sync when the connection is back; settings and sharing need a connection.",
     "unreachable": "The server cannot be reached. Changes to calendars and items are kept on this device and sync later; settings and sharing need a connection."
+  },
+  "reminders": {
+    "title": "Reminders",
+    "atStart": "At the start",
+    "minutesBefore_one": "{{count}} minute before",
+    "minutesBefore_other": "{{count}} minutes before",
+    "hoursBefore_one": "{{count}} hour before",
+    "hoursBefore_other": "{{count}} hours before",
+    "daysBefore_one": "{{count}} day before",
+    "daysBefore_other": "{{count}} days before",
+    "weeksBefore_one": "{{count}} week before",
+    "weeksBefore_other": "{{count}} weeks before",
+    "onTheDay": "On the day at {{time}}",
+    "daysBeforeAt_one": "{{count}} day before at {{time}}",
+    "daysBeforeAt_other": "{{count}} days before at {{time}}",
+    "add": "Add reminder",
+    "custom": "Custom…",
+    "remove": "Remove reminder: {{label}}",
+    "limit": "At most {{count}} reminders per event.",
+    "none": "No reminders",
+    "amount": "Amount",
+    "unit": "Unit",
+    "units": {
+      "minutes": "minutes before",
+      "hours": "hours before",
+      "days": "days before",
+      "weeks": "weeks before"
+    },
+    "daysBeforeField": "Days before",
+    "timeField": "Time",
+    "addCustom": "Add",
+    "cancelCustom": "Cancel",
+    "personal": "Reminders are yours only; people you share the calendar with set their own.",
+    "notification": "Reminder: {{title}} — {{when}}",
+    "late": "(late)",
+    "open": "Open"
   }
 }

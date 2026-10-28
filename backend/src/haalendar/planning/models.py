@@ -24,6 +24,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    SmallInteger,
     String,
     Text,
     Time,
@@ -170,3 +171,35 @@ class RecurrenceException(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+
+
+# +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. A user's reminder on an item and when it fires next (D-79).
+class Reminder(Base):
+    __tablename__ = "reminder"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"))
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"))
+    offset_minutes: Mapped[int | None] = mapped_column(Integer)
+    all_day_time: Mapped[time | None] = mapped_column(Time)
+    all_day_days_before: Mapped[int | None] = mapped_column(SmallInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+class ReminderSchedule(Base):
+    __tablename__ = "reminder_schedule"
+
+    reminder_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("reminder.id"), primary_key=True)
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"))
+    needs_check: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    next_fire_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_occurrence: Mapped[date | None] = mapped_column(Date)
+    last_occurrence: Mapped[date | None] = mapped_column(Date)
+    last_fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

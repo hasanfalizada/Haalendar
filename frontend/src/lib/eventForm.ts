@@ -7,6 +7,8 @@
 // - checks mirror the server (end ≥ start, title ≤ 150, location ≤ 500); a series lasts one day;
 // - changes of an existing event are sent as changed fields with the values they started from (field-level merge),
 //   a new calendar as a move.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. `reminders`: the user's reminders as canonical text (lib/reminders
+//   specsText), so they are part of the draft and of "unsaved changes" like every other field; not an event field.
 import { addDays } from "@/lib/datetime";
 import { effectiveStart, exceptionsOf } from "@/lib/dayView";
 
@@ -37,6 +39,7 @@ export interface EventForm extends Record<string, string> {
   priority: string;
   calendar_id: string;
   repeat: Repeat;
+  reminders: string;
 }
 
 export type FormErrors = Partial<Record<"title" | "end" | "location", "tooLong" | "endBeforeStart">>;
@@ -92,6 +95,7 @@ export function newEventForm(date: string, color: string, calendarId: string): E
     priority: "medium",
     calendar_id: calendarId,
     repeat: "none",
+    reminders: "[]",
   };
 }
 
@@ -117,6 +121,7 @@ export function formFromRow(row: Row, occurrence?: string): EventForm {
     priority: text(row.priority) || "medium",
     calendar_id: text(row.container_id),
     repeat: occurrence ? "none" : repeatOf(row.rrule),
+    reminders: "[]",
   };
 }
 

@@ -36,6 +36,8 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
     "item": ("item", "id", ("legacy_id",)),
     "attachment": ("attachment", "id", ("storage_key", "thumbnail_key")),
     "settings": ("user_settings", "owner_id", ()),
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's own reminders (owner-only row-level security).
+    "reminder": ("reminder", "id", ()),
 }
 
 
@@ -57,6 +59,10 @@ def _data_expr(alias: str, hidden: tuple[str, ...], entity: str = "") -> str:
     expression = f"to_jsonb({alias}){drops}"
     if entity == "item":
         expression = f"({expression}) || {EVENT_FIELDS_SQL.format(alias=alias)}"
+    if entity == "reminder":
+        expression = (
+            f"({expression}) || jsonb_build_object('all_day_time', to_char({alias}.all_day_time, 'HH24:MI'))"
+        )
     return expression
 
 

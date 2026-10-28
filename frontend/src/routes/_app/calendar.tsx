@@ -11,6 +11,8 @@ import { todayIn, useDisplayTimeZone } from "@/lib/datetime";
 interface CalendarSearch {
   date?: string;
   view?: CalendarViewKind;
+  // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. An event whose card opens (from a reminder notification).
+  event?: string;
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,9 +25,11 @@ function isRealDate(value: string): boolean {
 }
 
 function CalendarPage() {
-  const { date, view } = Route.useSearch();
+  const { date, view, event } = Route.useSearch();
   const viewerTz = useDisplayTimeZone();
-  return <DayView date={date ?? todayIn(viewerTz)} view={view ?? storedView()} />;
+  return (
+    <DayView date={date ?? todayIn(viewerTz)} view={view ?? storedView()} {...(event ? { focusEvent: event } : {})} />
+  );
 }
 
 export const Route = createFileRoute("/_app/calendar")({
@@ -33,6 +37,7 @@ export const Route = createFileRoute("/_app/calendar")({
   validateSearch: (search: Record<string, unknown>): CalendarSearch => ({
     date: typeof search.date === "string" && isRealDate(search.date) ? search.date : undefined,
     view: asView(search.view),
+    event: typeof search.event === "string" && /^[0-9a-f-]{36}$/i.test(search.event) ? search.event : undefined,
   }),
   component: CalendarPage,
 });

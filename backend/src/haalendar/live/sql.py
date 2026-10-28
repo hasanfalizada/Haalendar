@@ -22,6 +22,9 @@ NOTIFIED_TABLES: tuple[str, ...] = (
     "user_settings",
     "notification",
 )
+# +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Tables joining later (migration 0015 and its builders stay frozen):
+# a reminder concerns its owner only.
+NOTIFIED_TABLES_LATER: tuple[str, ...] = ("reminder",)
 
 NOTIFY_FUNCTION = f"""
 CREATE OR REPLACE FUNCTION haalendar_sync_notify() RETURNS trigger
@@ -44,6 +47,13 @@ BEGIN
 END
 $$
 """
+
+
+# +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (migration 0017): reminders are told to their owner.
+NOTIFY_FUNCTION_0017 = NOTIFY_FUNCTION.replace(
+    "    ELSE RETURN NULL;",
+    "    WHEN 'reminder' THEN message := jsonb_build_object('u', jsonb_build_array(NEW.owner_id));\n    ELSE RETURN NULL;",
+)
 
 
 def notify_trigger(table: str) -> str:

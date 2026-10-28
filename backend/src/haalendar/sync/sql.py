@@ -9,7 +9,11 @@ Builders used by an applied migration are frozen.
 
 from __future__ import annotations
 
-SYNCED_TABLES: tuple[str, ...] = ("calendar", "share", "item", "attachment", "user_settings")
+# +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The tables of migration 0014 stay frozen (that migration numbers them
+# and builds its high-water function from them); a table joining later is added to SYNCED_TABLES and its migration
+# re-creates the function with high_water_function(SYNCED_TABLES).
+SYNCED_TABLES_0014: tuple[str, ...] = ("calendar", "share", "item", "attachment", "user_settings")
+SYNCED_TABLES: tuple[str, ...] = (*SYNCED_TABLES_0014, "reminder")
 
 SYNC_STAMP_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_sync_stamp() RETURNS trigger
@@ -36,9 +40,13 @@ def sync_stamp_trigger(table: str) -> str:
 # The highest committed number over all synced tables, whatever the user may read (a number only, no data). Called in
 # the pull statement (STABLE: same snapshot), it moves a cursor past rows the user cannot see — otherwise a user who
 # sees nothing keeps cursor 0 and later receives everything twice when a container is shared with them.
-SYNC_HIGH_WATER_FUNCTION = (
-    "CREATE OR REPLACE FUNCTION haalendar_sync_high_water() RETURNS bigint "  # noqa: S608 — constant table names
-    "LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$ SELECT GREATEST("
-    + ", ".join(f"(SELECT coalesce(max(sync_seq), 0) FROM {table})" for table in SYNCED_TABLES)  # noqa: S608
-    + ") $$"
-)
+def high_water_function(tables: tuple[str, ...]) -> str:
+    return (
+        "CREATE OR REPLACE FUNCTION haalendar_sync_high_water() RETURNS bigint "  # noqa: S608 — constant table names
+        "LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$ SELECT GREATEST("
+        + ", ".join(f"(SELECT coalesce(max(sync_seq), 0) FROM {table})" for table in tables)  # noqa: S608
+        + ") $$"
+    )
+
+
+SYNC_HIGH_WATER_FUNCTION = high_water_function(SYNCED_TABLES_0014)

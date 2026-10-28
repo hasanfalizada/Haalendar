@@ -31,4 +31,4 @@ def test_ready_reports_unreachable_database_as_503(client: TestClient) -> None:
 
 
 def test_migration_head_is_latest() -> None:
-    assert migration_head() == "0016"
+    assert migration_head() == "0017"  # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091: reminders

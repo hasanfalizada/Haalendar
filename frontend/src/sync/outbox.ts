@@ -40,7 +40,7 @@ function merged(previous: OutboxEntry, next: NewMutation): OutboxEntry | "cancel
 
 /** Records a change of the user and applies it locally; returns the outbox entry. */
 export async function enqueue(db: LocalDb, change: NewMutation, offline: boolean): Promise<OutboxEntry> {
-  return db.transaction("rw", [db.outbox, db.calendars, db.items, db.attachments, db.shares, db.settings], async () => {
+  return db.transaction("rw", [db.outbox, ...db.entityTables()], async () => {
     const pending = await db.outbox.where("entity_id").equals(change.entity_id).sortBy("seq");
     const last = pending.at(-1);
     const entry: OutboxEntry = {

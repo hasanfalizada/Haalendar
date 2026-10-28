@@ -221,6 +221,8 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | item_label | item_id, label_id | uuid FK | PK pair among active rows; created_at, created_by, deleted_at |
 
 ### 5.12 `reminder`
++++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Implemented in migration 0017 (D-79): the recipient column is `owner_id` (owner-only row-level security like the other personal tables); exactly one form (offset_minutes, or all_day_time with all_day_days_before); `next_fire_at` moved to the service table `reminder_schedule` (reminder_id, owner_id, needs_check, next_fire_at, next_occurrence, last_occurrence, last_fired_at), so the worker's bookkeeping never changes the synced, audited reminder.
+
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid PK | |

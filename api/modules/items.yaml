@@ -426,13 +426,15 @@ components:
             content_hash: { type: string, description: 'BLAKE3, b3:<hex>' }
             url: { type: string, format: uri-reference }
             thumbnail_url: { type: string, format: uri-reference }
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (D-79). Exactly one form; both work for timed and all-day events.
     ReminderInput:
       type: object
+      description: 'Exactly one form: offset_minutes, or all_day_time with all_day_days_before. Personal: the owner''s own, also on shared items. Synced as entity `reminder` (sync.yaml).'
       properties:
         id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        offset_minutes: { type: integer, minimum: 0, maximum: 40320, description: Before start/due (timed items) }
+        offset_minutes: { type: integer, minimum: 0, maximum: 40320, description: 'Before the start: a timed event''s wall-clock start in its zone, an all-day event''s 00:00 in the owner''s zone' }
         all_day_time: { $ref: '../components/common.yaml#/components/schemas/LocalTime' }
-        all_day_days_before: { type: integer, minimum: 0, maximum: 28 }
+        all_day_days_before: { type: integer, minimum: 0, maximum: 28, description: 'Days before the occurrence; fires at all_day_time in the owner''s zone' }
     Reminder:
       allOf:
         - $ref: '../components/common.yaml#/components/schemas/Meta'

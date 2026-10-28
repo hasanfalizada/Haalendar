@@ -59,6 +59,17 @@ class OccurrenceData(ApiModel):
     override_event_id: uuid.UUID | None = None
 
 
+# +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. A reminder (D-79): its event when created, then one of two forms.
+class ReminderData(ApiModel):
+    offset_minutes: int | None = Field(default=None, ge=0, le=40320)
+    all_day_time: str | None = Field(default=None, max_length=8)
+    all_day_days_before: int | None = Field(default=None, ge=0, le=28)
+
+
+class ReminderCreateData(ReminderData):
+    item_id: uuid.UUID
+
+
 class MoveData(ApiModel):
     container_kind: Literal["calendar", "board", "note"]
     container_id: uuid.UUID
@@ -66,7 +77,7 @@ class MoveData(ApiModel):
 
 class MutationIn(ApiModel):
     mutation_id: uuid.UUID
-    entity_type: Literal["calendar", "item"]
+    entity_type: Literal["calendar", "item", "reminder"]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]
     base_version: int | None = None

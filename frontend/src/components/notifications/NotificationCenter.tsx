@@ -5,18 +5,22 @@
 // Sharing section of Settings, a ready export → Your data). Texts are built here from kind + payload and always
 // rendered as plain text.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. 44 px rail target on touch devices.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. A reminder (D-79) reads "Reminder: Dentist — Today, 11:00–12:00" in
+// the reader's zone (marked when it was sent late) and opens its day in the calendar with the event's card. A notification
+// that leads elsewhere does not send the focus back to the bell (it would close the card it opened).
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Bell, BellRing, Download, Share2, UserMinus, type LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useInstantFormat } from "@/lib/datetime";
+import { useDisplayTimeZone, useInstantFormat } from "@/lib/datetime";
 import { log } from "@/lib/log";
 import { cn } from "@/lib/utils";
 
+import { reminderTarget, useReminderText } from "./reminderText";
 import { badgeText, type CenterItem, useNotificationCenter } from "./useNotificationCenter";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -29,6 +33,7 @@ const ICONS: Record<string, LucideIcon> = {
 
 function useText() {
   const { t } = useTranslation();
+  const reminderText = useReminderText();
   return (item: CenterItem): string => {
     const p = item.payload as Record<string, unknown>;
     const text = (key: string) => (typeof p[key] === "string" ? p[key] : "");
@@ -54,7 +59,7 @@ function useText() {
         if (text("reason") === "deleted_changed") return t("sync.deletedChanged");
         return t("notifications.syncError");
       case "reminder":
-        return t("notifications.reminder", { title: text("title") || t("notifications.unnamed") });
+        return reminderText(item.payload);
       default:
         return t("notifications.generic");
     }
@@ -67,6 +72,7 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
   const format = useInstantFormat();
   const center = useNotificationCenter();
   const describe = useText();
+  const viewerTz = useDisplayTimeZone();
   const now = new Date();
 
   function open(item: CenterItem) {
@@ -78,6 +84,14 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
       onNavigate();
       void navigate({ to: "/trash" });
       return;
+    }
+    if (item.kind === "reminder") {
+      const target = reminderTarget(item.payload, viewerTz);
+      if (target) {
+        onNavigate();
+        void navigate({ to: "/calendar", search: target });
+        return;
+      }
     }
     const hash = item.kind.startsWith("share_")
       ? "sharing"
@@ -169,6 +183,7 @@ function Badge({ count, className }: { count: number; className?: string }) {
 export function NotificationBell() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const leaving = useRef(false);
   const { unread } = useNotificationCenter();
   const label = unread > 0 ? t("notifications.bellUnread", { count: unread }) : t("notifications.title");
   return (
@@ -181,9 +196,17 @@ export function NotificationBell() {
         <Bell className="size-5" aria-hidden />
         <Badge count={unread} className="absolute -top-0.5 -right-0.5" />
       </PopoverTrigger>
-      <PopoverContent side="right" align="end">
+      <PopoverContent
+        side="right"
+        align="end"
+        onCloseAutoFocus={(event) => {
+          if (leaving.current) event.preventDefault();
+          leaving.current = false;
+        }}
+      >
         <NotificationPanel
           onNavigate={() => {
+            leaving.current = true;
             setOpen(false);
           }}
         />
@@ -212,12 +235,22 @@ export function NotificationsEntry({ onOpen }: { onOpen: () => void }) {
 
 export function NotificationsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation();
+  const leaving = useRef(false);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title={t("notifications.title")} closeLabel={t("common.close")} className="md:max-w-md">
+      <DialogContent
+        title={t("notifications.title")}
+        closeLabel={t("common.close")}
+        className="md:max-w-md"
+        onCloseAutoFocus={(event: Event) => {
+          if (leaving.current) event.preventDefault();
+          leaving.current = false;
+        }}
+      >
         <NotificationPanel
           showTitle={false}
           onNavigate={() => {
+            leaving.current = true;
             onOpenChange(false);
           }}
         />

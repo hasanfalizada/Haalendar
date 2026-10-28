@@ -95,7 +95,7 @@ components:
       type: object
       required: [entity_type, entity_id, op, version]
       properties:
-        entity_type: { type: string, enum: [calendar, share, item, attachment, settings, board, note], description: 'Resource; for a tombstone the container kind' }
+        entity_type: { type: string, enum: [calendar, share, item, attachment, settings, reminder, board, note], description: 'Resource; for a tombstone the container kind. reminder: the user''s own reminders (HAAL-091, D-79)' }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         op: { type: string, enum: [upsert, delete, tombstone], description: 'upsert carries the full resource (deleted_at included); tombstone = a container no longer readable (share revoked or left): remove it and everything in it' }
         version: { type: integer }
@@ -105,7 +105,7 @@ components:
       required: [mutation_id, entity_type, entity_id, op]
       properties:
         mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        entity_type: { type: string, enum: [calendar, item] }
+        entity_type: { type: string, enum: [calendar, item, reminder], description: 'reminder (HAAL-091): create with `{item_id, offset_minutes}` or `{item_id, all_day_time, all_day_days_before}`; update the form fields; delete / restore (soft)' }
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include one occurrence of a series (D-67).
         op: { type: string, enum: [create, update, delete, restore, move, exclude, include], description: 'exclude / include (item, a repeating event): data `{occurrence_date, override_event_id?}` — the date leaves the series (or is replaced by that one-off event in the same calendar) or comes back; the series version rises and its pulled data lists the excluded dates in `exceptions`' }

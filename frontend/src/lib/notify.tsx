@@ -5,11 +5,14 @@
 // (api/write.ts); these functions are its single outlet and the outbox's. The toast region is a polite live region;
 // a failure is wrapped in role="alert" so screen readers announce it at once.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. `update`: a message that stays until acted on (new app version).
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. `reminder`: a reminder that fired while the app is open (D-79), longer
+// on screen with "Open".
 import { toast } from "sonner";
 
 import i18n from "@/i18n";
 
 export const SUCCESS_MS = 4_000;
+export const REMINDER_MS = 10_000;
 
 export interface NotifyAction {
   label: string;
@@ -32,6 +35,11 @@ function button(action: NotifyAction | undefined) {
 export const notify = {
   success(text: string, options: { action?: NotifyAction; hint?: string } = {}): string | number {
     return toast.success(text, { duration: SUCCESS_MS, action: button(options.action), description: options.hint });
+  },
+
+  /** A reminder that fired while the app is open. */
+  reminder(text: string, action: NotifyAction): string | number {
+    return toast.info(text, { duration: REMINDER_MS, action: button(action), closeButton: true });
   },
 
   /** A neutral message, e.g. "Nothing to undo". */

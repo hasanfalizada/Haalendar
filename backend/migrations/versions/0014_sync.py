@@ -27,7 +27,7 @@ from haalendar.security.rls import self_policies
 from haalendar.sync.sql import (
     SYNC_HIGH_WATER_FUNCTION,
     SYNC_STAMP_FUNCTION,
-    SYNCED_TABLES,
+    SYNCED_TABLES_0014,
     sync_stamp_trigger,
 )
 
@@ -43,13 +43,13 @@ def upgrade() -> None:
     op.execute("CREATE SEQUENCE sync_seq_global AS bigint")
     op.execute(AUDIT_FUNCTION)  # NOISE_COLUMNS now include sync_xid
     op.execute(SYNC_STAMP_FUNCTION)
-    for table in SYNCED_TABLES:
+    for table in SYNCED_TABLES_0014:
         op.execute(f"ALTER TABLE {table} ADD COLUMN sync_xid xid8")
         op.execute(sync_stamp_trigger(table))
         op.execute(f"CREATE INDEX ix_{table}_sync_seq ON {table} (sync_seq)")
 
     # Number the existing rows without firing the audit and record-time triggers (a renumbering is no change).
-    for table in SYNCED_TABLES:
+    for table in SYNCED_TABLES_0014:
         op.execute(f"ALTER TABLE {table} DISABLE TRIGGER USER")
         op.execute(
             f"UPDATE {table} SET sync_seq = nextval('sync_seq_global'), sync_xid = pg_current_xact_id()"  # noqa: S608 — constant table names

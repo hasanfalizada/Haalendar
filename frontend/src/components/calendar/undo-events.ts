@@ -72,3 +72,22 @@ registerUndo<OccurrenceExcluded>("event.include", {
     run: () => mutate(user, { ...target(id), op: "include", data: { occurrence_date: date } }),
   }),
 });
+
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders set or removed in the editor (D-79): a new one is undone by
+// a soft delete and redone by a restore; a removed one the other way round.
+export interface ReminderChanged {
+  user: string;
+  id: string;
+}
+
+const reminder = (id: string) => ({ entity_type: "reminder" as const, entity_id: id });
+
+registerUndo<ReminderChanged>("reminder.create", {
+  undo: ({ user, id }) => ({ run: () => mutate(user, { ...reminder(id), op: "delete" }) }),
+  redo: ({ user, id }) => ({ run: () => mutate(user, { ...reminder(id), op: "restore" }) }),
+});
+
+registerUndo<ReminderChanged>("reminder.delete", {
+  undo: ({ user, id }) => ({ run: () => mutate(user, { ...reminder(id), op: "restore" }) }),
+  redo: ({ user, id }) => ({ run: () => mutate(user, { ...reminder(id), op: "delete" }) }),
+});

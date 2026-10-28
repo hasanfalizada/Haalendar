@@ -12,6 +12,7 @@
   restore). Creating items arrives with their modules.
 - +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Items of kind `event` can be created, and their event fields
   changed (planning.events checks the whole event; time fields conflict as a group).
+- +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders: create, update, delete, restore (planning.reminders).
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import occurrences
+from haalendar.planning import occurrences, reminders
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
@@ -38,6 +39,8 @@ from haalendar.sync.schemas import (
     MoveData,
     MutationIn,
     OccurrenceData,
+    ReminderCreateData,
+    ReminderData,
 )
 
 log = get_logger(__name__)
@@ -62,7 +65,12 @@ def _unsupported(mutation: MutationIn) -> ProblemError:
 
 
 def _fields(
-    model: type[CalendarData] | type[ItemData] | type[ItemCreateData], raw: dict[str, Any] | None
+    model: type[CalendarData]
+    | type[ItemData]
+    | type[ItemCreateData]
+    | type[ReminderData]
+    | type[ReminderCreateData],
+    raw: dict[str, Any] | None,
 ) -> dict[str, Any]:
     try:
         return model.model_validate(raw or {}).model_dump(exclude_unset=True)
@@ -89,6 +97,20 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await planning.delete_calendar(db, user_id, m.entity_id, m.base_version)
         if m.op == "restore":
             return await planning.restore_calendar(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    if m.entity_type == "reminder":
+        if m.op == "create":
+            return await reminders.create_reminder(
+                db, user_id, m.entity_id, _fields(ReminderCreateData, m.data)
+            )
+        if m.op == "update":
+            return await reminders.update_reminder(
+                db, user_id, m.entity_id, m.base or {}, _fields(ReminderData, m.data), current
+            )
+        if m.op == "delete":
+            return await reminders.delete_reminder(db, user_id, m.entity_id)
+        if m.op == "restore":
+            return await reminders.restore_reminder(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.op == "create":
         return await planning.create_item(db, user_id, m.entity_id, _fields(ItemCreateData, m.data))

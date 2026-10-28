@@ -7,8 +7,9 @@
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. Delete (button and the Delete key) next to Edit; the page asks first.
 // +++===+++ 2026-10-25 — Hasan Alizada — HAAL-081. The colour picker, saving at once (EventColor).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084. "Move to next day" between Edit and Delete (FR-CAL-20).
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's own reminders of the event, under the calendar line.
 import { useQuery } from "@tanstack/react-query";
-import { CalendarArrowUp, CalendarDays, Eye, MapPin, Paperclip, Pencil, Repeat, Trash2 } from "lucide-react";
+import { Bell, CalendarArrowUp, CalendarDays, Eye, MapPin, Paperclip, Pencil, Repeat, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +24,7 @@ import { useDisplayTimeZone } from "@/lib/datetime";
 import { eventRange } from "@/lib/dayView";
 import { repeatOf } from "@/lib/eventForm";
 import { toPlainText } from "@/lib/markdown-text";
+import { reminderLabel, remindersOf } from "@/lib/reminders";
 import { useShortcut } from "@/lib/shortcuts";
 import { localKeys, localRows } from "@/sync";
 
@@ -81,6 +83,12 @@ export function EventDetails({
   const [preview, setPreview] = useState<number | null>(null);
   const id = text(row.id);
   const attachments = useAttachments(user, id);
+  const { data: reminderRows = [] } = useQuery({
+    queryKey: [...localKeys.table("reminder"), user],
+    queryFn: () => localRows(user, "reminder"),
+    enabled: Boolean(user),
+  });
+  const reminders = remindersOf(reminderRows, id);
   const body = text(row.body);
   const plain = toPlainText(body, { singleLine: true });
   const repeat = repeatOf(row.rrule);
@@ -139,6 +147,12 @@ export function EventDetails({
         <p className="flex items-center gap-1.5 text-muted">
           <CalendarDays className="size-3.5 shrink-0" aria-label={t("calendar.editor.calendar")} />
           {calendarName}
+        </p>
+      ) : null}
+      {reminders.length > 0 ? (
+        <p className="flex items-start gap-1.5">
+          <Bell className="mt-0.5 size-3.5 shrink-0 text-muted" aria-label={t("reminders.title")} />
+          {reminders.map((reminder) => reminderLabel(reminder.spec, timeFormat)).join(", ")}
         </p>
       ) : null}
       <EventColor user={user} row={row} writable={writable} />

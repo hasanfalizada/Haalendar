@@ -39,6 +39,8 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Event details and recurrence exceptions.
     "event": ("ref", ()),
     "recurrence_exception": ("ref", ()),
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders: personal content of their owner, no container.
+    "reminder": ("none", ()),
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.
@@ -65,6 +67,9 @@ AUDIT_EXEMPT_TABLES = frozenset(
         # +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. Bookkeeping of applied offline mutations (service data); the
         # changes they make are audited on their own rows.
         "sync_mutation",
+        # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. When reminders fire next (worker bookkeeping, D-79); the
+        # reminders themselves are audited.
+        "reminder_schedule",
     }
 )
 # +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. sync_xid (writing transaction) is bookkeeping too; the function is

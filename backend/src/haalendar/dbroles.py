@@ -33,6 +33,8 @@ TABLE_PRIVILEGES: dict[str, tuple[str, ...]] = {
     # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (D-48). Service data: the worker removes its own registration
     # (haalendar.security.no_delete.SERVICE_TABLES); user content never gets DELETE.
     "procrastinate_workers": ("SELECT", "INSERT", "UPDATE", "DELETE"),
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Periodic task bookkeeping (service data, see SERVICE_TABLES).
+    "procrastinate_periodic_defers": ("SELECT", "INSERT", "UPDATE", "DELETE"),
 }
 ROLE_NAME = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 

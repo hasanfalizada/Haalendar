@@ -5,12 +5,15 @@
 application role, so row-level security applies to everything they read. Today: building data export archives. The
 queue keeps finished jobs (no deletion); only the worker registry is service data that the library cleans up itself
 (haalendar.security.no_delete.SERVICE_TABLES).
++++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders (D-79): a periodic task every minute checks and fires due
+reminders (haalendar.planning.reminders.check_reminders) on its own queue, one run at a time.
 """
 
 from __future__ import annotations
 
 import asyncio
 import uuid
+from typing import Any
 
 from procrastinate import App, PsycopgConnector
 from sqlalchemy.engine import make_url
@@ -22,6 +25,9 @@ log = get_logger(__name__)
 
 EXPORT_QUEUE = "exports"
 BUILD_EXPORT = "build_export"
+REMINDER_QUEUE = "reminders"
+CHECK_REMINDERS = "check_reminders"
+WORKER_QUEUES = [EXPORT_QUEUE, REMINDER_QUEUE]
 
 
 def connector_for(settings: Settings, pool_size: int = 4) -> PsycopgConnector:
@@ -41,6 +47,18 @@ def make_job_app(settings: Settings, pool_size: int = 4) -> App:
         from haalendar.exports.service import build  # the export code is loaded only where jobs run
 
         await build(settings, uuid.UUID(export_id), uuid.UUID(owner_id))
+
+    sessions: list[Any] = []  # one session factory per process, made on the first run
+
+    @app.periodic(cron="* * * * *")
+    @app.task(name=CHECK_REMINDERS, queue=REMINDER_QUEUE, queueing_lock=CHECK_REMINDERS)
+    async def check_reminders(timestamp: int) -> None:
+        from haalendar.db import create_engine, create_session_factory
+        from haalendar.planning.reminders import check_reminders as run
+
+        if not sessions:
+            sessions.append(create_session_factory(create_engine(settings)))
+        await run(sessions[0])
 
     return app
 
@@ -82,8 +100,8 @@ def run_worker() -> None:
 
     async def main() -> None:
         async with app.open_async():
-            log.info("worker_started", queues=[EXPORT_QUEUE])
-            await app.run_worker_async(queues=[EXPORT_QUEUE], install_signal_handlers=True)
+            log.info("worker_started", queues=WORKER_QUEUES)
+            await app.run_worker_async(queues=WORKER_QUEUES, install_signal_handlers=True)
         log.info("worker_stopped")
 
     asyncio.run(main())

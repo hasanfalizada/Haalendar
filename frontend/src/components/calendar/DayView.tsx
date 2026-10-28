@@ -310,7 +310,16 @@ function DayList({
   );
 }
 
-export function DayView({ date, view = "day" }: { date: string; view?: CalendarViewKind }) {
+export function DayView({
+  date,
+  view = "day",
+  focusEvent,
+}: {
+  date: string;
+  view?: CalendarViewKind;
+  /** HAAL-091: an event whose details card opens once it is among the date's events (then leaves the URL). */
+  focusEvent?: string;
+}) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const router = useRouter();
@@ -536,6 +545,20 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
       />
     );
   };
+  // The card of `focusEvent` opens once its entry is known (state adjusted while rendering, as for the editor's form).
+  const [focused, setFocused] = useState<string | null>(null);
+  if (focusEvent && focused !== focusEvent) {
+    const entry = entries.find((candidate) => candidate.id === focusEvent);
+    if (entry) {
+      setFocused(focusEvent);
+      setDetails(entry);
+    }
+  }
+  useEffect(() => {
+    if (focusEvent && focused === focusEvent) {
+      void navigate({ to: "/calendar", search: { date, view }, replace: true });
+    }
+  }, [focusEvent, focused, navigate, date, view]);
   useEffect(() => {
     const id = refocus.current;
     const asking = deleting !== null || choice !== null;

@@ -28,6 +28,7 @@ import {
   NotificationsDialog,
   NotificationsEntry,
 } from "@/components/notifications/NotificationCenter";
+import { useReminderToasts } from "@/components/notifications/useReminderToasts";
 import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { startSync } from "@/sync";
@@ -106,6 +107,8 @@ export function AppShell() {
     if (userId) startSync(userId, queryClient);
   }, [userId, queryClient]);
   useUndoShortcuts(me?.id ?? null);
+  // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders that fire while the app is open.
+  useReminderToasts(me?.id ?? null);
   const closeDrawer = () => {
     setDrawerOpen(false);
   };

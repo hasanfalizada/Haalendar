@@ -437,6 +437,8 @@ components:
       # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048 (D-52). export_ready added; payload holds display data only —
       # share_*: share_id, container_kind, container_id, container_name, by_name, permission; export_ready: export_id,
       # size_bytes, expires_at. The client builds the text from kind + payload.
+      # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (D-79). reminder: reminder_id, item_id, title, location, all_day,
+      # occurrence_date, end_date, start_time, end_time (HH:MM in tzid), length_minutes, tzid, fire_at, late.
       type: object
       required: [id, kind, created_at, payload]
       properties:

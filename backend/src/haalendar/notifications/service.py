@@ -70,10 +70,15 @@ async def mark_read(db: AsyncSession, owner_id: uuid.UUID, *, ids: list[uuid.UUI
 
 
 async def notify_self(
-    db: AsyncSession, owner_id: uuid.UUID, kind: str, payload: dict[str, Any]
+    db: AsyncSession,
+    owner_id: uuid.UUID,
+    kind: str,
+    payload: dict[str, Any],
+    item_id: uuid.UUID | None = None,
 ) -> Notification:
-    """A notification for the acting user (e.g. their export is ready); others' come from database triggers."""
-    row = Notification(owner_id=owner_id, kind=kind, payload=payload)
+    """A notification for the acting user (e.g. their export is ready, HAAL-091: their reminder fired, with its item);
+    others' come from database triggers."""
+    row = Notification(owner_id=owner_id, kind=kind, payload=payload, item_id=item_id)
     db.add(row)
     await db.flush()
     log.info("notification_created", user_id=str(owner_id), kind=kind)

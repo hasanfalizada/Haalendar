@@ -18,6 +18,8 @@ from __future__ import annotations
 # Service tables whose rows may be physically removed (never user content or its metadata), with the reason.
 SERVICE_TABLES: dict[str, str] = {
     "procrastinate_workers": "job queue worker registry: removed by Procrastinate on shutdown or missed heartbeats",
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Periodic tasks (the reminder check every minute) run on it.
+    "procrastinate_periodic_defers": "periodic task bookkeeping: Procrastinate keeps only the latest run per task",
 }
 EXEMPT_TABLES = frozenset({"alembic_version", *SERVICE_TABLES})
 
