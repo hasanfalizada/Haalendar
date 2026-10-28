@@ -1,8 +1,9 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-087. The calendar's views (D-75) and the one last chosen on this device.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-088. Month (D-76).
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. Agenda (D-77).
 const VIEW_KEY = "haalendar.calendar.view";
 
-export const CALENDAR_VIEWS = ["day", "week", "month"] as const;
+export const CALENDAR_VIEWS = ["day", "week", "month", "agenda"] as const;
 export type CalendarViewKind = (typeof CALENDAR_VIEWS)[number];
 
 /** `value` when it names a view. */

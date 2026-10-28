@@ -67,7 +67,9 @@
       "todayMark": "today",
       "hasEvents": "has events",
       "previousWeek": "Previous week",
-      "nextWeek": "Next week"
+      "nextWeek": "Next week",
+      "previousRange": "Previous days",
+      "nextRange": "Next days"
     },
     "header": {
       "today": "Today",
@@ -173,7 +175,9 @@
       "dayKey": "Day view",
       "weekKey": "Week view",
       "month": "Month",
-      "monthKey": "Month view"
+      "monthKey": "Month view",
+      "agenda": "Agenda",
+      "agendaKey": "Agenda view"
     },
     "week": {
       "allDay": "all day",
@@ -187,6 +191,12 @@
       "more_other": "+{{count}} more",
       "moreOn_one": "{{count}} more on {{date}}",
       "moreOn_other": "{{count}} more on {{date}}"
+    },
+    "agenda": {
+      "tomorrow": "Tomorrow",
+      "emptyTitle_one": "Nothing on this day",
+      "emptyTitle_other": "Nothing in these {{count}} days",
+      "emptyBody": "Events of the range appear here. Create one with New event, or move on with the arrows."
     }
   },
   "pages": {

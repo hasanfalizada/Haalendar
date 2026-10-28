@@ -69,8 +69,8 @@ export function layoutDay(entries: readonly DayEntry[]): TimedBlock[] {
   return blocks;
 }
 
-/** "October 26 – November 1, 2026" in the interface language. */
-export function weekTitle(days: readonly string[], locale: string): string {
+/** "October 26 – November 1, 2026": the first to the last of `days` in the interface language (also the agenda). */
+export function rangeTitle(days: readonly string[], locale: string): string {
   const [first = "", last = first] = [days[0], days[days.length - 1]];
   return new Intl.DateTimeFormat(locale, {
     month: "long",

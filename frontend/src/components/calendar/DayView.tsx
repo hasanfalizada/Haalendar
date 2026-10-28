@@ -32,20 +32,12 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-088. Month view (FR-CAL-26, D-76): key M; ‹ › and ← / → move by a month
 // keeping the day of month (the last day when the month is shorter); title "October 2026"; no Day Number; the content
 // is the month grid (MonthView), whose days open the day view.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. Agenda (FR-CAL-27, D-77): key A; the range is the selected date and
+// the user's agenda days after it, ‹ › and ← / → move by that range; the title is the range; the content is the
+// agenda list (AgendaView), whose day headings open the day view.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import {
-  CalendarDays,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  MapPin,
-  PanelLeft,
-  Paperclip,
-  Plus,
-  Repeat,
-} from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -59,25 +51,29 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
-import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
+import { type DayEntry, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
 import { notify } from "@/lib/notify";
 import { itemColorClasses } from "@/lib/palette";
 import { useShortcut } from "@/lib/shortcuts";
 import { newStep } from "@/lib/undo";
+import { useAttachmentCounts, useRowFlags } from "@/lib/eventRow";
 import { useListNavigation } from "@/lib/useListNavigation";
 import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { type Selection, useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
+import { agendaDays } from "@/lib/agendaView";
 import { addMonths, monthOf, sameDayIn } from "@/lib/monthGrid";
 import { monthTitle, monthWeeks } from "@/lib/monthView";
-import { weekDays, weekTitle } from "@/lib/weekView";
+import { weekDays, rangeTitle } from "@/lib/weekView";
 import { localKeys, localRows, mutate } from "@/sync";
 
 import { DayNumberLabel, IsoWeekLabel, LiveClock, WeekAbBadge } from "./HeaderInfo";
+import { AgendaList } from "./AgendaView";
 import { MonthGrid } from "./MonthView";
 import { WeekGrid } from "./WeekView";
 import { EventDetails } from "./EventDetails";
+import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
 import { moveToNextDay } from "./moveNextDay";
@@ -104,7 +100,7 @@ function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (vie
             onChange(option);
           }}
           className={cn(
-            "h-11 border-r border-line px-3 text-[13px] last:border-r-0 pointer-fine:md:h-8",
+            "h-11 border-r border-line px-3 text-[13px] last:border-r-0 md:px-2.5 pointer-fine:md:h-8",
             option === view ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
           )}
         >
@@ -131,20 +127,6 @@ function storeSidebarOpen(open: boolean): void {
   }
 }
 
-function When({ entry }: { entry: DayEntry }) {
-  const { t, i18n } = useTranslation();
-  const { time_format: timeFormat } = useSettings();
-  if (entry.allDay || entry.start === null || entry.end === null) return <>{t("calendar.day.allDay")}</>;
-  const [start, end] = [
-    clockText(entry.start, i18n.language, timeFormat),
-    clockText(entry.end, i18n.language, timeFormat),
-  ];
-  if (entry.continues && entry.goesOn) return <>{t("calendar.day.allDayContinues")}</>;
-  if (entry.continues) return <>{t("calendar.day.until", { time: end })}</>;
-  if (entry.goesOn) return <>{t("calendar.day.from", { time: start })}</>;
-  return <>{start === end ? start : `${start}–${end}`}</>;
-}
-
 interface DayListProps {
   /** The signed-in user (local database of attachments). */
   user: string | undefined;
@@ -168,25 +150,8 @@ interface DayListProps {
 
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. A row opens the details card (click, tap, Enter / Space, right-click
 // without the browser's menu): as a popover next to the row, or — on phones — in the page's sheet.
-// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-083, D-72. Active attachments per item from the local database (one
-// query for the whole list, offline too); the row shows a paperclip when an item has any.
-function useAttachmentCounts(user: string | undefined): Map<string, number> {
-  const { data = [] } = useQuery({
-    queryKey: [...localKeys.table("attachment"), user ?? ""],
-    queryFn: () => (user ? localRows(user, "attachment") : Promise.resolve([])),
-    enabled: Boolean(user),
-  });
-  return useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const attachment of data) {
-      const itemId = attachment.item_id;
-      if (typeof itemId !== "string" || attachment.deleted_at) continue;
-      counts.set(itemId, (counts.get(itemId) ?? 0) + 1);
-    }
-    return counts;
-  }, [data]);
-}
-
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-083, D-72 / HAAL-089. Attachment counts and the row's inside are shared
+// with the agenda (lib/eventRow, EventRow).
 function DayList({
   user,
   date,
@@ -207,6 +172,7 @@ function DayList({
   const pointer = useRef("mouse");
   const label = dayLabel(date, i18n.language);
   const attachmentCounts = useAttachmentCounts(user);
+  const rowFlags = useRowFlags();
   const byKey = (key: string | undefined) => entries.find((entry) => entry.key === key);
   const navigation = useListNavigation(
     entries.map((entry) => entry.key),
@@ -255,11 +221,7 @@ function DayList({
         {entries.map((entry) => {
           const attachments = attachmentCounts.get(entry.id) ?? 0;
           // The row's name stays "Details of <title>"; what the icons show is its accessible description (D-72).
-          const flags = [
-            entry.recurring ? t("calendar.day.flagRepeats") : null,
-            entry.hasDescription ? t("calendar.day.flagDescription") : null,
-            attachments > 0 ? t("calendar.day.flagAttachments", { count: attachments }) : null,
-          ].filter((flag): flag is string => flag !== null);
+          const flags = rowFlags(entry, attachments);
           const flagsId = `day-row-flags-${entry.key}`;
           const selected = selection.isSelected(entry.key);
           const selectProps = selection.rowProps(
@@ -289,40 +251,7 @@ function DayList({
               }}
               className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-sm py-2 pr-3 pl-1 text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <span className="w-28 shrink-0 text-muted tabular-nums">
-                <When entry={entry} />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="flex items-center gap-1.5 font-medium wrap-anywhere">
-                  {entry.title || t("calendar.day.noTitle")}
-                  {entry.recurring ? (
-                    <span title={t("calendar.day.repeats")} className="shrink-0">
-                      <Repeat className="size-3.5 text-muted" aria-hidden />
-                    </span>
-                  ) : null}
-                  {entry.hasDescription ? (
-                    <span title={t("calendar.day.hasDescription")} className="shrink-0">
-                      <FileText className="size-3.5 text-muted" aria-hidden />
-                    </span>
-                  ) : null}
-                  {attachments > 0 ? (
-                    <span title={t("calendar.details.attachments", { count: attachments })} className="shrink-0">
-                      <Paperclip className="size-3.5 text-muted" aria-hidden />
-                    </span>
-                  ) : null}
-                </span>
-                {entry.location ? (
-                  <span className="flex items-center gap-1 text-xs text-muted wrap-anywhere">
-                    <MapPin className="size-3 shrink-0" aria-hidden />
-                    {entry.location}
-                  </span>
-                ) : null}
-              </span>
-              {flags.length > 0 ? (
-                <span id={flagsId} className="sr-only">
-                  {flags.join(", ")}
-                </span>
-              ) : null}
+              <EventRowBody entry={entry} attachments={attachments} flags={flags} flagsId={flagsId} />
             </button>
           );
           return (
@@ -380,7 +309,7 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
   const navigate = useNavigate();
   const router = useRouter();
   const viewerTz = useDisplayTimeZone();
-  const { week_start: weekStart } = useSettings();
+  const { week_start: weekStart, agenda_days: agendaLength } = useSettings();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
   const { data: me } = useQuery(meQuery);
@@ -395,24 +324,38 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
   const label = dayLabel(date, i18n.language);
   const week = view === "week";
   const month = view === "month";
+  const agenda = view === "agenda";
   const days = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
   const weeks = useMemo(() => monthWeeks(monthOf(date), weekStart), [date, weekStart]);
+  const agendaRange = useMemo(() => agendaDays(date, agendaLength), [date, agendaLength]);
   const title = week
-    ? weekTitle(days, i18n.language)
+    ? rangeTitle(days, i18n.language)
     : month
       ? monthTitle(monthOf(date), i18n.language)
-      : dateTitle(date, today, i18n.language, t("calendar.header.today"));
+      : agenda
+        ? rangeTitle(agendaRange, i18n.language)
+        : dateTitle(date, today, i18n.language, t("calendar.header.today"));
   const weekday = view === "day" ? weekdayName(date, i18n.language) : null;
-  /** The date one period (day, week or month) before or after `from`. */
+  /** The date one period (day, week, month or agenda range) before or after `from`. */
   const shift = (from: string, direction: 1 | -1) =>
-    month ? sameDayIn(from, addMonths(monthOf(from), direction)) : addDays(from, direction * (week ? 7 : 1));
-  const showsToday = week ? days.includes(today) : month ? monthOf(today) === monthOf(date) : date === today;
+    month
+      ? sameDayIn(from, addMonths(monthOf(from), direction))
+      : addDays(from, direction * (week ? 7 : agenda ? agendaLength : 1));
+  const showsToday = week
+    ? days.includes(today)
+    : month
+      ? monthOf(today) === monthOf(date)
+      : agenda
+        ? agendaRange.includes(today)
+        : date === today;
   const navLabel = (direction: "previous" | "next") =>
     week
       ? (`calendar.nav.${direction}Week` as const)
       : month
         ? (`calendar.nav.${direction}Month` as const)
-        : (`calendar.nav.${direction}Day` as const);
+        : agenda
+          ? (`calendar.nav.${direction}Range` as const)
+          : (`calendar.nav.${direction}Day` as const);
 
   const [pinned, setPinned] = useState(storedSidebarOpen);
   const [overlayOpen, setOverlayOpen] = useState(false);
@@ -620,6 +563,15 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
     },
   });
   useShortcut({
+    id: "calendar:view-agenda",
+    keys: ["A"],
+    group: "navigation",
+    label: "calendar.views.agendaKey",
+    handler: () => {
+      switchView("agenda");
+    },
+  });
+  useShortcut({
     id: "calendar:new-event",
     keys: ["N"],
     group: "items",
@@ -669,7 +621,7 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
         </aside>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 md:px-4">
+        <div className="@container flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 md:px-4">
           {tablet ? (
             <Button
               variant="ghost"
@@ -753,11 +705,35 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
               }}
             >
               <Plus aria-hidden />
-              {t("calendar.editor.newButton")}
+              {/* A narrow header (sidebar open, long range title) keeps the button on the line as an icon. */}
+              <span className="@max-[64rem]:sr-only">{t("calendar.editor.newButton")}</span>
             </Button>
           ) : null}
         </div>
-        {month ? (
+        {agenda ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <AgendaList
+              key={`${date}:${String(agendaLength)}`}
+              user={user}
+              days={agendaRange}
+              rows={rows}
+              viewerTz={viewerTz}
+              today={today}
+              anchor={{
+                openKey: details?.key ?? null,
+                onOpen: setDetails,
+                onClose: () => {
+                  setDetails(null);
+                },
+                inPopover: tablet,
+                details: detailsOf,
+              }}
+              onDay={(day) => {
+                switchView("day", day);
+              }}
+            />
+          </div>
+        ) : month ? (
           <div className="min-h-0 flex-1">
             <MonthGrid
               weeks={weeks}

@@ -27,7 +27,6 @@
 | HAAL-039 | E02 Cross-cutting | Full-text search across all modules with highlighting, offline local index; keeps title autocomplete and YYYY-MM-DD jump | Must | 016, 052 | — | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-046 | E02 Cross-cutting | Search filters: date range, module, calendar, color, priority, label | Must | 039 | C-14 | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-069 | E04 Calendar parity | Single editor instance guard | Should | 063 | F-19 | To do | — | owner backlog file |
-| HAAL-089 | E05 Calendar new | Agenda view: upcoming events grouped by day, default 30 days, configurable | Must | 060 | C-03 | To do | — | owner backlog file |
 | HAAL-090 | E05 Calendar new | Drag-and-drop reschedule in week/month views (mouse, touch), keep duration, this/following/all for occurrences, undoable | Must | 087, 088, 035 | C-04 | To do | — | owner backlog file |
 | HAAL-091 | E05 Calendar new | Reminders: 0..n per event, in-app + browser notifications incl. Web Push when app closed | Must | 063, 051, 048 | C-05 | To do | — | owner backlog file |
 | HAAL-092 | E05 Calendar new | Extended recurrence: end date/count, every N, weekdays, Nth weekday, last day of month (RRULE) | Must | 066 | C-06 | To do | — | owner backlog file |
@@ -136,7 +135,8 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-084 | 2026-10-28 | c6bb8f2 | feat(calendar): move to next day from the details card and for a selection in the day list (HAAL-084) |
 | HAAL-085 | 2026-10-28 | 10ddb0e | feat(calendar): Week A/B badge of the selected date after the ISO week in the header (HAAL-085) |
 | HAAL-087 | 2026-10-28 | 7c78aae | feat(calendar): week view with a Day / Week switch — all-day row, timed grid with overlaps side by side, current-time line (HAAL-087) |
-| HAAL-088 | 2026-10-28 | — | feat(calendar): month view — weeks of the month, events per day with +N more, days open the day view (HAAL-088) |
+| HAAL-088 | 2026-10-28 | 231168e | feat(calendar): month view — weeks of the month, events per day with +N more, days open the day view (HAAL-088) |
+| HAAL-089 | 2026-10-28 | — | feat(calendar): agenda view — days with events for the user's range, rows like the day list, headings open the day (HAAL-089) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
 | HAAL-160 | 2026-10-15 | 27255ce | docs(architecture): note user_account table name in domain model (HAAL-160) |

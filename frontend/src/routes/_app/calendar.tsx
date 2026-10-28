@@ -1,7 +1,7 @@
 // +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Calendar module placeholder; day view arrives in HAAL-060.
 // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. The day view of `?date=YYYY-MM-DD` (default: today in the profile
 // time zone); a malformed date falls back to today.
-// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-087. `?view=day|week` (HAAL-088: |month); without it the view last chosen on this device.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-087. `?view=day|week` (HAAL-088: |month, HAAL-089: |agenda); without it the view last chosen on this device.
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DayView } from "@/components/calendar/DayView";

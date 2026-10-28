@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { DayEntry } from "./dayView";
-import { layoutDay, weekDays, weekTitle } from "./weekView";
+import { layoutDay, weekDays, rangeTitle } from "./weekView";
 
 function timed(key: string, start: string, end: string, extra: Partial<DayEntry> = {}): DayEntry {
   return {
@@ -78,9 +78,9 @@ describe("layoutDay", () => {
   });
 });
 
-describe("weekTitle", () => {
+describe("rangeTitle", () => {
   // Intl puts thin spaces around the dash.
-  const title = (date: string) => weekTitle(weekDays(date, 1), "en").replace(/\s/g, " ");
+  const title = (date: string) => rangeTitle(weekDays(date, 1), "en").replace(/\s/g, " ");
   it("names the range in the interface language", () => {
     expect(title("2026-10-28")).toBe("October 26 – November 1, 2026");
     expect(title("2026-12-31")).toBe("December 28, 2026 – January 3, 2027");

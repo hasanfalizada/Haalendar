@@ -5,10 +5,11 @@
 // the selected date ringed. An event opens its details card; the day number, the empty space of a cell and "+N more"
 // open that day in the day view. On phones (cells about 50 px wide) a cell is one button: up to three colour bars
 // and "+N", a tap opens the day.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. The month's entries come from entriesOnDays (one pass for all days).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type DayEntry, dayLabel, entriesOn } from "@/lib/dayView";
+import { dayLabel, entriesOnDays } from "@/lib/dayView";
 import { useEntryTime } from "@/lib/entryTime";
 import { weekdayOrder } from "@/lib/monthGrid";
 import { fitInCell } from "@/lib/monthView";
@@ -67,11 +68,7 @@ export function MonthGrid({ weeks, month, date, today, rows, viewerTz, anchor, c
   const { t, i18n } = useTranslation();
   const time = useEntryTime();
   const { ref, lines } = useLinesPerCell(weeks.length);
-  const byDay = useMemo(() => {
-    const found = new Map<string, DayEntry[]>();
-    for (const day of weeks.flat()) found.set(day, entriesOn(rows, day, viewerTz));
-    return found;
-  }, [weeks, rows, viewerTz]);
+  const byDay = useMemo(() => entriesOnDays(rows, weeks.flat(), viewerTz), [weeks, rows, viewerTz]);
   const firstWeek = weeks[0] ?? [];
 
   return (

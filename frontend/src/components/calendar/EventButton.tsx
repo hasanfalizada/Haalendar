@@ -1,6 +1,7 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-088. An event in the week and month grids (taken out of the week view,
 // HAAL-087): a button named "Details of <title>" that opens the details card — a popover next to it on tablets and
 // desktops, the page's sheet on phones; right-click opens it too (the browser menu is suppressed).
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. Also the agenda's rows; the description is optional there.
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,8 +22,8 @@ export interface DetailsAnchor {
 interface EventButtonProps {
   entry: DayEntry;
   anchor: DetailsAnchor;
-  /** Id of the element with the event's time (its accessible description). */
-  describedBy: string;
+  /** Id of the element with the event's time or flags (its accessible description). */
+  describedBy?: string | undefined;
   className: string;
   children: ReactNode;
 }

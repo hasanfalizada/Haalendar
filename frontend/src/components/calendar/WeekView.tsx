@@ -6,11 +6,12 @@
 // opens the same details card as in the day list (popover next to it; on phones the page's sheet). The same narrow
 // grid on phones (titles cut). Each day is a list for screen readers ("Tuesday, October 27, 2026"); an event's name is
 // "Details of <title>", its time is its description.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. The week's entries come from entriesOnDays (one pass for all days).
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
-import { type DayEntry, clockText, dayLabel, entriesOn } from "@/lib/dayView";
+import { type DayEntry, clockText, dayLabel, entriesOnDays } from "@/lib/dayView";
 import { itemColorClasses } from "@/lib/palette";
 import { useEntryTime } from "@/lib/entryTime";
 import { cn } from "@/lib/utils";
@@ -63,14 +64,13 @@ export function WeekGrid({ days, rows, viewerTz, today, openKey, onOpen, onClose
   const { time_format: timeFormat } = useSettings();
   const now = useMinuteOfDay(viewerTz);
   const scroller = useRef<HTMLDivElement>(null);
-  const week = useMemo(
-    () =>
-      days.map((day) => {
-        const entries = entriesOn(rows, day, viewerTz);
-        return { day, allDay: entries.filter((entry) => entry.allDay), timed: layoutDay(entries) };
-      }),
-    [days, rows, viewerTz],
-  );
+  const week = useMemo(() => {
+    const byDay = entriesOnDays(rows, days, viewerTz);
+    return days.map((day) => {
+      const entries = byDay.get(day) ?? [];
+      return { day, allDay: entries.filter((entry) => entry.allDay), timed: layoutDay(entries) };
+    });
+  }, [days, rows, viewerTz]);
   const hasToday = days.includes(today);
 
   // A new week opens an hour before now (this week) or at 08:00; re-renders of the same week keep the scroll.
