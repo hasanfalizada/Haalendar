@@ -46,6 +46,7 @@ from haalendar.middleware import RequestContextMiddleware
 from haalendar.notifications.api import router as notifications_router
 from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
 from haalendar.preferences.api import router as settings_router
+from haalendar.push.api import router as push_router
 from haalendar.security.guards import BodyGuard, CsrfOriginGuard, HostGuard, RateLimitGuard
 from haalendar.sharing.api import router as sharing_router
 from haalendar.storage import create_storage
@@ -138,6 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sharing_router, prefix=API_PREFIX)
     app.include_router(trash_router, prefix=API_PREFIX)
     app.include_router(bulk_router, prefix=API_PREFIX)
+    app.include_router(push_router, prefix=API_PREFIX)  # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091
     app.include_router(attachment_items_router, prefix=API_PREFIX)
     app.include_router(attachments_router, prefix=API_PREFIX)
     app.include_router(exports_router, prefix=API_PREFIX)

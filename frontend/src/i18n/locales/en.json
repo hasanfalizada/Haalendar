@@ -1081,5 +1081,21 @@
     "notification": "Reminder: {{title}} — {{when}}",
     "late": "(late)",
     "open": "Open"
+  },
+  "push": {
+    "title": "Browser notifications",
+    "intro": "Reminders can also appear as notifications of this browser, even when Haalendar is closed. This is set for each device and browser.",
+    "stateOn": "On for this device.",
+    "stateOff": "Off for this device.",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "blocked": "Notifications are blocked for Haalendar in this browser. Allow them in the browser's site settings, then turn them on here.",
+    "unsupported": "This browser cannot show notifications from Haalendar (or the app runs without its offline part). Reminders still appear in the app.",
+    "enabled": "Browser notifications are on for this device.",
+    "disabled": "Browser notifications are off for this device.",
+    "offer": "Get reminders as notifications on this device, even when Haalendar is closed?",
+    "notNow": "Not now",
+    "failed": "This browser could not turn notifications on (private windows cannot receive them). Reminders still appear in the app.",
+    "turningOn": "Turning on…"
   }
 }

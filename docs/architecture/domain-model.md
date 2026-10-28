@@ -332,6 +332,8 @@ Conflict records (both values of a field changed on two devices) live on the dev
 | `auth_token` | id, user_id (NULL for invite to new e-mail), email, purpose, token_hash (U), expires_at, used_at, created_by | verify 24 h, reset 1 h, invite |
 | `recovery_code` | id, user_id, code_hash, used_at, created_at | 10 per TOTP enrolment |
 | `push_subscription` | id, user_id, session_id, endpoint (U), p256dh, auth, created_at, revoked_at | Web Push (FR-CAL-29) |
+
++++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (migration 0018, D-79): `push_subscription` has owner_id (owner-only row-level security), user_agent, last_sent_at and revoke_reason (user, sign_out, gone, claimed) instead of a session link — the browser revokes it at sign-out, and an endpoint taken over by another user on the same browser is revoked for the previous one; unique per user and endpoint while active. `push_key`: the instance's VAPID key pair, one row, private key encrypted.
 | `instance_settings` | single row: registration_mode (`invite`/`open`), require_admin_2fa, demo_mode, smtp_configured, updated_at, updated_by | |
 | `import_run` | id, user_id (target), started_by, started_at, finished_at, dry_run, source_hash, report jsonb | FR-OPS-01 |
 

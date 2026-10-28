@@ -20,6 +20,7 @@ import { ProfileSection } from "@/components/profile/ProfileSection";
 import { SecuritySection } from "@/components/security/SecuritySection";
 import { PreferencesSection } from "@/components/settings/PreferencesSection";
 import { SharingSection } from "@/components/sharing/SharingSection";
+import { NotificationsSection } from "@/components/settings/NotificationsSection";
 import { SyncSection } from "@/components/sync/SyncSection";
 
 /** Brings the section named by the URL hash into view and focus on every navigation (a new history entry). */
@@ -54,6 +55,8 @@ function SettingsPage() {
       <SecuritySection />
       <SharingSection />
       <ExportSection />
+      {/* +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Browser notifications of this device. */}
+      <NotificationsSection />
       <SyncSection />
     </div>
   );

@@ -3,10 +3,14 @@
 // all-day: on the day / 1, 2, 7 days before at 09:00) and "Custom…": an amount and a unit (minutes, hours, days, weeks
 // before) or, for all-day events, days before and a time. At most MAX_REMINDERS; a reminder already chosen is not
 // offered again. Reminders are personal — the note says so.
-import { Bell, X } from "lucide-react";
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (stage 2). With reminders chosen and browser notifications off on this
+// device, an offer to turn them on (the browser asks for permission on that click); "Not now" is remembered per user.
+import { useQuery } from "@tanstack/react-query";
+import { Bell, BellRing, X } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { meQuery } from "@/api/session";
 import { useSettings } from "@/api/settings";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -23,8 +27,49 @@ import {
   sortSpecs,
   specKey,
 } from "@/lib/reminders";
+import { usePush } from "@/lib/usePush";
 
 const UNITS = { minutes: 1, hours: 60, days: 1440, weeks: 10080 } as const;
+
+const offerKey = (user: string) => `haalendar.push.offer.${user}`;
+
+function offerDismissed(user: string): boolean {
+  try {
+    return window.localStorage.getItem(offerKey(user)) === "dismissed";
+  } catch {
+    return false;
+  }
+}
+
+function PushOffer() {
+  const { t } = useTranslation();
+  const { data: me } = useQuery(meQuery);
+  const push = usePush(me?.id);
+  const [dismissed, setDismissed] = useState(() => (me ? offerDismissed(me.id) : true));
+  if (!me || dismissed || push.state !== "off") return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-sm bg-primary-tint/50 p-2 text-[13px]">
+      <BellRing className="size-4 shrink-0 text-primary" aria-hidden />
+      <span className="min-w-0 flex-1">{t("push.offer")}</span>
+      <Button variant="primary" disabled={push.busy} onClick={() => void push.enable()}>
+        {t(push.busy ? "push.turningOn" : "push.turnOn")}
+      </Button>
+      <Button
+        variant="ghost"
+        onClick={() => {
+          try {
+            window.localStorage.setItem(offerKey(me.id), "dismissed");
+          } catch {
+            // Blocked storage: the offer comes back next time.
+          }
+          setDismissed(true);
+        }}
+      >
+        {t("push.notNow")}
+      </Button>
+    </div>
+  );
+}
 type Unit = keyof typeof UNITS;
 const CUSTOM = "custom";
 
@@ -190,6 +235,7 @@ export function ReminderPicker({ value, allDay, onChange }: ReminderPickerProps)
         </Select>
       )}
       <p className="text-xs text-muted">{t("reminders.personal")}</p>
+      {value.length > 0 ? <PushOffer /> : null}
     </div>
   );
 }

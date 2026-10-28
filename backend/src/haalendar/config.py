@@ -120,6 +120,10 @@ class Settings(BaseSettings):
     # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. File storage root (local adapter, ADR-0004); empty = system temp
     # directory outside production, required in production (the compose file mounts /data).
     storage_dir: str = ""
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Web Push: in production the server posts only to https endpoints of
+    # these push services (host or its subdomain), so a forged subscription cannot make it call other hosts (SSRF).
+    # Comma-separated additions to the known services; development and test accept any endpoint (local fake services).
+    push_extra_hosts: str = ""
 
     @model_validator(mode="after")
     def _forbid_insecure_production(self) -> Settings:

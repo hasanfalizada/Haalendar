@@ -70,6 +70,10 @@ AUDIT_EXEMPT_TABLES = frozenset(
         # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. When reminders fire next (worker bookkeeping, D-79); the
         # reminders themselves are audited.
         "reminder_schedule",
+        # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (stage 2). The VAPID key pair (a secret) and the browsers'
+        # push subscriptions (device data, like sessions; structured logs record subscribe / revoke).
+        "push_key",
+        "push_subscription",
     }
 )
 # +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. sync_xid (writing transaction) is bookkeeping too; the function is

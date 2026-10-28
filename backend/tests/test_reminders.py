@@ -17,6 +17,7 @@ import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
+from haalendar.config import Settings
 from haalendar.db import create_engine, create_session_factory
 from haalendar.planning.reminders import check_reminders
 
@@ -59,12 +60,13 @@ def _reminder(people: People, headers: dict[str, str], item: str, **form: Any) -
     return {"id": reminder_id, **result}
 
 
-def _run(people: People, at: datetime) -> dict[str, int]:
+def _run(people: People, at: datetime, settings: Settings | None = None) -> dict[str, int]:
+    """One round of the worker; with `settings` it also sends Web Push (HAAL-091 stage 2)."""
     engine = create_engine(make_settings(database_url=people.db_url))
 
     async def go() -> dict[str, int]:
         try:
-            return await check_reminders(create_session_factory(engine), now=at)
+            return await check_reminders(create_session_factory(engine), now=at, settings=settings)
         finally:
             await engine.dispose()
 

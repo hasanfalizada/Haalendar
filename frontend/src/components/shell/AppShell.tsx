@@ -31,6 +31,7 @@ import {
 import { useReminderToasts } from "@/components/notifications/useReminderToasts";
 import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { listenToWorker } from "@/lib/push";
 import { startSync } from "@/sync";
 
 import { ConnectionStatus } from "./ConnectionStatus";
@@ -109,6 +110,15 @@ export function AppShell() {
   useUndoShortcuts(me?.id ?? null);
   // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders that fire while the app is open.
   useReminderToasts(me?.id ?? null);
+  // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (stage 2). A system notification clicked while the app is open:
+  // the service worker asks this window to show the reminder's day.
+  useEffect(
+    () =>
+      listenToWorker((url) => {
+        void navigate({ href: url });
+      }),
+    [navigate],
+  );
   const closeDrawer = () => {
     setDrawerOpen(false);
   };

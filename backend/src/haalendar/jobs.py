@@ -58,7 +58,7 @@ def make_job_app(settings: Settings, pool_size: int = 4) -> App:
 
         if not sessions:
             sessions.append(create_session_factory(create_engine(settings)))
-        await run(sessions[0])
+        await run(sessions[0], settings=settings)
 
     return app
 

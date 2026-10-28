@@ -9,6 +9,10 @@
   handles each as its owner, under row-level security: a reminder whose event is gone or out of reach gets no next
   fire; one marked "to check" gets its next fire computed from now; a due one writes a `reminder` notification (late
   when more than LATE_AFTER behind) and moves on to the next occurrence after now.
+- +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (stage 2). A fired reminder that is not late also goes to the
+  owner's browsers by Web Push, after its transaction has committed: "Reminder: Dentist" / "Today, 11:00-12:00 · Main
+  St 1" in the owner's zone and 12/24-hour setting, opening the day with the event's card; the notification records
+  when a browser was reached (delivered_push_at).
 """
 
 from __future__ import annotations
@@ -16,18 +20,24 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from haalendar.accounts.models import UserAccount
+from haalendar.atoms.time.local_to_utc import local_to_utc
+from haalendar.config import Settings
 from haalendar.deps import USER_ID_SETTING
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
+from haalendar.notifications.models import Notification
 from haalendar.notifications.service import notify_self
 from haalendar.planning.models import Event, Item, RecurrenceException, Reminder, ReminderSchedule
 from haalendar.planning.reminder_times import EventTimes, ReminderRule, next_fire
 from haalendar.planning.service import Outcome, merge
+from haalendar.preferences.models import UserSettings
+from haalendar.push import service as push
 from haalendar.softdelete import new_batch
 
 log = get_logger(__name__)
@@ -37,6 +47,25 @@ LATE_AFTER = timedelta(hours=1)
 BATCH = 200
 FORM_FIELDS = ("offset_minutes", "all_day_time", "all_day_days_before")
 DUE = text("SELECT reminder_id, owner_id FROM haalendar_reminders_due(:at, :max_rows)")
+
+
+async def _push(
+    factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+    owner_id: uuid.UUID,
+    message: dict[str, Any],
+) -> None:
+    """Web Push of a fired reminder; a failure is logged and never stops the round."""
+    try:
+        reached = await push.deliver(factory, settings, owner_id, message)
+        if reached:
+            async with factory() as db, db.begin():
+                await db.execute(select(func.set_config(USER_ID_SETTING, str(owner_id), True)))
+                note = await db.get(Notification, uuid.UUID(str(message["notification_id"])))
+                if note is not None:
+                    note.delivered_push_at = datetime.now(UTC)
+    except Exception:
+        log.exception("reminder_push_failed", user_id=str(owner_id))
 
 
 def _invalid(message: str) -> ProblemError:
@@ -208,31 +237,84 @@ def _payload(
     }
 
 
+def _clock(value: time, twelve_hours: bool) -> str:
+    if not twelve_hours:
+        return value.strftime("%H:%M")
+    return f"{value.hour % 12 or 12}:{value.minute:02d} {'AM' if value.hour < 12 else 'PM'}"
+
+
+def push_message(
+    payload: dict[str, Any], notification_id: uuid.UUID, owner_tz: str, twelve_hours: bool, now: datetime
+) -> dict[str, Any]:
+    """The system notification of a fired reminder, in the owner's zone (English, like the server's e-mails)."""
+    zone = ZoneInfo(owner_tz)
+    occurrence = date.fromisoformat(str(payload["occurrence_date"]))
+    times = ""
+    day = occurrence
+    if not payload["all_day"] and payload["start_time"]:
+        start = local_to_utc(
+            occurrence, time.fromisoformat(str(payload["start_time"])), str(payload["tzid"])
+        ).utc
+        end = start + timedelta(minutes=int(payload["length_minutes"]))
+        local_start, local_end = start.astimezone(zone), end.astimezone(zone)
+        day = local_start.date()
+        times = _clock(local_start.time(), twelve_hours)
+        if end > start:
+            times += "\u2013" + _clock(local_end.time(), twelve_hours)  # en dash
+    today = now.astimezone(zone).date()
+    when = (
+        "Today"
+        if day == today
+        else "Tomorrow"
+        if day == today + timedelta(days=1)
+        else day.strftime("%a, %b %-d")
+    )
+    body = ", ".join(part for part in (when, times) if part)
+    if payload.get("location"):
+        body += f" · {payload['location']}"
+    return {
+        "type": "reminder",
+        "title": f"Reminder: {payload['title'] or '(No title)'}",
+        "body": body,
+        "url": f"/calendar?date={day.isoformat()}&view=day&event={payload['item_id']}",
+        "tag": f"reminder:{payload['reminder_id']}:{payload['occurrence_date']}",
+        "notification_id": str(notification_id),
+    }
+
+
 async def handle(db: AsyncSession, reminder_id: uuid.UUID, now: datetime) -> str:
     """Check or fire one reminder as its owner (the caller has set the owner for the transaction)."""
+    outcome, _message = await handle_with_push(db, reminder_id, now)
+    return outcome
+
+
+async def handle_with_push(
+    db: AsyncSession, reminder_id: uuid.UUID, now: datetime
+) -> tuple[str, dict[str, Any] | None]:
+    """handle(), and the Web Push message of a reminder that fired on time (None otherwise)."""
     schedule = await db.get(ReminderSchedule, reminder_id)
     reminder = await db.get(Reminder, reminder_id)
     if schedule is None or reminder is None:
-        return "missing"
+        return "missing", None
     item = await db.get(Item, reminder.item_id)
     found = await _event_times(db, item) if item is not None and item.deleted_at is None else None
     owner = await db.get(UserAccount, reminder.owner_id)
     if reminder.deleted_at is not None or item is None or found is None or owner is None:
         schedule.next_fire_at, schedule.next_occurrence, schedule.needs_check = None, None, False
-        return "idle"
+        return "idle", None
     event, times = found
     rule = ReminderRule(reminder.offset_minutes, reminder.all_day_time, reminder.all_day_days_before)
     outcome = "checked"
+    message: dict[str, Any] | None = None
     if not schedule.needs_check and schedule.next_fire_at is not None and schedule.next_fire_at <= now:
         occurrence = schedule.next_occurrence or times.start_date
         late = now - schedule.next_fire_at > LATE_AFTER
-        await notify_self(
-            db,
-            reminder.owner_id,
-            "reminder",
-            _payload(item, event, reminder, occurrence, schedule.next_fire_at, late),
-            item_id=item.id,
-        )
+        payload = _payload(item, event, reminder, occurrence, schedule.next_fire_at, late)
+        note = await notify_self(db, reminder.owner_id, "reminder", payload, item_id=item.id)
+        if not late:
+            prefs = await db.get(UserSettings, reminder.owner_id)
+            twelve = prefs is not None and prefs.time_format == "12h"
+            message = push_message(payload, note.id, owner.time_zone, twelve, now)
         schedule.last_occurrence, schedule.last_fired_at = occurrence, now
         outcome = "fired_late" if late else "fired"
     following = next_fire(
@@ -241,11 +323,11 @@ async def handle(db: AsyncSession, reminder_id: uuid.UUID, now: datetime) -> str
     schedule.next_fire_at = following.at if following else None
     schedule.next_occurrence = following.occurrence if following else None
     schedule.needs_check = False
-    return outcome
+    return outcome, message
 
 
 async def check_reminders(
-    factory: async_sessionmaker[AsyncSession], now: datetime | None = None
+    factory: async_sessionmaker[AsyncSession], now: datetime | None = None, settings: Settings | None = None
 ) -> dict[str, int]:
     """One round of the worker: every reminder to check or due, each in its own transaction as its owner."""
     at = now or datetime.now(UTC)
@@ -253,14 +335,17 @@ async def check_reminders(
         rows = (await db.execute(DUE, {"at": at, "max_rows": BATCH})).all()
     counts: dict[str, int] = {}
     for reminder_id, owner_id in rows:
+        message: dict[str, Any] | None = None
         try:
             async with factory() as db, db.begin():
                 await db.execute(select(func.set_config(USER_ID_SETTING, str(owner_id), True)))
-                outcome = await handle(db, reminder_id, at)
+                outcome, message = await handle_with_push(db, reminder_id, at)
         except Exception:
             log.exception("reminder_check_failed", reminder_id=str(reminder_id))
             outcome = "failed"
         counts[outcome] = counts.get(outcome, 0) + 1
+        if message is not None and settings is not None:
+            await _push(factory, settings, owner_id, message)
     if rows:
         log.info("reminders_checked", **counts)
     return counts

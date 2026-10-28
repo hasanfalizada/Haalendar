@@ -18,6 +18,7 @@ import { wipeDrafts } from "@/lib/drafts";
 import { cachedProfile, forgetProfile, rememberProfile } from "@/lib/profileCache";
 import { wipeLocalNotifications } from "@/lib/localNotifications";
 import { bindUndoUser } from "@/lib/undo";
+import { disablePush } from "@/lib/push";
 import { describeError, log } from "@/lib/log";
 import { wipeLocalStore } from "@/sync";
 
@@ -77,6 +78,9 @@ export function rememberSession(queryClient: QueryClient, me: Me, csrfToken: str
 // and confirmed first: useSignOut).
 export async function signOut(queryClient: QueryClient): Promise<void> {
   const user = queryClient.getQueryData<Me | null>(meQueryKey)?.id;
+  // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. This browser stops receiving the user's reminders (while the
+  // session still works); quietly, signing out goes on whatever happens.
+  if (user) await disablePush(user, "sign_out").catch(() => undefined);
   try {
     await logout();
   } catch (error) {

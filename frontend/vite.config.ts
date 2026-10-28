@@ -35,6 +35,8 @@ export default defineConfig(({ mode }) => {
         manifest: MANIFEST,
         includeAssets: ["favicon.ico", "apple-touch-icon.png"],
         workbox: {
+          // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Web Push handlers (public/push-sw.js).
+          importScripts: ["push-sw.js"],
           globPatterns: PRECACHE_GLOBS,
           navigateFallback: "/index.html",
           navigateFallbackDenylist: NETWORK_ONLY_PATHS,

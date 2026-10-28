@@ -454,6 +454,10 @@ paths:
       tags: [account]
       operationId: addPushSubscription
       summary: Register a Web Push subscription for this device (FR-CAL-29)
+      description: >-
+        The browser's PushSubscription (toJSON). The same endpoint again refreshes the user's subscription; other users'
+        active subscriptions of the endpoint (a shared browser) are revoked. Production accepts only https endpoints of
+        the known push services (Google, Mozilla, Microsoft, Apple, plus configured hosts); others are 422.
       requestBody:
         required: true
         content:
@@ -469,6 +473,7 @@ paths:
                   properties:
                     p256dh: { type: string }
                     auth: { type: string }
+                expirationTime: { oneOf: [{ type: integer }, { type: 'null' }], description: Sent by browsers; not used }
       responses:
         '201': { description: Registered, content: { application/json: { schema: { type: object, properties: { id: { $ref: '../components/common.yaml#/components/schemas/Uuid' } } } } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
@@ -478,8 +483,10 @@ paths:
       operationId: removePushSubscription
       x-soft-delete: 'Sets revoked_at; the subscription record is kept.'
       summary: Revoke a Web Push subscription (soft, revoked_at)
+      # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (D-79). Why: the user turned it off, or signed out on this device.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
+        - { name: reason, in: query, required: false, schema: { type: string, enum: [user, sign_out], default: user } }
       responses:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }

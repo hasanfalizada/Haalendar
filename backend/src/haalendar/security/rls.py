@@ -37,6 +37,7 @@ PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "s
     "recurrence_exception": "content",  # HAAL-066: content_policies
     "reminder": "self",  # HAAL-091: self_policies (reminders are personal, also on shared events)
     "reminder_schedule": "self",  # HAAL-091: self_policies (the worker works as the owner)
+    "push_subscription": "self",  # HAAL-091: self_policies (one browser of one user)
 }
 
 CURRENT_USER_FUNCTION = """
