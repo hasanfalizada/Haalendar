@@ -20,7 +20,7 @@ How to set up, run and test Haalendar locally, and how the environments differ.
 
 ## 1. Prerequisites
 
-Supported development OS: **Linux or WSL 2** (Ubuntu 24.04 is tested). On Windows, run every command below **inside WSL**, not in PowerShell or Git Bash.
+Supported development OS: **Linux or WSL 2** (Debian 13 and Ubuntu 24.04 are tested). On Windows, run every command below **inside WSL**, not in PowerShell or Git Bash.
 
 | Tool | Version | Install |
 |---|---|---|
@@ -169,6 +169,21 @@ pnpm check           # frontend: generate API client, TypeScript, ESLint, Pretti
 pnpm backend:check   # backend: Ruff lint, Ruff format, mypy (strict), pytest
 pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnpm audit + pip-audit)
 ```
+
+Or the whole set in one run, including the contract lint, the database tests on a throw-away PostgreSQL 18 (port 55433) and the production build — read-only, exit code 0 only when every step passes:
+
+```bash
+scripts/dev/check-all.sh
+```
+
+### Throw-away full stack for live checks
+
+```bash
+scripts/dev/stack-up.sh     # PostgreSQL 18 (port 55434), API 8081, worker, Vite 5173 — prints the URL to open
+scripts/dev/stack-down.sh   # stops everything and drops the database and the uploads
+```
+
+The stack listens on all interfaces and opens the API host/origin guards and Vite's host check for this machine's FQDN (`hostname -f`), so it can be used from another computer at `http://<fqdn>:5173`. Logs are in `.dev/` (git-ignored). The database starts empty: the app opens the first-administrator wizard.
 
 ### Backend (from `backend/`)
 

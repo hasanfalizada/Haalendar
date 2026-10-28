@@ -43,3 +43,6 @@ htmlcov/
 
 # Generated API client (ADR-0007: regenerated from api/openapi.yaml on every dev/build/check)
 frontend/src/api/generated/
+
+# Throw-away dev stack (scripts/dev/stack-up.sh): logs, uploads, mail
+.dev/
