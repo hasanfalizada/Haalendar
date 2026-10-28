@@ -23,7 +23,18 @@
 // and opens its details card.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, PanelLeft, Plus, Repeat } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  MapPin,
+  PanelLeft,
+  Paperclip,
+  Plus,
+  Repeat,
+} from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -87,6 +98,8 @@ function When({ entry }: { entry: DayEntry }) {
 }
 
 interface DayListProps {
+  /** The signed-in user (local database of attachments). */
+  user: string | undefined;
   date: string;
   entries: DayEntry[];
   /** The entry whose details are open (its key). */
@@ -102,9 +115,29 @@ interface DayListProps {
 
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. A row opens the details card (click, tap, Enter / Space, right-click
 // without the browser's menu): as a popover next to the row, or — on phones — in the page's sheet.
-function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details, onDelete }: DayListProps) {
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-083, D-72. Active attachments per item from the local database (one
+// query for the whole list, offline too); the row shows a paperclip when an item has any.
+function useAttachmentCounts(user: string | undefined): Map<string, number> {
+  const { data = [] } = useQuery({
+    queryKey: [...localKeys.table("attachment"), user ?? ""],
+    queryFn: () => (user ? localRows(user, "attachment") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
+  return useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const attachment of data) {
+      const itemId = attachment.item_id;
+      if (typeof itemId !== "string" || attachment.deleted_at) continue;
+      counts.set(itemId, (counts.get(itemId) ?? 0) + 1);
+    }
+    return counts;
+  }, [data]);
+}
+
+function DayList({ user, date, entries, openKey, onOpen, onClose, inPopover, details, onDelete }: DayListProps) {
   const { t, i18n } = useTranslation();
   const label = dayLabel(date, i18n.language);
+  const attachmentCounts = useAttachmentCounts(user);
   const byKey = (key: string | undefined) => entries.find((entry) => entry.key === key);
   const navigation = useListNavigation(
     entries.map((entry) => entry.key),
@@ -142,11 +175,20 @@ function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details, 
       {...navigation.listProps}
     >
       {entries.map((entry) => {
+        const attachments = attachmentCounts.get(entry.id) ?? 0;
+        // The row's name stays "Details of <title>"; what the icons show is its accessible description (D-72).
+        const flags = [
+          entry.recurring ? t("calendar.day.flagRepeats") : null,
+          entry.hasDescription ? t("calendar.day.flagDescription") : null,
+          attachments > 0 ? t("calendar.day.flagAttachments", { count: attachments }) : null,
+        ].filter((flag): flag is string => flag !== null);
+        const flagsId = `day-row-flags-${entry.key}`;
         const row = (
           <button
             type="button"
             {...navigation.itemProps(entry.key)}
             aria-label={t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") })}
+            aria-describedby={flags.length > 0 ? flagsId : undefined}
             aria-haspopup="dialog"
             aria-expanded={openKey === entry.key}
             onClick={
@@ -169,7 +211,19 @@ function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details, 
               <span className="flex items-center gap-1.5 font-medium wrap-anywhere">
                 {entry.title || t("calendar.day.noTitle")}
                 {entry.recurring ? (
-                  <Repeat className="size-3.5 shrink-0 text-muted" aria-label={t("calendar.day.repeats")} />
+                  <span title={t("calendar.day.repeats")} className="shrink-0">
+                    <Repeat className="size-3.5 text-muted" aria-hidden />
+                  </span>
+                ) : null}
+                {entry.hasDescription ? (
+                  <span title={t("calendar.day.hasDescription")} className="shrink-0">
+                    <FileText className="size-3.5 text-muted" aria-hidden />
+                  </span>
+                ) : null}
+                {attachments > 0 ? (
+                  <span title={t("calendar.details.attachments", { count: attachments })} className="shrink-0">
+                    <Paperclip className="size-3.5 text-muted" aria-hidden />
+                  </span>
                 ) : null}
               </span>
               {entry.location ? (
@@ -179,6 +233,11 @@ function DayList({ date, entries, openKey, onOpen, onClose, inPopover, details, 
                 </span>
               ) : null}
             </span>
+            {flags.length > 0 ? (
+              <span id={flagsId} className="sr-only">
+                {flags.join(", ")}
+              </span>
+            ) : null}
           </button>
         );
         return (
@@ -513,6 +572,7 @@ export function DayView({ date }: { date: string }) {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <DayList
+            user={user}
             date={date}
             entries={entries}
             openKey={details?.key ?? null}

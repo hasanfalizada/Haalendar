@@ -46,10 +46,11 @@
 +++===+++ 2026-10-25 — Hasan Alizada — HAAL-080. v1.47: decision D-69 (duplicate-title warning) approved by owner.
 +++===+++ 2026-10-25 — Hasan Alizada — HAAL-081. v1.48: decision D-70 (colour from the details card) approved by owner.
 +++===+++ 2026-10-28 — Hasan Alizada — HAAL-082. v1.49: decision D-71 (Day Number in the header) approved by owner.
++++===+++ 2026-10-28 — Hasan Alizada — HAAL-083. v1.50: decision D-72 (description and attachment icons in the day list) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.49 |
+| Version | 1.50 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -559,6 +560,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-69 | Duplicate-title warning (FR-CAL-16, U#2, refines D-06) | Searched in the local database (offline, instant) among all events the user can see — own and shared calendars ("of the same user" read as "visible to the user"). Match: title trimmed, Unicode NFC, case-insensitive, accents kept; an empty title / "(No title)" never matches; deleted events never count, past ones do; a series counts once. Checked on Save of a new event and of an edit whose title changed (the event itself left out); a copy of one occurrence (D-67) leaves its series out and is checked only when its title differs. The warning lists up to five matches (title, day, calendar; a series on its next occurrence) with "Show" each; "Back to editing" is focused (Enter / Esc never save a duplicate), "Save anyway" saves. "Show" closes the editor (the draft stays on the device and is offered next time), goes to that day and opens the event's details | FR-CAL-16 |
 | D-70 | Colour from the details card (FR-CAL-18, U#3) | The palette picker (D-47) in the details card under place and calendar, on phones in the sheet. A choice saves at once through the local store and outbox (offline too) as an update with the old colour as base; the row recolours immediately; toast "Color changed" with Undo, Ctrl+Z too (undo step event.update). Arrow keys pick a colour at every press, so the write waits 0.6 s after the last choice (one write, one toast, one undo step); a choice still waiting is written when the card closes. A series changes as a whole without the this/all question (colour belongs to the series; one occurrence: edit this occurrence, D-67) with the hint "Applies to all occurrences". A calendar shared for viewing shows the colour (swatch and name) only. While the card is open the day keys (←/→) do not fire, so the arrows stay with the picker | FR-CAL-18 |
 | D-71 | Day Number (FR-CAL-05, FR-CAL-22, U#8) | Ordinal day of the SELECTED date in its year, 1..365 (1..366 in a leap year), computed from the calendar date alone (no time zone, so the same for every viewer); a client function (`frontend/src/lib/dayOfYear.ts`), not an atom — only the header shows it; it becomes an atom if the server needs it (export, API). Shown after the ISO week in the header line ("Week 44  Day 301", same spacing as clock and week; phones: the second line with clock and week); tooltip and screen readers: "Day 301 of 365". Follows navigation like the week (arrows, mini month, Today) | FR-CAL-22 |
+| D-72 | Description and attachment icons (FR-CAL-19, U#10) | In a day-list row after the title, grouped with the repeat icon in the order repeat → description (Lucide FileText) → attachment (Paperclip); 14 px, muted, no counts. The description counts when its Markdown has visible text (plain text of the body, trimmed); attachments are the item's active (not deleted) attachments from the local database, read once for the whole list, so the icons follow uploads and deletions at once and offline. Tooltips: "Repeats", "Has a description", "N attachments". Screen readers: the row keeps its name "Details of <title>" and gets the flags as its accessible description ("repeats, has a description, 2 attachments"); the icons themselves are hidden from assistive technology | FR-CAL-19 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

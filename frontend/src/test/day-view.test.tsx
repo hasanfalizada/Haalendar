@@ -161,10 +161,11 @@ describe("day view page", () => {
     const rows = within(list).getAllByRole("listitem");
     expect(rows.map((row) => row.textContent)).toEqual([
       "All dayBirthday",
-      "All dayGym",
+      "All dayGymrepeats", // "repeats" is the row's screen-reader description (D-72)
       "09:00–09:30DentistMain street 1",
     ]);
-    expect(within(rows[1] as HTMLElement).getByLabelText("Repeats")).toBeInTheDocument();
+    expect(within(rows[1] as HTMLElement).getByRole("button")).toHaveAccessibleDescription("repeats");
+    expect(within(rows[1] as HTMLElement).getByTitle("Repeats")).toBeInTheDocument();
     expect(rows[2]).toHaveClass("ev-brown", "ev-tint", "ev-bar"); // the colour of the event (default brown)
   });
 

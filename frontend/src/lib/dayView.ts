@@ -15,6 +15,7 @@ import { eventDays } from "@/atoms/time/eventDays";
 import { localToUtc, wallClock } from "@/atoms/time/localToUtc";
 import { addDays } from "@/lib/datetime";
 import { log } from "@/lib/log";
+import { toPlainText } from "@/lib/markdown-text";
 
 export interface DayEntry {
   key: string;
@@ -24,6 +25,8 @@ export interface DayEntry {
   location: string | null;
   allDay: boolean;
   recurring: boolean;
+  /** HAAL-083: the description has visible text once its Markdown is stripped (D-72). */
+  hasDescription: boolean;
   /** Timed: started on an earlier day of the viewer. */
   continues: boolean;
   /** Timed: ends on a later day of the viewer. */
@@ -133,6 +136,7 @@ export function entriesOn(rows: readonly Row[], date: string, viewerTz: string):
         location: text(row.location),
         allDay,
         recurring: rrule !== null,
+        hasDescription: toPlainText(text(row.body) ?? "", { singleLine: true }).trim() !== "",
         ...entry,
         created_at: text(row.created_at) ?? "",
       });
