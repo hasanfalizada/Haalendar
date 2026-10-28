@@ -6,17 +6,23 @@
 // open that day in the day view. On phones (cells about 50 px wide) a cell is one button: up to three colour bars
 // and "+N", a tap opens the day.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. The month's entries come from entriesOnDays (one pass for all days).
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. Drag and drop (D-78): an event onto another day keeps its times (an
+// event over several days moves by the days between the cell it was taken from and the one it lands on). Not on
+// phones, where a cell is one button.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { dayLabel, entriesOnDays } from "@/lib/dayView";
+import { type DayEntry, dayLabel, entriesOnDays } from "@/lib/dayView";
+import type { DropTarget } from "@/lib/eventDrag";
 import { useEntryTime } from "@/lib/entryTime";
 import { weekdayOrder } from "@/lib/monthGrid";
 import { fitInCell } from "@/lib/monthView";
 import { itemColorClasses, swatchClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
-import { type DetailsAnchor, EventButton } from "./EventButton";
+import { DropArea } from "./DropArea";
+import { type DetailsAnchor, type DragData, EventButton } from "./EventButton";
+import { CalendarDnd } from "./EventDrag";
 
 type Row = Record<string, unknown>;
 
@@ -62,9 +68,24 @@ interface MonthGridProps {
   compact: boolean;
   /** Opens the day view of a date. */
   onDay: (date: string) => void;
+  /** May this event be dragged (its calendar is writable)? */
+  canDrag: (entry: DayEntry) => boolean;
+  onDrop: (data: DragData, target: DropTarget) => void;
 }
 
-export function MonthGrid({ weeks, month, date, today, rows, viewerTz, anchor, compact, onDay }: MonthGridProps) {
+export function MonthGrid({
+  weeks,
+  month,
+  date,
+  today,
+  rows,
+  viewerTz,
+  anchor,
+  compact,
+  onDay,
+  canDrag,
+  onDrop,
+}: MonthGridProps) {
   const { t, i18n } = useTranslation();
   const time = useEntryTime();
   const { ref, lines } = useLinesPerCell(weeks.length);
@@ -72,132 +93,137 @@ export function MonthGrid({ weeks, month, date, today, rows, viewerTz, anchor, c
   const firstWeek = weeks[0] ?? [];
 
   return (
-    <div className="flex h-full min-h-0 flex-col text-xs">
-      <div className="grid grid-cols-7 border-b border-line" aria-hidden>
-        {weekdayOrder(new Date(Date.parse(`${firstWeek[0] ?? month}T00:00:00Z`)).getUTCDay()).map((weekday) => (
-          <span key={weekday} className="truncate px-1 py-1 text-center text-muted">
-            {new Intl.DateTimeFormat(i18n.language, { weekday: "short", timeZone: "UTC" }).format(
-              Date.UTC(2023, 0, 1 + weekday), // 1 January 2023 was a Sunday
-            )}
-          </span>
-        ))}
-      </div>
-      <div
-        ref={ref}
-        className="grid min-h-0 flex-1 grid-cols-7 overflow-y-auto"
-        style={{ gridTemplateRows: `repeat(${String(weeks.length)}, minmax(5.5rem, 1fr))` }}
-      >
-        {weeks.flat().map((day) => {
-          const entries = byDay.get(day) ?? [];
-          const outside = day.slice(0, 7) !== month;
-          const label = dayLabel(day, i18n.language);
-          const number = (
-            <span
-              className={cn(
-                "grid size-6 place-items-center rounded-full tabular-nums",
-                day === today && "bg-primary font-semibold text-primary-ink",
+    <CalendarDnd onDrop={onDrop}>
+      <div className="flex h-full min-h-0 flex-col text-xs">
+        <div className="grid grid-cols-7 border-b border-line" aria-hidden>
+          {weekdayOrder(new Date(Date.parse(`${firstWeek[0] ?? month}T00:00:00Z`)).getUTCDay()).map((weekday) => (
+            <span key={weekday} className="truncate px-1 py-1 text-center text-muted">
+              {new Intl.DateTimeFormat(i18n.language, { weekday: "short", timeZone: "UTC" }).format(
+                Date.UTC(2023, 0, 1 + weekday), // 1 January 2023 was a Sunday
               )}
-            >
-              {Number(day.slice(8, 10))}
             </span>
-          );
-          const cellClass = cn(
-            "flex min-h-0 min-w-0 flex-col gap-0.5 border-r border-b border-line p-0.5 [&:nth-child(7n)]:border-r-0",
-            outside && "bg-surface/60 text-muted",
-            day === date && "outline-2 -outline-offset-2 outline-primary",
-          );
-          if (compact) {
-            return (
-              <button
-                key={day}
-                type="button"
-                aria-label={t("calendar.month.openDayCount", { date: label, count: entries.length })}
-                onClick={() => {
-                  onDay(day);
-                }}
-                className={cn(cellClass, "items-center text-left")}
+          ))}
+        </div>
+        <div
+          ref={ref}
+          className="grid min-h-0 flex-1 grid-cols-7 overflow-y-auto"
+          style={{ gridTemplateRows: `repeat(${String(weeks.length)}, minmax(5.5rem, 1fr))` }}
+        >
+          {weeks.flat().map((day) => {
+            const entries = byDay.get(day) ?? [];
+            const outside = day.slice(0, 7) !== month;
+            const label = dayLabel(day, i18n.language);
+            const number = (
+              <span
+                className={cn(
+                  "grid size-6 place-items-center rounded-full tabular-nums",
+                  day === today && "bg-primary font-semibold text-primary-ink",
+                )}
               >
-                {number}
-                {entries.slice(0, PHONE_BARS).map((entry) => (
-                  <span
-                    key={entry.key}
-                    aria-hidden
-                    className={cn("h-1.5 w-full rounded-full", swatchClasses(entry.color))}
-                  />
-                ))}
-                {entries.length > PHONE_BARS ? (
-                  <span aria-hidden className="text-[10.5px] text-muted">
-                    +{entries.length - PHONE_BARS}
-                  </span>
-                ) : null}
-              </button>
+                {Number(day.slice(8, 10))}
+              </span>
             );
-          }
-          const { shown, more } = fitInCell(entries.length, lines);
-          return (
-            <div
-              key={day}
-              className={cellClass}
-              onClick={(event) => {
-                // The empty space of a cell opens the day; its buttons handle their own clicks.
-                if (!(event.target instanceof Element) || !event.target.closest("button")) onDay(day);
-              }}
-            >
-              <button
-                type="button"
-                aria-label={t("calendar.month.openDay", { date: label })}
-                onClick={() => {
-                  onDay(day);
-                }}
-                className="w-fit rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                {number}
-              </button>
-              <ul aria-label={label} className="flex min-w-0 flex-col gap-0.5">
-                {entries.slice(0, shown).map((entry) => {
-                  const id = `month-${day}-${entry.key}`;
-                  const start = time.start(entry);
-                  return (
-                    <li key={entry.key} className="min-w-0">
-                      <EventButton
-                        entry={entry}
-                        anchor={anchor}
-                        describedBy={id}
-                        className={cn(
-                          "flex h-5 w-full items-center gap-1 rounded-sm pr-1 pl-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                          itemColorClasses(entry.color),
-                        )}
-                      >
-                        {start ? (
-                          <span aria-hidden className="shrink-0 text-muted tabular-nums">
-                            {start}
-                          </span>
-                        ) : null}
-                        <span className="truncate font-medium">{entry.title || t("calendar.day.noTitle")}</span>
-                        <span id={id} className="sr-only">
-                          {time.range(entry)}
-                        </span>
-                      </EventButton>
-                    </li>
-                  );
-                })}
-              </ul>
-              {more > 0 ? (
+            const cellClass = cn(
+              "flex min-h-0 min-w-0 flex-col gap-0.5 border-r border-b border-line p-0.5 [&:nth-child(7n)]:border-r-0",
+              outside && "bg-surface/60 text-muted",
+              day === date && "outline-2 -outline-offset-2 outline-primary",
+            );
+            if (compact) {
+              return (
                 <button
+                  key={day}
                   type="button"
-                  aria-label={t("calendar.month.moreOn", { count: more, date: label })}
+                  aria-label={t("calendar.month.openDayCount", { date: label, count: entries.length })}
                   onClick={() => {
                     onDay(day);
                   }}
-                  className="w-fit rounded-sm px-1 text-left font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                  className={cn(cellClass, "items-center text-left")}
                 >
-                  {t("calendar.month.more", { count: more })}
+                  {number}
+                  {entries.slice(0, PHONE_BARS).map((entry) => (
+                    <span
+                      key={entry.key}
+                      aria-hidden
+                      className={cn("h-1.5 w-full rounded-full", swatchClasses(entry.color))}
+                    />
+                  ))}
+                  {entries.length > PHONE_BARS ? (
+                    <span aria-hidden className="text-[10.5px] text-muted">
+                      +{entries.length - PHONE_BARS}
+                    </span>
+                  ) : null}
                 </button>
-              ) : null}
-            </div>
-          );
-        })}
+              );
+            }
+            const { shown, more } = fitInCell(entries.length, lines);
+            return (
+              <DropArea
+                id={`day:${day}`}
+                data={{ kind: "day", day }}
+                key={day}
+                className={cellClass}
+                onClick={(event) => {
+                  // The empty space of a cell opens the day; its buttons handle their own clicks.
+                  if (!(event.target instanceof Element) || !event.target.closest("button")) onDay(day);
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label={t("calendar.month.openDay", { date: label })}
+                  onClick={() => {
+                    onDay(day);
+                  }}
+                  className="w-fit rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {number}
+                </button>
+                <ul aria-label={label} className="flex min-w-0 flex-col gap-0.5">
+                  {entries.slice(0, shown).map((entry) => {
+                    const id = `month-${day}-${entry.key}`;
+                    const start = time.start(entry);
+                    return (
+                      <li key={entry.key} className="min-w-0">
+                        <EventButton
+                          entry={entry}
+                          anchor={anchor}
+                          describedBy={id}
+                          drag={{ day, accepts: "day", disabled: !canDrag(entry) }}
+                          className={cn(
+                            "flex h-5 w-full items-center gap-1 rounded-sm pr-1 pl-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                            itemColorClasses(entry.color),
+                          )}
+                        >
+                          {start ? (
+                            <span aria-hidden className="shrink-0 text-muted tabular-nums">
+                              {start}
+                            </span>
+                          ) : null}
+                          <span className="truncate font-medium">{entry.title || t("calendar.day.noTitle")}</span>
+                          <span id={id} className="sr-only">
+                            {time.range(entry)}
+                          </span>
+                        </EventButton>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {more > 0 ? (
+                  <button
+                    type="button"
+                    aria-label={t("calendar.month.moreOn", { count: more, date: label })}
+                    onClick={() => {
+                      onDay(day);
+                    }}
+                    className="w-fit rounded-sm px-1 text-left font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    {t("calendar.month.more", { count: more })}
+                  </button>
+                ) : null}
+              </DropArea>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </CalendarDnd>
   );
 }

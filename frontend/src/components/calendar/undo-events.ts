@@ -61,3 +61,14 @@ registerUndo<OccurrenceExcluded>("event.exclude", {
     run: () => mutate(user, { ...target(id), op: "exclude", data: { occurrence_date: date } }),
   }),
 });
+
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. A date given back to a series (a moved series takes its excluded
+// dates along, D-78): undone by excluding it again.
+registerUndo<OccurrenceExcluded>("event.include", {
+  undo: ({ user, id, date }) => ({
+    run: () => mutate(user, { ...target(id), op: "exclude", data: { occurrence_date: date } }),
+  }),
+  redo: ({ user, id, date }) => ({
+    run: () => mutate(user, { ...target(id), op: "include", data: { occurrence_date: date } }),
+  }),
+});

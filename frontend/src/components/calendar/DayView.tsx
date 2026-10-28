@@ -34,7 +34,11 @@
 // is the month grid (MonthView), whose days open the day view.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. Agenda (FR-CAL-27, D-77): key A; the range is the selected date and
 // the user's agenda days after it, ‹ › and ← / → move by that range; the title is the range; the content is the
-// agenda list (AgendaView), whose day headings open the day view.
+// agenda list (AgendaView), whose day headings open the day view. A header narrower than 64 rem shows New event as an
+// icon, so the four-view switch and range titles stay on one line.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. Drag and drop in the week and month grids (FR-CAL-28, D-78): only
+// events the user may change; a series first asks "only this occurrence or all?" (this and following: HAAL-093). The
+// move is written like every event change and is one undo step; the notification names the new day and time.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus } from "lucide-react";
@@ -51,7 +55,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
-import { type DayEntry, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
+import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
 import { notify } from "@/lib/notify";
 import { itemColorClasses } from "@/lib/palette";
 import { useShortcut } from "@/lib/shortcuts";
@@ -63,6 +67,7 @@ import { type Selection, useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
 import { agendaDays } from "@/lib/agendaView";
+import { type DropTarget, type EventTimes, droppedTimes, planDrop } from "@/lib/eventDrag";
 import { addMonths, monthOf, sameDayIn } from "@/lib/monthGrid";
 import { monthTitle, monthWeeks } from "@/lib/monthView";
 import { weekDays, rangeTitle } from "@/lib/weekView";
@@ -72,11 +77,12 @@ import { DayNumberLabel, IsoWeekLabel, LiveClock, WeekAbBadge } from "./HeaderIn
 import { AgendaList } from "./AgendaView";
 import { MonthGrid } from "./MonthView";
 import { WeekGrid } from "./WeekView";
+import type { DragData } from "./EventButton";
 import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
-import { moveToNextDay } from "./moveNextDay";
+import { moveToNextDay, runMoves } from "./moveNextDay";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
 import { OverdueCounter } from "./OverdueCounter";
 import { useCalendars } from "./useCalendars";
@@ -309,7 +315,7 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
   const navigate = useNavigate();
   const router = useRouter();
   const viewerTz = useDisplayTimeZone();
-  const { week_start: weekStart, agenda_days: agendaLength } = useSettings();
+  const { week_start: weekStart, agenda_days: agendaLength, time_format: timeFormat } = useSettings();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
   const { data: me } = useQuery(meQuery);
@@ -368,9 +374,13 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The "this occurrence or all?" question waiting for an answer.
-  const [choice, setChoice] = useState<{ kind: "delete" | "edit"; row: Record<string, unknown>; date: string } | null>(
-    null,
-  );
+  const [choice, setChoice] = useState<{
+    kind: "delete" | "edit" | "move";
+    row: Record<string, unknown>;
+    date: string;
+    /** move: where the dropped occurrence lands. */
+    drop?: { next: EventTimes; target: DropTarget };
+  } | null>(null);
   // After the confirmation closes the focus returns to the list — once a deleted row has left it ("" = cancelled).
   const refocus = useRef<string | null>(null);
   const titleOf = (row: Record<string, unknown>) =>
@@ -403,7 +413,12 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
   }
   async function answer(scope: OccurrenceScope) {
     if (!choice) return;
-    const { kind, row, date } = choice;
+    const { kind, row, date, drop } = choice;
+    if (kind === "move") {
+      setChoice(null);
+      if (drop) await applyDrop(row, date, drop.next, drop.target, scope);
+      return;
+    }
     if (kind === "edit") {
       setChoice(null);
       setEditing(scope === "this" ? { event: row, occurrence: date } : { event: row });
@@ -415,6 +430,44 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
       setChoice(null);
     }
   }
+  async function applyDrop(
+    row: Record<string, unknown>,
+    occurrence: string,
+    next: EventTimes,
+    target: DropTarget,
+    scope: OccurrenceScope,
+  ): Promise<void> {
+    if (!user) return;
+    const title = titleOf(row);
+    const day = dayLabel(target.day, i18n.language);
+    const where =
+      target.minutes === undefined
+        ? day
+        : t("calendar.drag.at", {
+            day,
+            time: clockText(
+              `${String(Math.floor(target.minutes / 60)).padStart(2, "0")}:${String(target.minutes % 60).padStart(2, "0")}`,
+              i18n.language,
+              timeFormat,
+            ),
+          });
+    await runMoves(
+      user,
+      [{ plan: planDrop(row, occurrence, next, scope), title }],
+      t("calendar.drag.moved", { title, where }),
+      { key: "undo.labels.eventMovedTo", values: { title, where } },
+    );
+  }
+  function dropEvent(data: DragData, target: DropTarget) {
+    const row = rowOf(data.entry);
+    if (!row || !calendars.canWrite(row.container_id)) return;
+    const occurrence = occurrenceOf(data.entry);
+    const next = droppedTimes(row, occurrence, data.day, target, viewerTz);
+    if (!next) return;
+    if (row.rrule) setChoice({ kind: "move", row, date: occurrence, drop: { next, target } });
+    else void applyDrop(row, occurrence, next, target, "this");
+  }
+  const canDrag = (entry: DayEntry) => calendars.canWrite(rowOf(entry)?.container_id);
   async function deleteEvent(row: Record<string, unknown>): Promise<boolean> {
     if (!user) return false;
     const id = String(row.id);
@@ -755,6 +808,8 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
               onDay={(day) => {
                 switchView("day", day);
               }}
+              canDrag={canDrag}
+              onDrop={dropEvent}
             />
           </div>
         ) : week ? (
@@ -771,6 +826,8 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
                 setDetails(null);
               }}
               details={detailsOf}
+              canDrag={canDrag}
+              onDrop={dropEvent}
             />
           </div>
         ) : (
@@ -857,18 +914,28 @@ export function DayView({ date, view = "day" }: { date: string; view?: CalendarV
       />
       <OccurrenceChoice
         open={choice !== null}
-        title={t(choice?.kind === "edit" ? "calendar.occurrence.editTitle" : "calendar.occurrence.deleteTitle")}
+        title={t(
+          choice?.kind === "edit"
+            ? "calendar.occurrence.editTitle"
+            : choice?.kind === "move"
+              ? "calendar.occurrence.moveTitle"
+              : "calendar.occurrence.deleteTitle",
+        )}
         body={
           choice
-            ? t(choice.kind === "edit" ? "calendar.occurrence.editBody" : "calendar.occurrence.deleteBody", {
-                title: titleOf(choice.row),
-                date: dayLabel(choice.date, i18n.language),
-              })
+            ? t(
+                choice.kind === "edit"
+                  ? "calendar.occurrence.editBody"
+                  : choice.kind === "move"
+                    ? "calendar.occurrence.moveBody"
+                    : "calendar.occurrence.deleteBody",
+                { title: titleOf(choice.row), date: dayLabel(choice.date, i18n.language) },
+              )
             : ""
         }
-        thisLabel={t(choice?.kind === "edit" ? "calendar.occurrence.editThis" : "calendar.occurrence.deleteThis")}
-        allLabel={t(choice?.kind === "edit" ? "calendar.occurrence.editAll" : "calendar.occurrence.deleteAll")}
-        danger={choice?.kind !== "edit"}
+        thisLabel={t(choice?.kind === "delete" ? "calendar.occurrence.deleteThis" : "calendar.occurrence.editThis")}
+        allLabel={t(choice?.kind === "delete" ? "calendar.occurrence.deleteAll" : "calendar.occurrence.editAll")}
+        danger={choice?.kind === "delete"}
         onChoose={answer}
         onClose={() => {
           refocus.current = "";

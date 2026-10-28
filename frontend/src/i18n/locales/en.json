@@ -150,7 +150,9 @@
       "editAll": "All occurrences",
       "editorTitle": "Edit the occurrence on {{date}}",
       "copyNote": "Saving makes this a separate event on its own date; the series skips {{date}}. Attachments stay with the series.",
-      "saved": "Saved {{title}} as a separate event"
+      "saved": "Saved {{title}} as a separate event",
+      "moveTitle": "Move repeating event?",
+      "moveBody": "“{{title}}” repeats. Move only the occurrence on {{date}} (it becomes a separate event), or all occurrences?"
     },
     "duplicate": {
       "title": "An event with this title already exists",
@@ -197,6 +199,11 @@
       "emptyTitle_one": "Nothing on this day",
       "emptyTitle_other": "Nothing in these {{count}} days",
       "emptyBody": "Events of the range appear here. Create one with New event, or move on with the arrows."
+    },
+    "drag": {
+      "instructions": "Drag the event with the mouse, or hold it with a finger, and drop it on another day or time. Esc cancels.",
+      "at": "{{day}}, {{time}}",
+      "moved": "Moved {{title}} to {{where}}"
     }
   },
   "pages": {
@@ -775,7 +782,8 @@
       "occurrenceDeleted": "deleting {{title}} on {{date}}",
       "occurrenceEdited": "the change to {{title}} on {{date}}",
       "eventMoved": "moving {{title}} to {{date}}",
-      "eventsMoved": "moving {{count}} events to the next day"
+      "eventsMoved": "moving {{count}} events to the next day",
+      "eventMovedTo": "moving {{title}} to {{where}}"
     }
   },
   "bulk": {
