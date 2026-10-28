@@ -65,7 +65,9 @@
       "chooseDate": "{{date}} — choose another date",
       "pickDate": "Choose a date",
       "todayMark": "today",
-      "hasEvents": "has events"
+      "hasEvents": "has events",
+      "previousWeek": "Previous week",
+      "nextWeek": "Next week"
     },
     "header": {
       "today": "Today",
@@ -163,6 +165,17 @@
       "done": "Moved {{title}} to {{date}}",
       "doneMany_one": "Moved {{count}} event to the next day",
       "doneMany_other": "Moved {{count}} events to the next day"
+    },
+    "views": {
+      "label": "View",
+      "day": "Day",
+      "week": "Week",
+      "dayKey": "Day view",
+      "weekKey": "Week view"
+    },
+    "week": {
+      "allDay": "all day",
+      "allDayOf": "All day, {{date}}"
     }
   },
   "pages": {
