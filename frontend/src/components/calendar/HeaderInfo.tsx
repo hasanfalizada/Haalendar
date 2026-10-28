@@ -6,12 +6,18 @@
 //   ISO year when it differs from the calendar year ("Week 53 · 2026" on 1 January 2027).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-082, D-71. Day Number of the SELECTED date after the week ("Day 301");
 // the tooltip and screen readers get the full "Day 301 of 365".
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-085, D-74. Week A/B label of the SELECTED date as a small badge after the
+// ISO week (FR-CAL-23, atom calendar.week_ab_label.v1 with the user's week start, anchor and labels); hidden while
+// switched off or without an anchor week. Tooltip: alternates weekly from the anchor week; screen readers: "Week
+// label: A".
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { isoWeek } from "@/atoms/calendar/isoWeek";
+import { labelWeek } from "@/atoms/calendar/weekAbLabel";
 import { dayOfYear } from "@/lib/dayOfYear";
+import { dayLabel } from "@/lib/dayView";
 
 /** The current time, updated on every second boundary while the tab is visible. */
 function useNow(): Date {
@@ -74,6 +80,28 @@ export function DayNumberLabel({ date }: { date: string }) {
     <span title={full}>
       <span aria-hidden>{t("calendar.header.day", { day })}</span>
       <span className="sr-only">{full}</span>
+    </span>
+  );
+}
+
+export function WeekAbBadge({ date }: { date: string }) {
+  const { t, i18n } = useTranslation();
+  const { week_start: weekStart, week_ab: weekAb } = useSettings();
+  const [first, second] = weekAb.labels ?? [];
+  if (!weekAb.enabled || !weekAb.anchor || !first || !second) return null;
+  let label: string;
+  try {
+    label = labelWeek({ date, anchor: weekAb.anchor, week_start: weekStart, labels: [first, second] }).label;
+  } catch {
+    return null; // identical labels: the server refuses them, nothing sensible to show
+  }
+  return (
+    <span
+      title={t("calendar.header.weekAbTitle", { label, anchor: dayLabel(weekAb.anchor, i18n.language) })}
+      className="rounded-sm bg-primary-tint px-1.5 py-px font-medium text-primary"
+    >
+      <span aria-hidden>{label}</span>
+      <span className="sr-only">{t("calendar.header.weekAb", { label })}</span>
     </span>
   );
 }

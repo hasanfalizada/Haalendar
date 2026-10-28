@@ -63,7 +63,7 @@ import { type Selection, useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows, mutate } from "@/sync";
 
-import { DayNumberLabel, IsoWeekLabel, LiveClock } from "./HeaderInfo";
+import { DayNumberLabel, IsoWeekLabel, LiveClock, WeekAbBadge } from "./HeaderInfo";
 import { EventDetails } from "./EventDetails";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
@@ -650,6 +650,7 @@ export function DayView({ date }: { date: string }) {
           <div className="flex w-full items-center gap-3 text-xs text-muted md:ml-auto md:w-auto md:text-[13px]">
             <LiveClock timeZone={viewerTz} />
             <IsoWeekLabel date={date} />
+            <WeekAbBadge date={date} />
             <DayNumberLabel date={date} />
           </div>
           {tablet ? (

@@ -74,7 +74,9 @@
       "weekOfYear": "Week {{week}} · {{year}}",
       "weekTitle": "ISO week {{week}} of {{year}}",
       "day": "Day {{day}}",
-      "dayTitle": "Day {{day}} of {{total}}"
+      "dayTitle": "Day {{day}} of {{total}}",
+      "weekAb": "Week label: {{label}}",
+      "weekAbTitle": "Week label {{label}} — alternates weekly from the week of {{anchor}}"
     },
     "details": {
       "title": "Event details",

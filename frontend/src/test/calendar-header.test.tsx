@@ -1,6 +1,6 @@
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. Calendar header (FR-CAL-05, F-05, D-63): "Today" or the long date as
 // the page heading with the weekday, the ISO week of the SELECTED date (also across New Year, with the ISO year when it
-// differs), the Day Number of the SELECTED date (HAAL-082) and the live clock (ticks on the second, stops in a hidden tab, 12/24 hours, profile zone).
+// differs), the Day Number of the SELECTED date (HAAL-082), the Week A/B badge (HAAL-085) and the live clock (ticks on the second, stops in a hidden tab, 12/24 hours, profile zone).
 import "@/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
@@ -54,6 +54,61 @@ describe("day number", () => {
       screen.getByRole("button", { name: "Next day" }).click();
     });
     expect(await screen.findByTitle("Day 1 of 365")).toBeInTheDocument();
+  });
+});
+
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-085. Week A/B badge of the selected date: from the user's settings,
+// right across the year boundary and a 53-week year, cut by the user's week start; hidden when off or without anchor.
+describe("week A/B", () => {
+  async function openWith(date: string, weekAb: ReturnType<typeof settings>["week_ab"], weekStart = 1) {
+    stubApi({
+      "GET /me": () => json(me()),
+      "GET /me/settings": () => json(settings({ week_start: weekStart, week_ab: weekAb })),
+    });
+    renderApp(`/calendar?date=${date}`);
+    await screen.findByRole("heading", { level: 1, name: /^Calendar:/ });
+  }
+
+  it("shows the label of the selected week after the ISO week, across New Year and week 53", async () => {
+    await openWith("2026-12-31", { enabled: true, anchor: "2026-12-28", labels: ["Odd", "Even"] });
+    const badge = await screen.findByTitle(
+      "Week label Odd — alternates weekly from the week of Monday, December 28, 2026",
+    );
+    expect(badge).toHaveTextContent("Odd");
+    expect(screen.getByText("Week label: Odd")).toHaveClass("sr-only");
+    act(() => {
+      screen.getByRole("button", { name: "Next day" }).click(); // 2027-01-01, still ISO week 53 of 2026
+    });
+    expect(await screen.findByText("Week 53 · 2026")).toBeInTheDocument();
+    expect(screen.getByText("Week label: Odd")).toBeInTheDocument();
+    for (const day of [2, 3, 4]) {
+      act(() => {
+        screen.getByRole("button", { name: "Next day" }).click();
+      });
+      await screen.findByRole("heading", { level: 1, name: new RegExp(`January ${String(day)}, 2027`) });
+    }
+    expect(await screen.findByText("Week label: Even")).toBeInTheDocument(); // Monday 2027-01-04
+  });
+
+  it("changes on the user's week start, not on the ISO Monday", async () => {
+    await openWith("2026-11-07", { enabled: true, anchor: "2026-11-01", labels: ["A", "B"] }, 0);
+    expect(await screen.findByText("Week label: A")).toBeInTheDocument(); // Saturday
+    act(() => {
+      screen.getByRole("button", { name: "Next day" }).click(); // Sunday 2026-11-08
+    });
+    expect(await screen.findByText("Week label: B")).toBeInTheDocument();
+  });
+
+  it("is hidden when switched off or without an anchor week", async () => {
+    await openWith("2026-11-10", { enabled: false, anchor: "2026-11-02", labels: ["A", "B"] });
+    await screen.findByText("Week 46");
+    expect(screen.queryByText(/^Week label/)).not.toBeInTheDocument();
+  });
+
+  it("is hidden while enabled without an anchor", async () => {
+    await openWith("2026-11-10", { enabled: true, anchor: null, labels: ["A", "B"] });
+    await screen.findByText("Week 46");
+    expect(screen.queryByText(/^Week label/)).not.toBeInTheDocument();
   });
 });
 
