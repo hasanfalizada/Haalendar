@@ -254,3 +254,30 @@ class ChecklistItem(Base):
     delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A Kanban board (domain model 5.3, FR-KAN-01, D-90): a container like a
+# calendar — owner, name 1-100, position (the owner's board order, fractional index), archived (read-only for everyone,
+# archive ≠ delete). Shared like a calendar; its columns and cards follow with HAAL-111/112.
+class Board(Base):
+    __tablename__ = "board"
+    __table_args__ = (
+        CheckConstraint("char_length(btrim(name)) BETWEEN 1 AND 100", name="name_length"),
+        CheckConstraint("position ~ '^[0-9A-Za-z]{1,64}$'", name="position_valid"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    position: Mapped[str] = mapped_column(String(64))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)

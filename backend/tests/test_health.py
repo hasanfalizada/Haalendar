@@ -36,4 +36,5 @@ def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100: notes (0022).
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101: checklist items (0023).
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105: reminders on notes (0024).
-    assert migration_head() == "0024"
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110: Kanban boards (0025).
+    assert migration_head() == "0025"

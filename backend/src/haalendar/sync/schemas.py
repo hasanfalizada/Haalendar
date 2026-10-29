@@ -38,6 +38,14 @@ class CalendarData(ApiModel):
         return value.strip() if value is not None else None
 
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A board (D-90): name, position (checked by haalendar.planning.boards)
+# and its archive state like a calendar's.
+class BoardData(ApiModel):
+    name: str | None = Field(default=None, max_length=200)
+    position: str | None = Field(default=None, max_length=64)
+    archived_at: datetime | None = None
+
+
 class ItemData(ApiModel):
     title: str | None = Field(default=None, max_length=200)
     body: str | None = Field(default=None, max_length=100_000)
@@ -102,7 +110,7 @@ class MoveData(ApiModel):
 
 class MutationIn(ApiModel):
     mutation_id: uuid.UUID
-    entity_type: Literal["calendar", "item", "reminder", "checklist_item"]
+    entity_type: Literal["calendar", "item", "reminder", "checklist_item", "board"]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]
     base_version: int | None = None

@@ -14,7 +14,8 @@ from __future__ import annotations
 # re-creates the function with high_water_function(SYNCED_TABLES).
 SYNCED_TABLES_0014: tuple[str, ...] = ("calendar", "share", "item", "attachment", "user_settings")
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items join (migration 0023).
-SYNCED_TABLES: tuple[str, ...] = (*SYNCED_TABLES_0014, "reminder", "checklist_item")
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards join (migration 0025).
+SYNCED_TABLES: tuple[str, ...] = (*SYNCED_TABLES_0014, "reminder", "checklist_item", "board")
 
 SYNC_STAMP_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_sync_stamp() RETURNS trigger

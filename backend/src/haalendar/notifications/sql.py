@@ -56,6 +56,14 @@ NOTIFY_SHARE_TRIGGER = (
     "FOR EACH ROW EXECUTE FUNCTION haalendar_notify_share()"
 )
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110 (migration 0025). A shared board is named in the notification too.
+NOTIFY_SHARE_FUNCTION_0025 = NOTIFY_SHARE_FUNCTION.replace(
+    "    SELECT name INTO c_name FROM calendar WHERE id = NEW.container_id;\n  END IF;",
+    "    SELECT name INTO c_name FROM calendar WHERE id = NEW.container_id;\n"
+    "  ELSIF NEW.container_kind = 'board' THEN\n"
+    "    SELECT name INTO c_name FROM board WHERE id = NEW.container_id;\n  END IF;",
+)
+
 ONLY_READ_STATE_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_notification_read_only() RETURNS trigger
 LANGUAGE plpgsql

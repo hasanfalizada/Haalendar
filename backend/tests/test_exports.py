@@ -103,6 +103,12 @@ class World:
                 "VALUES (%s, %s, 'note', %s, 'Milk', 'U', %s)",
                 (self.items["Milk"], self.items["Shopping"], self.items["Shopping"], self.ids["ada"]),
             )
+            # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. One Kanban board, archived.
+            self.items["Revamp"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO board (id, owner_id, name, position, archived_at) VALUES (%s, %s, 'Revamp', 'U', now())",
+                (self.items["Revamp"], self.ids["ada"]),
+            )
         with _as(db_url, self.ids["bob"]) as conn:
             conn.execute(
                 "INSERT INTO calendar (id, owner_id, name) VALUES (%s, %s, 'Bobs')",
@@ -200,7 +206,14 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     assert len(ready) == 1 and ready[0]["payload"]["export_id"] == export["id"] and notes["unread_count"] >= 1
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Ada's default calendar ("My calendar", D-82) counts too.
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100 / HAAL-101. The To-Do section: a note with one checklist item.
-    assert listed[0]["counts"] == {"calendars": 3, "attachments": 1, "notes": 1, "checklist_items": 1}
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. The Kanban section: one board.
+    assert listed[0]["counts"] == {
+        "calendars": 3,
+        "attachments": 1,
+        "notes": 1,
+        "checklist_items": 1,
+        "boards": 1,
+    }
     response = world.api.get(listed[0]["download_url"])
     assert response.status_code == 200 and response.headers["content-type"] == "application/zip"
     assert response.headers["content-disposition"].startswith('attachment; filename="haalendar-export-')
@@ -229,7 +242,15 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     exported = document["attachments"][0]
     assert exported["archive_path"] == f"calendar/attachments/{attachment['id'][:8]}-plan.png"
     assert "storage_key" not in exported and "thumbnail_key" not in exported
-    assert document["events"] == [] and document["boards"] == []
+    assert document["events"] == []
+    [board] = document["boards"]
+    assert (board["id"], board["name"], board["position"], board["permission"]) == (
+        world.items["Revamp"],
+        "Revamp",
+        "U",
+        "owner",
+    )
+    assert board["archived_at"] and "deleted_at" not in board
     [note] = document["notes"]
     assert (note["id"], note["title"], note["color"], note["pinned"], note["position"]) == (
         world.items["Shopping"],

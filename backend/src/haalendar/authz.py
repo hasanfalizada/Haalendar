@@ -8,6 +8,8 @@ with 409 invalid_state even for the owner; reading and sharing stay.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. A note is its own container (D-87): its owner is the note's owner; an
 archived note stays writable (archive ≠ delete, only hidden from the main list), and a note in the trash is still
 found, so its delete can repeat and its restore can run (the note row says it is deleted).
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards are containers like calendars (D-90): shared the same way, and
+an archived board is read-only in the same way.
 """
 
 from __future__ import annotations
@@ -21,14 +23,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from haalendar.atoms.authz.check import Action, Decision, SharePermission, check
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Calendar, Item
+from haalendar.planning.models import Board, Calendar, Item
 from haalendar.security.rls import ContainerKind
 
 log = get_logger(__name__)
 
-# Container kind → model of the container tables (sharing, archive); a note is its own container (below), the board
-# joins with its table.
-CONTAINERS: dict[ContainerKind, type[Calendar]] = {"calendar": Calendar}
+# Container kind → model of the container tables (sharing, archive); a note is its own container (below).
+CONTAINERS: dict[ContainerKind, type[Calendar] | type[Board]] = {"calendar": Calendar, "board": Board}
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,7 +91,7 @@ async def require(
             log.info(
                 "authz_archived", user_id=str(user_id), container_kind=kind, container_id=str(container_id)
             )
-            raise ProblemError(409, ProblemCode.INVALID_STATE, "This calendar is archived")
+            raise ProblemError(409, ProblemCode.INVALID_STATE, f"This {kind} is archived")
         return decision
     log.info(
         "authz_denied",

@@ -99,7 +99,7 @@ def test_share_list_and_access(people: People, clean_db: str) -> None:
     [
         ("nobody@example.org", {}, 422, "user_not_found"),
         ("ada@example.org", {}, 422, "self"),
-        ("bob@example.org", {"container_kind": "board"}, 422, "unsupported"),
+        ("bob@example.org", {"container_kind": "note"}, 422, "unsupported"),
     ],
 )
 def test_share_validation(people: People, email: str, extra: dict[str, str], status: int, code: str) -> None:

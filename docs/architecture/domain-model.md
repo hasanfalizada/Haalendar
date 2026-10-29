@@ -111,6 +111,7 @@ Legend: PK primary key, FK foreign key, NN not null, U unique. Common columns (P
 | updated_at | timestamptz NN | |
 
 ### 5.3 `board` (container) · `board_column`
+<!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. `board` built in migration 0025 (D-90): name not blank, position 1-64 letters or digits; `board_column` follows with HAAL-111. -->
 | Table | Column | Type | Rules |
 |---|---|---|---|
 | board | id, owner_id | uuid | PK; FK user |

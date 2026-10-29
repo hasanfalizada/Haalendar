@@ -7,6 +7,8 @@ iCalendar files and the attachments of items in them. The To-Do and Kanban secti
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. To-Do: the user's notes (archived and deleted ones included) and
 their attachments.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. And the notes' checklist items (deleted ones included).
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Kanban: the user's boards (archived and deleted ones included); their
+columns and cards join with HAAL-111/112.
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ from haalendar.exports.archive import ArchiveWriter, safe_name
 from haalendar.exports.schemas import Module
 from haalendar.planning.ics import calendar_ics
 from haalendar.planning.ics_service import calendar_events
-from haalendar.planning.models import Calendar, ChecklistItem, Item, Note
+from haalendar.planning.models import Board, Calendar, ChecklistItem, Item, Note
 from haalendar.storage import Storage
 
 
@@ -175,8 +177,27 @@ async def todo_section(ctx: ExportContext) -> None:
     await _attachments(ctx, "note", ids, "todo")
 
 
+async def kanban_section(ctx: ExportContext) -> None:
+    boards = await ctx.db.scalars(
+        select(Board).where(Board.owner_id == ctx.owner_id).order_by(Board.position.collate("C"), Board.id)
+    )
+    for board in boards:
+        ctx.archive.add_row(
+            "boards",
+            {
+                "id": board.id,
+                "owner_id": board.owner_id,
+                "name": board.name,
+                "position": board.position,
+                "archived_at": board.archived_at,
+                "permission": "owner",
+                **_meta(board),
+            },
+        )
+
+
 SECTIONS: dict[Module, list[Section]] = {
     "calendar": [calendar_section],
     "todo": [todo_section],
-    "kanban": [],
+    "kanban": [kanban_section],
 }

@@ -25,7 +25,8 @@ NOTIFIED_TABLES: tuple[str, ...] = (
 # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Tables joining later (migration 0015 and its builders stay frozen):
 # a reminder concerns its owner only.
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items: told like items, to their container's audience.
-NOTIFIED_TABLES_LATER: tuple[str, ...] = ("reminder", "checklist_item")
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards: told to their audience like calendars.
+NOTIFIED_TABLES_LATER: tuple[str, ...] = ("reminder", "checklist_item", "board")
 
 NOTIFY_FUNCTION = f"""
 CREATE OR REPLACE FUNCTION haalendar_sync_notify() RETURNS trigger
@@ -59,6 +60,14 @@ NOTIFY_FUNCTION_0017 = NOTIFY_FUNCTION.replace(
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101 (migration 0023): checklist items are told like items.
 NOTIFY_FUNCTION_0023 = NOTIFY_FUNCTION_0017.replace(
     "WHEN 'item', 'attachment' THEN", "WHEN 'item', 'attachment', 'checklist_item' THEN"
+)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110 (migration 0025): a board is told like a calendar.
+NOTIFY_FUNCTION_0025 = NOTIFY_FUNCTION_0023.replace(
+    "    WHEN 'item', 'attachment', 'checklist_item' THEN",
+    "    WHEN 'board' THEN message := jsonb_build_object('c', 'board', 'i', NEW.id);\n"
+    "    WHEN 'item', 'attachment', 'checklist_item' THEN",
 )
 
 
@@ -97,3 +106,10 @@ AS $$
   SELECT s.grantee_id FROM share s WHERE s.container_kind = $1 AND s.container_id = $2 AND s.revoked_at IS NULL
 $$
 """
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110 (migration 0025). The owner of a board is told too.
+AUDIENCE_FUNCTION_0025 = AUDIENCE_FUNCTION_0022.replace(
+    "  SELECT i.owner_id FROM item i",
+    "  SELECT b.owner_id FROM board b WHERE $1 = 'board' AND b.id = $2\n  UNION\n  SELECT i.owner_id FROM item i",
+)

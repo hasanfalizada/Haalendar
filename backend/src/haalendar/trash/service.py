@@ -38,7 +38,7 @@ from haalendar.accounts.models import UserAccount
 from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Calendar, ChecklistItem, Item
+from haalendar.planning.models import Board, Calendar, ChecklistItem, Item
 from haalendar.softdelete import restore_batch
 from haalendar.trash.schemas import (
     FailureCode,
@@ -97,6 +97,16 @@ SOURCES: dict[str, TrashSource] = {
         may_restore=lambda user_id: Calendar.owner_id == user_id,
         refuse=lambda row, user_id: None if row.owner_id == user_id else "forbidden",
         children=(("event", Item), ("attachment", Attachment)),
+    ),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards (D-90): restored by their owner with everything deleted
+    # with them (cards, their attachments and checklist items; columns join with HAAL-111).
+    "board": TrashSource(
+        kind="board",
+        model=Board,
+        title=lambda row: row.name,
+        may_restore=lambda user_id: Board.owner_id == user_id,
+        refuse=lambda row, user_id: None if row.owner_id == user_id else "forbidden",
+        children=(("card", Item), ("attachment", Attachment), ("checklist_item", ChecklistItem)),
     ),
     "event": TrashSource(
         kind="event",

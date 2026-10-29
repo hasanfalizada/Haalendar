@@ -40,6 +40,7 @@ PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "s
     "push_subscription": "self",  # HAAL-091: self_policies (one browser of one user)
     "note": "content",  # HAAL-100: content_child_policies (a note is its own container)
     "checklist_item": "content",  # HAAL-101: content_policies (author: created_by)
+    "board": "container",  # HAAL-110: container_policies
 }
 
 CURRENT_USER_FUNCTION = """
@@ -193,3 +194,11 @@ def item_policies_0022() -> list[str]:
         f"CREATE POLICY item_read ON item FOR SELECT USING ({owns} OR {shared} IS NOT NULL OR {own_note})",
         f"CREATE POLICY item_insert ON item FOR INSERT WITH CHECK (({writable} OR {own_note}) AND owner_id = {me})",
     ]
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110 (migration 0025). The board joins as a container table of its own.
+OWNS_CONTAINER_FUNCTION_0025 = OWNS_CONTAINER_FUNCTION_0022.replace(
+    "    WHEN 'note' THEN",
+    "    WHEN 'board' THEN RETURN EXISTS (SELECT 1 FROM board b WHERE b.id = container AND b.owner_id = me);\n"
+    "    WHEN 'note' THEN",
+)

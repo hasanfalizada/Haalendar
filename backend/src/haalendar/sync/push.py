@@ -13,6 +13,7 @@
 - +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Items of kind `event` can be created, and their event fields
   changed (planning.events checks the whole event; time fields conflict as a group).
 - +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders: create, update, delete, restore (planning.reminders).
+- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards: create, update, delete, restore (planning.boards).
 """
 
 from __future__ import annotations
@@ -27,12 +28,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import checklists, occurrences, reminders
+from haalendar.planning import boards, checklists, occurrences, reminders
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
 from haalendar.sync.pull import current_state
 from haalendar.sync.schemas import (
+    BoardData,
     CalendarData,
     ChecklistItemCreateData,
     ChecklistItemData,
@@ -68,6 +70,7 @@ def _unsupported(mutation: MutationIn) -> ProblemError:
 
 def _fields(
     model: type[CalendarData]
+    | type[BoardData]
     | type[ItemData]
     | type[ItemCreateData]
     | type[ReminderData]
@@ -101,6 +104,19 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await planning.delete_calendar(db, user_id, m.entity_id, m.base_version)
         if m.op == "restore":
             return await planning.restore_calendar(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards (D-90).
+    if m.entity_type == "board":
+        if m.op == "create":
+            return await boards.create_board(db, user_id, m.entity_id, _fields(BoardData, m.data))
+        if m.op == "update":
+            return await boards.update_board(
+                db, user_id, m.entity_id, m.base or {}, _fields(BoardData, m.data), current
+            )
+        if m.op == "delete":
+            return await boards.delete_board(db, user_id, m.entity_id, m.base_version)
+        if m.op == "restore":
+            return await boards.restore_board(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.entity_type == "reminder":
         if m.op == "create":
