@@ -107,3 +107,9 @@ export function addDays(iso: string, days: number): string {
   const ms = Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000;
   return new Date(ms).toISOString().slice(0, 10);
 }
+
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. Shared by drag and drop and the duplicate (was in eventDrag).
+/** Calendar days from `from` to `to` ("YYYY-MM-DD"; negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}

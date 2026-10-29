@@ -268,7 +268,58 @@ async def create_item(
     item_values = {name: data[name] for name in ITEM_FIELDS if name in data}
     event_values = {name: data[name] for name in events.EVENT_FIELDS if name in data}
     version = await events.create_event(db, user_id, item_id, container_id, item_values, event_values)
+    if data.get("copy_attachments_from") is not None:
+        await _copy_attachments(
+            db, user_id, uuid.UUID(str(data["copy_attachments_from"])), item_id, container_id
+        )
     return Outcome(version=version)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. A duplicate (FR-CAL-34, D-84) takes the live attachments of the event
+# it was copied from: new attachment rows of the new item pointing at the same stored files (they are content-addressed
+# and never deleted, so nothing is copied), written by the user who duplicates. Only when that user can read the
+# source; a source deleted or no longer readable meanwhile (the duplicate was made offline) leaves the copy without
+# them rather than refusing it.
+async def _copy_attachments(
+    db: AsyncSession, user_id: uuid.UUID, source_id: uuid.UUID, item_id: uuid.UUID, container_id: uuid.UUID
+) -> None:
+    source = await db.get(Item, source_id)
+    if source is None or source.deleted_at is not None:
+        log.info("attachments_not_copied", source_id=str(source_id), item_id=str(item_id), reason="gone")
+        return
+    try:
+        await require(db, user_id, "read", _container_kind(source.container_kind), source.container_id)
+    except ProblemError:
+        log.info("attachments_not_copied", source_id=str(source_id), item_id=str(item_id), reason="no_access")
+        return
+    rows = await db.scalars(
+        select(Attachment)
+        .where(Attachment.item_id == source_id, Attachment.deleted_at.is_(None))
+        .order_by(Attachment.created_at, Attachment.id)
+    )
+    copied = [
+        Attachment(
+            id=uuid.uuid7(),
+            item_id=item_id,
+            container_kind="calendar",
+            container_id=container_id,
+            uploaded_by=user_id,
+            file_name=row.file_name,
+            media_type=row.media_type,
+            size_bytes=row.size_bytes,
+            width=row.width,
+            height=row.height,
+            content_hash=row.content_hash,
+            storage_key=row.storage_key,
+            thumbnail_key=row.thumbnail_key,
+            created_by=user_id,
+            updated_by=user_id,
+        )
+        for row in rows
+    ]
+    db.add_all(copied)
+    await db.flush()
+    log.info("attachments_copied", source_id=str(source_id), item_id=str(item_id), count=len(copied))
 
 
 async def update_item(

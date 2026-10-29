@@ -8,8 +8,20 @@
 // +++===+++ 2026-10-25 — Hasan Alizada — HAAL-081. The colour picker, saving at once (EventColor).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084. "Move to next day" between Edit and Delete (FR-CAL-20).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's own reminders of the event, under the calendar line.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. "Duplicate…" (button and the key D) after "Move to next day".
 import { useQuery } from "@tanstack/react-query";
-import { Bell, CalendarArrowUp, CalendarDays, Eye, MapPin, Paperclip, Pencil, Repeat, Trash2 } from "lucide-react";
+import {
+  Bell,
+  CalendarArrowUp,
+  CalendarDays,
+  Copy,
+  Eye,
+  MapPin,
+  Paperclip,
+  Pencil,
+  Repeat,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -46,6 +58,7 @@ interface EventDetailsProps {
   onEdit: () => void;
   onDelete: () => void;
   onMoveNextDay: () => void;
+  onDuplicate: () => void;
 }
 
 function useAttachments(user: string, itemId: string): Attachment[] {
@@ -75,6 +88,7 @@ export function EventDetails({
   onEdit,
   onDelete,
   onMoveNextDay,
+  onDuplicate,
 }: EventDetailsProps) {
   const { t, i18n } = useTranslation();
   const { time_format: timeFormat } = useSettings();
@@ -113,6 +127,15 @@ export function EventDetails({
     allowInDialog: true,
     enabled: writable,
     handler: onDelete,
+  });
+  useShortcut({
+    id: "calendar:details-duplicate",
+    keys: ["D"],
+    group: "items",
+    label: "calendar.copy.key",
+    allowInDialog: true,
+    enabled: writable,
+    handler: onDuplicate,
   });
 
   return (
@@ -226,6 +249,10 @@ export function EventDetails({
           <Button onClick={onMoveNextDay}>
             <CalendarArrowUp aria-hidden />
             {t("calendar.details.moveNextDay")}
+          </Button>
+          <Button onClick={onDuplicate}>
+            <Copy aria-hidden />
+            {t("calendar.details.duplicate")}
           </Button>
           <Button variant="danger" onClick={onDelete}>
             <Trash2 aria-hidden />

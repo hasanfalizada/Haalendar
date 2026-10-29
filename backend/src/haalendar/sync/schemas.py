@@ -55,6 +55,8 @@ class ItemCreateData(ItemData):
     kind: Literal["event"]
     container_kind: Literal["calendar"]
     container_id: uuid.UUID
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. A duplicate (D-84): the event whose attachments it takes along.
+    copy_attachments_from: uuid.UUID | None = None
 
 
 # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include one occurrence of a series (D-67).

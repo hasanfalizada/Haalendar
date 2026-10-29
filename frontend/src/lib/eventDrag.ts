@@ -7,7 +7,7 @@
 //   date excluded (D-67); "all occurrences": the series moves by the same days and to the new times, and so do its
 //   excluded dates (the old ones are included again, the moved ones excluded).
 import { localToUtc, wallClock } from "@/atoms/time/localToUtc";
-import { addDays } from "@/lib/datetime";
+import { addDays, daysBetween } from "@/lib/datetime";
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Extended rules (D-80): a series whose rule names its days (weekdays,
 // Nth or last weekday, last day of month) moves as a whole only to other times on the same day (seriesMovable);
 // otherwise its end date (UNTIL) moves along with the start.
@@ -37,10 +37,6 @@ export interface EventTimes {
 
 const text = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null);
 const pad = (value: number) => String(value).padStart(2, "0");
-
-function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
-}
 
 function minutesOf(hhmm: string): number {
   const [h = 0, m = 0] = hhmm.split(":").map(Number);

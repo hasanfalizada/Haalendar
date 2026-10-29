@@ -95,7 +95,17 @@
       "delete": "Delete",
       "colorChanged": "Color changed: {{title}}",
       "colorSeries": "Applies to all occurrences.",
-      "moveNextDay": "Move to next day"
+      "moveNextDay": "Move to next day",
+      "duplicate": "Duplicate…"
+    },
+    "copy": {
+      "title": "Duplicate {{title}}",
+      "intro": "A copy with all its details and attachments, starting on the date you choose.",
+      "series": "This occurrence is copied as a one-off event; the series stays as it is.",
+      "date": "Start date of the copy",
+      "submit": "Duplicate",
+      "done": "Duplicated {{title}} to {{date}}",
+      "key": "Duplicate the event"
     },
     "delete": {
       "title": "Delete event?",
@@ -792,7 +802,8 @@
       "calendarChanged": "the change to {{name}}",
       "calendarDefault": "making {{name}} the default",
       "calendarDeleted": "deleting {{name}}",
-      "icsImported": "the import into {{name}}"
+      "icsImported": "the import into {{name}}",
+      "eventDuplicated": "duplicating {{title}} to {{date}}"
     }
   },
   "bulk": {

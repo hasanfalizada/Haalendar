@@ -39,6 +39,8 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. Drag and drop in the week and month grids (FR-CAL-28, D-78): only
 // events the user may change; a series first asks "only this occurrence or all?" (this and following: HAAL-093). The
 // move is written like every event change and is one undo step; the notification names the new day and time.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. Duplicate (FR-CAL-34, D-84) from the details card: the dialog writes
+// the copy, then the view goes to the copy's date with its card open.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus } from "lucide-react";
@@ -83,6 +85,7 @@ import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
 import { CalendarList } from "./CalendarList";
+import { DuplicateDialog } from "./DuplicateDialog";
 import { MiniMonth } from "./MiniMonth";
 import { moveToNextDay, planSteps, runMoves, writePlan } from "./moveNextDay";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
@@ -390,6 +393,8 @@ export function DayView({
   } | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
   const [details, setDetails] = useState<DayEntry | null>(null);
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. The event (and its shown date) being duplicated.
+  const [duplicating, setDuplicating] = useState<{ row: Record<string, unknown>; occurrence: string } | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The "this occurrence or all?" question waiting for an answer.
@@ -579,6 +584,10 @@ export function DayView({
         onMoveNextDay={() => {
           void moveOne(row, occurrenceOf(entry));
         }}
+        onDuplicate={() => {
+          setDetails(null);
+          setDuplicating({ row, occurrence: occurrenceOf(entry) });
+        }}
       />
     );
   };
@@ -689,7 +698,7 @@ export function DayView({
     keys: ["N"],
     group: "items",
     label: "calendar.editor.newButton",
-    enabled: editing === null && details === null && deleting === null && choice === null,
+    enabled: editing === null && details === null && deleting === null && choice === null && duplicating === null,
     handler: () => {
       setEditing({ event: null });
     },
@@ -955,6 +964,20 @@ export function DayView({
             </DialogContent>
           ) : null}
         </Dialog>
+      ) : null}
+      {duplicating && user ? (
+        <DuplicateDialog
+          user={user}
+          row={duplicating.row}
+          occurrence={duplicating.occurrence}
+          onClose={() => {
+            setDuplicating(null);
+          }}
+          onDone={(id, target) => {
+            setDuplicating(null);
+            void navigate({ to: "/calendar", search: { date: target, view, event: id }, replace: true });
+          }}
+        />
       ) : null}
       <ConfirmDialog
         open={deleting !== null}
