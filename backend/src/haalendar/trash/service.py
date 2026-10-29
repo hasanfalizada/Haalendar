@@ -38,7 +38,7 @@ from haalendar.accounts.models import UserAccount
 from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Calendar, Item
+from haalendar.planning.models import Calendar, ChecklistItem, Item
 from haalendar.softdelete import restore_batch
 from haalendar.trash.schemas import (
     FailureCode,
@@ -120,7 +120,8 @@ SOURCES: dict[str, TrashSource] = {
         title=lambda row: row.title or "",
         may_restore=lambda user_id: _edit_access(Item),
         refuse=lambda row, user_id: None,
-        children=(("attachment", Attachment),),
+        # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. And its checklist items.
+        children=(("attachment", Attachment), ("checklist_item", ChecklistItem)),
         scope=lambda: Item.kind == "note",
     ),
     "attachment": TrashSource(

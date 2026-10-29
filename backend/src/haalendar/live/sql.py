@@ -24,7 +24,8 @@ NOTIFIED_TABLES: tuple[str, ...] = (
 )
 # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Tables joining later (migration 0015 and its builders stay frozen):
 # a reminder concerns its owner only.
-NOTIFIED_TABLES_LATER: tuple[str, ...] = ("reminder",)
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items: told like items, to their container's audience.
+NOTIFIED_TABLES_LATER: tuple[str, ...] = ("reminder", "checklist_item")
 
 NOTIFY_FUNCTION = f"""
 CREATE OR REPLACE FUNCTION haalendar_sync_notify() RETURNS trigger
@@ -53,6 +54,11 @@ $$
 NOTIFY_FUNCTION_0017 = NOTIFY_FUNCTION.replace(
     "    ELSE RETURN NULL;",
     "    WHEN 'reminder' THEN message := jsonb_build_object('u', jsonb_build_array(NEW.owner_id));\n    ELSE RETURN NULL;",
+)
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101 (migration 0023): checklist items are told like items.
+NOTIFY_FUNCTION_0023 = NOTIFY_FUNCTION_0017.replace(
+    "WHEN 'item', 'attachment' THEN", "WHEN 'item', 'attachment', 'checklist_item' THEN"
 )
 
 

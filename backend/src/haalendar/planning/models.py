@@ -225,3 +225,30 @@ class Note(Base):
     position: Mapped[str] = mapped_column(String(64))
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_checklist: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. A checklist item of a note (domain model 5.10, FR-TODO-02, D-88; cards
+# later): its own synced row with the note's container copied for row-level security; text 1-500, checked with the
+# time it was checked, position (fractional index; checked items are shown at the bottom, keeping their position).
+class ChecklistItem(Base):
+    __tablename__ = "checklist_item"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), index=True)
+    container_kind: Mapped[str] = mapped_column(String(10))
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    # Before `text`: in the class body that name would hide sqlalchemy's text() used here.
+    checked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    text: Mapped[str] = mapped_column(String(500))
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    position: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)

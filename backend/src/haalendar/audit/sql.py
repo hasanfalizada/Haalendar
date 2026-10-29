@@ -43,6 +43,8 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     "reminder": ("none", ()),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Note details (the note is its own container).
     "note": ("ref", ()),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items.
+    "checklist_item": ("ref", ()),
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.

@@ -6,6 +6,7 @@ included with deleted_at. A module adds a Section to SECTIONS; today the calenda
 iCalendar files and the attachments of items in them. The To-Do and Kanban sections come with their modules.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. To-Do: the user's notes (archived and deleted ones included) and
 their attachments.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. And the notes' checklist items (deleted ones included).
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from haalendar.exports.archive import ArchiveWriter, safe_name
 from haalendar.exports.schemas import Module
 from haalendar.planning.ics import calendar_ics
 from haalendar.planning.ics_service import calendar_events
-from haalendar.planning.models import Calendar, Item, Note
+from haalendar.planning.models import Calendar, ChecklistItem, Item, Note
 from haalendar.storage import Storage
 
 
@@ -151,7 +152,27 @@ async def todo_section(ctx: ExportContext) -> None:
                 **_meta(item),
             },
         )
-    await _attachments(ctx, "note", [item.id for item, _ in rows], "todo")
+    ids = [item.id for item, _ in rows]
+    if ids:
+        checklist = await ctx.db.scalars(
+            select(ChecklistItem)
+            .where(ChecklistItem.item_id.in_(ids))
+            .order_by(ChecklistItem.item_id, ChecklistItem.position.collate("C"), ChecklistItem.id)
+        )
+        for entry in checklist:
+            ctx.archive.add_row(
+                "checklist_items",
+                {
+                    "id": entry.id,
+                    "item_id": entry.item_id,
+                    "text": entry.text,
+                    "checked": entry.checked,
+                    "checked_at": entry.checked_at,
+                    "position": entry.position,
+                    **_meta(entry),
+                },
+            )
+    await _attachments(ctx, "note", ids, "todo")
 
 
 SECTIONS: dict[Module, list[Section]] = {

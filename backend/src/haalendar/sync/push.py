@@ -27,13 +27,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import occurrences, reminders
+from haalendar.planning import checklists, occurrences, reminders
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
 from haalendar.sync.pull import current_state
 from haalendar.sync.schemas import (
     CalendarData,
+    ChecklistItemCreateData,
+    ChecklistItemData,
     ItemCreateData,
     ItemData,
     MoveData,
@@ -69,7 +71,9 @@ def _fields(
     | type[ItemData]
     | type[ItemCreateData]
     | type[ReminderData]
-    | type[ReminderCreateData],
+    | type[ReminderCreateData]
+    | type[ChecklistItemData]
+    | type[ChecklistItemCreateData],
     raw: dict[str, Any] | None,
 ) -> dict[str, Any]:
     try:
@@ -111,6 +115,21 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await reminders.delete_reminder(db, user_id, m.entity_id)
         if m.op == "restore":
             return await reminders.restore_reminder(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items (D-88).
+    if m.entity_type == "checklist_item":
+        if m.op == "create":
+            return await checklists.create_checklist_item(
+                db, user_id, m.entity_id, _fields(ChecklistItemCreateData, m.data)
+            )
+        if m.op == "update":
+            return await checklists.update_checklist_item(
+                db, user_id, m.entity_id, m.base or {}, _fields(ChecklistItemData, m.data), current
+            )
+        if m.op == "delete":
+            return await checklists.delete_checklist_item(db, user_id, m.entity_id)
+        if m.op == "restore":
+            return await checklists.restore_checklist_item(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.op == "create":
         return await planning.create_item(db, user_id, m.entity_id, _fields(ItemCreateData, m.data))

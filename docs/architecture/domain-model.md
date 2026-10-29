@@ -204,6 +204,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | created_at, created_by, deleted_at | | |
 
 ### 5.10 `checklist_item`
+<!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. As built (migration 0023, D-88): carries the item's `container_kind` / `container_id` (like attachments) for row-level security (content policies, author `created_by`); text 1–500 after trimming, position ≤ 64 letters or digits, `checked` ⇔ `checked_at` (CHECKs); synced, audited, soft-deleted; at most 200 live items per note (application). -->
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid PK | |

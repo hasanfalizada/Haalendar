@@ -54,6 +54,7 @@ class ItemData(ApiModel):
     pinned: bool | None = None
     archived_at: datetime | None = None
     position: str | None = Field(default=None, max_length=64)
+    is_checklist: bool | None = None
 
 
 class ItemCreateData(ItemData):
@@ -81,6 +82,17 @@ class ReminderCreateData(ReminderData):
     item_id: uuid.UUID
 
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. A checklist item (D-88): its note when created, then its fields.
+class ChecklistItemData(ApiModel):
+    text: str | None = Field(default=None, max_length=1000)
+    checked: bool | None = None
+    position: str | None = Field(default=None, max_length=64)
+
+
+class ChecklistItemCreateData(ChecklistItemData):
+    item_id: uuid.UUID
+
+
 class MoveData(ApiModel):
     container_kind: Literal["calendar", "board", "note"]
     container_id: uuid.UUID
@@ -88,7 +100,7 @@ class MoveData(ApiModel):
 
 class MutationIn(ApiModel):
     mutation_id: uuid.UUID
-    entity_type: Literal["calendar", "item", "reminder"]
+    entity_type: Literal["calendar", "item", "reminder", "checklist_item"]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]
     base_version: int | None = None

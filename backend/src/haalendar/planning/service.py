@@ -24,6 +24,7 @@ one cannot become the default; an archived calendar is read-only (haalendar.auth
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Notes (haalendar.planning.notes, D-87): created through `create_item`
 (kind `note`, its own container, the owner only); `update_item` also merges the note fields (archived as a flag);
 a note cannot move. Delete and restore are the same as for every item.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. An item's delete takes its checklist items into the batch (D-88).
 """
 
 from __future__ import annotations
@@ -41,7 +42,7 @@ from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
 from haalendar.planning import events, notes
-from haalendar.planning.models import Calendar, Event, Item, Note, RecurrenceException
+from haalendar.planning.models import Calendar, ChecklistItem, Event, Item, Note, RecurrenceException
 from haalendar.security.rls import ContainerKind
 from haalendar.softdelete import new_batch, restore_batch
 
@@ -441,12 +442,13 @@ async def delete_item(
     edited = item.deleted_at is None and base_version is not None and item.version != base_version
     if item.deleted_at is None:
         batch, now = new_batch(), datetime.now(UTC)
-        await db.execute(
-            update(Attachment)
-            .where(Attachment.item_id == item_id, Attachment.deleted_at.is_(None))
-            .values(deleted_at=now, delete_batch_id=batch, updated_by=user_id, version=Attachment.version + 1)
-            .execution_options(synchronize_session=False)
-        )
+        for model in (Attachment, ChecklistItem):
+            await db.execute(
+                update(model)
+                .where(model.item_id == item_id, model.deleted_at.is_(None))
+                .values(deleted_at=now, delete_batch_id=batch, updated_by=user_id, version=model.version + 1)
+                .execution_options(synchronize_session=False)
+            )
         item.deleted_at, item.delete_batch_id, item.updated_by = now, batch, user_id
         item.version += 1
         await db.flush()
@@ -458,6 +460,6 @@ async def restore_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID)
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
     if item.deleted_at is not None and item.delete_batch_id is not None:
-        await restore_batch(db, [Item, Attachment], item.delete_batch_id, user_id)
+        await restore_batch(db, [Item, Attachment, ChecklistItem], item.delete_batch_id, user_id)
         await db.refresh(item)
     return Outcome(version=item.version)

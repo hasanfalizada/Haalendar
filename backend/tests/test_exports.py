@@ -96,6 +96,13 @@ class World:
                 "VALUES (%s, 'note', %s, true, 'U')",
                 (self.items["Shopping"], self.items["Shopping"]),
             )
+            # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. One checklist item of it.
+            self.items["Milk"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO checklist_item (id, item_id, container_kind, container_id, text, position, created_by) "
+                "VALUES (%s, %s, 'note', %s, 'Milk', 'U', %s)",
+                (self.items["Milk"], self.items["Shopping"], self.items["Shopping"], self.ids["ada"]),
+            )
         with _as(db_url, self.ids["bob"]) as conn:
             conn.execute(
                 "INSERT INTO calendar (id, owner_id, name) VALUES (%s, %s, 'Bobs')",
@@ -192,11 +199,8 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     ready = [n for n in notes["data"] if n["kind"] == "export_ready"]
     assert len(ready) == 1 and ready[0]["payload"]["export_id"] == export["id"] and notes["unread_count"] >= 1
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Ada's default calendar ("My calendar", D-82) counts too.
-    assert listed[0]["counts"] == {
-        "calendars": 3,
-        "attachments": 1,
-        "notes": 1,
-    }  # HAAL-100: the To-Do section
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100 / HAAL-101. The To-Do section: a note with one checklist item.
+    assert listed[0]["counts"] == {"calendars": 3, "attachments": 1, "notes": 1, "checklist_items": 1}
     response = world.api.get(listed[0]["download_url"])
     assert response.status_code == 200 and response.headers["content-type"] == "application/zip"
     assert response.headers["content-disposition"].startswith('attachment; filename="haalendar-export-')
@@ -235,6 +239,13 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "U",
     )
     assert note.get("archived_at") is None and note["permission"] == "owner"
+    [milk] = document["checklist_items"]
+    assert (milk["item_id"], milk["text"], milk["checked"], milk["position"]) == (
+        world.items["Shopping"],
+        "Milk",
+        False,
+        "U",
+    )
 
     mails = list(world.mail_dir.glob("*.eml"))
     assert any("your data export is ready" in m.read_text(encoding="utf-8") for m in mails)

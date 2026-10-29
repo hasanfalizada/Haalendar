@@ -21,7 +21,8 @@ from haalendar.planning.models import Item, Note
 
 log = get_logger(__name__)
 
-NOTE_FIELDS = ("pinned", "archived_at", "position")
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. is_checklist: the note has a checklist (D-88).
+NOTE_FIELDS = ("pinned", "archived_at", "position", "is_checklist")
 POSITION = re.compile(r"[0-9A-Za-z]{1,64}")
 
 
@@ -39,7 +40,12 @@ def checked_position(value: Any) -> str:
 
 def state_of(note: Note) -> dict[str, Any]:
     """The note fields as they merge: archived as a flag (each side keeps its own time)."""
-    return {"pinned": note.pinned, "archived_at": note.archived_at is not None, "position": note.position}
+    return {
+        "pinned": note.pinned,
+        "archived_at": note.archived_at is not None,
+        "position": note.position,
+        "is_checklist": note.is_checklist,
+    }
 
 
 def as_flag(values: dict[str, Any]) -> dict[str, Any]:
@@ -57,6 +63,8 @@ def apply(note: Note, values: dict[str, Any]) -> None:
             note.position = checked_position(value)
         elif name == "pinned":
             note.pinned = bool(value)
+        elif name == "is_checklist":
+            note.is_checklist = bool(value)
 
 
 async def create_note(
@@ -93,6 +101,7 @@ async def create_note(
             container_kind="note",
             container_id=item_id,
             pinned=bool(note_values.get("pinned")),
+            is_checklist=bool(note_values.get("is_checklist")),
             archived_at=datetime.now(UTC) if note_values.get("archived_at") else None,
             position=position,
         )

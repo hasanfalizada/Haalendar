@@ -34,4 +34,5 @@ def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091: reminders (0017), Web Push (0018).
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092: extended recurrence (0019).
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100: notes (0022).
-    assert migration_head() == "0022"
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101: checklist items (0023).
+    assert migration_head() == "0023"

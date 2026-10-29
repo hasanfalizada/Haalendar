@@ -646,7 +646,9 @@
       "column_one": "{{count}} column",
       "column_other": "{{count}} columns",
       "attachment_one": "{{count}} image",
-      "attachment_other": "{{count}} images"
+      "attachment_other": "{{count}} images",
+      "checklist_item_one": "{{count}} checklist item",
+      "checklist_item_other": "{{count}} checklist items"
     },
     "select": "Select {{title}}",
     "restore": "Restore",

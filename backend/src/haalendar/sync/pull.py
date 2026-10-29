@@ -38,6 +38,8 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
     "settings": ("user_settings", "owner_id", ()),
     # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's own reminders (owner-only row-level security).
     "reminder": ("reminder", "id", ()),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items of the notes the user reads (D-88).
+    "checklist_item": ("checklist_item", "id", ()),
 }
 
 
@@ -99,12 +101,15 @@ def _container_content_sql() -> str:
     calendar_table, calendar_id, calendar_hidden = ENTITIES["calendar"]
     item_table, _, item_hidden = ENTITIES["item"]
     attachment_table, _, attachment_hidden = ENTITIES["attachment"]
+    checklist_table, _, checklist_hidden = ENTITIES["checklist_item"]
     return (
         f"SELECT 'calendar' AS entity, t.{calendar_id} AS id, t.sync_seq AS seq, {_data_expr('t', calendar_hidden)} AS data "  # noqa: S608 — constant identifiers
         f"FROM {calendar_table} t WHERE :kind = 'calendar' AND t.id = :container "
         f"UNION ALL SELECT 'item', t.id, t.sync_seq, {_data_expr('t', item_hidden, 'item')} FROM {item_table} t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container "
         f"UNION ALL SELECT 'attachment', t.id, t.sync_seq, {_data_expr('t', attachment_hidden)} FROM {attachment_table} t "
+        f"WHERE t.container_kind = :kind AND t.container_id = :container "
+        f"UNION ALL SELECT 'checklist_item', t.id, t.sync_seq, {_data_expr('t', checklist_hidden)} FROM {checklist_table} t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container"
     )
 
