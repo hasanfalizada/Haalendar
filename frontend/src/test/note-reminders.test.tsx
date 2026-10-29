@@ -111,6 +111,10 @@ describe("reminders on notes", { timeout: 20_000 }, () => {
       ["reminder", "delete", "r-next", undefined],
       ["reminder", "create", expect.any(String), { item_id: SHOPPING, remind_at: at(TOMORROW, "18:30") }],
     ]);
+    // The modal editor blocks the page until it has closed.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Edit note" })).not.toBeInTheDocument();
+    });
     await user.click(within(toast.closest("li") ?? document.body).getByRole("button", { name: "Undo" }));
     await waitFor(async () => {
       expect((await db.reminders.get("r-next"))?.deleted_at).toBeFalsy();

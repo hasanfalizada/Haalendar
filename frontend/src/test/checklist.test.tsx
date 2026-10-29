@@ -125,6 +125,10 @@ describe("checklists", { timeout: 20_000 }, () => {
     expect([...positions].sort(comparePositions)).toEqual(positions);
 
     const toast = await screen.findByText("Created Packing");
+    // The modal editor blocks the page until it has closed.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "New note" })).not.toBeInTheDocument();
+    });
     await user.click(within(toast.closest("li") ?? document.body).getByRole("button", { name: "Undo" }));
     await waitFor(async () => {
       expect((await db.items.get(String(writes[0]?.entity_id)))?.deleted_at).toBeTruthy();

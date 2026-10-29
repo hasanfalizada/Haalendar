@@ -7,8 +7,9 @@
   changes. Delete and restore are soft (one batch per reminder).
 - The worker (`check_reminders`, every minute) asks the database for the reminders to check or fire (ids only) and
   handles each as its owner, under row-level security: a reminder whose event is gone or out of reach gets no next
-  fire; one marked "to check" gets its next fire computed from now; a due one writes a `reminder` notification (late
-  when more than LATE_AFTER behind) and moves on to the next occurrence after now.
+  fire; one marked "to check" gets its next fire computed from the start of the current minute (HAAL-172: a time
+  in that minute counts as now and fires in the same round); a due one writes a `reminder` notification (late when
+  more than LATE_AFTER behind) and moves on to the next occurrence after now.
 - +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (stage 2). A fired reminder that is not late also goes to the
   owner's browsers by Web Push, after its transaction has committed: "Reminder: Dentist" / "Today, 11:00-12:00 · Main
   St 1" in the owner's zone and 12/24-hour setting, opening the day with the event's card; the notification records
@@ -425,7 +426,21 @@ async def handle_with_push(
     rule = ReminderRule(reminder.offset_minutes, reminder.all_day_time, reminder.all_day_days_before)
     outcome = "checked"
     message: dict[str, Any] | None = None
-    if not schedule.needs_check and schedule.next_fire_at is not None and schedule.next_fire_at <= now:
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-172. A reminder to check is computed from the start of this minute (the
+    # worker runs once a minute): a time in this minute counts as now, so one set shortly before its time, or reached by
+    # an edit of its event, is no longer taken for passed; if it is due, it fires in this same round.
+    if schedule.needs_check:
+        first = next_fire(
+            rule,
+            times,
+            owner.time_zone,
+            after_occurrence=schedule.last_occurrence,
+            not_before=now.replace(second=0, microsecond=0),
+        )
+        schedule.next_fire_at = first.at if first else None
+        schedule.next_occurrence = first.occurrence if first else None
+        schedule.needs_check = False
+    if schedule.next_fire_at is not None and schedule.next_fire_at <= now:
         occurrence = schedule.next_occurrence or times.start_date
         late = now - schedule.next_fire_at > LATE_AFTER
         payload = _payload(item, event, reminder, occurrence, schedule.next_fire_at, late)
@@ -436,12 +451,11 @@ async def handle_with_push(
             message = push_message(payload, note.id, owner.time_zone, twelve, now)
         schedule.last_occurrence, schedule.last_fired_at = occurrence, now
         outcome = "fired_late" if late else "fired"
-    following = next_fire(
-        rule, times, owner.time_zone, after_occurrence=schedule.last_occurrence, not_before=now
-    )
-    schedule.next_fire_at = following.at if following else None
-    schedule.next_occurrence = following.occurrence if following else None
-    schedule.needs_check = False
+        following = next_fire(
+            rule, times, owner.time_zone, after_occurrence=schedule.last_occurrence, not_before=now
+        )
+        schedule.next_fire_at = following.at if following else None
+        schedule.next_occurrence = following.occurrence if following else None
     return outcome, message
 
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import psycopg
@@ -239,3 +239,35 @@ def test_a_series_moves_on_late_fires_say_so_and_lost_access_stops(people: Peopl
     assert _run(people, utc(2026, 11, 6, 14)) == {"idle": 1}
     assert _schedule(people, "bob", reminder["id"])[1] is None
     assert _run(people, utc(2026, 11, 8, 9)) == {}
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-172. The first check of a reminder may land in the very minute it is due.
+@pytest.mark.db
+def test_a_reminder_due_in_the_minute_of_its_first_check_fires_at_once(people: People) -> None:
+    ada = people.as_("ada")
+    event = _event(people, ada)  # 10 November 11:00 Berlin = 10:00 UTC
+    at_start = _reminder(people, ada, event, offset_minutes=0)
+    passed = _reminder(people, ada, event, offset_minutes=15)  # 09:45 UTC: before this minute
+    just_after = utc(2026, 11, 10, 10) + timedelta(seconds=0.5)
+    assert _run(people, just_after) == {"fired": 1, "checked": 1}
+    [note] = _reminder_notifications(people, ada)
+    assert note["payload"]["reminder_id"] == at_start["id"] and note["payload"]["late"] is False
+    assert _schedule(people, "ada", at_start["id"]) == (False, None, None, "2026-11-10")
+    assert _schedule(people, "ada", passed["id"]) == (False, None, None, None)
+
+    # The event moves so that a reminder lands in the minute of the check: it fires in that round.
+    moved = _push(
+        people.api,
+        ada,
+        _m(
+            "item",
+            event,
+            "update",
+            base={"start_date": "2026-11-10", "end_date": "2026-11-10"},
+            data={"start_date": "2026-11-11", "end_date": "2026-11-11"},
+        ),
+    )[0]
+    assert moved["status"] == "applied", moved
+    assert _run(people, utc(2026, 11, 11, 9, 45) + timedelta(seconds=20)) == {"fired": 1, "checked": 1}
+    fired = sorted(n["payload"]["reminder_id"] for n in _reminder_notifications(people, ada))
+    assert fired == sorted([at_start["id"], passed["id"]])
