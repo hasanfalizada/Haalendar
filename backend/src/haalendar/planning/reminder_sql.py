@@ -71,6 +71,49 @@ def recheck_trigger(table: str) -> str:
 
 RECHECKED_TABLES: tuple[str, ...] = ("item", "event", "recurrence_exception", "share")
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Migration 0020 (D-82): archiving or unarchiving a calendar also marks
+# the reminders of its events "to check" (an archived calendar's reminders do not fire).
+RECHECK_ITEM_FUNCTION_0020 = """
+CREATE OR REPLACE FUNCTION haalendar_reminders_recheck() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public
+AS $$
+DECLARE target uuid;
+BEGIN
+  IF TG_TABLE_NAME = 'calendar' THEN
+    IF OLD.archived_at IS DISTINCT FROM NEW.archived_at THEN
+      UPDATE reminder_schedule s SET needs_check = true
+      FROM reminder r JOIN item i ON i.id = r.item_id
+      WHERE s.reminder_id = r.id AND i.container_kind = 'calendar' AND i.container_id = NEW.id
+        AND NOT s.needs_check;
+    END IF;
+    RETURN NULL;
+  END IF;
+  IF TG_TABLE_NAME = 'share' THEN
+    UPDATE reminder_schedule s SET needs_check = true
+    FROM reminder r JOIN item i ON i.id = r.item_id
+    WHERE s.reminder_id = r.id AND i.container_kind = NEW.container_kind AND i.container_id = NEW.container_id
+      AND NOT s.needs_check;
+    RETURN NULL;
+  END IF;
+  -- separate branches: PL/pgSQL resolves NEW.<field> at run time, and only exceptions have event_id
+  IF TG_TABLE_NAME = 'recurrence_exception' THEN
+    target := NEW.event_id;
+  ELSE
+    target := NEW.id;
+  END IF;
+  UPDATE reminder_schedule s SET needs_check = true
+  FROM reminder r
+  WHERE s.reminder_id = r.id AND r.item_id = target AND NOT s.needs_check;
+  RETURN NULL;
+END
+$$
+"""
+
+RECHECK_CALENDAR_TRIGGER = (
+    "CREATE TRIGGER haalendar_reminders_recheck AFTER UPDATE ON calendar "
+    "FOR EACH ROW EXECUTE FUNCTION haalendar_reminders_recheck()"
+)
+
 DUE_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_reminders_due(at timestamptz, max_rows integer)
 RETURNS TABLE (reminder_id uuid, owner_id uuid)

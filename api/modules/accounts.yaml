@@ -551,7 +551,8 @@ components:
       # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045 (D-50). Created with the defaults on first use; theme is the
       # source of truth for every device (the browser keeps a cached copy for the first paint).
       type: object
-      required: [week_start, time_format, theme, default_color, agenda_days, week_ab, version]
+      # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82). hidden_calendars: calendars hidden in the calendar views.
+      required: [week_start, time_format, theme, default_color, agenda_days, week_ab, hidden_calendars, version]
       properties:
         week_start: { type: integer, minimum: 0, maximum: 6, default: 1, description: 0 = Sunday … 6 = Saturday }
         time_format: { type: string, enum: ['24h', '12h'] }
@@ -572,6 +573,10 @@ components:
               minItems: 2
               maxItems: 2
               description: Trimmed; the two labels must differ (case-insensitive).
+        hidden_calendars:
+          type: array
+          items: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+          description: Calendars (own or shared) this user hides in the calendar views; sorted, no repeats.
         version: { type: integer }
     SettingsPatch:
       type: object
@@ -588,6 +593,11 @@ components:
             enabled: { type: boolean }
             anchor: { $ref: '../components/common.yaml#/components/schemas/Date' }
             labels: { type: array, items: { type: string, minLength: 1, maxLength: 10 }, minItems: 2, maxItems: 2 }
+        hidden_calendars:
+          type: array
+          items: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+          maxItems: 500
+          description: The whole list replaces the stored one.
     Session:
       type: object
       required: [id, created_at, last_seen_at, current]

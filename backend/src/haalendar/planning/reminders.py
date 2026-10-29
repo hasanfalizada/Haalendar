@@ -33,7 +33,7 @@ from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
 from haalendar.notifications.models import Notification
 from haalendar.notifications.service import notify_self
-from haalendar.planning.models import Event, Item, RecurrenceException, Reminder, ReminderSchedule
+from haalendar.planning.models import Calendar, Event, Item, RecurrenceException, Reminder, ReminderSchedule
 from haalendar.planning.reminder_times import EventTimes, ReminderRule, next_fire
 from haalendar.planning.service import Outcome, merge
 from haalendar.preferences.models import UserSettings
@@ -297,7 +297,14 @@ async def handle_with_push(
     if schedule is None or reminder is None:
         return "missing", None
     item = await db.get(Item, reminder.item_id)
-    found = await _event_times(db, item) if item is not None and item.deleted_at is None else None
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. An archived calendar's reminders do not fire (D-82).
+    calendar = (
+        await db.get(Calendar, item.container_id)
+        if item is not None and item.container_kind == "calendar"
+        else None
+    )
+    live = item is not None and item.deleted_at is None and (calendar is None or calendar.archived_at is None)
+    found = await _event_times(db, item) if item is not None and live else None
     owner = await db.get(UserAccount, reminder.owner_id)
     if reminder.deleted_at is not None or item is None or found is None or owner is None:
         schedule.next_fire_at, schedule.next_occurrence, schedule.needs_check = None, None, False

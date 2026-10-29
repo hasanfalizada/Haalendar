@@ -46,6 +46,8 @@ class Calendar(Base):
     __table_args__ = (
         CheckConstraint("char_length(name) BETWEEN 1 AND 100", name="name_length"),
         CheckConstraint(f"color in ({', '.join(repr(c) for c in COLORS)})", name="color_valid"),
+        # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Migration 0020 (D-82).
+        CheckConstraint("NOT (is_default AND archived_at IS NOT NULL)", name="default_not_archived"),
         Index(
             "uq_calendar_default_per_owner",
             "owner_id",

@@ -6,6 +6,8 @@
 - an invitation proves e-mail ownership, open registration requires the 24 h verification link;
 - server-side sessions: 256-bit token in a __Host- cookie, only its hash stored, idle 30 d sliding, absolute 90 d;
 - every security event is logged with ids only (no e-mail addresses, passwords or tokens).
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Every new user (first administrator, registration, invitation without
+mail) gets the default calendar at once (D-82).
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ from haalendar.atoms.accounts.password_policy import check_password
 from haalendar.config import Settings
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
+from haalendar.planning.service import create_default_calendar
 from haalendar.storage import Storage
 
 log = get_logger(__name__)
@@ -197,6 +200,7 @@ async def register(
     )
     db.add(user)
     await db.flush()
+    await create_default_calendar(db, user.id)
 
     if invite is not None:
         invite.used_at = now
@@ -813,6 +817,7 @@ async def create_first_admin(
     )
     db.add(user)
     await db.flush()
+    await create_default_calendar(db, user.id)
     log.info("first_admin_created", user_id=str(user.id))
     return await login(
         db, settings, email=user.email, password=password, user_agent=user_agent, client_ip=client_ip
@@ -1078,6 +1083,7 @@ async def admin_invite(
                 409, ProblemCode.DUPLICATE, "An account with this e-mail already exists"
             ) from None
         await db.refresh(user)
+        await create_default_calendar(db, user.id)
         log.info(
             "admin_user_invited",
             admin_id=str(admin.id),

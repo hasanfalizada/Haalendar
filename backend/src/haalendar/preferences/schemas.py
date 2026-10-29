@@ -6,6 +6,7 @@ they are; inside week_ab only the given keys change.
 
 from __future__ import annotations
 
+import uuid
 from datetime import date
 from typing import Literal
 
@@ -31,6 +32,7 @@ class SettingsOut(BaseModel):
     default_color: Color
     agenda_days: int
     week_ab: WeekAbOut
+    hidden_calendars: list[uuid.UUID]
     version: int
 
 
@@ -47,3 +49,5 @@ class SettingsPatchIn(ApiModel):
     default_color: Color | None = None
     agenda_days: int | None = Field(default=None, ge=1, le=365)
     week_ab: WeekAbPatchIn | None = None
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. The whole list (D-82): calendars hidden in the views.
+    hidden_calendars: list[uuid.UUID] | None = Field(default=None, max_length=500)

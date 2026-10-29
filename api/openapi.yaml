@@ -83,7 +83,6 @@ paths:
 
   /calendars: { $ref: './modules/calendar.yaml#/paths/calendars' }
   /calendars/{id}: { $ref: './modules/calendar.yaml#/paths/calendar' }
-  /calendars/{id}/preference: { $ref: './modules/calendar.yaml#/paths/calendar_pref' }
   /calendars/{id}/import-ics: { $ref: './modules/calendar.yaml#/paths/calendar_ics_import' }
   /calendars/{id}/export.ics: { $ref: './modules/calendar.yaml#/paths/calendar_ics_export' }
   /events: { $ref: './modules/calendar.yaml#/paths/events' }

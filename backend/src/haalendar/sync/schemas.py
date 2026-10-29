@@ -23,6 +23,10 @@ Priority = Literal["low", "medium", "high"]
 class CalendarData(ApiModel):
     name: str | None = Field(default=None, max_length=100)
     color: Color | None = None
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Owner's calendar state (D-82): archived (any time; null = not)
+    # and the default calendar (only true: the default moves there).
+    archived_at: datetime | None = None
+    is_default: bool | None = None
 
     @field_validator("name")
     @classmethod

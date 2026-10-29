@@ -66,25 +66,6 @@ paths:
       responses:
         '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
         '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
-  calendar_pref:
-    put:
-      tags: [calendar]
-      operationId: setCalendarPreference
-      summary: Show or hide a calendar for the current user
-      parameters:
-        - $ref: '../components/common.yaml#/components/parameters/Id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [hidden]
-              properties:
-                hidden: { type: boolean }
-      responses:
-        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
-        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
   calendar_ics_import:
     post:
       tags: [calendar]
@@ -289,7 +270,8 @@ components:
       allOf:
         - $ref: '../components/common.yaml#/components/schemas/Meta'
         - type: object
-          required: [id, owner_id, name, color, is_default, hidden, permission]
+          # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82). Hiding is a user setting (Settings.hidden_calendars).
+          required: [id, owner_id, name, color, is_default, permission]
           properties:
             id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
             owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
@@ -297,7 +279,6 @@ components:
             color: { $ref: '../components/common.yaml#/components/schemas/Color' }
             is_default: { type: boolean }
             archived_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
-            hidden: { type: boolean, description: Current user's preference }
             permission: { type: string, enum: [owner, edit, view], description: Current user's access }
     CalendarInput:
       type: object

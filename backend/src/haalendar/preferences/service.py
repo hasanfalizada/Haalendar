@@ -4,6 +4,8 @@
 the user create it; rows of users that existed before migration 0012 were created there). Week A/B: labels are
 trimmed, 1 to 10 characters and must differ (atom calendar.week_ab_label.v1, error LABELS_NOT_DISTINCT); switching it on
 needs an anchor (any date of the week that is the first label). Changes are logged without their values.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. `hidden_calendars` (D-82): the calendars hidden in the views, stored
+as a sorted list without repeats.
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ def to_out(row: UserSettings) -> SettingsOut:
         week_ab=WeekAbOut(
             enabled=row.week_ab_enabled, anchor=row.week_ab_anchor, labels=list(row.week_ab_labels)
         ),
+        hidden_calendars=list(row.hidden_calendars),
         version=row.version,
     )
 
@@ -85,6 +88,9 @@ async def update_settings(
         for field in ("week_start", "time_format", "theme", "default_color", "agenda_days")
         if (value := getattr(patch, field)) is not None
     }
+    if patch.hidden_calendars is not None:
+        # Unknown or foreign ids are kept as given: hiding only filters what the user sees (D-82).
+        changes["hidden_calendars"] = sorted(set(patch.hidden_calendars))
     if patch.week_ab is not None:
         if patch.week_ab.enabled is not None:
             changes["week_ab_enabled"] = patch.week_ab.enabled

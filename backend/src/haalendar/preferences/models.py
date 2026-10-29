@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, SmallInteger, String, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, SmallInteger, String, Uuid, func
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,6 +30,10 @@ class UserSettings(Base):
     week_ab_anchor: Mapped[date | None] = mapped_column(Date)
     week_ab_labels: Mapped[list[str]] = mapped_column(
         ARRAY(String(10)), default=lambda: ["A", "B"], server_default="{A,B}"
+    )
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Calendars this user hides in the calendar views (D-82).
+    hidden_calendars: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(Uuid(as_uuid=True)), default=list, server_default="{}"
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

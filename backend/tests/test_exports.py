@@ -178,7 +178,8 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     notes = world.api.get("/api/v1/notifications").json()
     ready = [n for n in notes["data"] if n["kind"] == "export_ready"]
     assert len(ready) == 1 and ready[0]["payload"]["export_id"] == export["id"] and notes["unread_count"] >= 1
-    assert listed[0]["counts"] == {"calendars": 2, "attachments": 1}
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Ada's default calendar ("My calendar", D-82) counts too.
+    assert listed[0]["counts"] == {"calendars": 3, "attachments": 1}
     response = world.api.get(listed[0]["download_url"])
     assert response.status_code == 200 and response.headers["content-type"] == "application/zip"
     assert response.headers["content-disposition"].startswith('attachment; filename="haalendar-export-')
@@ -190,8 +191,9 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         assert json.loads(archive.read("schema/haalendar-export-1.0.schema.json")) == SCHEMA
         assert b"<h1>Haalendar export</h1>" in archive.read("README.html")
         ics = [n for n in names if n.startswith("calendar/") and n.endswith(".ics")]
-        assert ics == [f"calendar/Work ({world.cal['Work'][:8]}).ics"]  # live calendars only
-        assert archive.read(ics[0]).startswith(b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\n")
+        assert sorted(ics)[1:] == [f"calendar/Work ({world.cal['Work'][:8]}).ics"]  # live calendars only
+        assert sorted(ics)[0].startswith("calendar/My calendar (")
+        assert archive.read(sorted(ics)[1]).startswith(b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\n")
         image = [n for n in names if n.startswith("calendar/attachments/")]
         assert image == [f"calendar/attachments/{attachment['id'][:8]}-plan.png"]
 
@@ -199,7 +201,8 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. The settings travel with the export.
     assert document["settings"]["week_start"] == 1 and document["settings"]["week_ab"]["labels"] == ["A", "B"]
     calendars = {c["name"]: c for c in document["calendars"]}
-    assert set(calendars) == {"Work", "Old"}  # not Bob's calendar, even though it is shared with Ada
+    # Not Bob's calendar, even though it is shared with Ada.
+    assert set(calendars) == {"My calendar", "Work", "Old"}
     assert calendars["Old"]["deleted_at"] and "deleted_at" not in calendars["Work"]
     assert [a["id"] for a in document["attachments"]] == [attachment["id"]]  # not the one in Bob's calendar
     exported = document["attachments"][0]

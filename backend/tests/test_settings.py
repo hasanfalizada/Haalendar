@@ -21,6 +21,7 @@ DEFAULTS = {
     "default_color": "brown",
     "agenda_days": 30,
     "week_ab": {"enabled": False, "anchor": None, "labels": ["A", "B"]},
+    "hidden_calendars": [],  # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82).
     "version": 1,
 }
 

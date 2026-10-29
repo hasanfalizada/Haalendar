@@ -16,6 +16,11 @@ whole event afterwards; moving an event is possible between calendars only, its 
 rule 4) and says when the record had changed since (`edited_elsewhere`), so the user can be told.
 +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. Moving a series moves its recurrence exceptions along (they copy the
 calendar for row-level security); excluding and including occurrences live in haalendar.planning.occurrences.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Multiple calendars (FR-CAL-32, D-82): every user has one default
+calendar, made when the user is created (`create_default_calendar`); the owner can make another one the default
+(`is_default: true` moves it there, `false` is refused), archive (`archived_at`: any timestamp archives — the server
+takes its own time —, null unarchives) and unarchive. The default calendar cannot be archived or deleted, an archived
+one cannot become the default; an archived calendar is read-only (haalendar.authz).
 """
 
 from __future__ import annotations
@@ -25,7 +30,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.attachments.models import Attachment
@@ -99,8 +104,61 @@ async def create_calendar(
     return calendar
 
 
+DEFAULT_CALENDAR_NAME = "My calendar"
+
+
+async def create_default_calendar(db: AsyncSession, owner_id: uuid.UUID) -> Calendar:
+    """The default calendar of a user just created (row-level security: written as that user, then given back)."""
+    previous = await db.scalar(select(func.current_setting("app.user_id", True)))
+    await db.execute(select(func.set_config("app.user_id", str(owner_id), True)))
+    calendar = Calendar(
+        owner_id=owner_id,
+        name=DEFAULT_CALENDAR_NAME,
+        color="blue",
+        is_default=True,
+        created_by=owner_id,
+        updated_by=owner_id,
+    )
+    db.add(calendar)
+    await db.flush()
+    await db.execute(select(func.set_config("app.user_id", previous or "", True)))
+    log.info("default_calendar_created", calendar_id=str(calendar.id), user_id=str(owner_id))
+    return calendar
+
+
 def _calendar_fields(calendar: Calendar) -> dict[str, Any]:
-    return {"name": calendar.name, "color": calendar.color}
+    # The archive state merges as archived or not: the client sends its own time, the server keeps its own.
+    return {
+        "name": calendar.name,
+        "color": calendar.color,
+        "archived_at": calendar.archived_at is not None,
+        "is_default": calendar.is_default,
+    }
+
+
+def _archived_flag(values: dict[str, Any]) -> dict[str, Any]:
+    return {**values, "archived_at": values["archived_at"] is not None} if "archived_at" in values else values
+
+
+def _invalid_state(message: str) -> ProblemError:
+    return ProblemError(409, ProblemCode.INVALID_STATE, message)
+
+
+async def _make_default(db: AsyncSession, calendar: Calendar, user_id: uuid.UUID) -> None:
+    """The owner's previous default gives way (one default per owner)."""
+    previous = await db.scalar(
+        select(Calendar).where(
+            Calendar.owner_id == calendar.owner_id,
+            Calendar.is_default.is_(True),
+            Calendar.deleted_at.is_(None),
+            Calendar.id != calendar.id,
+        )
+    )
+    if previous is not None:
+        previous.is_default = False
+        previous.version += 1
+        previous.updated_by = user_id
+        await db.flush()
 
 
 async def update_calendar(
@@ -115,10 +173,25 @@ async def update_calendar(
     _owner_only(calendar, user_id)
     if calendar.deleted_at is not None:
         raise _deleted(current_state)
-    apply, conflicts = merge(_calendar_fields(calendar), base, new)
+    apply, conflicts = merge(_calendar_fields(calendar), _archived_flag(base), _archived_flag(new))
+    archived = apply.get("archived_at", calendar.archived_at is not None)
+    default = apply.get("is_default", calendar.is_default)
+    if apply.get("is_default") is False:
+        raise _invalid_state("Make another calendar the default instead")
+    if archived and default:
+        raise _invalid_state(
+            "An archived calendar cannot be the default"
+            if apply.get("is_default")
+            else "The default calendar cannot be archived"
+        )
     if apply:
+        if apply.get("is_default"):
+            await _make_default(db, calendar, user_id)
         for name, value in apply.items():
-            setattr(calendar, name, value)
+            if name == "archived_at":
+                calendar.archived_at = datetime.now(UTC) if value else None
+            else:
+                setattr(calendar, name, value)
         calendar.version += 1
         calendar.updated_by = user_id
         await db.flush()
@@ -131,6 +204,8 @@ async def delete_calendar(
 ) -> Outcome:
     calendar = await _calendar(db, calendar_id)
     _owner_only(calendar, user_id)
+    if calendar.is_default and calendar.deleted_at is None:
+        raise _invalid_state("The default calendar cannot be deleted")
     edited = calendar.deleted_at is None and base_version is not None and calendar.version != base_version
     if calendar.deleted_at is None:
         batch = new_batch()

@@ -26,9 +26,10 @@ def _dsn(url: str) -> str:
 
 
 def _visible_calendars(db_url: str, user_id: str) -> int:
+    """Calendars of others the user can see (+++===+++ 2026-10-29 — Hasan Alizada — HAAL-094: everyone owns a default)."""
     with psycopg.connect(_dsn(db_url), autocommit=True) as conn:
         conn.execute("SELECT set_config('app.user_id', %s, false)", (user_id,))
-        row = conn.execute("SELECT count(*) FROM calendar").fetchone()
+        row = conn.execute("SELECT count(*) FROM calendar WHERE owner_id <> %s", (user_id,)).fetchone()
         return int(row[0]) if row else 0
 
 

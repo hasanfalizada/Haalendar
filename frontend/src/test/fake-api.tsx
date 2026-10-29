@@ -96,6 +96,7 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
     default_color: "brown",
     agenda_days: 30,
     week_ab: { enabled: false, anchor: null, labels: ["A", "B"] },
+    hidden_calendars: [], // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82).
     version: 1,
     ...overrides,
   };

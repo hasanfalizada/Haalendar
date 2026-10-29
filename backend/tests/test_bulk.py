@@ -40,12 +40,18 @@ class World:
         }
         self.cal: dict[str, str] = {}
         with _as(db_url, self.ids["ada"]) as conn:
-            for name, default in (("Work", False), ("Home", False), ("Main", True)):
+            for name in ("Work", "Home"):
                 self.cal[name] = str(uuid.uuid7())
                 conn.execute(
-                    "INSERT INTO calendar (id, owner_id, name, is_default) VALUES (%s, %s, %s, %s)",
-                    (self.cal[name], self.ids["ada"], name, default),
+                    "INSERT INTO calendar (id, owner_id, name) VALUES (%s, %s, %s)",
+                    (self.cal[name], self.ids["ada"], name),
                 )
+            # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Ada's default calendar comes with her account (D-82).
+            default = conn.execute(
+                "SELECT id FROM calendar WHERE owner_id = %s AND is_default", (self.ids["ada"],)
+            ).fetchone()
+            assert default is not None
+            self.cal["Main"] = str(default[0])
             conn.execute(
                 "INSERT INTO share (id, container_kind, container_id, grantee_id, permission, granted_by) "
                 "VALUES (%s, 'calendar', %s, %s, 'edit', %s)",

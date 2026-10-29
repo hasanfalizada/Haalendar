@@ -3,6 +3,8 @@
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Every content endpoint calls `require(...)` before acting (FR-ACC-07,
 ADR-0005 section 7). Facts are read inside the request transaction, i.e. already under row-level security: a container
 the user may not read is simply not found, which matches the atom's 404. Refusals are logged with ids only.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. An archived calendar is read-only (D-82): writing its items is refused
+with 409 invalid_state even for the owner; reading and sharing stay.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ CONTAINERS: dict[ContainerKind, type[Calendar]] = {"calendar": Calendar}
 class ContainerAccess:
     owner_id: uuid.UUID
     share_permission: SharePermission | None
+    archived: bool = False
 
 
 async def container_access(
@@ -38,14 +41,21 @@ async def container_access(
     model = CONTAINERS.get(kind)
     if model is None:
         return None
-    owner_id = await db.scalar(
-        select(model.owner_id).where(model.id == container_id, model.deleted_at.is_(None))
-    )
-    if owner_id is None:
+    found = (
+        await db.execute(
+            select(model.owner_id, model.archived_at).where(
+                model.id == container_id, model.deleted_at.is_(None)
+            )
+        )
+    ).first()
+    if found is None:
         return None
+    owner_id, archived_at = found
     permission = await db.scalar(select(func.haalendar_share_permission(kind, container_id)))
     return ContainerAccess(
-        owner_id=owner_id, share_permission=permission if permission in ("view", "edit") else None
+        owner_id=owner_id,
+        share_permission=permission if permission in ("view", "edit") else None,
+        archived=archived_at is not None,
     )
 
 
@@ -60,6 +70,11 @@ async def require(
         else Decision(False, 404, "not_shared")
     )
     if decision.allowed:
+        if action == "write_items" and access is not None and access.archived:
+            log.info(
+                "authz_archived", user_id=str(user_id), container_kind=kind, container_id=str(container_id)
+            )
+            raise ProblemError(409, ProblemCode.INVALID_STATE, "This calendar is archived")
         return decision
     log.info(
         "authz_denied",
