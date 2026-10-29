@@ -229,7 +229,7 @@
     "kanban": {
       "title": "Kanban",
       "emptyTitle": "Create your first board",
-      "emptyBody": "Boards with columns and cards will appear here."
+      "emptyBody": "Boards with columns and cards will appear here. Start with New board."
     },
     "trash": {
       "title": "Trash",
@@ -728,7 +728,8 @@
       "calendar": "Calendar",
       "item": "Item",
       "reminder": "Reminder",
-      "checklist_item": "Checklist item"
+      "checklist_item": "Checklist item",
+      "board": "Board"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -819,7 +820,10 @@
       "noteCreated": "creating {{title}}",
       "noteChanged": "the change to {{title}}",
       "noteDeleted": "deleting {{title}}",
-      "checklistToggled": "the check of {{item}} in {{title}}"
+      "checklistToggled": "the check of {{item}} in {{title}}",
+      "boardCreated": "creating {{name}}",
+      "boardChanged": "the change to {{name}}",
+      "boardDeleted": "deleting {{name}}"
     }
   },
   "bulk": {
@@ -1056,7 +1060,8 @@
     "unnamed": "(no name)",
     "containers": {
       "calendar": "calendar",
-      "other": "item"
+      "other": "item",
+      "board": "board"
     },
     "permissions": {
       "view": "can view",
@@ -1329,6 +1334,44 @@
       "inPast": "Choose a time that is still ahead.",
       "duplicate": "This reminder is already set.",
       "none": "No reminders."
+    }
+  },
+  "kanban": {
+    "own": "My boards",
+    "shared": "Shared with me",
+    "archived_one": "Archived ({{count}})",
+    "archived_other": "Archived ({{count}})",
+    "noneOwn": "You have no boards of your own yet.",
+    "new": "New board",
+    "newTitle": "New board",
+    "renameTitle": "Rename board",
+    "name": "Name",
+    "create": "Create",
+    "save": "Save",
+    "sharedBy": "Shared by {{name}}",
+    "all": "All boards",
+    "menu": "Options for {{name}}",
+    "rename": "Rename…",
+    "share": "Share…",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "delete": "Delete…",
+    "leave": "Leave",
+    "archivedNotice": "This board is archived and read-only.",
+    "noColumnsTitle": "No columns yet",
+    "noColumnsBody": "Columns and cards will appear here.",
+    "missingTitle": "Board not found",
+    "missingBody": "It may have been deleted, or it is no longer shared with you.",
+    "deleteTitle": "Delete board?",
+    "deleteBody_one": "Delete “{{name}}”? Its {{count}} card goes to the trash with it. It can be undone.",
+    "deleteBody_other": "Delete “{{name}}”? Its {{count}} cards go to the trash with it. It can be undone.",
+    "deleteConfirm": "Delete",
+    "done": {
+      "create": "Board created: {{name}}",
+      "rename": "Renamed to {{name}}",
+      "archive": "Archived {{name}}",
+      "unarchive": "Unarchived {{name}}",
+      "delete": "Deleted {{name}}"
     }
   }
 }

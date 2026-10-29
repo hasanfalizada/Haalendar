@@ -8,6 +8,10 @@ import type { Change } from "@/api/generated/types.gen";
 
 import { ENTITY_TABLE, type EntityType, type LocalDb, type OutboxEntry } from "./db";
 
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Rows the user creates are theirs: the owner is known here before the
+// server's copy arrives (a board or calendar made offline is listed among the user's own at once). Sent data unchanged.
+const OWNED: ReadonlySet<string> = new Set(["calendar", "board", "item", "reminder"]);
+
 function now(): string {
   return new Date().toISOString();
 }
@@ -18,7 +22,13 @@ export async function applyLocal(db: LocalDb, entry: OutboxEntry): Promise<void>
   const row = await table.get(entry.entity_id);
   switch (entry.op) {
     case "create":
-      await table.put({ ...(entry.data ?? {}), id: entry.entity_id, version: 0, deleted_at: null });
+      await table.put({
+        ...(OWNED.has(entry.entity_type) ? { owner_id: db.user } : {}),
+        ...(entry.data ?? {}),
+        id: entry.entity_id,
+        version: 0,
+        deleted_at: null,
+      });
       return;
     case "update":
     case "move":
@@ -49,6 +59,8 @@ async function removeContainer(db: LocalDb, kind: string, id: string): Promise<v
   await db.checklistItems.where("[container_kind+container_id]").equals(inside).delete();
   await db.shares.where("[container_kind+container_id]").equals(inside).delete();
   if (kind === "calendar") await db.calendars.delete(id);
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A board no longer shared leaves the device too.
+  if (kind === "board") await db.boards.delete(id);
 }
 
 /** Applies a page of server changes, then lays the waiting local changes over them again. */

@@ -21,10 +21,11 @@ import { Route as SetupRouteImport } from './routes/setup'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
-import { Route as AppKanbanRouteImport } from './routes/_app/kanban'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppTodoRouteImport } from './routes/_app/todo'
 import { Route as AppTrashRouteImport } from './routes/_app/trash'
+import { Route as AppKanbanIndexRouteImport } from './routes/_app/kanban.index'
+import { Route as AppKanbanBoardIdRouteImport } from './routes/_app/kanban.$boardId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -85,11 +86,6 @@ const AppCalendarRoute = AppCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AppRoute,
 } as any)
-const AppKanbanRoute = AppKanbanRouteImport.update({
-  id: '/kanban',
-  path: '/kanban',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -105,6 +101,16 @@ const AppTrashRoute = AppTrashRouteImport.update({
   path: '/trash',
   getParentRoute: () => AppRoute,
 } as any)
+const AppKanbanIndexRoute = AppKanbanIndexRouteImport.update({
+  id: '/kanban/',
+  path: '/kanban/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKanbanBoardIdRoute = AppKanbanBoardIdRouteImport.update({
+  id: '/kanban/$boardId',
+  path: '/kanban/$boardId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -118,10 +124,11 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AppAdminRoute
   '/calendar': typeof AppCalendarRoute
-  '/kanban': typeof AppKanbanRoute
   '/settings': typeof AppSettingsRoute
   '/todo': typeof AppTodoRoute
   '/trash': typeof AppTrashRoute
+  '/kanban/$boardId': typeof AppKanbanBoardIdRoute
+  '/kanban/': typeof AppKanbanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -135,10 +142,11 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AppAdminRoute
   '/calendar': typeof AppCalendarRoute
-  '/kanban': typeof AppKanbanRoute
   '/settings': typeof AppSettingsRoute
   '/todo': typeof AppTodoRoute
   '/trash': typeof AppTrashRoute
+  '/kanban/$boardId': typeof AppKanbanBoardIdRoute
+  '/kanban': typeof AppKanbanIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -154,10 +162,11 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/calendar': typeof AppCalendarRoute
-  '/_app/kanban': typeof AppKanbanRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/todo': typeof AppTodoRoute
   '/_app/trash': typeof AppTrashRoute
+  '/_app/kanban/$boardId': typeof AppKanbanBoardIdRoute
+  '/_app/kanban/': typeof AppKanbanIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -173,10 +182,11 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin'
     | '/calendar'
-    | '/kanban'
     | '/settings'
     | '/todo'
     | '/trash'
+    | '/kanban/$boardId'
+    | '/kanban/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,10 +200,11 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin'
     | '/calendar'
-    | '/kanban'
     | '/settings'
     | '/todo'
     | '/trash'
+    | '/kanban/$boardId'
+    | '/kanban'
   id:
     | '__root__'
     | '/'
@@ -208,10 +219,11 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/_app/admin'
     | '/_app/calendar'
-    | '/_app/kanban'
     | '/_app/settings'
     | '/_app/todo'
     | '/_app/trash'
+    | '/_app/kanban/$boardId'
+    | '/_app/kanban/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -313,13 +325,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCalendarRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/kanban': {
-      id: '/_app/kanban'
-      path: '/kanban'
-      fullPath: '/kanban'
-      preLoaderRoute: typeof AppKanbanRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -341,25 +346,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTrashRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/kanban/': {
+      id: '/_app/kanban/'
+      path: '/kanban'
+      fullPath: '/kanban/'
+      preLoaderRoute: typeof AppKanbanIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/kanban/$boardId': {
+      id: '/_app/kanban/$boardId'
+      path: '/kanban/$boardId'
+      fullPath: '/kanban/$boardId'
+      preLoaderRoute: typeof AppKanbanBoardIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppCalendarRoute: typeof AppCalendarRoute
-  AppKanbanRoute: typeof AppKanbanRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTodoRoute: typeof AppTodoRoute
   AppTrashRoute: typeof AppTrashRoute
+  AppKanbanBoardIdRoute: typeof AppKanbanBoardIdRoute
+  AppKanbanIndexRoute: typeof AppKanbanIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
   AppCalendarRoute: AppCalendarRoute,
-  AppKanbanRoute: AppKanbanRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTodoRoute: AppTodoRoute,
   AppTrashRoute: AppTrashRoute,
+  AppKanbanBoardIdRoute: AppKanbanBoardIdRoute,
+  AppKanbanIndexRoute: AppKanbanIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -9,14 +9,17 @@
 //   LOCAL_SCHEMA 2: earlier clients skipped reminder rows of a pull, so devices pull everything once more.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items of notes (D-88) in their own table (Dexie version 3);
 //   LOCAL_SCHEMA 3 for the same reason.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Kanban boards (D-90) in their own table (Dexie version 4);
+//   LOCAL_SCHEMA 4 for the same reason.
 import Dexie, { type Table } from "dexie";
 
 import { log } from "@/lib/log";
 
-export const LOCAL_SCHEMA = 3;
+export const LOCAL_SCHEMA = 4;
 
-export type EntityType = "calendar" | "item" | "attachment" | "share" | "settings" | "reminder" | "checklist_item";
-export type MutableEntity = "calendar" | "item" | "reminder" | "checklist_item";
+export type EntityType =
+  "calendar" | "item" | "attachment" | "share" | "settings" | "reminder" | "checklist_item" | "board";
+export type MutableEntity = "calendar" | "item" | "reminder" | "checklist_item" | "board";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
 export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
@@ -72,12 +75,17 @@ export class LocalDb extends Dexie {
   settings!: Table<Row, string>;
   reminders!: Table<Row, string>;
   checklistItems!: Table<Row, string>;
+  boards!: Table<Row, string>;
   outbox!: Table<OutboxEntry, number>;
   conflicts!: Table<ConflictRecord, string>;
   meta!: Table<MetaRow, string>;
 
+  /** The user whose database this is. */
+  readonly user: string;
+
   constructor(user: string) {
     super(dbName(user));
+    this.user = user;
     this.version(1).stores({
       calendars: "id, owner_id",
       items: "id, [container_kind+container_id]",
@@ -90,6 +98,7 @@ export class LocalDb extends Dexie {
     });
     this.version(2).stores({ reminders: "id, item_id" });
     this.version(3).stores({ checklistItems: "id, item_id, [container_kind+container_id]" });
+    this.version(4).stores({ boards: "id, owner_id" });
   }
 
   /** Every table of server rows (for transactions over all of them). */
@@ -102,13 +111,14 @@ export class LocalDb extends Dexie {
       this.settings,
       this.reminders,
       this.checklistItems,
+      this.boards,
     ];
   }
 }
 
 export const ENTITY_TABLE: Record<
   EntityType,
-  "calendars" | "items" | "attachments" | "shares" | "settings" | "reminders" | "checklistItems"
+  "calendars" | "items" | "attachments" | "shares" | "settings" | "reminders" | "checklistItems" | "boards"
 > = {
   calendar: "calendars",
   item: "items",
@@ -117,6 +127,7 @@ export const ENTITY_TABLE: Record<
   settings: "settings",
   reminder: "reminders",
   checklist_item: "checklistItems",
+  board: "boards",
 };
 
 export function dbName(user: string): string {

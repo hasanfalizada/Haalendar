@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { log } from "@/lib/log";
 
 import type { ConflictRecord, Resolution, Row } from "./db";
-import { localDb } from "./db";
+import { ENTITY_TABLE, localDb } from "./db";
 import { localChanged, localKeys, mutate } from "./index";
 
 export type ConflictKind = "fields" | "deleted" | "rejected";
@@ -63,7 +63,8 @@ async function mark(user: string, conflict: ConflictRecord, resolution: Resoluti
 
 async function currentRow(user: string, conflict: ConflictRecord): Promise<Row | undefined> {
   const db = await localDb(user);
-  return db[conflict.entity_type === "calendar" ? "calendars" : "items"].get(conflict.entity_id);
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. The row's own table (boards, checklist items too).
+  return db[ENTITY_TABLE[conflict.entity_type]].get(conflict.entity_id);
 }
 
 /** Rule 2: per field "mine" or "theirs"; the fields kept as mine are sent again on the current version. */
