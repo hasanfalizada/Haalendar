@@ -2,7 +2,7 @@
 // grid (six weeks from the user's week start, month and year boundaries), ‹ Today › and the keys ← / → / T, the mini
 // month (click, dots for days with events, ARIA grid keyboard that does not move the day by itself), the sidebar on
 // desktops (collapsible, remembered), on tablets (overlay) and the date sheet on phones.
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -212,5 +212,32 @@ describe("tablet and phone", { timeout: 15_000 }, () => {
       expect(selectedDate(router)).toBe("2026-11-01");
     });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-098. A swipe over the content moves by the view's period (FR-CAL-36, D-86).
+  it.each([
+    ["day", "2026-10-23"],
+    ["week", "2026-10-29"],
+    ["month", "2026-11-22"],
+    ["agenda", "2026-11-21"],
+  ])("swiping in the %s view goes to the next and back to the previous period", async (view, next) => {
+    screenWidth(360);
+    const { router } = await open(`/calendar?date=2026-10-22&view=${view}`);
+    const area = document.querySelector(".touch-pan-y");
+    expect(area).not.toBeNull();
+    const swipe = (from: number, to: number) => {
+      fireEvent.touchStart(area!, { touches: [{ clientX: from, clientY: 300 }] });
+      fireEvent.touchMove(area!, { touches: [{ clientX: (from + to) / 2, clientY: 302 }] });
+      fireEvent.touchMove(area!, { touches: [{ clientX: to, clientY: 305 }] });
+      fireEvent.touchEnd(area!, { touches: [] });
+    };
+    swipe(300, 120);
+    await waitFor(() => {
+      expect(selectedDate(router)).toBe(next);
+    });
+    swipe(120, 300);
+    await waitFor(() => {
+      expect(selectedDate(router)).toBe("2026-10-22");
+    });
   });
 });

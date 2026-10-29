@@ -41,6 +41,8 @@
 // move is written like every event change and is one undo step; the notification names the new day and time.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. Duplicate (FR-CAL-34, D-84) from the details card: the dialog writes
 // the copy, then the view goes to the copy's date with its card open.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-098. On touch, a swipe left / right over the content moves to the next /
+// previous period in every view, like › / ‹ (FR-CAL-36, D-86).
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus } from "lucide-react";
@@ -67,6 +69,7 @@ import { useAttachmentCounts, useRowFlags } from "@/lib/eventRow";
 import { useListNavigation } from "@/lib/useListNavigation";
 import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { type Selection, useSelection } from "@/lib/useSelection";
+import { useSwipe } from "@/lib/useSwipe";
 import { cn } from "@/lib/utils";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
 import { agendaDays } from "@/lib/agendaView";
@@ -648,6 +651,9 @@ export function DayView({
       go(shift(current(), 1));
     },
   });
+  const swipeArea = useSwipe((direction) => {
+    go(shift(current(), direction));
+  });
   useShortcut({
     id: "calendar:today",
     keys: ["T"],
@@ -834,99 +840,104 @@ export function DayView({
             </Button>
           ) : null}
         </div>
-        {agenda ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <AgendaList
-              key={`${date}:${String(agendaLength)}`}
-              user={user}
-              days={agendaRange}
-              rows={rows}
-              viewerTz={viewerTz}
-              today={today}
-              anchor={{
-                openKey: details?.key ?? null,
-                onOpen: setDetails,
-                onClose: () => {
-                  setDetails(null);
-                },
-                inPopover: tablet,
-                details: detailsOf,
-              }}
-              onDay={(day) => {
-                switchView("day", day);
-              }}
-            />
+        {/* The content follows a swipe sideways; the outer box keeps it from widening the page. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div ref={swipeArea} className="flex min-h-0 flex-1 flex-col touch-pan-y touch-pinch-zoom">
+            {agenda ? (
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <AgendaList
+                  key={`${date}:${String(agendaLength)}`}
+                  user={user}
+                  days={agendaRange}
+                  rows={rows}
+                  viewerTz={viewerTz}
+                  today={today}
+                  anchor={{
+                    openKey: details?.key ?? null,
+                    onOpen: setDetails,
+                    onClose: () => {
+                      setDetails(null);
+                    },
+                    inPopover: tablet,
+                    details: detailsOf,
+                  }}
+                  onDay={(day) => {
+                    switchView("day", day);
+                  }}
+                />
+              </div>
+            ) : month ? (
+              <div className="min-h-0 flex-1">
+                <MonthGrid
+                  weeks={weeks}
+                  month={monthOf(date)}
+                  date={date}
+                  today={today}
+                  rows={rows}
+                  viewerTz={viewerTz}
+                  anchor={{
+                    openKey: details?.key ?? null,
+                    onOpen: setDetails,
+                    onClose: () => {
+                      setDetails(null);
+                    },
+                    inPopover: tablet,
+                    details: detailsOf,
+                  }}
+                  compact={!tablet}
+                  onDay={(day) => {
+                    switchView("day", day);
+                  }}
+                  canDrag={canDrag}
+                  onDrop={dropEvent}
+                />
+              </div>
+            ) : week ? (
+              <div className="min-h-0 flex-1">
+                <WeekGrid
+                  days={days}
+                  rows={rows}
+                  viewerTz={viewerTz}
+                  today={today}
+                  openKey={details?.key ?? null}
+                  inPopover={tablet}
+                  onOpen={setDetails}
+                  onClose={() => {
+                    setDetails(null);
+                  }}
+                  details={detailsOf}
+                  canDrag={canDrag}
+                  onDrop={dropEvent}
+                />
+              </div>
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <DayList
+                  user={user}
+                  date={date}
+                  entries={entries}
+                  openKey={details?.key ?? null}
+                  inPopover={tablet}
+                  onOpen={setDetails}
+                  onClose={() => {
+                    setDetails(null);
+                  }}
+                  details={detailsOf}
+                  onDelete={(entry) => {
+                    const row = rows.find((candidate) => candidate.id === entry.id);
+                    if (row) requestDelete(row, occurrenceOf(entry));
+                  }}
+                  selection={selection}
+                  canMoveSelected={canMoveSelected}
+                  moving={moving}
+                  onMoveSelected={() => {
+                    void moveSelected();
+                  }}
+                />
+              </div>
+            )}
           </div>
-        ) : month ? (
-          <div className="min-h-0 flex-1">
-            <MonthGrid
-              weeks={weeks}
-              month={monthOf(date)}
-              date={date}
-              today={today}
-              rows={rows}
-              viewerTz={viewerTz}
-              anchor={{
-                openKey: details?.key ?? null,
-                onOpen: setDetails,
-                onClose: () => {
-                  setDetails(null);
-                },
-                inPopover: tablet,
-                details: detailsOf,
-              }}
-              compact={!tablet}
-              onDay={(day) => {
-                switchView("day", day);
-              }}
-              canDrag={canDrag}
-              onDrop={dropEvent}
-            />
-          </div>
-        ) : week ? (
-          <div className="min-h-0 flex-1">
-            <WeekGrid
-              days={days}
-              rows={rows}
-              viewerTz={viewerTz}
-              today={today}
-              openKey={details?.key ?? null}
-              inPopover={tablet}
-              onOpen={setDetails}
-              onClose={() => {
-                setDetails(null);
-              }}
-              details={detailsOf}
-              canDrag={canDrag}
-              onDrop={dropEvent}
-            />
-          </div>
-        ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <DayList
-              user={user}
-              date={date}
-              entries={entries}
-              openKey={details?.key ?? null}
-              inPopover={tablet}
-              onOpen={setDetails}
-              onClose={() => {
-                setDetails(null);
-              }}
-              details={detailsOf}
-              onDelete={(entry) => {
-                const row = rows.find((candidate) => candidate.id === entry.id);
-                if (row) requestDelete(row, occurrenceOf(entry));
-              }}
-              selection={selection}
-              canMoveSelected={canMoveSelected}
-              moving={moving}
-              onMoveSelected={() => {
-                void moveSelected();
-              }}
-            />
-          </div>
-        )}
+        </div>
       </div>
       {tablet && !desktop ? (
         <Sheet open={overlayOpen} onOpenChange={setOverlayOpen}>
