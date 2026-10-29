@@ -281,3 +281,36 @@ class Board(Base):
     delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A column of a board (domain model 5.3, FR-KAN-02, D-91): name 1-60,
+# position (fractional index, left to right), an optional WIP limit (1-999; exceeding it only warns), archived. The
+# board is copied as its container (container_kind `board`, container_id = board_id) for row-level security and the
+# audit log: written by the board's owner or an edit share.
+class BoardColumn(Base):
+    __tablename__ = "board_column"
+    __table_args__ = (
+        CheckConstraint("container_kind = 'board' AND container_id = board_id", name="board_container"),
+        CheckConstraint("char_length(btrim(name)) BETWEEN 1 AND 60", name="name_length"),
+        CheckConstraint("position ~ '^[0-9A-Za-z]{1,64}$'", name="position_valid"),
+        CheckConstraint("wip_limit IS NULL OR wip_limit BETWEEN 1 AND 999", name="wip_limit_range"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    board_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("board.id"), index=True)
+    container_kind: Mapped[str] = mapped_column(String(10), default="board")
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(String(60))
+    position: Mapped[str] = mapped_column(String(64))
+    wip_limit: Mapped[int | None] = mapped_column(SmallInteger)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)

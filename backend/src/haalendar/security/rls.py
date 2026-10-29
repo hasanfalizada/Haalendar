@@ -41,6 +41,7 @@ PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "s
     "note": "content",  # HAAL-100: content_child_policies (a note is its own container)
     "checklist_item": "content",  # HAAL-101: content_policies (author: created_by)
     "board": "container",  # HAAL-110: container_policies
+    "board_column": "content",  # HAAL-111: content_policies (author: created_by)
 }
 
 CURRENT_USER_FUNCTION = """

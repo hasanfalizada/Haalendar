@@ -112,6 +112,7 @@ Legend: PK primary key, FK foreign key, NN not null, U unique. Common columns (P
 
 ### 5.3 `board` (container) · `board_column`
 <!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. `board` built in migration 0025 (D-90): name not blank, position 1-64 letters or digits; `board_column` follows with HAAL-111. -->
+<!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. `board_column` built in migration 0026 (D-91): also container_kind `board` / container_id = board_id (for row-level security), wip_limit 1-999. -->
 | Table | Column | Type | Rules |
 |---|---|---|---|
 | board | id, owner_id | uuid | PK; FK user |

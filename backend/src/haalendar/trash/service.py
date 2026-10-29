@@ -38,7 +38,7 @@ from haalendar.accounts.models import UserAccount
 from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Board, Calendar, ChecklistItem, Item
+from haalendar.planning.models import Board, BoardColumn, Calendar, ChecklistItem, Item
 from haalendar.softdelete import restore_batch
 from haalendar.trash.schemas import (
     FailureCode,
@@ -89,6 +89,13 @@ async def _calendar_in_trash(db: AsyncSession, item: Any) -> ParentOut | None:
     return ParentOut(type="calendar", id=calendar.id, title=calendar.name)
 
 
+async def _board_in_trash(db: AsyncSession, row: Any) -> ParentOut | None:
+    board = await db.get(Board, row.board_id)
+    if board is None or board.deleted_at is None:
+        return None
+    return ParentOut(type="board", id=board.id, title=board.name)
+
+
 SOURCES: dict[str, TrashSource] = {
     "calendar": TrashSource(
         kind="calendar",
@@ -106,7 +113,29 @@ SOURCES: dict[str, TrashSource] = {
         title=lambda row: row.name,
         may_restore=lambda user_id: Board.owner_id == user_id,
         refuse=lambda row, user_id: None if row.owner_id == user_id else "forbidden",
-        children=(("card", Item), ("attachment", Attachment), ("checklist_item", ChecklistItem)),
+        # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. And its columns.
+        children=(
+            ("column", BoardColumn),
+            ("card", Item),
+            ("attachment", Attachment),
+            ("checklist_item", ChecklistItem),
+        ),
+    ),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A column deleted on its own (D-91): restored by the board's owner
+    # or an edit share; one deleted with its board is shown inside the board's entry; while its board is in the trash it
+    # is refused with parent_in_trash.
+    "column": TrashSource(
+        kind="column",
+        model=BoardColumn,
+        title=lambda row: row.name,
+        may_restore=lambda user_id: _edit_access(BoardColumn),
+        refuse=lambda row, user_id: None,
+        root_only=lambda: (
+            ~exists().where(
+                Board.id == BoardColumn.board_id, Board.delete_batch_id == BoardColumn.delete_batch_id
+            )
+        ),
+        parent_in_trash=_board_in_trash,
     ),
     "event": TrashSource(
         kind="event",

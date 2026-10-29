@@ -9,6 +9,7 @@ their attachments.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. And the notes' checklist items (deleted ones included).
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Kanban: the user's boards (archived and deleted ones included); their
 columns and cards join with HAAL-111/112.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Each board carries its columns (deleted ones included), left to right.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from haalendar.exports.archive import ArchiveWriter, safe_name
 from haalendar.exports.schemas import Module
 from haalendar.planning.ics import calendar_ics
 from haalendar.planning.ics_service import calendar_events
-from haalendar.planning.models import Board, Calendar, ChecklistItem, Item, Note
+from haalendar.planning.models import Board, BoardColumn, Calendar, ChecklistItem, Item, Note
 from haalendar.storage import Storage
 
 
@@ -178,9 +179,31 @@ async def todo_section(ctx: ExportContext) -> None:
 
 
 async def kanban_section(ctx: ExportContext) -> None:
-    boards = await ctx.db.scalars(
-        select(Board).where(Board.owner_id == ctx.owner_id).order_by(Board.position.collate("C"), Board.id)
+    boards = list(
+        await ctx.db.scalars(
+            select(Board)
+            .where(Board.owner_id == ctx.owner_id)
+            .order_by(Board.position.collate("C"), Board.id)
+        )
     )
+    columns: dict[uuid.UUID, list[dict[str, Any]]] = {board.id: [] for board in boards}
+    if boards:
+        for column in await ctx.db.scalars(
+            select(BoardColumn)
+            .where(BoardColumn.board_id.in_(list(columns)))
+            .order_by(BoardColumn.board_id, BoardColumn.position.collate("C"), BoardColumn.id)
+        ):
+            columns[column.board_id].append(
+                {
+                    "id": column.id,
+                    "board_id": column.board_id,
+                    "name": column.name,
+                    "position": column.position,
+                    "wip_limit": column.wip_limit,
+                    "archived_at": column.archived_at,
+                    **_meta(column),
+                }
+            )
     for board in boards:
         ctx.archive.add_row(
             "boards",
@@ -191,6 +214,7 @@ async def kanban_section(ctx: ExportContext) -> None:
                 "position": board.position,
                 "archived_at": board.archived_at,
                 "permission": "owner",
+                "columns": columns[board.id],
                 **_meta(board),
             },
         )

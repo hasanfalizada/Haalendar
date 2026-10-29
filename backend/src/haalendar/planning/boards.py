@@ -8,6 +8,7 @@
   renaming, unarchiving and deleting it stay possible;
 - delete: soft, the board with everything in it in one batch (its cards, their attachments and checklist items —
   columns join with HAAL-111); restore brings the batch back. Repeating either is harmless.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. The board's columns go to the trash and come back with it.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Board, ChecklistItem, Item
+from haalendar.planning.models import Board, BoardColumn, ChecklistItem, Item
 from haalendar.planning.notes import checked_position
 from haalendar.planning.service import Outcome, merge
 from haalendar.softdelete import new_batch, restore_batch
@@ -30,8 +31,8 @@ from haalendar.softdelete import new_batch, restore_batch
 log = get_logger(__name__)
 
 NAME_MAX = 100
-# The rows that live in a board and go to the trash with it (columns join with HAAL-111).
-CONTENTS: tuple[type[Any], ...] = (Item, Attachment, ChecklistItem)
+# The rows that live in a board and go to the trash with it.
+CONTENTS: tuple[type[Any], ...] = (BoardColumn, Item, Attachment, ChecklistItem)
 
 
 def _problem(field: str, message: str) -> ProblemError:

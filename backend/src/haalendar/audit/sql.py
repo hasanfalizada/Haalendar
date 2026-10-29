@@ -47,6 +47,8 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     "checklist_item": ("ref", ()),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards (the row is the container).
     "board": ("self:board", ()),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns (their board is the container).
+    "board_column": ("ref", ()),
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.

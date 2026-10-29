@@ -109,6 +109,13 @@ class World:
                 "INSERT INTO board (id, owner_id, name, position, archived_at) VALUES (%s, %s, 'Revamp', 'U', now())",
                 (self.items["Revamp"], self.ids["ada"]),
             )
+            # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. With one column.
+            self.items["Doing"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO board_column (id, board_id, container_kind, container_id, name, position, wip_limit, "
+                "created_by) VALUES (%s, %s, 'board', %s, 'Doing', 'U', 3, %s)",
+                (self.items["Doing"], self.items["Revamp"], self.items["Revamp"], self.ids["ada"]),
+            )
         with _as(db_url, self.ids["bob"]) as conn:
             conn.execute(
                 "INSERT INTO calendar (id, owner_id, name) VALUES (%s, %s, 'Bobs')",
@@ -251,6 +258,8 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "owner",
     )
     assert board["archived_at"] and "deleted_at" not in board
+    [column] = board["columns"]
+    assert (column["id"], column["name"], column["wip_limit"]) == (world.items["Doing"], "Doing", 3)
     [note] = document["notes"]
     assert (note["id"], note["title"], note["color"], note["pinned"], note["position"]) == (
         world.items["Shopping"],

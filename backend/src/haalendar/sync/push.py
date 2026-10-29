@@ -14,6 +14,7 @@
   changed (planning.events checks the whole event; time fields conflict as a group).
 - +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders: create, update, delete, restore (planning.reminders).
 - +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards: create, update, delete, restore (planning.boards).
+- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns: create, update, delete, restore (planning.columns).
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import boards, checklists, occurrences, reminders
+from haalendar.planning import boards, checklists, columns, occurrences, reminders
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
@@ -38,6 +39,8 @@ from haalendar.sync.schemas import (
     CalendarData,
     ChecklistItemCreateData,
     ChecklistItemData,
+    ColumnCreateData,
+    ColumnData,
     ItemCreateData,
     ItemData,
     MoveData,
@@ -71,6 +74,8 @@ def _unsupported(mutation: MutationIn) -> ProblemError:
 def _fields(
     model: type[CalendarData]
     | type[BoardData]
+    | type[ColumnData]
+    | type[ColumnCreateData]
     | type[ItemData]
     | type[ItemCreateData]
     | type[ReminderData]
@@ -117,6 +122,19 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await boards.delete_board(db, user_id, m.entity_id, m.base_version)
         if m.op == "restore":
             return await boards.restore_board(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns (D-91).
+    if m.entity_type == "board_column":
+        if m.op == "create":
+            return await columns.create_column(db, user_id, m.entity_id, _fields(ColumnCreateData, m.data))
+        if m.op == "update":
+            return await columns.update_column(
+                db, user_id, m.entity_id, m.base or {}, _fields(ColumnData, m.data), current
+            )
+        if m.op == "delete":
+            return await columns.delete_column(db, user_id, m.entity_id, m.base_version)
+        if m.op == "restore":
+            return await columns.restore_column(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.entity_type == "reminder":
         if m.op == "create":

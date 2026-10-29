@@ -103,6 +103,19 @@ class ChecklistItemCreateData(ChecklistItemData):
     item_id: uuid.UUID
 
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A board column (D-91): its board when created, then its fields
+# (checked by haalendar.planning.columns).
+class ColumnData(ApiModel):
+    name: str | None = Field(default=None, max_length=200)
+    position: str | None = Field(default=None, max_length=64)
+    wip_limit: int | None = None
+    archived_at: datetime | None = None
+
+
+class ColumnCreateData(ColumnData):
+    board_id: uuid.UUID
+
+
 class MoveData(ApiModel):
     container_kind: Literal["calendar", "board", "note"]
     container_id: uuid.UUID
@@ -110,7 +123,7 @@ class MoveData(ApiModel):
 
 class MutationIn(ApiModel):
     mutation_id: uuid.UUID
-    entity_type: Literal["calendar", "item", "reminder", "checklist_item", "board"]
+    entity_type: Literal["calendar", "item", "reminder", "checklist_item", "board", "board_column"]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]
     base_version: int | None = None
