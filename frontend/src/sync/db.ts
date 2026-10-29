@@ -7,14 +7,16 @@
 //   start empty the entity tables and the cursor (a fresh pull rebuilds them) — the outbox and conflicts are kept.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's reminders (D-79) in their own table (Dexie version 2);
 //   LOCAL_SCHEMA 2: earlier clients skipped reminder rows of a pull, so devices pull everything once more.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items of notes (D-88) in their own table (Dexie version 3);
+//   LOCAL_SCHEMA 3 for the same reason.
 import Dexie, { type Table } from "dexie";
 
 import { log } from "@/lib/log";
 
-export const LOCAL_SCHEMA = 2;
+export const LOCAL_SCHEMA = 3;
 
-export type EntityType = "calendar" | "item" | "attachment" | "share" | "settings" | "reminder";
-export type MutableEntity = "calendar" | "item" | "reminder";
+export type EntityType = "calendar" | "item" | "attachment" | "share" | "settings" | "reminder" | "checklist_item";
+export type MutableEntity = "calendar" | "item" | "reminder" | "checklist_item";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
 export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
@@ -69,6 +71,7 @@ export class LocalDb extends Dexie {
   shares!: Table<Row, string>;
   settings!: Table<Row, string>;
   reminders!: Table<Row, string>;
+  checklistItems!: Table<Row, string>;
   outbox!: Table<OutboxEntry, number>;
   conflicts!: Table<ConflictRecord, string>;
   meta!: Table<MetaRow, string>;
@@ -86,17 +89,26 @@ export class LocalDb extends Dexie {
       meta: "key",
     });
     this.version(2).stores({ reminders: "id, item_id" });
+    this.version(3).stores({ checklistItems: "id, item_id, [container_kind+container_id]" });
   }
 
   /** Every table of server rows (for transactions over all of them). */
   entityTables(): Table<Row, string>[] {
-    return [this.calendars, this.items, this.attachments, this.shares, this.settings, this.reminders];
+    return [
+      this.calendars,
+      this.items,
+      this.attachments,
+      this.shares,
+      this.settings,
+      this.reminders,
+      this.checklistItems,
+    ];
   }
 }
 
 export const ENTITY_TABLE: Record<
   EntityType,
-  "calendars" | "items" | "attachments" | "shares" | "settings" | "reminders"
+  "calendars" | "items" | "attachments" | "shares" | "settings" | "reminders" | "checklistItems"
 > = {
   calendar: "calendars",
   item: "items",
@@ -104,6 +116,7 @@ export const ENTITY_TABLE: Record<
   share: "shares",
   settings: "settings",
   reminder: "reminders",
+  checklist_item: "checklistItems",
 };
 
 export function dbName(user: string): string {

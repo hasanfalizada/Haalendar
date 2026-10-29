@@ -46,6 +46,7 @@ async function removeContainer(db: LocalDb, kind: string, id: string): Promise<v
   const inside = [kind, id] as [string, string];
   await db.items.where("[container_kind+container_id]").equals(inside).delete();
   await db.attachments.where("[container_kind+container_id]").equals(inside).delete();
+  await db.checklistItems.where("[container_kind+container_id]").equals(inside).delete();
   await db.shares.where("[container_kind+container_id]").equals(inside).delete();
   if (kind === "calendar") await db.calendars.delete(id);
 }

@@ -2,6 +2,8 @@
 // of its text (plain), priority (not the default) and number of attachments; the card opens the editor. The actions
 // below it act at once with a notification and undo: pin / unpin, colour (written when the palette closes — one write
 // however many colours were tried), archive / unarchive and delete (soft; the trash restores it too).
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. A checklist (D-88): up to 8 unchecked items with working checkboxes
+// (each a write with undo), "+ N more items" and "+ N checked items".
 import { Archive, ArchiveRestore, Paperclip, Palette, Pin, PinOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,12 +13,13 @@ import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PriorityBadge } from "@/components/ui/priority";
+import { CARD_ITEMS, type ChecklistGroups } from "@/lib/checklist";
 import { toPlainText } from "@/lib/markdown-text";
 import { text } from "@/lib/notes";
 import { DEFAULT_COLOR, itemColorClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
-import { deleteNote, noteName, updateNote } from "./noteWrites";
+import { deleteNote, noteName, toggleItem, updateNote } from "./noteWrites";
 
 type Row = Record<string, unknown>;
 
@@ -26,10 +29,12 @@ interface NoteCardProps {
   user: string;
   row: Row;
   attachments: number;
+  /** The note's checklist, when it has one. */
+  checklist: ChecklistGroups | null;
   onOpen: () => void;
 }
 
-export function NoteCard({ user, row, attachments, onOpen }: NoteCardProps) {
+export function NoteCard({ user, row, attachments, checklist, onOpen }: NoteCardProps) {
   const { t } = useTranslation();
   const name = noteName(row);
   const title = text(row.title).trim();
@@ -45,7 +50,11 @@ export function NoteCard({ user, row, attachments, onOpen }: NoteCardProps) {
       <button
         type="button"
         aria-label={t("todo.card.open", { title: name })}
-        className="flex min-h-16 flex-col gap-1.5 rounded-t-md p-3 text-left wrap-anywhere focus-visible:outline-2 focus-visible:outline-primary"
+        className={cn(
+          "flex flex-col gap-1.5 rounded-t-md p-3 text-left wrap-anywhere focus-visible:outline-2 focus-visible:outline-primary",
+          // A card of a title only stays big enough to hit; a checklist below fills it anyway.
+          !checklist && "min-h-16",
+        )}
         onClick={onOpen}
       >
         {title ? <h3 className="text-[15px] font-semibold">{title}</h3> : null}
@@ -62,6 +71,35 @@ export function NoteCard({ user, row, attachments, onOpen }: NoteCardProps) {
           </span>
         ) : null}
       </button>
+      {checklist && checklist.unchecked.length + checklist.checked.length > 0 ? (
+        <div className="flex flex-col gap-0.5 px-3 pb-2 text-[13px]">
+          <ul aria-label={t("todo.checklist.title")} className="flex flex-col">
+            {checklist.unchecked.slice(0, CARD_ITEMS).map((item) => (
+              <li key={String(item.id)}>
+                <label className="flex min-h-11 items-center gap-2 wrap-anywhere pointer-fine:md:min-h-7">
+                  <input
+                    type="checkbox"
+                    className="size-4 shrink-0"
+                    checked={false}
+                    onChange={() => void toggleItem(user, item, row)}
+                  />
+                  {text(item.text)}
+                </label>
+              </li>
+            ))}
+          </ul>
+          {checklist.unchecked.length > CARD_ITEMS ? (
+            <span className="text-xs text-muted">
+              {t("todo.checklist.more", { count: checklist.unchecked.length - CARD_ITEMS })}
+            </span>
+          ) : null}
+          {checklist.checked.length > 0 ? (
+            <span className="text-xs text-muted">
+              {t("todo.checklist.moreChecked", { count: checklist.checked.length })}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="mt-auto flex items-center gap-0.5 px-1 pb-1">
         {archived ? null : (
           <Button

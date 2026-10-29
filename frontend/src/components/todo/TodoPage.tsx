@@ -3,9 +3,10 @@
 // (`?priority=`, FR-X-12), New note (in the header from tablets, a floating button on phones). Notes are cards in a
 // grid: Pinned first, then Others, each by position — a new note goes on top (manual order and list layout: HAAL-103).
 // The archive shows the archived notes only; an empty page invites the first note.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklists on the cards and "New list" next to New note (D-88).
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Archive, ListChecks, Plus } from "lucide-react";
+import { Archive, ListChecks, ListPlus, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +14,7 @@ import type { Priority } from "@/atoms/items/priority";
 import { meQuery } from "@/api/session";
 import { Button } from "@/components/ui/button";
 import { PriorityFilter } from "@/components/ui/priority";
+import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
 import { type NotesTab, noteGroups, notePositions } from "@/lib/notes";
 import { formatPriorityParam } from "@/lib/priority";
@@ -43,12 +45,18 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
     queryFn: () => (user ? localRows(user, "item") : Promise.resolve([])),
     enabled: Boolean(user),
   });
+  const { data: itemRows = [] } = useQuery({
+    queryKey: [...localKeys.table("checklist_item"), user],
+    queryFn: () => (user ? localRows(user, "checklist_item") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
   const attachments = useAttachmentCounts(user);
   const groups = useMemo(() => noteGroups(rows, tab, priorities), [rows, tab, priorities]);
   const positions = useMemo(() => notePositions(rows), [rows]);
-  // The note in the editor: a row, "new", or none.
-  const [editing, setEditing] = useState<Row | "new" | null>(null);
-  const editingRow = editing && editing !== "new" ? (rows.find((row) => row.id === editing.id) ?? editing) : null;
+  // The note in the editor: a row, "new" (a note), "list" (a note with a checklist), or none.
+  const [editing, setEditing] = useState<Row | "new" | "list" | null>(null);
+  const editingRow =
+    editing && typeof editing === "object" ? (rows.find((row) => row.id === editing.id) ?? editing) : null;
 
   const go = (next: { tab?: NotesTab; priorities?: Priority[] }) => {
     const nextTab = next.tab ?? tab;
@@ -72,6 +80,7 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
             user={user}
             row={row}
             attachments={attachments.get(String(row.id)) ?? 0}
+            checklist={row.is_checklist === true ? checklistOf(itemRows, String(row.id)) : null}
             onOpen={() => {
               setEditing(row);
             }}
@@ -114,18 +123,30 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
             go({ priorities: next });
           }}
         />
-        {tablet ? (
+        <div className="ml-auto flex items-center gap-2">
           <Button
-            variant="primary"
-            className="ml-auto"
+            size={tablet ? "md" : "icon"}
+            aria-label={tablet ? undefined : t("todo.newList")}
             onClick={() => {
-              setEditing("new");
+              setEditing("list");
             }}
           >
-            <Plus aria-hidden />
-            {t("todo.newButton")}
+            <ListPlus aria-hidden />
+            {tablet ? t("todo.newList") : null}
           </Button>
-        ) : null}
+          {/* On phones New note is the floating button. */}
+          {tablet ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditing("new");
+              }}
+            >
+              <Plus aria-hidden />
+              {t("todo.newButton")}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
@@ -192,6 +213,7 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
           user={user}
           note={editingRow}
           positions={positions}
+          asList={editing === "list"}
           onClose={() => {
             setEditing(null);
           }}

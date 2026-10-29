@@ -31,7 +31,8 @@ export function shownFields(conflict: ConflictRecord): string[] {
 /** The name of the record as the server or this device knows it. */
 export function recordName(conflict: ConflictRecord): string {
   const source = { ...conflict.mine, ...(conflict.theirs ?? {}) };
-  const name = source.title ?? source.name;
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. A checklist item is named by its text.
+  const name = source.title ?? source.name ?? source.text;
   return typeof name === "string" ? name : "";
 }
 

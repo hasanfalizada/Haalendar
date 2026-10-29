@@ -727,7 +727,8 @@
     "entity": {
       "calendar": "Calendar",
       "item": "Item",
-      "reminder": "Reminder"
+      "reminder": "Reminder",
+      "checklist_item": "Checklist item"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -753,7 +754,13 @@
       "container_id": "Moved to",
       "offset_minutes": "Reminder time",
       "all_day_time": "Reminder time",
-      "all_day_days_before": "Reminder day"
+      "all_day_days_before": "Reminder day",
+      "text": "Text",
+      "checked": "Checked",
+      "position": "Order",
+      "pinned": "Pinned",
+      "archived_at": "Archived",
+      "is_checklist": "Checklist"
     },
     "mine": "Mine (this device)",
     "theirs": "Theirs (server)",
@@ -811,7 +818,8 @@
       "eventDuplicated": "duplicating {{title}} to {{date}}",
       "noteCreated": "creating {{title}}",
       "noteChanged": "the change to {{title}}",
-      "noteDeleted": "deleting {{title}}"
+      "noteDeleted": "deleting {{title}}",
+      "checklistToggled": "the check of {{item}} in {{title}}"
     }
   },
   "bulk": {
@@ -1285,7 +1293,29 @@
       "color": "Changed the color of {{title}}",
       "archive": "Archived {{title}}",
       "unarchive": "Unarchived {{title}}",
-      "deleted": "Deleted {{title}} — it is in the trash"
+      "deleted": "Deleted {{title}} — it is in the trash",
+      "checked": "Checked {{item}}",
+      "unchecked": "Unchecked {{item}}"
+    },
+    "newList": "New list",
+    "checklist": {
+      "title": "Checklist",
+      "item": "Item {{number}}",
+      "emptyItem": "empty item {{number}}",
+      "drag": "Drag {{item}} to move it",
+      "check": "{{item}}",
+      "remove": "Remove {{item}}",
+      "add": "Add item",
+      "full": "A checklist holds at most {{max}} items.",
+      "checked_one": "Checked ({{count}})",
+      "checked_other": "Checked ({{count}})",
+      "addList": "Add checklist",
+      "removeList": "Remove checklist",
+      "more_one": "+ {{count}} more item",
+      "more_other": "+ {{count}} more items",
+      "moreChecked_one": "+ {{count}} checked item",
+      "moreChecked_other": "+ {{count}} checked items",
+      "progress": "{{checked}} of {{total}} done"
     }
   }
 }

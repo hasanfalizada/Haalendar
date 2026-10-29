@@ -21,7 +21,22 @@ import type { ConflictRecord } from "@/sync/db";
 import { conflictKind, letGo, recordName, resolveFields, restoreWithMine, shownFields } from "@/sync/conflicts";
 
 const FOLD = 160;
-const KNOWN_FIELDS = ["name", "title", "body", "color", "priority", "container_kind", "container_id"] as const;
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Note and checklist item fields (D-87, D-88).
+const KNOWN_FIELDS = [
+  "name",
+  "title",
+  "body",
+  "color",
+  "priority",
+  "container_kind",
+  "container_id",
+  "text",
+  "checked",
+  "position",
+  "pinned",
+  "archived_at",
+  "is_checklist",
+] as const;
 type KnownField = (typeof KNOWN_FIELDS)[number];
 
 /** Text of a value as it is stored (strings as they are, anything else as JSON). */
