@@ -13,6 +13,11 @@
   owner's browsers by Web Push, after its transaction has committed: "Reminder: Dentist" / "Today, 11:00-12:00 · Main
   St 1" in the owner's zone and 12/24-hour setting, opening the day with the event's card; the notification records
   when a browser was reached (delivered_push_at).
+- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. Reminders on notes (FR-TODO-07, D-89): a third form, `remind_at` (a
+  date and time), the only one a note takes (an event keeps the other two). It fires once — a time already passed when
+  it was set (to the minute) does not fire —, also for an archived note, never for a deleted one; editing the note
+  marks its reminders "to check" but neither loses a due one nor fires it twice. Its notification and Web Push
+  name the note and open it on the To-Do page.
 """
 
 from __future__ import annotations
@@ -45,7 +50,7 @@ log = get_logger(__name__)
 MAX_PER_ITEM = 5
 LATE_AFTER = timedelta(hours=1)
 BATCH = 200
-FORM_FIELDS = ("offset_minutes", "all_day_time", "all_day_days_before")
+FORM_FIELDS = ("offset_minutes", "all_day_time", "all_day_days_before", "remind_at")
 DUE = text("SELECT reminder_id, owner_id FROM haalendar_reminders_due(:at, :max_rows)")
 
 
@@ -85,12 +90,31 @@ def _parse_time(value: Any) -> time | None:
         raise _invalid("Use a time like 09:00") from None
 
 
-def _form(values: dict[str, Any]) -> dict[str, Any]:
-    """The reminder's form fields, checked: exactly one of the two forms."""
+def _parse_moment(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        moment = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
+    except ValueError:
+        raise _invalid("Use a date and time") from None
+    if moment.tzinfo is None:
+        raise _invalid("Use a date and time with its zone")
+    return moment.astimezone(UTC).replace(second=0, microsecond=0)
+
+
+def _form(values: dict[str, Any], kind: str) -> dict[str, Any]:
+    """The reminder's form fields, checked: a note takes a date and time, an event one of its two forms."""
     form = {name: values.get(name) for name in FORM_FIELDS}
     form["all_day_time"] = _parse_time(form["all_day_time"])
+    form["remind_at"] = _parse_moment(form["remind_at"])
     before = form["offset_minutes"] is not None
     on_day = form["all_day_time"] is not None or form["all_day_days_before"] is not None
+    if kind == "note":
+        if before or on_day or form["remind_at"] is None:
+            raise _invalid("Choose a date and a time")
+        return form
+    if form["remind_at"] is not None:
+        raise _invalid("Choose minutes before, or a day and a time")
     if before == on_day:
         raise _invalid("Choose minutes before, or a day and a time")
     if on_day and (form["all_day_time"] is None or form["all_day_days_before"] is None):
@@ -103,6 +127,7 @@ def state_of(reminder: Reminder) -> dict[str, Any]:
         "offset_minutes": reminder.offset_minutes,
         "all_day_time": reminder.all_day_time,
         "all_day_days_before": reminder.all_day_days_before,
+        "remind_at": reminder.remind_at,
     }
 
 
@@ -119,18 +144,21 @@ async def create_reminder(
     if await db.get(Reminder, reminder_id) is not None:
         raise ProblemError(409, ProblemCode.DUPLICATE, "A reminder with this id exists")
     item = await db.get(Item, uuid.UUID(str(data["item_id"])))
-    if item is None or item.kind != "event":  # unknown, not readable, or not an event
+    if item is None or item.kind not in (
+        "event",
+        "note",
+    ):  # unknown, not readable, or a kind without reminders
         raise _not_found()
     if item.deleted_at is not None:
-        raise ProblemError(409, ProblemCode.INVALID_STATE, "The event was deleted")
+        raise ProblemError(409, ProblemCode.INVALID_STATE, f"The {item.kind} was deleted")
     active = await db.scalar(
         select(func.count())
         .select_from(Reminder)
         .where(Reminder.item_id == item.id, Reminder.owner_id == user_id, Reminder.deleted_at.is_(None))
     )
     if (active or 0) >= MAX_PER_ITEM:
-        raise _invalid(f"At most {MAX_PER_ITEM} reminders per event")
-    reminder = Reminder(id=reminder_id, item_id=item.id, owner_id=user_id, **_form(data))
+        raise _invalid(f"At most {MAX_PER_ITEM} reminders per {item.kind}")
+    reminder = Reminder(id=reminder_id, item_id=item.id, owner_id=user_id, **_form(data, item.kind))
     db.add(reminder)
     await db.flush()
     log.info("reminder_created", reminder_id=str(reminder_id), item_id=str(item.id), user_id=str(user_id))
@@ -150,7 +178,7 @@ async def update_reminder(
         raise ProblemError(
             409, ProblemCode.INVALID_STATE, "It was deleted on another device", current=current_state
         )
-    normalize = {"all_day_time": _parse_time}
+    normalize = {"all_day_time": _parse_time, "remind_at": _parse_moment}
     new = {k: normalize.get(k, lambda v: v)(v) for k, v in new.items() if k in FORM_FIELDS}
     base = {k: normalize.get(k, lambda v: v)(v) for k, v in base.items() if k in FORM_FIELDS}
     apply, conflicts = merge(state_of(reminder), base, new)
@@ -159,7 +187,8 @@ async def update_reminder(
         apply = {}
         conflicts = sorted(set(conflicts) | {name for name in new if name in FORM_FIELDS})
     if apply:
-        form = _form({**state_of(reminder), **apply})
+        item = await db.get(Item, reminder.item_id)
+        form = _form({**state_of(reminder), **apply}, item.kind if item is not None else "event")
         for name, value in form.items():
             setattr(reminder, name, value)
         reminder.version += 1
@@ -223,6 +252,7 @@ def _payload(
     return {
         "reminder_id": str(reminder.id),
         "item_id": str(item.id),
+        "kind": "event",
         "title": item.title,
         "location": event.location,
         "all_day": event.all_day,
@@ -232,6 +262,18 @@ def _payload(
         "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
         "length_minutes": int(length.total_seconds() // 60),
         "tzid": event.tzid,
+        "fire_at": fire_at.isoformat(),
+        "late": late,
+    }
+
+
+def _note_payload(item: Item, reminder: Reminder, fire_at: datetime, late: bool) -> dict[str, Any]:
+    """Display data of a note's reminder notification."""
+    return {
+        "reminder_id": str(reminder.id),
+        "item_id": str(item.id),
+        "kind": "note",
+        "title": item.title,
         "fire_at": fire_at.isoformat(),
         "late": late,
     }
@@ -248,6 +290,8 @@ def push_message(
 ) -> dict[str, Any]:
     """The system notification of a fired reminder, in the owner's zone (English, like the server's e-mails)."""
     zone = ZoneInfo(owner_tz)
+    if payload.get("kind") == "note":
+        return _note_push(payload, notification_id, zone, twelve_hours, now)
     occurrence = date.fromisoformat(str(payload["occurrence_date"]))
     times = ""
     day = occurrence
@@ -282,6 +326,72 @@ def push_message(
     }
 
 
+def _when(day: date, today: date) -> str:
+    return (
+        "Today"
+        if day == today
+        else "Tomorrow"
+        if day == today + timedelta(days=1)
+        else day.strftime("%a, %b %-d")
+    )
+
+
+def _note_push(
+    payload: dict[str, Any], notification_id: uuid.UUID, zone: ZoneInfo, twelve_hours: bool, now: datetime
+) -> dict[str, Any]:
+    fire_at = datetime.fromisoformat(str(payload["fire_at"])).astimezone(zone)
+    body = f"{_when(fire_at.date(), now.astimezone(zone).date())}, {_clock(fire_at.time(), twelve_hours)}"
+    return {
+        "type": "reminder",
+        "title": f"Reminder: {payload['title'] or 'Untitled note'}",
+        "body": body,
+        "url": f"/todo?note={payload['item_id']}",
+        "tag": f"reminder:{payload['reminder_id']}:{payload['fire_at']}",
+        "notification_id": str(notification_id),
+    }
+
+
+async def _handle_note(
+    db: AsyncSession, schedule: ReminderSchedule, reminder: Reminder, item: Item | None, now: datetime
+) -> tuple[str, dict[str, Any] | None]:
+    """A note's reminder: fires once at its time (an archived note too, a deleted one never)."""
+    owner = await db.get(UserAccount, reminder.owner_id)
+    at = reminder.remind_at
+    if (
+        reminder.deleted_at is not None
+        or item is None
+        or item.deleted_at is not None
+        or owner is None
+        or at is None
+    ):
+        schedule.next_fire_at, schedule.next_occurrence, schedule.needs_check = None, None, False
+        return "idle", None
+    outcome = "checked"
+    message: dict[str, Any] | None = None
+    # Fired already at or after the time set now (an edit of the note asks for a check, but changes nothing here; a
+    # later time set afterwards fires again).
+    fired = schedule.last_fired_at is not None and schedule.last_fired_at >= at
+    # "Already passed when set" is judged against the moment it was set (to the minute), not the moment of the check:
+    # the first check may come only when the time has just been reached.
+    passed_when_set = at < reminder.updated_at.replace(second=0, microsecond=0)
+    if at <= now and not fired and not passed_when_set:
+        late = now - at > LATE_AFTER
+        payload = _note_payload(item, reminder, at, late)
+        note = await notify_self(db, reminder.owner_id, "reminder", payload, item_id=item.id)
+        if not late:
+            prefs = await db.get(UserSettings, reminder.owner_id)
+            twelve = prefs is not None and prefs.time_format == "12h"
+            message = push_message(payload, note.id, owner.time_zone, twelve, now)
+        schedule.last_fired_at = now
+        outcome = "fired_late" if late else "fired"
+        schedule.next_fire_at = None
+    else:
+        schedule.next_fire_at = at if at > now and not fired else None
+    schedule.next_occurrence = None
+    schedule.needs_check = False
+    return outcome, message
+
+
 async def handle(db: AsyncSession, reminder_id: uuid.UUID, now: datetime) -> str:
     """Check or fire one reminder as its owner (the caller has set the owner for the transaction)."""
     outcome, _message = await handle_with_push(db, reminder_id, now)
@@ -297,6 +407,8 @@ async def handle_with_push(
     if schedule is None or reminder is None:
         return "missing", None
     item = await db.get(Item, reminder.item_id)
+    if item is not None and item.kind == "note":
+        return await _handle_note(db, schedule, reminder, item, now)
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. An archived calendar's reminders do not fire (D-82).
     calendar = (
         await db.get(Calendar, item.container_id)

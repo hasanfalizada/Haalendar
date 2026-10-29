@@ -76,6 +76,8 @@ class ReminderData(ApiModel):
     offset_minutes: int | None = Field(default=None, ge=0, le=40320)
     all_day_time: str | None = Field(default=None, max_length=8)
     all_day_days_before: int | None = Field(default=None, ge=0, le=28)
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. A note's reminder: a date and time (D-89).
+    remind_at: datetime | None = None
 
 
 class ReminderCreateData(ReminderData):

@@ -188,6 +188,8 @@ class Reminder(Base):
     offset_minutes: Mapped[int | None] = mapped_column(Integer)
     all_day_time: Mapped[time | None] = mapped_column(Time)
     all_day_days_before: Mapped[int | None] = mapped_column(SmallInteger)
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The third form, of notes (D-89): a date and time, once.
+    remind_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
