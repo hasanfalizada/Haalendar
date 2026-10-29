@@ -3,6 +3,7 @@
 // occurrence or all of them with its excluded dates.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The end date of a series moves along; a rule with its own days
 // moves as a whole only to other times on the same day.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. This and following: the series ends before, a new series at the drop.
 import { describe, expect, it } from "vitest";
 
 import { droppedTimes, planDrop, seriesMovable } from "./eventDrag";
@@ -126,5 +127,34 @@ describe("planDrop", () => {
       true,
     ); // other times on the same day
     expect(seriesMovable(series, "2026-10-28", next)).toBe(true);
+  });
+
+  it("this and following: the series ends the day before and the rest moves as a new series", () => {
+    const series = {
+      ...timed,
+      start_date: "2026-10-21",
+      end_date: "2026-10-21",
+      rrule: "FREQ=WEEKLY;UNTIL=20261130",
+      exceptions: ["2026-11-04"],
+    };
+    expect(planDrop(series, "2026-10-28", next, "following")).toMatchObject({
+      kind: "split",
+      id: "e1",
+      version: 2,
+      base: { rrule: "FREQ=WEEKLY;UNTIL=20261130" },
+      data: { rrule: "FREQ=WEEKLY;UNTIL=20261027" },
+      follow: {
+        kind: "event",
+        container_id: "c1",
+        tzid: "Europe/Berlin",
+        title: "Workshop",
+        start_date: "2026-10-30",
+        start_time: "15:00",
+        end_date: "2026-10-30",
+        end_time: "17:00",
+        rrule: "FREQ=WEEKLY;UNTIL=20261202",
+      },
+      exceptions: ["2026-11-06"],
+    });
   });
 });

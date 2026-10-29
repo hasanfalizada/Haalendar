@@ -133,19 +133,25 @@
     },
     "occurrence": {
       "deleteTitle": "Delete repeating event?",
-      "deleteBody": "“{{title}}” repeats. Delete only the occurrence on {{date}}, or all occurrences (they go to the trash)? Either can be undone.",
+      "deleteBody": "“{{title}}” repeats. Delete only the occurrence on {{date}}, this and the following occurrences (the series ends the day before), or all occurrences (they go to the trash)? Each can be undone.",
       "deleteThis": "Only this occurrence",
+      "deleteFollowing": "This and following",
       "deleteAll": "All occurrences",
       "deleted": "Deleted {{title}} on {{date}}",
+      "followingDeleted": "Deleted {{title}} from {{date}} on",
       "editTitle": "Edit repeating event?",
-      "editBody": "“{{title}}” repeats. Change only the occurrence on {{date}} (it becomes a separate event), or all occurrences?",
+      "editBody": "“{{title}}” repeats. Change only the occurrence on {{date}} (it becomes a separate event), this and the following occurrences (they become a new series), or all occurrences?",
       "editThis": "Only this occurrence",
+      "editFollowing": "This and following",
       "editAll": "All occurrences",
       "editorTitle": "Edit the occurrence on {{date}}",
       "copyNote": "Saving makes this a separate event on its own date; the series skips {{date}}. Attachments stay with the series.",
       "saved": "Saved {{title}} as a separate event",
+      "followingEditorTitle": "Edit the occurrences from {{date}} on",
+      "followingNote": "Saving ends the series on {{previous}} and saves these values as a new series from {{date}}. Attachments stay with the earlier occurrences.",
+      "followingSaved": "Saved {{title}} from {{date}} on",
       "moveTitle": "Move repeating event?",
-      "moveBody": "“{{title}}” repeats. Move only the occurrence on {{date}} (it becomes a separate event), or all occurrences?",
+      "moveBody": "“{{title}}” repeats. Move only the occurrence on {{date}} (it becomes a separate event), this and the following occurrences (they become a new series), or all occurrences?",
       "moveOnlyThisBody": "“{{title}}” repeats on chosen days, so only the occurrence on {{date}} can move to another day (it becomes a separate event)."
     },
     "duplicate": {
@@ -781,7 +787,9 @@
       "occurrenceEdited": "the change to {{title}} on {{date}}",
       "eventMoved": "moving {{title}} to {{date}}",
       "eventsMoved": "moving {{count}} events to the next day",
-      "eventMovedTo": "moving {{title}} to {{where}}"
+      "eventMovedTo": "moving {{title}} to {{where}}",
+      "followingDeleted": "deleting {{title}} from {{date}} on",
+      "followingEdited": "the change to {{title}} from {{date}} on"
     }
   },
   "bulk": {

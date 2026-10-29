@@ -59,7 +59,8 @@ import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName }
 import { notify } from "@/lib/notify";
 import { itemColorClasses } from "@/lib/palette";
 import { useShortcut } from "@/lib/shortcuts";
-import { newStep } from "@/lib/undo";
+import { planSplit, splitsWhole } from "@/lib/seriesSplit";
+import { batchStep, newStep } from "@/lib/undo";
 import { useAttachmentCounts, useRowFlags } from "@/lib/eventRow";
 import { useListNavigation } from "@/lib/useListNavigation";
 import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
@@ -82,7 +83,7 @@ import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
 import { MiniMonth } from "./MiniMonth";
-import { moveToNextDay, runMoves } from "./moveNextDay";
+import { moveToNextDay, planSteps, runMoves, writePlan } from "./moveNextDay";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
 import { OverdueCounter } from "./OverdueCounter";
 import { useCalendars } from "./useCalendars";
@@ -376,7 +377,11 @@ export function DayView({
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. The open editor: a new event (null) or the event row to edit.
-  const [editing, setEditing] = useState<{ event: Record<string, unknown> | null; occurrence?: string } | null>(null);
+  const [editing, setEditing] = useState<{
+    event: Record<string, unknown> | null;
+    occurrence?: string;
+    following?: boolean;
+  } | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
   const [details, setDetails] = useState<DayEntry | null>(null);
   const calendars = useCalendars(user);
@@ -422,9 +427,27 @@ export function DayView({
     });
     return result.ok;
   }
-  async function answer(scope: OccurrenceScope) {
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. "This and following" (FR-CAL-31, D-81): delete ends the series the
+  // day before (an edit of its rule, not a trash entry); edit opens the editor on the later part; a drop moves it. At
+  // the series' first remaining occurrence it means all occurrences.
+  async function deleteFollowing(row: Record<string, unknown>, date: string): Promise<boolean> {
+    if (!user) return false;
+    const title = titleOf(row);
+    const values = { title, date: dayLabel(date, i18n.language) };
+    const plan = planSplit(row, date, null);
+    const result = await runWrite({
+      name: "series_end",
+      run: () => writePlan(user, plan, ""),
+      retry: false,
+      success: t("calendar.occurrence.followingDeleted", values),
+      undo: () => batchStep({ key: "undo.labels.followingDeleted", values }, planSteps(user, plan, "", title)),
+    });
+    return result.ok;
+  }
+  async function answer(chosen: OccurrenceScope) {
     if (!choice) return;
     const { kind, row, date, drop } = choice;
+    const scope = chosen === "following" && splitsWhole(row, date) ? "all" : chosen;
     if (kind === "move") {
       setChoice(null);
       if (drop) await applyDrop(row, date, drop.next, drop.target, scope);
@@ -432,10 +455,15 @@ export function DayView({
     }
     if (kind === "edit") {
       setChoice(null);
-      setEditing(scope === "this" ? { event: row, occurrence: date } : { event: row });
+      setEditing(scope === "all" ? { event: row } : { event: row, occurrence: date, following: scope === "following" });
       return;
     }
-    const ok = scope === "this" ? await excludeOccurrence(row, date) : await deleteEvent(row);
+    const ok =
+      scope === "this"
+        ? await excludeOccurrence(row, date)
+        : scope === "following"
+          ? await deleteFollowing(row, date)
+          : await deleteEvent(row);
     if (ok) {
       refocus.current = String(row.id);
       setChoice(null);
@@ -963,6 +991,11 @@ export function DayView({
             : ""
         }
         thisLabel={t(choice?.kind === "delete" ? "calendar.occurrence.deleteThis" : "calendar.occurrence.editThis")}
+        followingLabel={
+          onlyThis
+            ? undefined
+            : t(choice?.kind === "delete" ? "calendar.occurrence.deleteFollowing" : "calendar.occurrence.editFollowing")
+        }
         allLabel={
           onlyThis
             ? undefined
@@ -983,6 +1016,7 @@ export function DayView({
           date={date}
           event={editing.event}
           {...(editing.occurrence ? { occurrence: editing.occurrence } : {})}
+          {...(editing.following ? { following: true } : {})}
           onShowEvent={(id, day) => {
             go(day);
             setDetails(entriesOn(rows, day, viewerTz).find((entry) => entry.id === id) ?? null);

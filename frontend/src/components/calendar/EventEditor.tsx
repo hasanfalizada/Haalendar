@@ -17,6 +17,11 @@
 // event. A new event and the copy of an occurrence get the reminders of the form (the copy starts with the series').
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Repeat (FR-CAL-30, D-80): presets for the start date and Custom…
 // (RepeatPicker); a rule that does not fit the start is shown at the field and blocks Save.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. With `occurrence` and `following`, the editor works on the series
+// from that occurrence on (FR-CAL-31, D-81): the series' fields and rule (a count lowered by the dates before). Nothing
+// is written until Save, and only when something changed: the series then ends the day before and the values are
+// saved as a new series (calendar free to choose, the user's reminders along, attachments stay with the earlier part),
+// in one undo step.
 import { useQuery } from "@tanstack/react-query";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,7 +39,7 @@ import { DraftNotice } from "@/components/ui/draft-notice";
 import { Field, Input, Select } from "@/components/ui/input";
 import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
-import { todayIn, useDisplayTimeZone } from "@/lib/datetime";
+import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { clockText, dayLabel } from "@/lib/dayView";
 import { dayToShow, findDuplicates, titleKey } from "@/lib/duplicates";
 import {
@@ -43,6 +48,7 @@ import {
   TITLE_MAX,
   changesOf,
   eventData,
+  followingForm,
   formFromRow,
   newEventForm,
   slotsFor,
@@ -61,6 +67,7 @@ import {
   specFromText,
   specText,
 } from "@/lib/repeatRule";
+import { planSplit } from "@/lib/seriesSplit";
 import { batchStep, newStep } from "@/lib/undo";
 import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
@@ -70,6 +77,7 @@ import { localKeys, localRows, mutate } from "@/sync";
 import { type DuplicateMatch, DuplicateWarning } from "./DuplicateWarning";
 import { ReminderPicker } from "./ReminderPicker";
 import { RepeatCustom, RepeatSelect } from "./RepeatPicker";
+import { planSteps, writePlan } from "./moveNextDay";
 import { reminderChanges } from "./reminderWrites";
 import { useCalendars } from "./useCalendars";
 
@@ -82,6 +90,8 @@ interface EventEditorProps {
   event: Row | null;
   /** With a series: edit a one-off copy of this occurrence ("YYYY-MM-DD") instead of the series. */
   occurrence?: string;
+  /** With `occurrence`: edit that occurrence and the following ones (a split of the series). */
+  following?: boolean;
   onClose: () => void;
   /** "Show" in the duplicate warning: open that event on that day (the editor has closed). */
   onShowEvent?: (id: string, day: string) => void;
@@ -96,7 +106,7 @@ function nowIn(timeZone: string): string {
 // A stable empty list while the reminders load (a new [] on every render would change the form's baseline each time).
 const NO_ROWS: Record<string, unknown>[] = [];
 
-export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: EventEditorProps) {
+export function EventEditor({ date, event, occurrence, following = false, onClose, onShowEvent }: EventEditorProps) {
   const { t, i18n } = useTranslation();
   const { data: me } = useQuery(meQuery);
   const user = me?.id ?? "";
@@ -122,9 +132,13 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
     [reminderRows, eventKey],
   );
   const baseline = useMemo(() => {
-    const form = event ? formFromRow(event, occurrence) : newEventForm(date, settings.default_color, firstCalendar);
+    const form = event
+      ? following && occurrence
+        ? followingForm(event, occurrence)
+        : formFromRow(event, occurrence)
+      : newEventForm(date, settings.default_color, firstCalendar);
     return { ...form, reminders: specsText(existingReminders.map((reminder) => reminder.spec)) };
-  }, [event, occurrence, date, settings.default_color, firstCalendar, existingReminders]);
+  }, [event, occurrence, following, date, settings.default_color, firstCalendar, existingReminders]);
   const [form, setForm] = useState<EventForm>(baseline);
   // The starting values can change after opening (the calendars arrive from the local database): an untouched form
   // follows them — adjusted while rendering, React's pattern for state derived from changed inputs.
@@ -141,15 +155,23 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
   );
   const formRef = useRef<HTMLFormElement>(null);
   const eventId = typeof event?.id === "string" ? event.id : null;
-  const copyOf = eventId !== null && occurrence !== undefined ? { series: eventId, date: occurrence } : null;
-  // The record being edited: none for a new event or for the copy of an occurrence (both are created on Save).
-  const id = copyOf ? null : eventId;
+  const at = eventId !== null && occurrence !== undefined ? { series: eventId, date: occurrence } : null;
+  const copyOf = following ? null : at;
+  const splitAt = following ? at : null;
+  // The record being edited: none for a new event, the copy of an occurrence or a split (all created on Save).
+  const id = at ? null : eventId;
   const eventTz = typeof event?.tzid === "string" ? event.tzid : viewerTz;
   const today = todayIn(eventTz);
 
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
   const draft = useDraft({
-    scope: copyOf ? `event:${copyOf.series}:${copyOf.date}` : id ? `event:${id}` : "event:new",
+    scope: splitAt
+      ? `event:${splitAt.series}:${splitAt.date}:following`
+      : copyOf
+        ? `event:${copyOf.series}:${copyOf.date}`
+        : id
+          ? `event:${id}`
+          : "event:new",
     values: form,
     baseline,
   });
@@ -230,6 +252,36 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
               { key: "undo.labels.occurrenceDeleted", values },
               { user, id: copyOf.series, date: copyOf.date },
             ),
+            ...reminders.steps,
+          ]),
+      });
+      return result.ok;
+    }
+    if (splitAt && event) {
+      if (!dirty) return true;
+      const newId = uuidv7();
+      const values = { title, date: dayLabel(splitAt.date, i18n.language) };
+      const plan = planSplit(event, splitAt.date, {
+        kind: "event",
+        container_kind: "calendar",
+        container_id: calendarId,
+        tzid: eventTz,
+        ...eventData(form),
+      });
+      const reminders = reminderChanges(user, newId, [], wantedReminders, reminderLabel);
+      const result = await runWrite({
+        name: "series_split",
+        run: async () => {
+          const written = await writePlan(user, plan, newId);
+          await reminders.run();
+          return written;
+        },
+        // A repeat would split the series once more.
+        retry: false,
+        success: t("calendar.occurrence.followingSaved", values),
+        undo: () =>
+          batchStep({ key: "undo.labels.followingEdited", values }, [
+            ...planSteps(user, plan, newId, title),
             ...reminders.steps,
           ]),
       });
@@ -395,9 +447,11 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
     >
       <DialogContent
         title={
-          copyOf
-            ? t("calendar.occurrence.editorTitle", { date: dayLabel(copyOf.date, i18n.language) })
-            : t(event ? "calendar.editor.editTitle" : "calendar.editor.newTitle")
+          splitAt
+            ? t("calendar.occurrence.followingEditorTitle", { date: dayLabel(splitAt.date, i18n.language) })
+            : copyOf
+              ? t("calendar.occurrence.editorTitle", { date: dayLabel(copyOf.date, i18n.language) })
+              : t(event ? "calendar.editor.editTitle" : "calendar.editor.newTitle")
         }
         closeLabel={t("common.close")}
         className="max-md:top-0 max-md:max-h-dvh max-md:rounded-none md:max-w-2xl"
@@ -598,7 +652,14 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
             }}
           />
 
-          {copyOf ? (
+          {splitAt ? (
+            <p className="text-xs text-muted">
+              {t("calendar.occurrence.followingNote", {
+                date: dayLabel(splitAt.date, i18n.language),
+                previous: dayLabel(addDays(splitAt.date, -1), i18n.language),
+              })}
+            </p>
+          ) : copyOf ? (
             <p className="text-xs text-muted">
               {t("calendar.occurrence.copyNote", { date: dayLabel(copyOf.date, i18n.language) })}
             </p>

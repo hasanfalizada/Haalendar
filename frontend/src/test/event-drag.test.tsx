@@ -3,6 +3,8 @@
 // 100 px cells, week time columns 100 px wide with 0.8 px a minute. A month drop keeps the times, a week drop takes the
 // new start in 15-minute steps and keeps the length, a series asks "only this or all", one undo brings it back, a
 // short drag (a click) opens the card instead, and view-only events do not move.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. "This and following" ends the series before the occurrence and
+// starts a new one where it was dropped.
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -233,9 +235,27 @@ describe("drag and drop", { timeout: 15_000 }, () => {
     const ask = await screen.findByRole("dialog", { name: "Move repeating event?" });
     expect(ask).toHaveTextContent("repeats on chosen days, so only the occurrence on Monday, October 5, 2026 can move");
     expect(within(ask).queryByRole("button", { name: "All occurrences" })).not.toBeInTheDocument();
+    expect(within(ask).queryByRole("button", { name: "This and following" })).not.toBeInTheDocument();
     await afterDrop();
     await userEvent.click(within(ask).getByRole("button", { name: "Only this occurrence" }));
     await screen.findByText("Moved Standup to Tuesday, October 6, 2026");
     expect((await db.items.get("e2"))?.rrule).toBe("FREQ=WEEKLY;BYDAY=MO,WE");
+  });
+
+  it("this and following: the series ends before the occurrence, a new series starts where it was dropped", async () => {
+    const { db } = await open("/calendar?date=2026-10-14&view=month");
+    const standups = await screen.findAllByRole("button", { name: "Details of Standup" });
+    await drag(standups[1] as HTMLElement, 100, 0); // Monday 12 → Tuesday 13, and the following Mondays
+    const ask = await screen.findByRole("dialog", { name: "Move repeating event?" });
+    await afterDrop();
+    await userEvent.click(within(ask).getByRole("button", { name: "This and following" }));
+    await screen.findByText("Moved Standup to Tuesday, October 13, 2026");
+    const [end, created] = await outbox();
+    expect(end).toMatchObject({ entity_id: "e2", op: "update", data: { rrule: "FREQ=WEEKLY;UNTIL=20261011" } });
+    expect(created).toMatchObject({
+      op: "create",
+      data: { title: "Standup", start_date: "2026-10-13", end_date: "2026-10-13", rrule: "FREQ=WEEKLY" },
+    });
+    expect(await db.items.get(String(created?.entity_id))).toMatchObject({ start_date: "2026-10-13" });
   });
 });

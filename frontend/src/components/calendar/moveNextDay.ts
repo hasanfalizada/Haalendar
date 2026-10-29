@@ -6,18 +6,21 @@
 // that moves takes its excluded dates along: each old date is included again (no check on the server), the series
 // moves, then each new date is excluded (the server checks it is an occurrence of the moved series). The undo step
 // keeps that order, so undoing it backwards is valid at every point.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. A split of a series ("this and following", D-81): the series' new
+// end, the new series, its excluded dates — writePlan and planSteps are shared with the editor and the delete.
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
 import { dayLabel } from "@/lib/dayView";
 import { addDays } from "@/lib/datetime";
 import type { DragPlan } from "@/lib/eventDrag";
 import { type MovePlan, planMove } from "@/lib/moveNextDay";
+import type { SplitPlan } from "@/lib/seriesSplit";
 import { type UndoLabel, type UndoStep, batchStep, newStep } from "@/lib/undo";
 import { uuidv7 } from "@/lib/uuid";
 import { mutate } from "@/sync";
 
 type Row = Record<string, unknown>;
-type Plan = MovePlan | DragPlan;
+type Plan = MovePlan | DragPlan | SplitPlan;
 
 export interface MoveTarget {
   row: Row;
@@ -30,7 +33,22 @@ const titleOf = (row: Row) =>
 
 const item = (id: string) => ({ entity_type: "item" as const, entity_id: id });
 
-async function write(user: string, plan: Plan, newId: string) {
+/** Writes a plan; `newId`: the id of the one-off copy or the new series. */
+export async function writePlan(user: string, plan: Plan, newId: string) {
+  if (plan.kind === "split") {
+    const result = await mutate(user, {
+      ...item(plan.id),
+      op: "update",
+      ...(plan.version !== null ? { base_version: plan.version } : {}),
+      base: plan.base,
+      data: plan.data,
+    });
+    if (plan.follow) await mutate(user, { ...item(newId), op: "create", data: plan.follow });
+    for (const date of plan.exceptions) {
+      await mutate(user, { ...item(newId), op: "exclude", data: { occurrence_date: date } });
+    }
+    return result;
+  }
   if (plan.kind === "occurrence") {
     await mutate(user, { ...item(newId), op: "create", data: plan.copy });
     return mutate(user, {
@@ -56,7 +74,18 @@ async function write(user: string, plan: Plan, newId: string) {
   return result;
 }
 
-function steps(user: string, plan: Plan, newId: string, title: string): UndoStep[] {
+/** The undo steps of a plan, in the order it was written. */
+export function planSteps(user: string, plan: Plan, newId: string, title: string): UndoStep[] {
+  if (plan.kind === "split") {
+    const label = { key: "undo.labels.eventEdited", values: { title } };
+    return [
+      newStep("event.update", label, { user, id: plan.id, before: plan.base, after: plan.data }),
+      ...(plan.follow
+        ? [newStep("event.create", { key: "undo.labels.eventCreated", values: { title } }, { user, id: newId })]
+        : []),
+      ...plan.exceptions.map((date) => newStep("event.exclude", label, { user, id: newId, date })),
+    ];
+  }
   if (plan.kind === "occurrence") {
     const date = dayLabel(plan.date, i18n.language);
     return [
@@ -88,7 +117,7 @@ export async function runMoves(user: string, moves: Move[], success: string, lab
   const result = await runWrite({
     name: "event_move",
     run: async () => {
-      for (const move of planned) await write(user, move.plan, move.newId);
+      for (const move of planned) await writePlan(user, move.plan, move.newId);
       return { data: planned.length };
     },
     // A repeat would move the events already written once more.
@@ -97,7 +126,7 @@ export async function runMoves(user: string, moves: Move[], success: string, lab
     undo: () =>
       batchStep(
         label,
-        planned.flatMap((move) => steps(user, move.plan, move.newId, move.title)),
+        planned.flatMap((move) => planSteps(user, move.plan, move.newId, move.title)),
       ),
   });
   return result.ok;

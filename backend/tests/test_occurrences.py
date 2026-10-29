@@ -162,3 +162,61 @@ def test_effective_start() -> None:
     assert effective_start(start, "FREQ=DAILY", {date(2026, 11, 3)}) == start  # only leading dates move it
     assert effective_start(date(2026, 1, 31), "FREQ=MONTHLY", {date(2026, 1, 31)}) == date(2026, 3, 31)
     assert effective_start(date(2028, 2, 29), "FREQ=YEARLY", {date(2028, 2, 29)}) == date(2032, 2, 29)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. "This and following" (FR-CAL-31, D-81) is written by the client with
+# the ordinary operations in one push: the series ends the day before (UNTIL in place of COUNT), the new series starts
+# on the occurrence with the remaining count, the excluded dates after it are excluded there too. The series keeps its
+# exceptions, so restoring its rule (undo) brings them back with it.
+@pytest.mark.db
+def test_split_with_the_ordinary_operations(people: People) -> None:
+    ada = people.as_("ada")
+    series = _event(people, ada, start_date="2026-11-02", rrule="FREQ=DAILY;COUNT=10")
+    _occurrence(people, ada, "exclude", series, "2026-11-07")
+    later = str(uuid.uuid7())
+    results = _push(
+        people.api,
+        ada,
+        _m(
+            "item",
+            series,
+            "update",
+            base_version=2,
+            base={"rrule": "FREQ=DAILY;COUNT=10"},
+            data={"rrule": "FREQ=DAILY;UNTIL=20261104"},
+        ),
+        _m(
+            "item",
+            later,
+            "create",
+            data={
+                "kind": "event",
+                "container_kind": "calendar",
+                "container_id": people.calendar,
+                "title": "Standup",
+                "start_date": "2026-11-05",
+                "rrule": "FREQ=DAILY;COUNT=7",
+            },
+        ),
+        _m("item", later, "exclude", data={"occurrence_date": "2026-11-07"}),
+    )
+    assert [r["status"] for r in results] == ["applied", "applied", "applied"], results
+    pulled = _pulled(people, series)
+    assert (pulled["rrule"], pulled["exceptions"]) == ("FREQ=DAILY;UNTIL=20261104", ["2026-11-07"])
+    assert _pulled(people, later)["exceptions"] == ["2026-11-07"]
+    # Past its new end the series has no occurrences left to exclude.
+    assert _occurrence(people, ada, "exclude", series, "2026-11-05")["problem"]["status"] == 422
+
+    undo = _push(
+        people.api,
+        ada,
+        _m(
+            "item",
+            series,
+            "update",
+            base={"rrule": "FREQ=DAILY;UNTIL=20261104"},
+            data={"rrule": "FREQ=DAILY;COUNT=10"},
+        ),
+    )[0]
+    assert undo["status"] == "applied", undo
+    assert _exceptions(people, series) == [("2026-11-07", "cancelled", False, people.calendar)]

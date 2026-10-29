@@ -140,6 +140,12 @@ export function formFromRow(row: Row, occurrence?: string): EventForm {
   };
 }
 
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. "This and following" (FR-CAL-31, D-81): the form of the series' later
+// part from the occurrence `at` on — the series' fields and rule, a count lowered by the dates before `at`.
+export function followingForm(row: Row, at: string): EventForm {
+  return { ...formFromRow(row, at), repeat: repeatOf(row, at) };
+}
+
 /** Start and end as comparable text ("YYYY-MM-DD HH:MM"; all-day = whole days). */
 function span(form: EventForm): [string, string] {
   if (form.all_day === "true") return [form.start_date, form.repeat === "none" ? form.end_date : form.start_date];

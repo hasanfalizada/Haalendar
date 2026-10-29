@@ -12,8 +12,12 @@ import { addDays } from "@/lib/datetime";
 // Nth or last weekday, last day of month) moves as a whole only to other times on the same day (seriesMovable);
 // otherwise its end date (UNTIL) moves along with the start.
 import { exceptionsOf } from "@/lib/dayView";
-import { eventData, formFromRow } from "@/lib/eventForm";
+import { eventData, followingForm, formFromRow } from "@/lib/eventForm";
 import { shiftedRule } from "@/lib/repeatRule";
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. "This and following" (D-81): the series ends before the occurrence
+// and a new series starts at the drop, moved like "all occurrences" (seriesMovable decides for both); the excluded
+// dates from the occurrence on move along into the new series.
+import { type SplitPlan, planSplit } from "@/lib/seriesSplit";
 
 type Row = Record<string, unknown>;
 
@@ -100,7 +104,7 @@ export function droppedTimes(
   return same ? null : next;
 }
 
-export type DragScope = "this" | "all";
+export type DragScope = "this" | "following" | "all";
 
 export type DragPlan =
   | { kind: "shift"; id: string; version: number | null; base: Row; data: Row; exceptions?: never }
@@ -113,7 +117,8 @@ export type DragPlan =
       data: Row;
       /** Excluded dates that move along: each `from` is included again, each `to` excluded. */
       exceptions: { from: string; to: string }[];
-    };
+    }
+  | SplitPlan;
 
 function changed(row: Row, next: EventTimes): { base: Row; data: Row } {
   const base: Row = {};
@@ -153,6 +158,25 @@ export function planDrop(row: Row, occurrence: string, next: EventTimes, scope: 
         ...next,
       },
     };
+  }
+  if (scope === "following") {
+    const days = daysBetween(occurrence, next.start_date);
+    const later = eventData(followingForm(row, occurrence));
+    return planSplit(
+      row,
+      occurrence,
+      {
+        kind: "event",
+        container_kind: "calendar",
+        container_id: row.container_id,
+        ...(text(row.tzid) ? { tzid: row.tzid } : {}),
+        ...later,
+        ...next,
+        end_date: next.start_date,
+        rrule: shiftedRule(text(later.rrule) ?? "", days),
+      },
+      days,
+    );
   }
   // The whole series: its stored start moves by the days the occurrence moved; a series lasts one day.
   const days = daysBetween(occurrence, next.start_date);

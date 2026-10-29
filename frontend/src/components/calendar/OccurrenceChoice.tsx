@@ -2,21 +2,24 @@
 // deleting or editing a repeating event. "Only this occurrence" has the focus, so Delete → Enter removes one date
 // (the safer choice); "All occurrences" works on the whole series; Esc or Cancel does nothing. The dialog stays open,
 // its buttons disabled, until the chosen action has finished.
-// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Without `allLabel` only "this occurrence" is offered (a series whose
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Without `allLabel` (and `followingLabel`) only "this occurrence" is offered (a series whose
 // rule names its days cannot move as a whole to another day, D-80).
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-093. "This and following" between the two (FR-CAL-31, D-81); "only this"
+// keeps the focus.
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 
-export type OccurrenceScope = "this" | "all";
+export type OccurrenceScope = "this" | "following" | "all";
 
 interface OccurrenceChoiceProps {
   open: boolean;
   title: string;
   body: string;
   thisLabel: string;
+  followingLabel?: string | undefined;
   allLabel?: string | undefined;
   danger?: boolean;
   onChoose: (scope: OccurrenceScope) => Promise<void>;
@@ -29,6 +32,7 @@ export function OccurrenceChoice({
   title,
   body,
   thisLabel,
+  followingLabel,
   allLabel,
   danger = false,
   onChoose,
@@ -74,6 +78,17 @@ export function OccurrenceChoice({
               }}
             >
               {allLabel}
+            </Button>
+          ) : null}
+          {followingLabel ? (
+            <Button
+              variant={danger ? "danger" : "secondary"}
+              disabled={busy}
+              onClick={() => {
+                choose("following");
+              }}
+            >
+              {followingLabel}
             </Button>
           ) : null}
           <Button
