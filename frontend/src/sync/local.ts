@@ -58,6 +58,8 @@ async function removeContainer(db: LocalDb, kind: string, id: string): Promise<v
   await db.attachments.where("[container_kind+container_id]").equals(inside).delete();
   await db.checklistItems.where("[container_kind+container_id]").equals(inside).delete();
   await db.boardColumns.where("[container_kind+container_id]").equals(inside).delete();
+  await db.labels.where("[container_kind+container_id]").equals(inside).delete();
+  await db.itemLabels.where("[container_kind+container_id]").equals(inside).delete();
   await db.shares.where("[container_kind+container_id]").equals(inside).delete();
   if (kind === "calendar") await db.calendars.delete(id);
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A board no longer shared leaves the device too.

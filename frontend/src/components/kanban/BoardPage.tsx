@@ -5,6 +5,7 @@
 // HAAL-111/112; until then the board invites them. A board that is not (or no longer) there says so.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. The board shows its columns (D-91); the board menu lists the archived
 // columns. Columns are written by the owner and edit shares while the board is not archived.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards in the columns; a card opens the card editor (D-92).
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArrowLeft, Columns3, MoreHorizontal } from "lucide-react";
@@ -25,17 +26,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { STANDALONE_LINK } from "@/components/ui/link-styles";
 import { columnsOf } from "@/lib/columns";
+import { useAttachmentCounts } from "@/lib/eventRow";
 import { localKeys, localRows } from "@/sync";
 
 import { ArchivedColumnsDialog } from "./ArchivedColumnsDialog";
 import { BoardColumns } from "./BoardColumns";
+import { CardEditor } from "./CardEditor";
 import { deleteBoard, updateBoard } from "./boardWrites";
 import { NameDialog } from "./NameDialog";
 import { useBoards } from "./useBoards";
 
 type Dialog = "rename" | "share" | "delete" | "archivedColumns" | null;
 
-function useLocal(user: string, entity: "item" | "board_column" | "share") {
+function useLocal(user: string, entity: "item" | "board_column" | "share" | "label" | "item_label" | "checklist_item") {
   return useQuery({
     queryKey: [...localKeys.table(entity), user],
     queryFn: () => (user ? localRows(user, entity) : Promise.resolve([])),
@@ -61,6 +64,13 @@ export function BoardPage({ boardId }: { boardId: string }) {
   const items = useLocal(user, "item") ?? [];
   const columnRows = useLocal(user, "board_column") ?? [];
   const shareRows = useLocal(user, "share") ?? [];
+  const labelRows = useLocal(user, "label") ?? [];
+  const itemLabelRows = useLocal(user, "item_label") ?? [];
+  const checklistRows = useLocal(user, "checklist_item") ?? [];
+  const attachments = useAttachmentCounts(user);
+  const boardLabels = labelRows.filter((label) => label.board_id === boardId && !label.deleted_at);
+  const [editing, setEditing] = useState<string | null>(null);
+  const editingCard = editing ? items.find((item) => item.id === editing && !item.deleted_at) : undefined;
   const columns = columnsOf(columnRows, boardId);
   const editShare = shareRows.some(
     (s) =>
@@ -219,6 +229,13 @@ export function BoardPage({ boardId }: { boardId: string }) {
           allColumns={columnRows}
           items={items}
           canWrite={canWrite}
+          labels={boardLabels}
+          itemLabels={itemLabelRows}
+          checklistItems={checklistRows}
+          attachments={attachments}
+          onOpenCard={(card) => {
+            setEditing(String(card.id));
+          }}
         />
       )}
 
@@ -231,6 +248,19 @@ export function BoardPage({ boardId }: { boardId: string }) {
           onSave={(next) => updateBoard(user, row, "rename", { name: next })}
           onClose={() => {
             setDialog(null);
+          }}
+        />
+      ) : null}
+      {editingCard ? (
+        <CardEditor
+          key={String(editingCard.id)}
+          user={user}
+          card={editingCard}
+          columns={columns.active}
+          items={items}
+          canWrite={canWrite}
+          onClose={() => {
+            setEditing(null);
           }}
         />
       ) : null}

@@ -13,15 +13,28 @@
 //   LOCAL_SCHEMA 4 for the same reason.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns (D-91) in their own table (Dexie version 5);
 //   LOCAL_SCHEMA 5 for the same reason.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Board labels and labels on cards (D-92) in their own tables (Dexie
+//   version 6); LOCAL_SCHEMA 6 for the same reason (and cards carry their card fields now).
 import Dexie, { type Table } from "dexie";
 
 import { log } from "@/lib/log";
 
-export const LOCAL_SCHEMA = 5;
+export const LOCAL_SCHEMA = 6;
 
 export type EntityType =
-  "calendar" | "item" | "attachment" | "share" | "settings" | "reminder" | "checklist_item" | "board" | "board_column";
-export type MutableEntity = "calendar" | "item" | "reminder" | "checklist_item" | "board" | "board_column";
+  | "calendar"
+  | "item"
+  | "attachment"
+  | "share"
+  | "settings"
+  | "reminder"
+  | "checklist_item"
+  | "board"
+  | "board_column"
+  | "label"
+  | "item_label";
+export type MutableEntity =
+  "calendar" | "item" | "reminder" | "checklist_item" | "board" | "board_column" | "label" | "item_label";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
 export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
@@ -79,6 +92,8 @@ export class LocalDb extends Dexie {
   checklistItems!: Table<Row, string>;
   boards!: Table<Row, string>;
   boardColumns!: Table<Row, string>;
+  labels!: Table<Row, string>;
+  itemLabels!: Table<Row, string>;
   outbox!: Table<OutboxEntry, number>;
   conflicts!: Table<ConflictRecord, string>;
   meta!: Table<MetaRow, string>;
@@ -103,6 +118,10 @@ export class LocalDb extends Dexie {
     this.version(3).stores({ checklistItems: "id, item_id, [container_kind+container_id]" });
     this.version(4).stores({ boards: "id, owner_id" });
     this.version(5).stores({ boardColumns: "id, board_id, [container_kind+container_id]" });
+    this.version(6).stores({
+      labels: "id, board_id, [container_kind+container_id]",
+      itemLabels: "id, item_id, label_id, [container_kind+container_id]",
+    });
   }
 
   /** Every table of server rows (for transactions over all of them). */
@@ -117,6 +136,8 @@ export class LocalDb extends Dexie {
       this.checklistItems,
       this.boards,
       this.boardColumns,
+      this.labels,
+      this.itemLabels,
     ];
   }
 }
@@ -132,6 +153,8 @@ export const ENTITY_TABLE: Record<
   | "checklistItems"
   | "boards"
   | "boardColumns"
+  | "labels"
+  | "itemLabels"
 > = {
   calendar: "calendars",
   item: "items",
@@ -142,6 +165,8 @@ export const ENTITY_TABLE: Record<
   checklist_item: "checklistItems",
   board: "boards",
   board_column: "boardColumns",
+  label: "labels",
+  item_label: "itemLabels",
 };
 
 export function dbName(user: string): string {

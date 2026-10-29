@@ -734,7 +734,9 @@
       "reminder": "Reminder",
       "checklist_item": "Checklist item",
       "board": "Board",
-      "board_column": "Column"
+      "board_column": "Column",
+      "label": "Label",
+      "item_label": "Label on a card"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -831,7 +833,10 @@
       "boardDeleted": "deleting {{name}}",
       "columnCreated": "adding {{name}}",
       "columnChanged": "the change to {{name}}",
-      "columnDeleted": "deleting {{name}}"
+      "columnDeleted": "deleting {{name}}",
+      "cardCreated": "adding {{title}}",
+      "cardChanged": "the changes to {{title}}",
+      "cardDeleted": "deleting {{title}}"
     }
   },
   "bulk": {
@@ -1425,6 +1430,34 @@
         "archive": "Archived {{name}}",
         "unarchive": "Unarchived {{name}}",
         "delete": "Deleted {{name}}"
+      }
+    },
+    "cards": {
+      "add": "Add card",
+      "addTo": "Add a card to {{column}}",
+      "addButton": "Add",
+      "titleIn": "Title of the new card in {{column}}",
+      "titlePlaceholder": "Card title",
+      "open": "Open {{title}}",
+      "due": "Due {{when}}",
+      "progress": "{{done}} of {{total}} checklist items done",
+      "attachments_one": "{{count}} attachment",
+      "attachments_other": "{{count}} attachments",
+      "editTitle": "Edit card",
+      "viewTitle": "Card",
+      "title": "Title",
+      "body": "Description",
+      "column": "Column",
+      "hiddenColumn": "(archived or deleted column)",
+      "dueDate": "Due date",
+      "dueTime": "Time (optional)",
+      "clearDue": "Clear due date",
+      "color": "Color",
+      "delete": "Delete",
+      "done": {
+        "create": "Card added: {{title}}",
+        "edit": "Saved {{title}}",
+        "delete": "Deleted {{title}}"
       }
     }
   }

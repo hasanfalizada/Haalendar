@@ -5,6 +5,8 @@
 // Undo). A column is dragged by its header with the mouse (after 5 px) or touch (after a 300 ms hold, so a swipe still
 // scrolls); Esc cancels; the keyboard way is Move left / right. Without the right to write (view share, archived board)
 // nothing can be changed. Cards fill the columns with HAAL-112.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Each column lists its cards top to bottom (CardTile; a card opens the
+// editor) and ends with "+ Add card" for whoever may write (D-92).
 import {
   type CollisionDetection,
   DndContext,
@@ -20,7 +22,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { MoreHorizontal, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -32,9 +34,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSettings } from "@/api/settings";
+import { cardsOf, labelsOf, newCardPosition } from "@/lib/cards";
+import { checklistOf } from "@/lib/checklist";
 import { cardCount, newColumnPosition, overLimit, positionAt } from "@/lib/columns";
 import { cn } from "@/lib/utils";
 
+import { AddCard } from "./AddCard";
+import { createCard } from "./cardWrites";
+import { CardTile } from "./CardTile";
 import { createColumn, deleteColumn, updateColumn } from "./columnWrites";
 import { NameDialog } from "./NameDialog";
 import { WipDialog } from "./WipDialog";
@@ -58,6 +66,12 @@ interface BoardColumnsProps {
   /** Every item row of the local database (cards per column). */
   items: readonly Row[];
   canWrite: boolean;
+  /** The board's labels, the labels on items, checklist items and attachment counts per item (the cards show them). */
+  labels: readonly Row[];
+  itemLabels: readonly Row[];
+  checklistItems: readonly Row[];
+  attachments: ReadonlyMap<string, number>;
+  onOpenCard: (card: Row) => void;
 }
 
 type Dialog = { kind: "add" } | { kind: "rename" | "wip" | "delete"; row: Row } | null;
@@ -70,8 +84,21 @@ interface DropData {
   index: number;
 }
 
-export function BoardColumns({ user, boardId, active, allColumns, items, canWrite }: BoardColumnsProps) {
+export function BoardColumns({
+  user,
+  boardId,
+  active,
+  allColumns,
+  items,
+  canWrite,
+  labels,
+  itemLabels,
+  checklistItems,
+  attachments,
+  onOpenCard,
+}: BoardColumnsProps) {
   const { t } = useTranslation();
+  const { default_color: defaultColor } = useSettings();
   const [dialog, setDialog] = useState<Dialog>(null);
   const [dragging, setDragging] = useState<Row | null>(null);
   const [current, setCurrent] = useState(0);
@@ -142,6 +169,43 @@ export function BoardColumns({ user, boardId, active, allColumns, items, canWrit
               canWrite={canWrite}
               first={index === 0}
               last={index === active.length - 1}
+              cards={
+                <>
+                  <ul className="flex flex-col gap-2">
+                    {cardsOf(items, String(row.id)).map((card) => {
+                      const cardId = String(card.id);
+                      const list = checklistOf(checklistItems, cardId);
+                      const total = list.unchecked.length + list.checked.length;
+                      return (
+                        <CardTile
+                          key={cardId}
+                          row={card}
+                          labels={labelsOf(cardId, itemLabels, labels)}
+                          progress={total > 0 ? { done: list.checked.length, total } : null}
+                          attachments={attachments.get(cardId) ?? 0}
+                          onOpen={() => {
+                            onOpenCard(card);
+                          }}
+                        />
+                      );
+                    })}
+                  </ul>
+                  {canWrite ? (
+                    <AddCard
+                      columnName={name(row)}
+                      onAdd={(title) =>
+                        createCard(user, {
+                          boardId,
+                          columnId: String(row.id),
+                          title,
+                          position: newCardPosition(items, String(row.id)),
+                          color: defaultColor,
+                        })
+                      }
+                    />
+                  ) : null}
+                </>
+              }
               onAction={(action) => {
                 if (action === "left") move(row, index - 1);
                 else if (action === "right") move(row, index + 1);
@@ -253,6 +317,8 @@ type Action = "rename" | "wip" | "left" | "right" | "archive" | "delete";
 
 interface ColumnProps {
   row: Row;
+  /** The cards and "+ Add card". */
+  cards: ReactNode;
   index: number;
   count: number;
   canWrite: boolean;
@@ -261,7 +327,7 @@ interface ColumnProps {
   onAction: (action: Action) => void;
 }
 
-function Column({ row, index, count, canWrite, first, last, onAction }: ColumnProps) {
+function Column({ row, cards, index, count, canWrite, first, last, onAction }: ColumnProps) {
   const { t } = useTranslation();
   const id = String(row.id);
   const name = String(row.name);
@@ -380,8 +446,9 @@ function Column({ row, index, count, canWrite, first, last, onAction }: ColumnPr
           </DropdownMenu>
         ) : null}
       </div>
-      <div className="min-h-16 px-3 pb-3">
-        {count === 0 ? <p className="text-xs text-muted">{t("kanban.columns.noCards")}</p> : null}
+      <div className="flex min-h-16 flex-col gap-2 overflow-y-auto px-2 pb-2">
+        {count === 0 && !canWrite ? <p className="px-1 text-xs text-muted">{t("kanban.columns.noCards")}</p> : null}
+        {cards}
       </div>
     </section>
   );
