@@ -53,6 +53,9 @@
     "overdue_one": "{{count}} overdue event",
     "overdue_other": "{{count}} overdue events",
     "nav": {
+      "weekColumn": "Wk",
+      "weekColumnLong": "ISO week",
+      "weekRow": "Week {{week}}",
       "previousDay": "Previous day",
       "nextDay": "Next day",
       "today": "Today",

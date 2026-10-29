@@ -158,8 +158,32 @@ describe("desktop", { timeout: 15_000 }, () => {
     await open("/calendar?date=2026-10-22", { "GET /me/settings": () => json(settings({ week_start: 0 })) });
     const grid = await screen.findByRole("grid", { name: "October 2026" });
     await waitFor(() => {
-      expect(within(grid).getAllByRole("columnheader")[0]).toHaveAttribute("abbr", "Sunday");
+      expect(within(grid).getAllByRole("columnheader")[1]).toHaveAttribute("abbr", "Sunday");
     });
+    // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-097. A row from Sunday shows the ISO week of its Thursday (D-85).
+    expect(
+      within(grid)
+        .getAllByRole("rowheader")
+        .map((cell) => cell.textContent),
+    ).toEqual(["40Week 40", "41Week 41", "42Week 42", "43Week 43", "44Week 44", "45Week 45"]);
+  });
+
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-097. ISO week numbers in the mini month (FR-CAL-35, D-85).
+  it("shows the ISO week of every row, across the turn of the year", async () => {
+    screenWidth(1280);
+    await open("/calendar?date=2026-12-28");
+    const grid = await screen.findByRole("grid", { name: "December 2026" });
+    expect(within(grid).getAllByRole("columnheader")[0]).toHaveAttribute("abbr", "ISO week");
+    const weeks = within(grid).getAllByRole("rowheader");
+    expect(weeks.map((cell) => cell.getAttribute("title"))).toEqual([
+      "ISO week 49 of 2026",
+      "ISO week 50 of 2026",
+      "ISO week 51 of 2026",
+      "ISO week 52 of 2026",
+      "ISO week 53 of 2026",
+      "ISO week 1 of 2027",
+    ]);
+    expect(weeks[4]).toHaveAccessibleName("Week 53");
   });
 });
 

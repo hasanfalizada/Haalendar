@@ -4,10 +4,14 @@
 // the selected day; when the selected day moves to another month the calendar follows. Keyboard: ARIA grid pattern —
 // one Tab stop, arrows move by day / week, PageUp / PageDown by month, Home / End to the start / end of the week,
 // Enter / Space select. Cells are 44 px on touch, compact with a mouse.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-097. ISO week numbers (FR-CAL-35, C-12, D-85): a narrow first column,
+// always shown, a row header ("Week 46") and no button — the day keys stay as they are. A week that starts on Sunday or
+// Saturday spans two ISO weeks: the row shows the week of its Thursday, the one most of its days belong to.
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { isoWeek } from "@/atoms/calendar/isoWeek";
 import { Button } from "@/components/ui/button";
 import { addDays } from "@/lib/datetime";
 import { dayLabel } from "@/lib/dayView";
@@ -40,6 +44,22 @@ function weekdayNames(weekStart: number, locale: string): { short: string; long:
       long: new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(date),
     };
   });
+}
+
+function WeekNumber({ date }: { date: string }) {
+  const { t } = useTranslation();
+  const { week, week_year: year } = isoWeek(date);
+  return (
+    <th
+      scope="row"
+      role="rowheader"
+      title={t("calendar.header.weekTitle", { week, year })}
+      className="p-0 text-center text-[10px] font-normal text-muted tabular-nums"
+    >
+      <span aria-hidden>{week}</span>
+      <span className="sr-only">{t("calendar.nav.weekRow", { week })}</span>
+    </th>
+  );
 }
 
 export function MiniMonth({ selected, today, weekStart, marked, onSelect, onMonthShown }: MiniMonthProps) {
@@ -109,6 +129,7 @@ export function MiniMonth({ selected, today, weekStart, marked, onSelect, onMont
   const names = weekdayNames(weekStart, i18n.language);
   const label = monthLabel(shown, i18n.language);
   const weeks = Array.from({ length: 6 }, (_, w) => days.slice(w * 7, w * 7 + 7));
+  const thursday = weekdayOrder(weekStart).indexOf(4);
 
   return (
     <div className="flex flex-col gap-1">
@@ -146,6 +167,13 @@ export function MiniMonth({ selected, today, weekStart, marked, onSelect, onMont
       >
         <thead>
           <tr>
+            <th
+              scope="col"
+              abbr={t("calendar.nav.weekColumnLong")}
+              className="w-[2.25em] pb-1 text-center text-[10px] font-medium text-muted"
+            >
+              {t("calendar.nav.weekColumn")}
+            </th>
             {names.map((name) => (
               <th
                 key={name.long}
@@ -161,6 +189,7 @@ export function MiniMonth({ selected, today, weekStart, marked, onSelect, onMont
         <tbody>
           {weeks.map((week) => (
             <tr key={week[0]}>
+              <WeekNumber date={week[thursday] ?? week[0] ?? selected} />
               {week.map((date) => {
                 const isSelected = date === selected;
                 const isToday = date === today;
