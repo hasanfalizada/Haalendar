@@ -116,6 +116,29 @@ class World:
                 "created_by) VALUES (%s, %s, 'board', %s, 'Doing', 'U', 3, %s)",
                 (self.items["Doing"], self.items["Revamp"], self.items["Revamp"], self.ids["ada"]),
             )
+            # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A card in it with a board label.
+            self.items["Release"], self.items["Urgent"] = str(uuid.uuid7()), str(uuid.uuid7())
+            revamp, doing = self.items["Revamp"], self.items["Doing"]
+            conn.execute(
+                "INSERT INTO item (id, kind, owner_id, container_kind, container_id, title) "
+                "VALUES (%s, 'card', %s, 'board', %s, 'Release')",
+                (self.items["Release"], self.ids["ada"], revamp),
+            )
+            conn.execute(
+                "INSERT INTO card (id, container_kind, container_id, board_id, column_id, position, due_date, "
+                "due_time) VALUES (%s, 'board', %s, %s, %s, 'U', '2026-11-10', '09:30')",
+                (self.items["Release"], revamp, revamp, doing),
+            )
+            conn.execute(
+                "INSERT INTO label (id, board_id, container_kind, container_id, name, color, created_by) "
+                "VALUES (%s, %s, 'board', %s, 'Urgent', 'red', %s)",
+                (self.items["Urgent"], revamp, revamp, self.ids["ada"]),
+            )
+            conn.execute(
+                "INSERT INTO item_label (id, item_id, label_id, container_kind, container_id, created_by) "
+                "VALUES (%s, %s, %s, 'board', %s, %s)",
+                (uuid.uuid7(), self.items["Release"], self.items["Urgent"], revamp, self.ids["ada"]),
+            )
         with _as(db_url, self.ids["bob"]) as conn:
             conn.execute(
                 "INSERT INTO calendar (id, owner_id, name) VALUES (%s, %s, 'Bobs')",
@@ -220,6 +243,7 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "notes": 1,
         "checklist_items": 1,
         "boards": 1,
+        "labels": 1,
     }
     response = world.api.get(listed[0]["download_url"])
     assert response.status_code == 200 and response.headers["content-type"] == "application/zip"
@@ -260,6 +284,14 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     assert board["archived_at"] and "deleted_at" not in board
     [column] = board["columns"]
     assert (column["id"], column["name"], column["wip_limit"]) == (world.items["Doing"], "Doing", 3)
+    [card] = column["cards"]
+    assert (card["title"], card["due_date"], card["due_time"], card["label_ids"]) == (
+        "Release",
+        "2026-11-10",
+        "09:30",
+        [world.items["Urgent"]],
+    )
+    assert [(label["name"], label["color"]) for label in document["labels"]] == [("Urgent", "red")]
     [note] = document["notes"]
     assert (note["id"], note["title"], note["color"], note["pinned"], note["position"]) == (
         world.items["Shopping"],

@@ -38,7 +38,16 @@ from haalendar.accounts.models import UserAccount
 from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Board, BoardColumn, Calendar, ChecklistItem, Item
+from haalendar.planning.models import (
+    Board,
+    BoardColumn,
+    Calendar,
+    Card,
+    ChecklistItem,
+    Item,
+    ItemLabel,
+    Label,
+)
 from haalendar.softdelete import restore_batch
 from haalendar.trash.schemas import (
     FailureCode,
@@ -96,6 +105,17 @@ async def _board_in_trash(db: AsyncSession, row: Any) -> ParentOut | None:
     return ParentOut(type="board", id=board.id, title=board.name)
 
 
+async def _column_or_board_in_trash(db: AsyncSession, item: Any) -> ParentOut | None:
+    board = await db.get(Board, item.container_id)
+    if board is not None and board.deleted_at is not None:
+        return ParentOut(type="board", id=board.id, title=board.name)
+    card = await db.get(Card, item.id)
+    column = await db.get(BoardColumn, card.column_id) if card is not None else None
+    if column is not None and column.deleted_at is not None:
+        return ParentOut(type="column", id=column.id, title=column.name)
+    return None
+
+
 SOURCES: dict[str, TrashSource] = {
     "calendar": TrashSource(
         kind="calendar",
@@ -119,6 +139,9 @@ SOURCES: dict[str, TrashSource] = {
             ("card", Item),
             ("attachment", Attachment),
             ("checklist_item", ChecklistItem),
+            # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Its labels and the labels on its cards.
+            ("label", Label),
+            ("item_label", ItemLabel),
         ),
     ),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A column deleted on its own (D-91): restored by the board's owner
@@ -136,6 +159,34 @@ SOURCES: dict[str, TrashSource] = {
             )
         ),
         parent_in_trash=_board_in_trash,
+        # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Its cards come back with it.
+        children=(
+            ("card", Item),
+            ("attachment", Attachment),
+            ("checklist_item", ChecklistItem),
+            ("item_label", ItemLabel),
+        ),
+    ),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards (D-92): restored with their attachments, checklist items and
+    # labels by the board's owner or an edit share; one deleted with its column or board is shown inside that entry;
+    # while its column or board is in the trash it is refused with parent_in_trash.
+    "card": TrashSource(
+        kind="card",
+        model=Item,
+        title=lambda row: row.title or "",
+        may_restore=lambda user_id: _edit_access(Item),
+        refuse=lambda row, user_id: None,
+        children=(("attachment", Attachment), ("checklist_item", ChecklistItem), ("item_label", ItemLabel)),
+        root_only=lambda: (
+            ~exists().where(Board.id == Item.container_id, Board.delete_batch_id == Item.delete_batch_id)
+            & ~exists().where(
+                Card.id == Item.id,
+                BoardColumn.id == Card.column_id,
+                BoardColumn.delete_batch_id == Item.delete_batch_id,
+            )
+        ),
+        parent_in_trash=_column_or_board_in_trash,
+        scope=lambda: Item.kind == "card",
     ),
     "event": TrashSource(
         kind="event",

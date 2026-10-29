@@ -27,7 +27,15 @@ NOTIFIED_TABLES: tuple[str, ...] = (
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items: told like items, to their container's audience.
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards: told to their audience like calendars.
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns: told like items, to their board's audience.
-NOTIFIED_TABLES_LATER: tuple[str, ...] = ("reminder", "checklist_item", "board", "board_column")
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Labels and labels on items: told like items.
+NOTIFIED_TABLES_LATER: tuple[str, ...] = (
+    "reminder",
+    "checklist_item",
+    "board",
+    "board_column",
+    "label",
+    "item_label",
+)
 
 NOTIFY_FUNCTION = f"""
 CREATE OR REPLACE FUNCTION haalendar_sync_notify() RETURNS trigger
@@ -76,6 +84,13 @@ NOTIFY_FUNCTION_0025 = NOTIFY_FUNCTION_0023.replace(
 NOTIFY_FUNCTION_0026 = NOTIFY_FUNCTION_0025.replace(
     "WHEN 'item', 'attachment', 'checklist_item' THEN",
     "WHEN 'item', 'attachment', 'checklist_item', 'board_column' THEN",
+)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112 (migration 0027): labels and labels on items are told like items.
+NOTIFY_FUNCTION_0027 = NOTIFY_FUNCTION_0026.replace(
+    "WHEN 'item', 'attachment', 'checklist_item', 'board_column' THEN",
+    "WHEN 'item', 'attachment', 'checklist_item', 'board_column', 'label', 'item_label' THEN",
 )
 
 

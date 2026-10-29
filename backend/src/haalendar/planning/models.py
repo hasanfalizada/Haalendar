@@ -314,3 +314,92 @@ class BoardColumn(Base):
     delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A card (domain model 5.8, FR-KAN-03, D-92): the card details of an item
+# of kind `card` (1:1, same id) — its column on the board and its place there (fractional index), a due date with an
+# optional time (wall-clock in the board owner's zone; a date alone means the whole day). The board is copied as its
+# container like on `event`, for row-level security and the audit log.
+class Card(Base):
+    __tablename__ = "card"
+    __table_args__ = (
+        CheckConstraint("container_kind = 'board' AND container_id = board_id", name="board_container"),
+        CheckConstraint("position ~ '^[0-9A-Za-z]{1,64}$'", name="position_valid"),
+        CheckConstraint("due_time IS NULL OR due_date IS NOT NULL", name="due_time_needs_date"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), primary_key=True)
+    container_kind: Mapped[str] = mapped_column(String(10), default="board")
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    board_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("board.id"), index=True)
+    column_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("board_column.id"), index=True)
+    position: Mapped[str] = mapped_column(String(64))
+    due_date: Mapped[date | None] = mapped_column(Date)
+    due_time: Mapped[time | None] = mapped_column(Time)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A label of a board (domain model 5.11, D-92): name 1-40 (unique on the
+# board among live labels, case ignored), colour; shared by everyone on the board. The board is its container.
+class Label(Base):
+    __tablename__ = "label"
+    __table_args__ = (
+        CheckConstraint("container_kind = 'board' AND container_id = board_id", name="board_container"),
+        CheckConstraint("char_length(btrim(name)) BETWEEN 1 AND 40", name="name_length"),
+        CheckConstraint(f"color in ({', '.join(repr(c) for c in COLORS)})", name="color_valid"),
+        Index(
+            "uq_label_name_per_board",
+            "board_id",
+            text("lower(name)"),
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    board_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("board.id"), index=True)
+    container_kind: Mapped[str] = mapped_column(String(10), default="board")
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    name: Mapped[str] = mapped_column(String(40))
+    color: Mapped[str] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A label on an item (domain model 5.11, D-92): its own synced row, so a
+# label set on one device and another set elsewhere both stay (a set as add / remove, ADR-0009); removing is a soft
+# delete. At most one live row per item and label. The item's container is copied for row-level security.
+class ItemLabel(Base):
+    __tablename__ = "item_label"
+    __table_args__ = (
+        Index(
+            "uq_item_label_live",
+            "item_id",
+            "label_id",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), index=True)
+    label_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("label.id"), index=True)
+    container_kind: Mapped[str] = mapped_column(String(10))
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)

@@ -189,6 +189,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | is_checklist | bool NN | checklist mode (FR-TODO-02) |
 
 ### 5.8 `card` (subtype)
+<!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. As built (migration 0027, D-92): id = item id; the board copied as container_kind / container_id; `due_at` is `due_date` (date) + `due_time` (time, needs the date), wall-clock in the board owner's zone; no `archived_at` so far. -->
 | Column | Type | Rules |
 |---|---|---|
 | item_id | uuid PK FK item | |
@@ -218,6 +219,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | [common] | | |
 
 ### 5.11 `label` · `item_label`
+<!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. As built (migration 0027, D-92): board labels only (board_id NN, the board as container; author created_by instead of owner_id; name unique per board, case ignored); `item_label` has its own id, the item's container and the common columns (a synced set row), one live row per item and label. Personal labels for notes come with HAAL-102. -->
 | Table | Column | Type | Rules |
 |---|---|---|---|
 | label | id | uuid PK | |

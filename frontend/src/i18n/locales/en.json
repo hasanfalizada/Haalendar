@@ -648,7 +648,11 @@
       "attachment_one": "{{count}} image",
       "attachment_other": "{{count}} images",
       "checklist_item_one": "{{count}} checklist item",
-      "checklist_item_other": "{{count}} checklist items"
+      "checklist_item_other": "{{count}} checklist items",
+      "label_one": "{{count}} label",
+      "label_other": "{{count}} labels",
+      "item_label_one": "{{count}} label on a card",
+      "item_label_other": "{{count}} labels on cards"
     },
     "select": "Select {{title}}",
     "restore": "Restore",

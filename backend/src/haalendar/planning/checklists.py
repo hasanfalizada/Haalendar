@@ -69,8 +69,9 @@ async def create_checklist_item(
     item = await db.get(Item, uuid.UUID(str(data["item_id"])))
     if item is None:
         raise _not_found()
-    if item.kind != "note":
-        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only notes have checklists so far")
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards have checklists too (D-92).
+    if item.kind not in ("note", "card"):
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only notes and cards have checklists")
     await _writable(db, user_id, item.container_kind, item.container_id)
     if item.deleted_at is not None:
         raise ProblemError(409, ProblemCode.INVALID_STATE, "The note was deleted on another device")

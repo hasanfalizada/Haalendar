@@ -15,6 +15,8 @@
 - +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders: create, update, delete, restore (planning.reminders).
 - +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards: create, update, delete, restore (planning.boards).
 - +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns: create, update, delete, restore (planning.columns).
+- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Board labels (create, update, delete, restore) and labels on items
+  (create = add, delete = remove, restore) — planning.labels; cards are items.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import boards, checklists, columns, occurrences, reminders
+from haalendar.planning import boards, checklists, columns, labels, occurrences, reminders
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
@@ -43,6 +45,9 @@ from haalendar.sync.schemas import (
     ColumnData,
     ItemCreateData,
     ItemData,
+    ItemLabelCreateData,
+    LabelCreateData,
+    LabelData,
     MoveData,
     MutationIn,
     OccurrenceData,
@@ -76,6 +81,9 @@ def _fields(
     | type[BoardData]
     | type[ColumnData]
     | type[ColumnCreateData]
+    | type[LabelData]
+    | type[LabelCreateData]
+    | type[ItemLabelCreateData]
     | type[ItemData]
     | type[ItemCreateData]
     | type[ReminderData]
@@ -135,6 +143,27 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await columns.delete_column(db, user_id, m.entity_id, m.base_version)
         if m.op == "restore":
             return await columns.restore_column(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Board labels and labels on items (D-92).
+    if m.entity_type == "label":
+        if m.op == "create":
+            return await labels.create_label(db, user_id, m.entity_id, _fields(LabelCreateData, m.data))
+        if m.op == "update":
+            return await labels.update_label(
+                db, user_id, m.entity_id, m.base or {}, _fields(LabelData, m.data), current
+            )
+        if m.op == "delete":
+            return await labels.delete_label(db, user_id, m.entity_id, m.base_version)
+        if m.op == "restore":
+            return await labels.restore_label(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    if m.entity_type == "item_label":
+        if m.op == "create":
+            return await labels.add_label(db, user_id, m.entity_id, _fields(ItemLabelCreateData, m.data))
+        if m.op == "delete":
+            return await labels.remove_label(db, user_id, m.entity_id)
+        if m.op == "restore":
+            return await labels.restore_item_label(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.entity_type == "reminder":
         if m.op == "create":

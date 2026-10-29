@@ -10,6 +10,8 @@ their attachments.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Kanban: the user's boards (archived and deleted ones included); their
 columns and cards join with HAAL-111/112.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Each board carries its columns (deleted ones included), left to right.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Each column its cards; the boards' labels, the cards' checklist items and
+their attachments (folder kanban/) in their sections.
 """
 
 from __future__ import annotations
@@ -29,7 +31,17 @@ from haalendar.exports.archive import ArchiveWriter, safe_name
 from haalendar.exports.schemas import Module
 from haalendar.planning.ics import calendar_ics
 from haalendar.planning.ics_service import calendar_events
-from haalendar.planning.models import Board, BoardColumn, Calendar, ChecklistItem, Item, Note
+from haalendar.planning.models import (
+    Board,
+    BoardColumn,
+    Calendar,
+    Card,
+    ChecklistItem,
+    Item,
+    ItemLabel,
+    Label,
+    Note,
+)
 from haalendar.storage import Storage
 
 
@@ -127,6 +139,30 @@ async def calendar_section(ctx: ExportContext) -> None:
     await _attachments(ctx, "calendar", [c.id for c in calendars], "calendar")
 
 
+async def _checklist_items(ctx: ExportContext, item_ids: list[uuid.UUID]) -> None:
+    """The checklist items of these notes or cards (deleted ones included)."""
+    if not item_ids:
+        return
+    checklist = await ctx.db.scalars(
+        select(ChecklistItem)
+        .where(ChecklistItem.item_id.in_(item_ids))
+        .order_by(ChecklistItem.item_id, ChecklistItem.position.collate("C"), ChecklistItem.id)
+    )
+    for entry in checklist:
+        ctx.archive.add_row(
+            "checklist_items",
+            {
+                "id": entry.id,
+                "item_id": entry.item_id,
+                "text": entry.text,
+                "checked": entry.checked,
+                "checked_at": entry.checked_at,
+                "position": entry.position,
+                **_meta(entry),
+            },
+        )
+
+
 async def todo_section(ctx: ExportContext) -> None:
     rows = (
         await ctx.db.execute(
@@ -156,25 +192,7 @@ async def todo_section(ctx: ExportContext) -> None:
             },
         )
     ids = [item.id for item, _ in rows]
-    if ids:
-        checklist = await ctx.db.scalars(
-            select(ChecklistItem)
-            .where(ChecklistItem.item_id.in_(ids))
-            .order_by(ChecklistItem.item_id, ChecklistItem.position.collate("C"), ChecklistItem.id)
-        )
-        for entry in checklist:
-            ctx.archive.add_row(
-                "checklist_items",
-                {
-                    "id": entry.id,
-                    "item_id": entry.item_id,
-                    "text": entry.text,
-                    "checked": entry.checked,
-                    "checked_at": entry.checked_at,
-                    "position": entry.position,
-                    **_meta(entry),
-                },
-            )
+    await _checklist_items(ctx, ids)
     await _attachments(ctx, "note", ids, "todo")
 
 
@@ -186,24 +204,62 @@ async def kanban_section(ctx: ExportContext) -> None:
             .order_by(Board.position.collate("C"), Board.id)
         )
     )
-    columns: dict[uuid.UUID, list[dict[str, Any]]] = {board.id: [] for board in boards}
-    if boards:
-        for column in await ctx.db.scalars(
-            select(BoardColumn)
-            .where(BoardColumn.board_id.in_(list(columns)))
-            .order_by(BoardColumn.board_id, BoardColumn.position.collate("C"), BoardColumn.id)
-        ):
-            columns[column.board_id].append(
-                {
-                    "id": column.id,
-                    "board_id": column.board_id,
-                    "name": column.name,
-                    "position": column.position,
-                    "wip_limit": column.wip_limit,
-                    "archived_at": column.archived_at,
-                    **_meta(column),
-                }
-            )
+    board_ids = [board.id for board in boards]
+    if not board_ids:
+        return
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Each column carries its cards (top to bottom, with the ids of
+    # their labels); the boards' labels, the cards' checklist items and attachments go to their own sections.
+    item_labels: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for row in await ctx.db.scalars(
+        select(ItemLabel)
+        .where(ItemLabel.container_kind == "board", ItemLabel.container_id.in_(board_ids))
+        .where(ItemLabel.deleted_at.is_(None))
+        .order_by(ItemLabel.created_at, ItemLabel.id)
+    ):
+        item_labels.setdefault(row.item_id, []).append(row.label_id)
+    cards: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for item, card in (
+        await ctx.db.execute(
+            select(Item, Card)
+            .join(Card, Card.id == Item.id)
+            .where(Card.board_id.in_(board_ids))
+            .order_by(Card.column_id, Card.position.collate("C"), Item.id)
+        )
+    ).all():
+        cards.setdefault(card.column_id, []).append(
+            {
+                "id": item.id,
+                "owner_id": item.owner_id,
+                "column_id": card.column_id,
+                "title": item.title,
+                "body": item.body,
+                "color": item.color,
+                "priority": item.priority,
+                "position": card.position,
+                "due_date": card.due_date,
+                "due_time": card.due_time.strftime("%H:%M") if card.due_time else None,
+                "label_ids": item_labels.get(item.id, []),
+                **_meta(item),
+            }
+        )
+    columns: dict[uuid.UUID, list[dict[str, Any]]] = {board_id: [] for board_id in board_ids}
+    for column in await ctx.db.scalars(
+        select(BoardColumn)
+        .where(BoardColumn.board_id.in_(board_ids))
+        .order_by(BoardColumn.board_id, BoardColumn.position.collate("C"), BoardColumn.id)
+    ):
+        columns[column.board_id].append(
+            {
+                "id": column.id,
+                "board_id": column.board_id,
+                "name": column.name,
+                "position": column.position,
+                "wip_limit": column.wip_limit,
+                "archived_at": column.archived_at,
+                "cards": cards.get(column.id, []),
+                **_meta(column),
+            }
+        )
     for board in boards:
         ctx.archive.add_row(
             "boards",
@@ -218,6 +274,22 @@ async def kanban_section(ctx: ExportContext) -> None:
                 **_meta(board),
             },
         )
+    for label in await ctx.db.scalars(
+        select(Label).where(Label.board_id.in_(board_ids)).order_by(Label.board_id, Label.name, Label.id)
+    ):
+        ctx.archive.add_row(
+            "labels",
+            {
+                "id": label.id,
+                "board_id": label.board_id,
+                "name": label.name,
+                "color": label.color,
+                **_meta(label),
+            },
+        )
+    card_ids = [entry["id"] for entries in cards.values() for entry in entries]
+    await _checklist_items(ctx, card_ids)
+    await _attachments(ctx, "board", board_ids, "kanban")
 
 
 SECTIONS: dict[Module, list[Section]] = {

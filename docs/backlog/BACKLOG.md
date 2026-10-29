@@ -30,7 +30,7 @@
 | HAAL-102 | E06 To-Do | Labels and filter | Should | 100 | — | To do | — | owner backlog file |
 | HAAL-103 | E06 To-Do | Grid/list view, drag and keyboard reorder | Should | 100 | — | To do | — | owner backlog file |
 | HAAL-104 | E06 To-Do | Due date on note, visible in calendar | Should | 100 | — | To do | — | owner backlog file |
-| HAAL-112 | E07 Kanban | Cards: title, description, color, priority, due date, labels, checklist, attachments, timestamps | Must | 111 | — | To do | — | owner backlog file |
+| HAAL-112 | E07 Kanban | Cards: title, description, color, priority, due date, labels, checklist, attachments, timestamps | Must | 111 | — | In progress | — | owner backlog file |
 | HAAL-113 | E07 Kanban | Drag-and-drop cards (mouse, touch, keyboard), stable order, undoable | Must | 112 | — | To do | — | owner backlog file |
 | HAAL-114 | E07 Kanban | Card activity (from audit log) and comments | Should | 112, 032 | — | To do | — | owner backlog file |
 | HAAL-115 | E07 Kanban | Swimlanes | Could | 111 | — | To do | — | owner backlog file |
@@ -136,7 +136,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-101 | 2026-10-29 | 1361d79, c8245e6 | feat(todo): checklists — items on the server with sync, note rights, trash and export (stage 1) and in the note editor and on the cards (stage 2) (HAAL-101) |
 | HAAL-105 | 2026-10-29 | 31bfbdb, 01307a6 | feat(todo): reminders on notes — a date and time fired once on the server (stage 1), set in the note editor, a bell on the card, the notification opens the note (stage 2) (HAAL-105) |
 | HAAL-110 | 2026-10-29 | 168358e, b9f7ce7 | feat(kanban): boards — on the server with sharing, trash and export (stage 1) and the boards page with the board header, rename, archive, share, leave and delete with undo (stage 2) (HAAL-110) |
-| HAAL-111 | 2026-10-29 | 9907580, — | feat(kanban): board columns — on the server with WIP limit, archive, trash and export (stage 1) and on the board side by side with add, rename, WIP limit, drag and menu moves, archive, delete with undo and starting columns for new boards (stage 2) (HAAL-111) |
+| HAAL-111 | 2026-10-29 | 9907580, bbf3811 | feat(kanban): board columns — on the server with WIP limit, archive, trash and export (stage 1) and on the board side by side with add, rename, WIP limit, drag and menu moves, archive, delete with undo and starting columns for new boards (stage 2) (HAAL-111) |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |

@@ -25,6 +25,9 @@ one cannot become the default; an archived calendar is read-only (haalendar.auth
 (kind `note`, its own container, the owner only); `update_item` also merges the note fields (archived as a flag);
 a note cannot move. Delete and restore are the same as for every item.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. An item's delete takes its checklist items into the batch (D-88).
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards (haalendar.planning.cards, D-92): created through `create_item`
+(kind `card` on a board, in a live column); `update_item` also merges the card fields (column, position, due date and
+time); a card never leaves its board. An item's delete takes its labels into the batch too.
 """
 
 from __future__ import annotations
@@ -41,8 +44,17 @@ from haalendar.attachments.models import Attachment
 from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import events, notes
-from haalendar.planning.models import Calendar, ChecklistItem, Event, Item, Note, RecurrenceException
+from haalendar.planning import cards, events, notes
+from haalendar.planning.models import (
+    Calendar,
+    Card,
+    ChecklistItem,
+    Event,
+    Item,
+    ItemLabel,
+    Note,
+    RecurrenceException,
+)
 from haalendar.security.rls import ContainerKind
 from haalendar.softdelete import new_batch, restore_batch
 
@@ -265,8 +277,22 @@ ITEM_FIELDS = ("title", "body", "color", "priority")
 async def create_item(
     db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID, data: dict[str, Any]
 ) -> Outcome:
-    """A new item: an event in a calendar or a note (cards arrive with their module)."""
+    """A new item: an event in a calendar, a note or a card on a board."""
     item_values = {name: data[name] for name in ITEM_FIELDS if name in data}
+    if data.get("kind") == "card":
+        if data.get("container_id") is None or data.get("container_kind") != "board":
+            raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A card belongs to a board")
+        foreign = (*events.EVENT_FIELDS, *(name for name in notes.NOTE_FIELDS if name != "position"))
+        if any(name in data for name in foreign):
+            raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only cards have these fields here")
+        board_id = uuid.UUID(str(data["container_id"]))
+        await _writable(db, user_id, "board", board_id)
+        card_values = cards.normalize({name: data[name] for name in cards.CARD_FIELDS if name in data})
+        return Outcome(
+            version=await cards.create_card(db, user_id, item_id, board_id, item_values, card_values)
+        )
+    if any(name in cards.CARD_FIELDS and name not in notes.NOTE_FIELDS for name in data):
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only cards have card fields")
     if data.get("kind") == "note":
         if data.get("container_id") not in (None, item_id) or data.get("container_kind", "note") != "note":
             raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A note is its own container")
@@ -351,8 +377,16 @@ async def update_item(
     if event is None and any(name in events.EVENT_FIELDS for name in new):
         raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only events have event fields")
     note = await db.get(Note, item_id) if item.kind == "note" else None
-    if note is None and any(name in notes.NOTE_FIELDS for name in new):
+    card = await db.get(Card, item_id) if item.kind == "card" else None
+    # `position` belongs to notes and cards alike.
+    if note is None and any(
+        name in notes.NOTE_FIELDS and not (card and name in cards.CARD_FIELDS) for name in new
+    ):
         raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only notes have note fields")
+    if card is None and any(
+        name in cards.CARD_FIELDS and not (note and name in notes.NOTE_FIELDS) for name in new
+    ):
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only cards have card fields")
     current = {name: getattr(item, name) for name in ITEM_FIELDS}
     if event is not None:
         current.update(events.state_of(event))
@@ -360,6 +394,9 @@ async def update_item(
     if note is not None:
         current.update(notes.state_of(note))
         new, base = notes.as_flag(new), notes.as_flag(base)
+    if card is not None:
+        current.update(cards.state_of(card))
+        new, base = cards.normalize(new), cards.normalize(base)
     apply, conflicts = merge(current, base, new)
     if event is not None:
         changed = [name for name, value in new.items() if current.get(name) != value]
@@ -374,6 +411,12 @@ async def update_item(
         notes.apply(note, {name: value for name, value in apply.items() if name in notes.NOTE_FIELDS})
         if "title" in apply:
             apply["title"] = (apply["title"] or "").strip()
+    if card is not None:
+        await cards.apply(
+            db, card, {name: value for name, value in apply.items() if name in cards.CARD_FIELDS}
+        )
+        if "title" in apply:
+            apply["title"] = cards.checked_title(apply["title"])
     if apply:
         for name, value in apply.items():
             if name in ITEM_FIELDS:
@@ -406,6 +449,9 @@ async def move_item(
     apply, conflicts = merge(current, {k: str(v) for k, v in base.items()}, new)
     if item.kind == "event" and target_kind != "calendar":
         raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "An event belongs to a calendar")
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A card stays on its board (another column: update column_id).
+    if item.kind == "card":
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A card stays on its board")
     if apply and not conflicts:
         item.container_kind, item.container_id = target_kind, target_id
         if item.kind == "event":
@@ -442,7 +488,7 @@ async def delete_item(
     edited = item.deleted_at is None and base_version is not None and item.version != base_version
     if item.deleted_at is None:
         batch, now = new_batch(), datetime.now(UTC)
-        for model in (Attachment, ChecklistItem):
+        for model in (Attachment, ChecklistItem, ItemLabel):
             await db.execute(
                 update(model)
                 .where(model.item_id == item_id, model.deleted_at.is_(None))
@@ -460,6 +506,6 @@ async def restore_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID)
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
     if item.deleted_at is not None and item.delete_batch_id is not None:
-        await restore_batch(db, [Item, Attachment, ChecklistItem], item.delete_batch_id, user_id)
+        await restore_batch(db, [Item, Attachment, ChecklistItem, ItemLabel], item.delete_batch_id, user_id)
         await db.refresh(item)
     return Outcome(version=item.version)

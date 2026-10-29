@@ -44,6 +44,9 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
     "board": ("board", "id", ()),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. The columns of the boards the user reads (D-91).
     "board_column": ("board_column", "id", ()),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Board labels and labels on items (D-92).
+    "label": ("label", "id", ()),
+    "item_label": ("item_label", "id", ()),
 }
 
 
@@ -69,11 +72,23 @@ NOTE_FIELDS_SQL = (
 )
 
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. An item of kind `card` carries its card fields (D-92; time as "HH:MM",
+# the copied container stays on the server).
+CARD_FIELDS_SQL = (
+    "coalesce((SELECT (to_jsonb(c) - 'id' - 'container_kind' - 'container_id' - 'board_id') "
+    "|| jsonb_build_object('due_time', to_char(c.due_time, 'HH24:MI')) FROM card c WHERE c.id = {alias}.id), "
+    "'{{}}'::jsonb)"
+)
+
+
 def _data_expr(alias: str, hidden: tuple[str, ...], entity: str = "") -> str:
     drops = "".join(f" - '{column}'" for column in ("sync_seq", "sync_xid", *hidden))
     expression = f"to_jsonb({alias}){drops}"
     if entity == "item":
-        expression = f"({expression}) || {EVENT_FIELDS_SQL.format(alias=alias)} || {NOTE_FIELDS_SQL.format(alias=alias)}"
+        expression = (
+            f"({expression}) || {EVENT_FIELDS_SQL.format(alias=alias)} || {NOTE_FIELDS_SQL.format(alias=alias)} "
+            f"|| {CARD_FIELDS_SQL.format(alias=alias)}"
+        )
     if entity == "reminder":
         expression = (
             f"({expression}) || jsonb_build_object('all_day_time', to_char({alias}.all_day_time, 'HH24:MI'))"
@@ -122,6 +137,11 @@ def _container_content_sql() -> str:
         f"WHERE t.container_kind = :kind AND t.container_id = :container "
         # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. And the board's columns.
         f"UNION ALL SELECT 'board_column', t.id, t.sync_seq, {_data_expr('t', column_hidden)} FROM {column_table} t "
+        f"WHERE t.container_kind = :kind AND t.container_id = :container "
+        # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Its labels and the labels on its items.
+        f"UNION ALL SELECT 'label', t.id, t.sync_seq, {_data_expr('t', ())} FROM label t "
+        f"WHERE t.container_kind = :kind AND t.container_id = :container "
+        f"UNION ALL SELECT 'item_label', t.id, t.sync_seq, {_data_expr('t', ())} FROM item_label t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container"
     )
 

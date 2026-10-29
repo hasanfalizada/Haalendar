@@ -63,11 +63,15 @@ class ItemData(ApiModel):
     archived_at: datetime | None = None
     position: str | None = Field(default=None, max_length=64)
     is_checklist: bool | None = None
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Card fields (D-92; checked by haalendar.planning.cards).
+    column_id: uuid.UUID | None = None
+    due_date: str | None = Field(default=None, max_length=10)
+    due_time: str | None = Field(default=None, max_length=8)
 
 
 class ItemCreateData(ItemData):
-    kind: Literal["event", "note"]
-    container_kind: Literal["calendar", "note"] | None = None
+    kind: Literal["event", "note", "card"]
+    container_kind: Literal["calendar", "note", "board"] | None = None
     container_id: uuid.UUID | None = None
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. A duplicate (D-84): the event whose attachments it takes along.
     copy_attachments_from: uuid.UUID | None = None
@@ -103,6 +107,22 @@ class ChecklistItemCreateData(ChecklistItemData):
     item_id: uuid.UUID
 
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A board label (D-92): its board when created, then name and colour;
+# a label on an item: item and label when created, nothing to change afterwards (removed and added again).
+class LabelData(ApiModel):
+    name: str | None = Field(default=None, max_length=200)
+    color: Color | None = None
+
+
+class LabelCreateData(LabelData):
+    board_id: uuid.UUID
+
+
+class ItemLabelCreateData(ApiModel):
+    item_id: uuid.UUID
+    label_id: uuid.UUID
+
+
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A board column (D-91): its board when created, then its fields
 # (checked by haalendar.planning.columns).
 class ColumnData(ApiModel):
@@ -123,7 +143,9 @@ class MoveData(ApiModel):
 
 class MutationIn(ApiModel):
     mutation_id: uuid.UUID
-    entity_type: Literal["calendar", "item", "reminder", "checklist_item", "board", "board_column"]
+    entity_type: Literal[
+        "calendar", "item", "reminder", "checklist_item", "board", "board_column", "label", "item_label"
+    ]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]
     base_version: int | None = None

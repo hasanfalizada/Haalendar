@@ -8,6 +8,8 @@ archived board — haalendar.authz):
   own time —, null unarchives; merged as archived or not);
 - delete: soft, the column in a batch of its own (its cards join with HAAL-112); restore brings the batch back. A
   board's delete takes its columns into the board's batch (planning.boards).
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A column's delete takes its cards into its batch, with their attachments,
+checklist items and labels; restoring the column brings them back.
 """
 
 from __future__ import annotations
@@ -16,12 +18,14 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from haalendar.attachments.models import Attachment
 from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Board, BoardColumn
+from haalendar.planning.models import Board, BoardColumn, Card, ChecklistItem, Item, ItemLabel
 from haalendar.planning.notes import checked_position
 from haalendar.planning.service import Outcome, merge
 from haalendar.softdelete import new_batch, restore_batch
@@ -153,16 +157,34 @@ async def delete_column(
     row = await _row(db, user_id, row_id)
     edited = row.deleted_at is None and base_version is not None and row.version != base_version
     if row.deleted_at is None:
-        row.deleted_at, row.delete_batch_id, row.updated_by = datetime.now(UTC), new_batch(), user_id
+        batch, now = new_batch(), datetime.now(UTC)
+        cards = select(Card.id).where(Card.column_id == row_id).scalar_subquery()
+        changes = {"deleted_at": now, "delete_batch_id": batch, "updated_by": user_id}
+        await db.execute(
+            update(Item)
+            .where(Item.id.in_(cards), Item.deleted_at.is_(None))
+            .values(**changes, version=Item.version + 1)
+            .execution_options(synchronize_session=False)
+        )
+        for model in (Attachment, ChecklistItem, ItemLabel):
+            await db.execute(
+                update(model)
+                .where(model.item_id.in_(cards), model.deleted_at.is_(None))
+                .values(**changes, version=model.version + 1)
+                .execution_options(synchronize_session=False)
+            )
+        row.deleted_at, row.delete_batch_id, row.updated_by = now, batch, user_id
         row.version += 1
         await db.flush()
-        log.info("board_column_deleted", column_id=str(row_id), user_id=str(user_id))
+        log.info("board_column_deleted", column_id=str(row_id), batch_id=str(batch), user_id=str(user_id))
     return Outcome(version=row.version, edited_elsewhere=edited)
 
 
 async def restore_column(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID) -> Outcome:
     row = await _row(db, user_id, row_id)
     if row.deleted_at is not None and row.delete_batch_id is not None:
-        await restore_batch(db, [BoardColumn], row.delete_batch_id, user_id)
+        await restore_batch(
+            db, [BoardColumn, Item, Attachment, ChecklistItem, ItemLabel], row.delete_batch_id, user_id
+        )
         await db.refresh(row)
     return Outcome(version=row.version)
