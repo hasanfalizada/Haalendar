@@ -89,7 +89,8 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
       const target = reminderTarget(item.payload, viewerTz);
       if (target) {
         onNavigate();
-        void navigate({ to: "/calendar", search: target });
+        if (target.to === "/todo") void navigate({ to: "/todo", search: target.search });
+        else void navigate({ to: "/calendar", search: target.search });
         return;
       }
     }

@@ -4,7 +4,8 @@
 // however many colours were tried), archive / unarchive and delete (soft; the trash restores it too).
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. A checklist (D-88): up to 8 unchecked items with working checkboxes
 // (each a write with undo), "+ N more items" and "+ N checked items".
-import { Archive, ArchiveRestore, Paperclip, Palette, Pin, PinOff, Trash2 } from "lucide-react";
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. A bell with the next reminder still ahead (D-89).
+import { Archive, ArchiveRestore, Bell, Paperclip, Palette, Pin, PinOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,10 +32,12 @@ interface NoteCardProps {
   attachments: number;
   /** The note's checklist, when it has one. */
   checklist: ChecklistGroups | null;
+  /** The next reminder still ahead, as text ("Tomorrow, 09:00"), or null. */
+  nextReminder: string | null;
   onOpen: () => void;
 }
 
-export function NoteCard({ user, row, attachments, checklist, onOpen }: NoteCardProps) {
+export function NoteCard({ user, row, attachments, checklist, nextReminder, onOpen }: NoteCardProps) {
   const { t } = useTranslation();
   const name = noteName(row);
   const title = text(row.title).trim();
@@ -59,8 +62,15 @@ export function NoteCard({ user, row, attachments, checklist, onOpen }: NoteCard
       >
         {title ? <h3 className="text-[15px] font-semibold">{title}</h3> : null}
         {preview ? <p className="line-clamp-8 text-[13px] whitespace-pre-line text-fg/90">{preview}</p> : null}
-        {attachments > 0 || text(row.priority) !== "medium" ? (
+        {attachments > 0 || text(row.priority) !== "medium" || nextReminder ? (
           <span className="flex flex-wrap items-center gap-1.5">
+            {nextReminder ? (
+              <span className="inline-flex items-center gap-1 rounded-sm bg-bg/60 px-1.5 py-0.5 text-xs">
+                <Bell className="size-3" aria-hidden />
+                <span className="sr-only">{t("todo.card.reminder")} </span>
+                {nextReminder}
+              </span>
+            ) : null}
             <PriorityBadge priority={text(row.priority) as Priority} hideDefault />
             {attachments > 0 ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted">

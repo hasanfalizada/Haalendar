@@ -6,8 +6,10 @@
 // the server keeps its own, and undo / redo send the time anew. Undo kinds are registered at start-up (App.tsx).
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items (D-88): the editor's Save writes the note and its
 // item changes as one write with one undo step; a checkbox on a card checks or unchecks one item with its own step.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The note's reminders (D-89) go with Save as well.
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
+import type { ReminderChanges } from "@/components/calendar/reminderWrites";
 import type { ChecklistChanges } from "@/lib/checklist";
 import { type UndoStep, batchStep, newStep, registerUndo } from "@/lib/undo";
 import { text } from "@/lib/notes";
@@ -133,9 +135,10 @@ export async function saveNote(
   row: Row | null,
   data: Row,
   items: ChecklistChanges = NO_CHANGES,
+  reminders?: ReminderChanges,
 ): Promise<boolean> {
   const fields = Object.keys(data).length > 0;
-  const count = items.create.length + items.update.length + items.remove.length;
+  const count = items.create.length + items.update.length + items.remove.length + (reminders?.count ?? 0);
   if (row && !fields && count === 0) return true;
   const values = { title: noteName({ ...(row ?? {}), ...data }) };
   const base = row ? Object.fromEntries(Object.keys(data).map((name) => [name, row[name] ?? null])) : {};
@@ -154,6 +157,7 @@ export async function saveNote(
         await mutate(user, { ...itemTarget(entry.id), op: "update", base: entry.base, data: entry.data });
       }
       for (const removed of items.remove) await mutate(user, { ...itemTarget(removed), op: "delete" });
+      await reminders?.run();
       return written;
     },
     // A repeat would make a second note.
@@ -171,6 +175,7 @@ export async function saveNote(
           newStep("checklist.update", label, { user, id: entry.id, before: entry.base, after: entry.data }),
         ),
         ...items.remove.map((removed) => newStep("checklist.delete", label, { user, id: removed })),
+        ...(reminders?.steps ?? []),
       ];
       return steps.length === 1 && steps[0] ? steps[0] : batchStep(label, steps);
     },

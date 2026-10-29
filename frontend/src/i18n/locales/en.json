@@ -1273,7 +1273,8 @@
       "archiveShort": "Archive",
       "unarchiveShort": "Unarchive",
       "delete": "Delete {{title}}",
-      "deleteShort": "Delete"
+      "deleteShort": "Delete",
+      "reminder": "Reminder:"
     },
     "editor": {
       "newTitle": "New note",
@@ -1316,6 +1317,18 @@
       "moreChecked_one": "+ {{count}} checked item",
       "moreChecked_other": "+ {{count}} checked items",
       "progress": "{{checked}} of {{total}} done"
+    },
+    "reminders": {
+      "title": "Reminders",
+      "date": "Date",
+      "time": "Time",
+      "add": "Add reminder",
+      "remove": "Remove the reminder {{when}}",
+      "passed": "passed",
+      "full": "At most {{max}} reminders per note.",
+      "inPast": "Choose a time that is still ahead.",
+      "duplicate": "This reminder is already set.",
+      "none": "No reminders."
     }
   }
 }

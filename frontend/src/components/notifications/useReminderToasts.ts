@@ -49,7 +49,8 @@ export function useReminderToasts(user: string | null): void {
             retry: false,
             onSuccess: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
           });
-          if (target) void navigate({ to: "/calendar", search: target });
+          if (target?.to === "/todo") void navigate({ to: "/todo", search: target.search });
+          else if (target) void navigate({ to: "/calendar", search: target.search });
         },
       });
     }

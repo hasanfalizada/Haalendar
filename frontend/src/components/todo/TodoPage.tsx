@@ -4,10 +4,12 @@
 // grid: Pinned first, then Others, each by position — a new note goes on top (manual order and list layout: HAAL-103).
 // The archive shows the archived notes only; an empty page invites the first note.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklists on the cards and "New list" next to New note (D-88).
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The cards show the next reminder (D-89); `focusNote` (from a
+// reminder) opens that note once it is in the local database, whichever tab it is on.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Archive, ListChecks, ListPlus, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Priority } from "@/atoms/items/priority";
@@ -16,7 +18,10 @@ import { Button } from "@/components/ui/button";
 import { PriorityFilter } from "@/components/ui/priority";
 import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
-import { type NotesTab, noteGroups, notePositions } from "@/lib/notes";
+import { type NotesTab, isNote, noteGroups, notePositions } from "@/lib/notes";
+import { atLabel, nextReminder } from "@/lib/reminders";
+import { useDisplayTimeZone } from "@/lib/datetime";
+import { useSettings } from "@/api/settings";
 import { formatPriorityParam } from "@/lib/priority";
 import { TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
@@ -29,12 +34,28 @@ type Row = Record<string, unknown>;
 
 const TABS: readonly NotesTab[] = ["notes", "archive"];
 
+/** Now, moved every minute (which reminders are still ahead). */
+function useNow(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+  return now;
+}
+
 interface TodoPageProps {
   tab: NotesTab;
   priorities: Priority[];
+  /** A note to open (from its reminder). */
+  focusNote?: string;
 }
 
-export function TodoPage({ tab, priorities }: TodoPageProps) {
+export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tablet = useMediaQuery(TABLET_UP);
@@ -50,13 +71,34 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
     queryFn: () => (user ? localRows(user, "checklist_item") : Promise.resolve([])),
     enabled: Boolean(user),
   });
+  const { data: reminderRows = [] } = useQuery({
+    queryKey: [...localKeys.table("reminder"), user],
+    queryFn: () => (user ? localRows(user, "reminder") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
   const attachments = useAttachmentCounts(user);
+  const now = useNow();
+  const viewerTz = useDisplayTimeZone();
+  const { time_format: timeFormat } = useSettings();
+  const reminderText = (noteId: string) => {
+    const next = nextReminder(reminderRows, noteId, now);
+    return next ? atLabel(next, viewerTz, timeFormat, now) : null;
+  };
   const groups = useMemo(() => noteGroups(rows, tab, priorities), [rows, tab, priorities]);
   const positions = useMemo(() => notePositions(rows), [rows]);
   // The note in the editor: a row, "new" (a note), "list" (a note with a checklist), or none.
   const [editing, setEditing] = useState<Row | "new" | "list" | null>(null);
   const editingRow =
     editing && typeof editing === "object" ? (rows.find((row) => row.id === editing.id) ?? editing) : null;
+  // The note a reminder leads to opens once it has arrived (adjusted while rendering, not in an effect).
+  const [focused, setFocused] = useState<string | null>(null);
+  if (focusNote && focusNote !== focused) {
+    const target = rows.find((row) => row.id === focusNote && isNote(row));
+    if (target) {
+      setFocused(focusNote);
+      setEditing(target);
+    }
+  }
 
   const go = (next: { tab?: NotesTab; priorities?: Priority[] }) => {
     const nextTab = next.tab ?? tab;
@@ -65,6 +107,7 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
       search: {
         tab: nextTab === "archive" ? "archive" : undefined,
         priority: formatPriorityParam(next.priorities ?? priorities),
+        note: undefined,
       },
       replace: true,
     });
@@ -81,6 +124,7 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
             row={row}
             attachments={attachments.get(String(row.id)) ?? 0}
             checklist={row.is_checklist === true ? checklistOf(itemRows, String(row.id)) : null}
+            nextReminder={reminderText(String(row.id))}
             onOpen={() => {
               setEditing(row);
             }}
@@ -216,6 +260,7 @@ export function TodoPage({ tab, priorities }: TodoPageProps) {
           asList={editing === "list"}
           onClose={() => {
             setEditing(null);
+            if (focusNote) go({});
           }}
         />
       ) : null}

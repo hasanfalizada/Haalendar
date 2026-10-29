@@ -4,6 +4,8 @@
 // - a reminder's label ("15 minutes before", "1 day before at 09:00") and the key that tells two equal ones apart;
 // - the user's active reminders of an item from the local rows, in the order they fire;
 // - the day and time a reminder notification is about, in the reader's zone (payload of the worker).
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The third form, of notes (D-89): a date and time (`remind_at`, an
+// instant kept as UTC "YYYY-MM-DDTHH:MM:00.000Z"), shown and entered in the reader's zone.
 import { localToUtc, wallClock } from "@/atoms/time/localToUtc";
 import i18n from "@/i18n";
 
@@ -13,7 +15,8 @@ export const MAX_REMINDERS = 5;
 export const MAX_OFFSET_MINUTES = 40_320; // 28 days, as on the server
 export const MAX_DAYS_BEFORE = 28;
 
-export type ReminderSpec = { offset_minutes: number } | { all_day_time: string; all_day_days_before: number };
+export type ReminderSpec =
+  { offset_minutes: number } | { all_day_time: string; all_day_days_before: number } | { remind_at: string };
 
 type Row = Record<string, unknown>;
 
@@ -29,8 +32,20 @@ export function isBefore(spec: ReminderSpec): spec is { offset_minutes: number }
   return "offset_minutes" in spec;
 }
 
+export function isAt(spec: ReminderSpec): spec is { remind_at: string } {
+  return "remind_at" in spec;
+}
+
+/** An instant in the one form reminders keep it (UTC, whole minutes); null when it is no date. */
+export function atInstant(value: string | number): string | null {
+  const ms = typeof value === "number" ? value : Date.parse(value);
+  if (Number.isNaN(ms)) return null;
+  return new Date(Math.floor(ms / 60_000) * 60_000).toISOString();
+}
+
 /** Equal reminders have equal keys. */
 export function specKey(spec: ReminderSpec): string {
+  if (isAt(spec)) return `at:${spec.remind_at}`;
   return isBefore(spec)
     ? `before:${String(spec.offset_minutes)}`
     : `day:${String(spec.all_day_days_before)}@${spec.all_day_time}`;
@@ -38,6 +53,7 @@ export function specKey(spec: ReminderSpec): string {
 
 /** Roughly minutes before the start (for ordering: earlier first). */
 function lead(spec: ReminderSpec): number {
+  if (isAt(spec)) return -Date.parse(spec.remind_at) / 60_000;
   if (isBefore(spec)) return spec.offset_minutes;
   const [h = 0, m = 0] = spec.all_day_time.split(":").map(Number);
   return spec.all_day_days_before * 1440 - (h * 60 + m);
@@ -49,6 +65,10 @@ export function sortSpecs(specs: readonly ReminderSpec[]): ReminderSpec[] {
 
 /** The form of a stored reminder row, or null for a row that has none. */
 export function specOf(row: Row): ReminderSpec | null {
+  if (typeof row.remind_at === "string") {
+    const at = atInstant(row.remind_at);
+    return at ? { remind_at: at } : null;
+  }
   if (typeof row.offset_minutes === "number") return { offset_minutes: row.offset_minutes };
   if (typeof row.all_day_time === "string" && typeof row.all_day_days_before === "number") {
     return { all_day_time: row.all_day_time.slice(0, 5), all_day_days_before: row.all_day_days_before };
@@ -66,8 +86,9 @@ export function remindersOf(rows: readonly Row[], itemId: string): { id: string;
 }
 
 /** "At the start", "15 minutes before", "2 hours before", "1 day before", "On the day at 09:00", "1 day before at 09:00". */
-export function reminderLabel(spec: ReminderSpec, timeFormat: "12h" | "24h"): string {
+export function reminderLabel(spec: ReminderSpec, timeFormat: "12h" | "24h", timeZone?: string): string {
   const t = i18n.t.bind(i18n);
+  if (isAt(spec)) return atLabel(spec.remind_at, timeZone ?? "UTC", timeFormat, Date.now());
   if (isBefore(spec)) {
     const minutes = spec.offset_minutes;
     if (minutes === 0) return t("reminders.atStart");
@@ -127,4 +148,51 @@ export function reminderWhen(
   const from = local(startMs);
   const to = local(startMs + length * 60_000);
   return { day: from.day, start: from.time, end: length > 0 ? to.time : null };
+}
+
+/** An instant's day ("YYYY-MM-DD") and clock time ("HH:MM") in a zone. */
+export function localParts(instant: string | number, timeZone: string): { day: string; time: string } {
+  const w = wallClock(typeof instant === "number" ? instant : Date.parse(instant), timeZone);
+  return {
+    day: `${String(w.year).padStart(4, "0")}-${pad(w.month)}-${pad(w.day)}`,
+    time: `${pad(w.hour)}:${pad(w.minute)}`,
+  };
+}
+
+/** "Today, 09:00", "Tomorrow, 9:00 AM" or "Tue, Nov 10, 09:00" — a date-and-time reminder in the reader's zone. */
+export function atLabel(instant: string, timeZone: string, timeFormat: "12h" | "24h", now: number): string {
+  const { day, time } = localParts(instant, timeZone);
+  const today = localParts(now, timeZone).day;
+  const tomorrow = localParts(Date.parse(`${today}T12:00:00Z`) + 86_400_000, "UTC").day;
+  const clock = clockText(time, i18n.language, timeFormat);
+  const date =
+    day === today
+      ? i18n.t("calendar.header.today")
+      : day === tomorrow
+        ? i18n.t("calendar.agenda.tomorrow")
+        : new Intl.DateTimeFormat(i18n.language, {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: day.slice(0, 4) === today.slice(0, 4) ? undefined : "numeric",
+            timeZone: "UTC",
+          }).format(new Date(`${day}T12:00:00Z`));
+  return `${date}, ${clock}`;
+}
+
+/** The instant of a day and clock time in a zone (what the note editor's fields mean). */
+export function atFromLocal(day: string, time: string, timeZone: string): string | null {
+  try {
+    return atInstant(localToUtc(day, time, timeZone).utc);
+  } catch {
+    return null;
+  }
+}
+
+/** The next date-and-time reminder of an item still ahead of `now`, or null. */
+export function nextReminder(rows: readonly Row[], itemId: string, now: number): string | null {
+  const ahead = remindersOf(rows, itemId).flatMap(({ spec }) =>
+    isAt(spec) && Date.parse(spec.remind_at) > now ? [spec.remind_at] : [],
+  );
+  return ahead.sort()[0] ?? null;
 }

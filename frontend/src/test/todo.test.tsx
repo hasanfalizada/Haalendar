@@ -155,11 +155,17 @@ describe("To-Do notes", { timeout: 20_000 }, () => {
 
     await user.click(screen.getByRole("button", { name: "Archive Ideas" }));
     await screen.findByText("Archived Ideas");
-    expect(screen.queryByRole("article", { name: "Ideas" })).not.toBeInTheDocument();
+    // The list follows the local write a moment after the notification.
+    await waitFor(() => {
+      expect(screen.queryByRole("article", { name: "Ideas" })).not.toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole("button", { name: "Delete Shopping" }));
     const deleted = await screen.findByText("Deleted Shopping — it is in the trash");
-    expect(screen.queryByRole("article", { name: "Shopping" })).not.toBeInTheDocument();
+    // The list follows the local write a moment after the notification.
+    await waitFor(() => {
+      expect(screen.queryByRole("article", { name: "Shopping" })).not.toBeInTheDocument();
+    });
 
     expect(await outbox()).toMatchObject([
       { entity_id: SHOPPING, op: "update", base: { pinned: false }, data: { pinned: true } },

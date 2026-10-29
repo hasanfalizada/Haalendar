@@ -5,6 +5,7 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. The checklist (D-88): Add checklist / Remove checklist, the items
 // below the text (ChecklistEditor); Save writes the note and its item changes as one undo step. "New list" opens the
 // editor with a checklist ready.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The note's reminders (NoteReminders, D-89), saved with the note.
 import { useQuery } from "@tanstack/react-query";
 import { ListChecks, ListX } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -22,6 +23,7 @@ import { Field, Input } from "@/components/ui/input";
 import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { type ChecklistEntry, checklistChanges, checklistOf, entriesOf } from "@/lib/checklist";
+import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
 import { text } from "@/lib/notes";
 import { DEFAULT_COLOR } from "@/lib/palette";
 import { topPosition } from "@/lib/position";
@@ -30,7 +32,10 @@ import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { uuidv7 } from "@/lib/uuid";
 import { localKeys, localRows } from "@/sync";
 
+import { reminderChanges } from "@/components/calendar/reminderWrites";
+
 import { ChecklistEditor } from "./ChecklistEditor";
+import { NoteReminders } from "./NoteReminders";
 import { saveNote } from "./noteWrites";
 
 type Row = Record<string, unknown>;
@@ -47,6 +52,8 @@ interface NoteForm {
   is_checklist: string;
   /** The checklist as JSON (ChecklistEntry[]: unchecked in order, then checked). */
   checklist: string;
+  /** The user's reminders of the note as canonical text (specsText). */
+  reminders: string;
 }
 
 // A stable empty list while the items load.
@@ -74,6 +81,12 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
     queryFn: () => localRows(user, "checklist_item"),
     enabled: Boolean(user) && note !== null,
   });
+  const { data: reminderRows = NO_ROWS } = useQuery({
+    queryKey: [...localKeys.table("reminder"), user],
+    queryFn: () => localRows(user, "reminder"),
+    enabled: Boolean(user) && note !== null,
+  });
+  const existingReminders = useMemo(() => remindersOf(reminderRows, id), [reminderRows, id]);
   const stored = useMemo(() => {
     const groups = checklistOf(itemRows, id);
     return [...groups.unchecked, ...groups.checked];
@@ -95,8 +108,9 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
             ? [{ id: firstItem, text: "", checked: false }]
             : [],
       ),
+      reminders: specsText(existingReminders.map((reminder) => reminder.spec)),
     }),
-    [note, settings.default_color, asList, stored, firstItem],
+    [note, settings.default_color, asList, stored, firstItem, existingReminders],
   );
   const [form, setForm] = useState<NoteForm>(baseline);
   // The items arrive from the local database after opening: an untouched form follows them.
@@ -144,15 +158,20 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
   async function save(): Promise<boolean> {
     const fields = { title: form.title.trim(), body: form.body, color: form.color, priority: form.priority };
     const items = checklistChanges(id, stored, hasList ? entries : []);
+    const label = {
+      key: note ? "undo.labels.noteChanged" : "undo.labels.noteCreated",
+      values: { title: fields.title },
+    };
+    const reminders = reminderChanges(user, id, existingReminders, specsFromText(form.reminders), label);
     if (!note) {
       const data = { ...fields, is_checklist: hasList, pinned: false, position: topPosition(positions) };
-      return saveNote(user, id, null, data, items);
+      return saveNote(user, id, null, data, items, reminders);
     }
     const changed: Record<string, unknown> = Object.fromEntries(
       Object.entries(fields).filter(([name, value]) => text(note[name]) !== value),
     );
     if ((note.is_checklist === true) !== hasList) changed.is_checklist = hasList;
-    return saveNote(user, id, note, changed, items);
+    return saveNote(user, id, note, changed, items, reminders);
   }
 
   async function onSubmit(submitted: SubmitEvent<HTMLFormElement>) {
@@ -233,6 +252,12 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
             {hasList ? <ListX aria-hidden /> : <ListChecks aria-hidden />}
             {t(hasList ? "todo.checklist.removeList" : "todo.checklist.addList")}
           </Button>
+          <NoteReminders
+            value={specsFromText(form.reminders)}
+            onChange={(next) => {
+              set({ reminders: specsText(next) });
+            }}
+          />
           <ColorPicker
             name="note-color"
             legend={t("todo.editor.color")}
