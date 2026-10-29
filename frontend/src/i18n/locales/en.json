@@ -806,7 +806,10 @@
       "calendarDefault": "making {{name}} the default",
       "calendarDeleted": "deleting {{name}}",
       "icsImported": "the import into {{name}}",
-      "eventDuplicated": "duplicating {{title}} to {{date}}"
+      "eventDuplicated": "duplicating {{title}} to {{date}}",
+      "noteCreated": "creating {{title}}",
+      "noteChanged": "the change to {{title}}",
+      "noteDeleted": "deleting {{title}}"
     }
   },
   "bulk": {
@@ -1225,5 +1228,62 @@
     "skippedTitle": "Skipped",
     "warningsTitle": "Notes",
     "offline": "Exporting needs a connection."
+  },
+  "todo": {
+    "untitled": "Untitled note",
+    "newButton": "New note",
+    "tabs": {
+      "label": "Show",
+      "notes": "Notes",
+      "archive": "Archive"
+    },
+    "groups": {
+      "pinned": "Pinned",
+      "others": "Others"
+    },
+    "empty": {
+      "notesTitle": "Write your first note",
+      "notesBody": "Notes you create will appear here. Pin the important ones to keep them on top.",
+      "archiveTitle": "No archived notes",
+      "archiveBody": "Notes you archive leave the main list and wait here — archiving does not delete them.",
+      "filtered": "No notes with this priority"
+    },
+    "card": {
+      "open": "Open {{title}}",
+      "attachments_one": "{{count}} attachment",
+      "attachments_other": "{{count}} attachments",
+      "pin": "Pin {{title}}",
+      "unpin": "Unpin {{title}}",
+      "pinShort": "Pin",
+      "unpinShort": "Unpin",
+      "color": "Color of {{title}}",
+      "colorShort": "Color",
+      "archive": "Archive {{title}}",
+      "unarchive": "Unarchive {{title}}",
+      "archiveShort": "Archive",
+      "unarchiveShort": "Unarchive",
+      "delete": "Delete {{title}}",
+      "deleteShort": "Delete"
+    },
+    "editor": {
+      "newTitle": "New note",
+      "editTitle": "Edit note",
+      "title": "Title",
+      "body": "Note",
+      "color": "Color",
+      "save": "Save",
+      "empty": "Write a title or some text to save the note.",
+      "attachmentsLater": "Images can be added once the note is saved."
+    },
+    "done": {
+      "created": "Created {{title}}",
+      "edit": "Saved {{title}}",
+      "pin": "Pinned {{title}}",
+      "unpin": "Unpinned {{title}}",
+      "color": "Changed the color of {{title}}",
+      "archive": "Archived {{title}}",
+      "unarchive": "Unarchived {{title}}",
+      "deleted": "Deleted {{title}} — it is in the trash"
+    }
   }
 }

@@ -129,7 +129,7 @@ async def todo_section(ctx: ExportContext) -> None:
             select(Item, Note)
             .join(Note, Note.id == Item.id)
             .where(Item.kind == "note", Item.owner_id == ctx.owner_id)
-            .order_by(Note.pinned.desc(), Note.position, Item.id)
+            .order_by(Note.pinned.desc(), Note.position.collate("C"), Item.id)
         )
     ).all()
     for item, note in rows:

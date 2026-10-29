@@ -16,6 +16,8 @@ import "@/components/attachments/undo-attachments";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. Undo / redo of the event editor.
 import "@/components/calendar/undo-events";
 import "@/components/sharing/undo-sharing";
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Notes (D-87).
+import "@/components/todo/noteWrites";
 import "@/lib/bulk";
 import { Notifications } from "@/components/ui/notifications";
 import { ThemeProvider } from "@/theme/ThemeProvider";
