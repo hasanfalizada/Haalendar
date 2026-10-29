@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { effectiveStart, entriesOn } from "@/lib/dayView";
 import { formFromRow } from "@/lib/eventForm";
+import { plainSpec, specText } from "@/lib/repeatRule";
 import { mutate } from "@/sync";
 import { localDb } from "@/sync/db";
 
@@ -67,7 +68,12 @@ describe("excluded dates and the effective start", () => {
     expect(effectiveStart("2026-11-03", "FREQ=DAILY", ["2026-11-05"])).toBe("2026-11-03");
     expect(effectiveStart("2026-01-31", "FREQ=MONTHLY", ["2026-01-31"])).toBe("2026-03-31");
     const leading = { ...series, exceptions: ["2026-11-03"] };
-    expect(formFromRow(leading)).toMatchObject({ start_date: "2026-11-04", end_date: "2026-11-04", repeat: "daily" });
+    // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The form holds the rule as its spec text.
+    expect(formFromRow(leading)).toMatchObject({
+      start_date: "2026-11-04",
+      end_date: "2026-11-04",
+      repeat: specText(plainSpec("daily")),
+    });
     expect(formFromRow(series, DAY)).toMatchObject({ start_date: DAY, end_date: DAY, repeat: "none" });
   });
 

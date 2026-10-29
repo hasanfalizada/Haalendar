@@ -32,4 +32,5 @@ def test_ready_reports_unreachable_database_as_503(client: TestClient) -> None:
 
 def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091: reminders (0017), Web Push (0018).
-    assert migration_head() == "0018"
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092: extended recurrence (0019).
+    assert migration_head() == "0019"

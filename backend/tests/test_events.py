@@ -4,6 +4,9 @@ every change, time fields conflicting as a group while other fields still merge,
 only, pull sending the event fields in text form, and the audit log. Marker `db`.
 
 +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Extended rules (calendar.recurrence.v2): stored as given, a rule outside
+the subset or one the start date does not fit is refused — also when a later change moves the start off the rule; the
+database refuses foreign parts by itself.
 """
 
 from __future__ import annotations
@@ -97,7 +100,10 @@ def test_timed_event_and_series(people: People) -> None:
             {"all_day": False, "start_date": "2026-10-22", "start_time": "10:00", "end_time": "09:00"},
             "/data/end_date",
         ),
-        ({"start_date": "2026-10-22", "rrule": "FREQ=WEEKLY;BYDAY=MO"}, "/data/rrule"),
+        ({"start_date": "2026-10-22", "rrule": "FREQ=WEEKLY;BYDAY=MO"}, "/data/rrule"),  # a Thursday
+        ({"start_date": "2026-10-22", "rrule": "FREQ=MONTHLY;BYDAY=TH;BYSETPOS=4"}, "/data/rrule"),
+        ({"start_date": "2026-10-22", "rrule": "FREQ=DAILY;UNTIL=20261021"}, "/data/rrule"),
+        ({"start_date": "2026-10-22", "rrule": "FREQ=MONTHLY;BYMONTHDAY=-1"}, "/data/rrule"),
         ({"start_date": "2026-10-22", "end_date": "2026-10-23", "rrule": "FREQ=DAILY"}, "/data/end_date"),
         ({"start_date": "2026-10-22", "tzid": "Mars/Base"}, "/data/tzid"),
         ({"start_date": "22.10.2026"}, "/data/start_date"),
@@ -108,6 +114,39 @@ def test_invalid_events_are_refused(people: People, data: dict[str, Any], pointe
     _, result = _create(people, people.as_("ada"), **data)
     assert result["status"] == "rejected" and result["problem"]["code"] == "validation_failed"
     assert pointer in [e["pointer"] for e in result["problem"].get("errors", [])] or pointer == "/data/title"
+
+
+def test_extended_rules_are_kept_and_the_start_must_stay_on_them(people: People) -> None:
+    ada = people.as_("ada")
+    rule = "FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH;UNTIL=20271231"
+    series, result = _create(people, ada, title="Training", start_date="2026-10-22", rrule=rule)
+    assert result["status"] == "applied" and _event(people, series)["rrule"] == rule
+    last_friday, result = _create(
+        people, ada, title="Review", start_date="2026-10-30", rrule="FREQ=MONTHLY;BYDAY=-1FR;COUNT=12"
+    )
+    assert result["status"] == "applied"
+
+    # Moving the start to a Wednesday leaves the rule's days: refused, the series stays as it was.
+    moved = _push(
+        people.api,
+        ada,
+        _m(
+            "item",
+            series,
+            "update",
+            base={"start_date": "2026-10-22", "end_date": "2026-10-22"},
+            data={"start_date": "2026-10-28", "end_date": "2026-10-28"},
+        ),
+    )[0]
+    assert moved["status"] == "rejected"
+    assert [e["pointer"] for e in moved["problem"]["errors"]] == ["/data/rrule"]
+    assert _event(people, series)["start_date"] == "2026-10-22"
+
+    # The database keeps out what the application would refuse, also when written around it.
+    with psycopg.connect(_dsn(people.db_url), autocommit=True) as conn:
+        conn.execute("SELECT set_config('app.user_id', %s, false)", (people.ids["ada"],))
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute("UPDATE event SET rrule = 'FREQ=DAILY;BYHOUR=9' WHERE id = %s", (last_friday,))
 
 
 def test_updates_merge_and_time_fields_conflict_as_a_group(people: People) -> None:

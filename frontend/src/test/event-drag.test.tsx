@@ -119,7 +119,7 @@ const timed = (id: string, title: string, calendar: string, date: string, start:
   end_time: end,
 });
 
-async function open(path: string) {
+async function open(path: string, standupRule = "FREQ=WEEKLY") {
   const db = await localDb(USER);
   await db.calendars.bulkPut([
     { id: OWN, name: "Work", owner_id: USER, deleted_at: null },
@@ -135,7 +135,7 @@ async function open(path: string) {
   });
   await db.items.bulkPut([
     timed("e1", "Dentist", OWN, "2026-10-14", "11:00", "12:00"),
-    { ...timed("e2", "Standup", OWN, "2026-10-05", "09:00", "09:15"), rrule: "FREQ=WEEKLY" },
+    { ...timed("e2", "Standup", OWN, "2026-10-05", "09:00", "09:15"), rrule: standupRule },
     timed("e3", "Party", SHARED, "2026-10-14", "18:00", "20:00"),
     timed("e4", "Workshop", OWN, "2026-10-28", "10:00", "12:00"),
   ]);
@@ -223,5 +223,19 @@ describe("drag and drop", { timeout: 15_000 }, () => {
     expect(await outbox()).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "Details of Dentist" }));
     expect(await screen.findByRole("dialog", { name: "Event details" })).toBeInTheDocument();
+  });
+
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. A series on chosen weekdays moves only one occurrence to another day.
+  it("a series on chosen weekdays offers only this occurrence for another day", async () => {
+    const { db } = await open("/calendar?date=2026-10-14&view=month", "FREQ=WEEKLY;BYDAY=MO,WE");
+    const standups = await screen.findAllByRole("button", { name: "Details of Standup" });
+    await drag(standups[0] as HTMLElement, 100, 0); // Monday 5 → Tuesday 6
+    const ask = await screen.findByRole("dialog", { name: "Move repeating event?" });
+    expect(ask).toHaveTextContent("repeats on chosen days, so only the occurrence on Monday, October 5, 2026 can move");
+    expect(within(ask).queryByRole("button", { name: "All occurrences" })).not.toBeInTheDocument();
+    await afterDrop();
+    await userEvent.click(within(ask).getByRole("button", { name: "Only this occurrence" }));
+    await screen.findByText("Moved Standup to Tuesday, October 6, 2026");
+    expect((await db.items.get("e2"))?.rrule).toBe("FREQ=WEEKLY;BYDAY=MO,WE");
   });
 });

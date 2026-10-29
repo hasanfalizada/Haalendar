@@ -15,6 +15,8 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders (FR-CAL-29, D-79): the user's own reminders of the
 // event are part of the form (ReminderPicker); saving writes the removed and new ones in the same undo step as the
 // event. A new event and the copy of an occurrence get the reminders of the form (the copy starts with the series').
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Repeat (FR-CAL-30, D-80): presets for the start date and Custom…
+// (RepeatPicker); a rule that does not fit the start is shown at the field and blocks Save.
 import { useQuery } from "@tanstack/react-query";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,8 +40,6 @@ import { dayToShow, findDuplicates, titleKey } from "@/lib/duplicates";
 import {
   type EventForm,
   LOCATION_MAX,
-  REPEATS,
-  type Repeat,
   TITLE_MAX,
   changesOf,
   eventData,
@@ -52,6 +52,15 @@ import {
 } from "@/lib/eventForm";
 import { log } from "@/lib/log";
 import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
+import {
+  NO_REPEAT,
+  type RepeatSpec,
+  describeSpec,
+  plainSpec,
+  presetOf,
+  specFromText,
+  specText,
+} from "@/lib/repeatRule";
 import { batchStep, newStep } from "@/lib/undo";
 import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
@@ -60,6 +69,7 @@ import { localKeys, localRows, mutate } from "@/sync";
 
 import { type DuplicateMatch, DuplicateWarning } from "./DuplicateWarning";
 import { ReminderPicker } from "./ReminderPicker";
+import { RepeatCustom, RepeatSelect } from "./RepeatPicker";
 import { reminderChanges } from "./reminderWrites";
 import { useCalendars } from "./useCalendars";
 
@@ -125,6 +135,10 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
   }
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Custom… stays open once chosen; a stored rule that is no preset opens with it.
+  const [customRepeat, setCustomRepeat] = useState(
+    () => presetOf(specFromText(baseline.repeat), baseline.start_date) === "custom",
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const eventId = typeof event?.id === "string" ? event.id : null;
   const copyOf = eventId !== null && occurrence !== undefined ? { series: eventId, date: occurrence } : null;
@@ -335,7 +349,17 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
   }
 
   const timed = form.all_day === "false";
-  const series = form.repeat !== "none";
+  const series = form.repeat !== NO_REPEAT;
+  const repeatSpec = specFromText(form.repeat);
+  const showCustom = customRepeat || presetOf(repeatSpec, form.start_date) === "custom";
+  /** A new rule (and the start it needs); a series lasts one day. */
+  const setRepeat = (spec: RepeatSpec | null, start?: string) => {
+    setForm((current) => {
+      const next = { ...current, repeat: specText(spec) };
+      const moved = start ? withStart(next, { start_date: start }) : next;
+      return spec ? { ...moved, end_date: moved.start_date } : moved;
+    });
+  };
   const timeLabel = (value: string) => clockText(value, i18n.language, settings.time_format);
   const timeSelect = (field: "start_time" | "end_time", label: string, error?: string) => (
     <Field id={`event-${field}`} label={label} error={error}>
@@ -460,23 +484,33 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
               <Field
                 id="event-repeat"
                 label={t("calendar.editor.repeat")}
-                hint={series ? t("calendar.editor.repeatHint") : undefined}
+                hint={
+                  series ? (
+                    <>
+                      {showCustom && repeatSpec && !errors.repeat ? (
+                        <span className="block font-medium text-fg">{describeSpec(repeatSpec, form.start_date)}</span>
+                      ) : null}
+                      {t("calendar.editor.repeatHint")}
+                    </>
+                  ) : undefined
+                }
+                error={errors.repeat && t(`repeat.problems.${errors.repeat}`)}
               >
                 {(aria) => (
-                  <Select
-                    {...aria}
-                    value={form.repeat}
-                    onChange={(e) => {
-                      const repeat = e.target.value as Repeat;
-                      set({ repeat, ...(repeat !== "none" ? { end_date: form.start_date } : {}) });
+                  <RepeatSelect
+                    aria={aria}
+                    spec={repeatSpec}
+                    start={form.start_date}
+                    custom={showCustom}
+                    onPreset={(spec) => {
+                      setCustomRepeat(false);
+                      setRepeat(spec);
                     }}
-                  >
-                    {REPEATS.map((repeat) => (
-                      <option key={repeat} value={repeat}>
-                        {t(`calendar.editor.repeats.${repeat}`)}
-                      </option>
-                    ))}
-                  </Select>
+                    onCustom={() => {
+                      setCustomRepeat(true);
+                      setRepeat(repeatSpec ?? plainSpec("weekly"));
+                    }}
+                  />
                 )}
               </Field>
             )}
@@ -502,6 +536,15 @@ export function EventEditor({ date, event, occurrence, onClose, onShowEvent }: E
               </Field>
             )}
           </div>
+
+          {!copyOf && showCustom && repeatSpec ? (
+            <RepeatCustom
+              spec={repeatSpec}
+              start={form.start_date}
+              weekStart={settings.week_start}
+              onChange={setRepeat}
+            />
+          ) : null}
 
           <ReminderPicker
             value={specsFromText(form.reminders)}

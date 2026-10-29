@@ -2,6 +2,8 @@
 // deleting or editing a repeating event. "Only this occurrence" has the focus, so Delete → Enter removes one date
 // (the safer choice); "All occurrences" works on the whole series; Esc or Cancel does nothing. The dialog stays open,
 // its buttons disabled, until the chosen action has finished.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Without `allLabel` only "this occurrence" is offered (a series whose
+// rule names its days cannot move as a whole to another day, D-80).
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,7 +17,7 @@ interface OccurrenceChoiceProps {
   title: string;
   body: string;
   thisLabel: string;
-  allLabel: string;
+  allLabel?: string | undefined;
   danger?: boolean;
   onChoose: (scope: OccurrenceScope) => Promise<void>;
   onClose: () => void;
@@ -63,15 +65,17 @@ export function OccurrenceChoice({
           <Button onClick={onClose} disabled={busy}>
             {t("common.cancel")}
           </Button>
-          <Button
-            variant={danger ? "danger" : "secondary"}
-            disabled={busy}
-            onClick={() => {
-              choose("all");
-            }}
-          >
-            {allLabel}
-          </Button>
+          {allLabel ? (
+            <Button
+              variant={danger ? "danger" : "secondary"}
+              disabled={busy}
+              onClick={() => {
+                choose("all");
+              }}
+            >
+              {allLabel}
+            </Button>
+          ) : null}
           <Button
             ref={first}
             variant={danger ? "danger" : "primary"}

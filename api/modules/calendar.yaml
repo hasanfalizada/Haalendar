@@ -331,7 +331,12 @@ components:
         tzid: { $ref: '../components/common.yaml#/components/schemas/TimeZone' }
         rrule:
           oneOf: [{ type: string, maxLength: 500 }, { type: 'null' }]
-          description: RFC 5545 RRULE value without the "RRULE:" prefix, e.g. FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20271231
+          # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The supported subset (calendar.recurrence.v2, D-80).
+          description: >-
+            RFC 5545 RRULE value without the "RRULE:" prefix, e.g. FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20271231. Supported
+            (calendar.recurrence.v2): FREQ DAILY/WEEKLY/MONTHLY/YEARLY, INTERVAL 1..99, weekly BYDAY days, monthly one
+            BYDAY with ordinal 1..4 or -1 or one BYMONTHDAY 1..31 or -1, UNTIL as a date or COUNT 1..999; the start date
+            must be an occurrence. Anything else is refused with 422.
     EventInput:
       allOf:
         - $ref: '#/components/schemas/EventFields'

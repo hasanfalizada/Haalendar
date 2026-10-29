@@ -8,8 +8,12 @@
 //   excluded dates (the old ones are included again, the moved ones excluded).
 import { localToUtc, wallClock } from "@/atoms/time/localToUtc";
 import { addDays } from "@/lib/datetime";
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. Extended rules (D-80): a series whose rule names its days (weekdays,
+// Nth or last weekday, last day of month) moves as a whole only to other times on the same day (seriesMovable);
+// otherwise its end date (UNTIL) moves along with the start.
 import { exceptionsOf } from "@/lib/dayView";
 import { eventData, formFromRow } from "@/lib/eventForm";
+import { shiftedRule } from "@/lib/repeatRule";
 
 type Row = Record<string, unknown>;
 
@@ -124,6 +128,12 @@ function changed(row: Row, next: EventTimes): { base: Row; data: Row } {
   return { base, data };
 }
 
+/** Whether "all occurrences" can take this drop: the rule still means the same from the moved start. */
+export function seriesMovable(row: Row, occurrence: string, next: EventTimes): boolean {
+  const rrule = text(row.rrule);
+  return rrule === null || shiftedRule(rrule, daysBetween(occurrence, next.start_date)) !== null;
+}
+
 /** The writes of a drop: `next` from droppedTimes; `scope` only matters for a series. */
 export function planDrop(row: Row, occurrence: string, next: EventTimes, scope: DragScope): DragPlan {
   const id = String(row.id);
@@ -153,11 +163,18 @@ export function planDrop(row: Row, occurrence: string, next: EventTimes, scope: 
     end_date: start,
     end_time: next.end_time,
   };
+  const { base, data } = changed(row, series);
+  const rrule = shiftedRule(text(row.rrule) ?? "", days);
+  if (rrule !== null && rrule !== row.rrule) {
+    base.rrule = row.rrule;
+    data.rrule = rrule;
+  }
   return {
     kind: "series",
     id,
     version,
-    ...changed(row, series),
+    base,
+    data,
     exceptions: days === 0 ? [] : exceptionsOf(row).map((from) => ({ from, to: addDays(from, days) })),
   };
 }

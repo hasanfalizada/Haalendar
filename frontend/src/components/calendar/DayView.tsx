@@ -67,7 +67,7 @@ import { type Selection, useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
 import { agendaDays } from "@/lib/agendaView";
-import { type DropTarget, type EventTimes, droppedTimes, planDrop } from "@/lib/eventDrag";
+import { type DropTarget, type EventTimes, droppedTimes, planDrop, seriesMovable } from "@/lib/eventDrag";
 import { addMonths, monthOf, sameDayIn } from "@/lib/monthGrid";
 import { monthTitle, monthWeeks } from "@/lib/monthView";
 import { weekDays, rangeTitle } from "@/lib/weekView";
@@ -390,6 +390,8 @@ export function DayView({
     /** move: where the dropped occurrence lands. */
     drop?: { next: EventTimes; target: DropTarget };
   } | null>(null);
+  const onlyThis =
+    choice?.kind === "move" && choice.drop !== undefined && !seriesMovable(choice.row, choice.date, choice.drop.next);
   // After the confirmation closes the focus returns to the list — once a deleted row has left it ("" = cancelled).
   const refocus = useRef<string | null>(null);
   const titleOf = (row: Record<string, unknown>) =>
@@ -473,6 +475,8 @@ export function DayView({
     const occurrence = occurrenceOf(data.entry);
     const next = droppedTimes(row, occurrence, data.day, target, viewerTz);
     if (!next) return;
+    // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. A series whose rule names its days only moves this occurrence
+    // to another day (the dialog then offers no "all occurrences", see onlyThis).
     if (row.rrule) setChoice({ kind: "move", row, date: occurrence, drop: { next, target } });
     else void applyDrop(row, occurrence, next, target, "this");
   }
@@ -950,14 +954,20 @@ export function DayView({
                 choice.kind === "edit"
                   ? "calendar.occurrence.editBody"
                   : choice.kind === "move"
-                    ? "calendar.occurrence.moveBody"
+                    ? onlyThis
+                      ? "calendar.occurrence.moveOnlyThisBody"
+                      : "calendar.occurrence.moveBody"
                     : "calendar.occurrence.deleteBody",
                 { title: titleOf(choice.row), date: dayLabel(choice.date, i18n.language) },
               )
             : ""
         }
         thisLabel={t(choice?.kind === "delete" ? "calendar.occurrence.deleteThis" : "calendar.occurrence.editThis")}
-        allLabel={t(choice?.kind === "delete" ? "calendar.occurrence.deleteAll" : "calendar.occurrence.editAll")}
+        allLabel={
+          onlyThis
+            ? undefined
+            : t(choice?.kind === "delete" ? "calendar.occurrence.deleteAll" : "calendar.occurrence.editAll")
+        }
         danger={choice?.kind === "delete"}
         onChoose={answer}
         onClose={() => {

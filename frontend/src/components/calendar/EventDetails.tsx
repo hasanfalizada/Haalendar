@@ -22,7 +22,7 @@ import { PriorityBadge } from "@/components/ui/priority";
 import { RecordTimestamps } from "@/components/ui/record-timestamps";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { eventRange } from "@/lib/dayView";
-import { repeatOf } from "@/lib/eventForm";
+import { describeRrule } from "@/lib/repeatRule";
 import { toPlainText } from "@/lib/markdown-text";
 import { reminderLabel, remindersOf } from "@/lib/reminders";
 import { useShortcut } from "@/lib/shortcuts";
@@ -91,7 +91,10 @@ export function EventDetails({
   const reminders = remindersOf(reminderRows, id);
   const body = text(row.body);
   const plain = toPlainText(body, { singleLine: true });
-  const repeat = repeatOf(row.rrule);
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The whole rule as text ("Every 2 weeks on Mon and Thu, 10 times").
+  const repeat = row.rrule
+    ? (describeRrule(row.rrule, text(row.start_date), i18n.language) ?? t("calendar.day.repeats"))
+    : null;
 
   useShortcut({
     id: "calendar:details-edit",
@@ -117,10 +120,10 @@ export function EventDetails({
       <div className="flex flex-col gap-1.5">
         <h3 className="text-[15px] font-semibold">{text(row.title) || t("calendar.day.noTitle")}</h3>
         <div className="flex flex-wrap gap-1.5">
-          {repeat !== "none" ? (
+          {repeat ? (
             <span className="inline-flex items-center gap-1 rounded-sm bg-surface px-1.5 py-0.5 text-xs">
               <Repeat className="size-3" aria-hidden />
-              {t("calendar.details.repeats", { rule: t(`calendar.editor.repeats.${repeat}`) })}
+              {t("calendar.details.repeats", { rule: repeat })}
             </span>
           ) : null}
           {row.all_day !== false ? (

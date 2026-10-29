@@ -9,22 +9,26 @@
 //   a new calendar as a move.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. `reminders`: the user's reminders as canonical text (lib/reminders
 //   specsText), so they are part of the draft and of "unsaved changes" like every other field; not an event field.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. `repeat`: the repeat rule relative to the start (lib/repeatRule,
+//   FR-CAL-30), "none" or its JSON text; saved as RRULE for the start date. A rule that does not fit its start (e.g.
+//   weekdays without the start's) is an error of the form. A counted series opened at a later effective start keeps
+//   its dates: the count shown leaves out the excluded dates before that start.
 import { addDays } from "@/lib/datetime";
 import { effectiveStart, exceptionsOf } from "@/lib/dayView";
+import {
+  NO_REPEAT,
+  type RuleProblem,
+  datesBefore,
+  ruleProblem,
+  rruleOf,
+  specFromRrule,
+  specFromText,
+  specText,
+} from "@/lib/repeatRule";
 
 export const TITLE_MAX = 150;
 export const LOCATION_MAX = 500;
 export const NO_TITLE = "(No title)";
-
-export const REPEATS = ["none", "daily", "weekly", "monthly", "yearly"] as const;
-export type Repeat = (typeof REPEATS)[number];
-const RRULE: Record<Repeat, string | null> = {
-  none: null,
-  daily: "FREQ=DAILY",
-  weekly: "FREQ=WEEKLY",
-  monthly: "FREQ=MONTHLY",
-  yearly: "FREQ=YEARLY",
-};
 
 export interface EventForm extends Record<string, string> {
   title: string;
@@ -38,11 +42,17 @@ export interface EventForm extends Record<string, string> {
   color: string;
   priority: string;
   calendar_id: string;
-  repeat: Repeat;
+  /** "none" or the repeat rule as text (lib/repeatRule specText). */
+  repeat: string;
   reminders: string;
 }
 
-export type FormErrors = Partial<Record<"title" | "end" | "location", "tooLong" | "endBeforeStart">>;
+export interface FormErrors {
+  title?: "tooLong";
+  end?: "endBeforeStart";
+  location?: "tooLong";
+  repeat?: RuleProblem;
+}
 
 type Row = Record<string, unknown>;
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -94,14 +104,19 @@ export function newEventForm(date: string, color: string, calendarId: string): E
     color,
     priority: "medium",
     calendar_id: calendarId,
-    repeat: "none",
+    repeat: NO_REPEAT,
     reminders: "[]",
   };
 }
 
-export function repeatOf(rrule: unknown): Repeat {
-  const found = (Object.keys(RRULE) as Repeat[]).find((key) => RRULE[key] === rrule);
-  return found ?? "none";
+/** The series' rule for the form opened at `start`; a count leaves out the dates before it (all excluded). */
+function repeatOf(row: Row, start: string): string {
+  const spec = specFromRrule(row.rrule, start);
+  const stored = text(row.start_date);
+  if (spec?.end === "count" && stored && stored < start) {
+    spec.count = Math.max(1, spec.count - datesBefore(stored, text(row.rrule), start));
+  }
+  return specText(spec);
 }
 
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. A series opens at its effective start (its first dates may be
@@ -120,7 +135,7 @@ export function formFromRow(row: Row, occurrence?: string): EventForm {
     color: text(row.color) || "brown",
     priority: text(row.priority) || "medium",
     calendar_id: text(row.container_id),
-    repeat: occurrence ? "none" : repeatOf(row.rrule),
+    repeat: occurrence ? NO_REPEAT : repeatOf(row, start),
     reminders: "[]",
   };
 }
@@ -153,6 +168,8 @@ export function validate(form: EventForm): FormErrors {
   if (form.location.length > LOCATION_MAX) errors.location = "tooLong";
   const [start, end] = span(form);
   if (end < start) errors.end = "endBeforeStart";
+  const repeat = ruleProblem(specFromText(form.repeat), form.start_date);
+  if (repeat) errors.repeat = repeat;
   return errors;
 }
 
@@ -170,7 +187,7 @@ export function eventData(form: EventForm): Record<string, unknown> {
     start_time: timed ? form.start_time : null,
     end_date: form.repeat === "none" ? form.end_date : form.start_date,
     end_time: timed ? form.end_time : null,
-    rrule: RRULE[form.repeat],
+    rrule: rruleOf(specFromText(form.repeat), form.start_date),
   };
 }
 

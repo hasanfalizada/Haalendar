@@ -1,9 +1,11 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. Where a dropped event lands and what that writes (FR-CAL-28, D-78):
 // days keep the times, the time grid keeps the length (also over midnight and from another zone), a series moves one
 // occurrence or all of them with its excluded dates.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The end date of a series moves along; a rule with its own days
+// moves as a whole only to other times on the same day.
 import { describe, expect, it } from "vitest";
 
-import { droppedTimes, planDrop } from "./eventDrag";
+import { droppedTimes, planDrop, seriesMovable } from "./eventDrag";
 
 const base = {
   id: "e1",
@@ -105,5 +107,24 @@ describe("planDrop", () => {
       data: { start_date: "2026-10-28", start_time: "15:00", end_date: "2026-10-28", end_time: "17:00" },
       exceptions: [{ from: "2026-11-02", to: "2026-11-04" }],
     });
+  });
+
+  it("moves the end date of the series along; a rule with its own days stays on its days", () => {
+    const series = {
+      ...timed,
+      start_date: "2026-10-26",
+      end_date: "2026-10-26",
+      rrule: "FREQ=WEEKLY;UNTIL=20261130",
+    };
+    expect(planDrop(series, "2026-10-28", next, "all")).toMatchObject({
+      base: { rrule: "FREQ=WEEKLY;UNTIL=20261130" },
+      data: { start_date: "2026-10-28", rrule: "FREQ=WEEKLY;UNTIL=20261202" },
+    });
+    const ownDays = { ...series, rrule: "FREQ=WEEKLY;BYDAY=MO,WE" };
+    expect(seriesMovable(ownDays, "2026-10-28", next)).toBe(false); // to Friday
+    expect(seriesMovable(ownDays, "2026-10-28", { ...next, start_date: "2026-10-28", end_date: "2026-10-28" })).toBe(
+      true,
+    ); // other times on the same day
+    expect(seriesMovable(series, "2026-10-28", next)).toBe(true);
   });
 });

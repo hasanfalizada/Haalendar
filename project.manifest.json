@@ -2,7 +2,7 @@
   "$schema": "./manifest.schema.json",
   "project": "haalendar",
   "manifest_version": "1.0.0",
-  "updated_at": "2026-10-17",
+  "updated_at": "2026-10-29",
   "description": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Central registry of Haalendar atoms. Read this file first; then load only the contract, vectors and implementation of the atoms involved. Update it after every change.",
   "conventions": {
     "atoms_dir": "atoms",
@@ -48,7 +48,7 @@
     },
     {
       "id": "calendar.recurrence.v1",
-      "status": "implemented",
+      "status": "deprecated",
       "purpose": "Occurrence dates of an event inside a window (≤ 367 days): one-off, daily, weekly, monthly (short months skipped), yearly (29 February only in leap years), without exceptions; tells whether an RRULE is supported.",
       "contract": "atoms/calendar.recurrence.v1/contract.json",
       "examples": "atoms/calendar.recurrence.v1/examples.md",
@@ -73,7 +73,41 @@
         "FR-CAL-01",
         "FR-CAL-10"
       ],
-      "notes": "Pure function on dates; times are applied per occurrence with time.local_to_utc.v1 and viewer days come from time.event_days.v1. The server validates rrule with it (HAAL-066); the day/week/month views expand series with it (HAAL-060, 087, 088). Extended rules (HAAL-092) arrive as v2."
+      "notes": "Superseded by calendar.recurrence.v2 (HAAL-092, D-80): the implementation files below now implement v2, which gives the same dates for the four v1 rules (all v1 vectors pass except the extended rule v1 rejected). Kept for reference only."
+    },
+    {
+      "id": "calendar.recurrence.v2",
+      "status": "implemented",
+      "purpose": "Occurrence dates of an event inside a window (≤ 367 days) for an RRULE subset: every N days/weeks/months/years, weekdays, Nth or last weekday, last day of month, until a date or N times; checks the rule and that the start fits.",
+      "contract": "atoms/calendar.recurrence.v2/contract.json",
+      "examples": "atoms/calendar.recurrence.v2/examples.md",
+      "vectors": "atoms/calendar.recurrence.v2/vectors.json",
+      "capabilities": [
+        "occurrences",
+        "isSupportedRrule",
+        "parseRule",
+        "checkRule"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_recurrence_atom.py",
+        "typescript": "frontend/src/atoms/calendar/recurrence.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/calendar/recurrence.py",
+        "typescript": "frontend/src/atoms/calendar/recurrence.ts"
+      },
+      "hash": "b3:79766ed9bb64c26ad837fa605fc9487c42887a7cdf38c3628e780f51d367ff52",
+      "deps": [],
+      "requirements": [
+        "C-06",
+        "D-60",
+        "D-80",
+        "F-20",
+        "FR-CAL-01",
+        "FR-CAL-10",
+        "FR-CAL-30"
+      ],
+      "notes": "Pure function on dates; times are applied per occurrence with time.local_to_utc.v1 and viewer days come from time.event_days.v1. The server validates rrule and its fit to the start with it; views, effective start, duplicates and reminders expand series with it. Weeks run Monday to Sunday (WKST=MO); COUNT includes excluded dates (RFC 5545). Own implementation (identical results both sides); expected dates checked against python-dateutil when the vectors were written. ICS import (HAAL-095) maps into this subset."
     },
     {
       "id": "calendar.day_order.v1",

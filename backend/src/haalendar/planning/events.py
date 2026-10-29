@@ -7,6 +7,8 @@
   with the server's. The whole event is checked after every change (also after a field-level merge):
   end ≥ start; all-day without times, timed with both; RRULE supported by calendar.recurrence.v1; a series spans one
   day; title ≤ 150, empty → "(No title)"; location ≤ 500; a known IANA zone (default: the owner's profile zone).
+  +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The rule is checked with calendar.recurrence.v2 (FR-CAL-30, D-80):
+  inside its subset, and the start date must be an occurrence of it (e.g. a weekday the rule names, not after UNTIL).
 - The time fields (all_day, dates, times, zone, rule) merge as one group: a conflict on one of them makes all changed
   ones of the group conflicts, so two devices can never combine into an event neither of them meant.
 - start_utc / end_utc are derived for timed events from the first occurrence (time.local_to_utc.v1); all-day events
@@ -22,7 +24,12 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts.models import UserAccount
-from haalendar.atoms.calendar.recurrence import is_supported
+from haalendar.atoms.calendar.recurrence import (
+    StartNotInRuleError,
+    UnsupportedRruleError,
+    check,
+    is_supported,
+)
 from haalendar.atoms.time.local_to_utc import UnknownTimeZoneError, local_to_utc, zone
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
@@ -119,10 +126,22 @@ def checked(state: dict[str, Any]) -> dict[str, Any]:
             zone(tzid)
         except UnknownTimeZoneError:
             errors.append({"pointer": "/data/tzid", "detail": "Unknown time zone"})
-    if rrule is not None and (not isinstance(rrule, str) or not is_supported(rrule)):
+    if rrule is not None and not isinstance(rrule, str):
         errors.append({"pointer": "/data/rrule", "detail": "This repeat rule is not supported"})
-    elif rrule is not None and start_date and end_date and end_date != start_date:
-        errors.append({"pointer": "/data/end_date", "detail": "A repeating event lasts one day"})
+    elif rrule is not None:
+        try:
+            if start_date:
+                check(start_date, rrule)
+            elif not is_supported(rrule):
+                raise UnsupportedRruleError("unsupported RRULE")
+        except UnsupportedRruleError:
+            errors.append({"pointer": "/data/rrule", "detail": "This repeat rule is not supported"})
+        except StartNotInRuleError:
+            errors.append(
+                {"pointer": "/data/rrule", "detail": "The start date is not one of the repeat dates"}
+            )
+        if start_date and end_date and end_date != start_date:
+            errors.append({"pointer": "/data/end_date", "detail": "A repeating event lasts one day"})
     if location is not None and (not isinstance(location, str) or len(location) > LOCATION_MAX):
         errors.append({"pointer": "/data/location", "detail": f"At most {LOCATION_MAX} characters"})
     if errors:

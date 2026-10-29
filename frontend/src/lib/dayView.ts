@@ -1,6 +1,6 @@
 // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. What the day view shows for one date (FR-CAL-01, D-61), from the
 // rows in the local database:
-// - one-off events whose days include the date, and occurrences of series on it (calendar.recurrence.v1);
+// - one-off events whose days include the date, and occurrences of series on it (calendar.recurrence, v2 since HAAL-092);
 // - the days an event covers are the viewer's (time.event_days.v1): a timed event is placed by its instants, so 23:00
 //   in Berlin can land on the next day in Baku; occurrences are therefore expanded one day around the date;
 // - times are shown in the viewer's zone; a timed event that started on an earlier day "continues", one that ends on

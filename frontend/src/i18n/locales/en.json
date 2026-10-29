@@ -119,14 +119,7 @@
       "endBeforeStart": "The end cannot be before the start.",
       "zoneNote": "Times are in {{zone}}, the time zone of this event.",
       "repeat": "Repeat",
-      "repeatHint": "A repeating event lasts one day; it repeats without an end.",
-      "repeats": {
-        "none": "Does not repeat",
-        "daily": "Every day",
-        "weekly": "Every week",
-        "monthly": "Every month",
-        "yearly": "Every year"
-      },
+      "repeatHint": "A repeating event lasts one day.",
       "calendar": "Calendar",
       "newCalendar": "My calendar (created with this event)",
       "defaultCalendar": "My calendar",
@@ -152,7 +145,8 @@
       "copyNote": "Saving makes this a separate event on its own date; the series skips {{date}}. Attachments stay with the series.",
       "saved": "Saved {{title}} as a separate event",
       "moveTitle": "Move repeating event?",
-      "moveBody": "“{{title}}” repeats. Move only the occurrence on {{date}} (it becomes a separate event), or all occurrences?"
+      "moveBody": "“{{title}}” repeats. Move only the occurrence on {{date}} (it becomes a separate event), or all occurrences?",
+      "moveOnlyThisBody": "“{{title}}” repeats on chosen days, so only the occurrence on {{date}} can move to another day (it becomes a separate event)."
     },
     "duplicate": {
       "title": "An event with this title already exists",
@@ -1097,5 +1091,62 @@
     "notNow": "Not now",
     "failed": "This browser could not turn notifications on (private windows cannot receive them). Reminders still appear in the app.",
     "turningOn": "Turning on…"
+  },
+  "repeat": {
+    "none": "Does not repeat",
+    "custom": "Custom…",
+    "customTitle": "Custom repeat",
+    "every": "Every",
+    "unit": "Repeat unit",
+    "units": {
+      "daily_one": "day",
+      "daily_other": "days",
+      "weekly_one": "week",
+      "weekly_other": "weeks",
+      "monthly_one": "month",
+      "monthly_other": "months",
+      "yearly_one": "year",
+      "yearly_other": "years"
+    },
+    "weekdays": "Days of the week",
+    "monthlyMode": "Day of the month",
+    "ends": "Ends",
+    "endOptions": {
+      "never": "Never",
+      "until": "On",
+      "count": "After"
+    },
+    "untilDate": "End date",
+    "countField": "Number of occurrences",
+    "occurrences_one": "occurrence",
+    "occurrences_other": "occurrences",
+    "daily_one": "Every day",
+    "daily_other": "Every {{count}} days",
+    "weeklyOn_one": "Every week on {{days}}",
+    "weeklyOn_other": "Every {{count}} weeks on {{days}}",
+    "monthlyDay_one": "Every month on day {{day}}",
+    "monthlyDay_other": "Every {{count}} months on day {{day}}",
+    "monthlyWeekday_one": "Every month on the {{nth}} {{weekday}}",
+    "monthlyWeekday_other": "Every {{count}} months on the {{nth}} {{weekday}}",
+    "monthlyLastDay_one": "Every month on the last day",
+    "monthlyLastDay_other": "Every {{count}} months on the last day",
+    "yearly_one": "Every year on {{date}}",
+    "yearly_other": "Every {{count}} years on {{date}}",
+    "nth": {
+      "first": "first",
+      "second": "second",
+      "third": "third",
+      "fourth": "fourth",
+      "last": "last"
+    },
+    "until": "{{rule}}, until {{date}}",
+    "times_one": "{{rule}}, once",
+    "times_other": "{{rule}}, {{count}} times",
+    "problems": {
+      "interval": "Enter a number from 1 to 99.",
+      "count": "Enter a number of occurrences from 1 to 999.",
+      "until": "The end date cannot be before the start.",
+      "startNotInRule": "The start date is not one of the repeat dates — change the date or the rule."
+    }
   }
 }
