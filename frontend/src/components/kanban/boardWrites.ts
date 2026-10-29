@@ -2,11 +2,16 @@
 // archive / unarchive and delete go through the local store and outbox (offline too) with a notification and an undo
 // step, like calendars. Archiving sends this device's time — the server keeps its own; undoing an unarchive sends the
 // time again.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A new board starts with its columns (To do, In progress, Done; D-91),
+// written with it in one undo step: undoing deletes the board, which takes its columns along.
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
 import { newStep, registerUndo } from "@/lib/undo";
 import { uuidv7 } from "@/lib/uuid";
+import { startPositions } from "@/lib/columns";
 import { mutate } from "@/sync";
+
+import { columnCreate } from "./columnWrites";
 
 type Row = Record<string, unknown>;
 
@@ -47,13 +52,25 @@ registerUndo<BoardEdit>("board.update", {
 
 const versionOf = (row: Row) => (typeof row.version === "number" ? { base_version: row.version } : {});
 
-/** Creates a board; its id when written, else null. */
-export async function createBoard(user: string, name: string, position: string): Promise<string | null> {
+/** Creates a board with the given columns; its id when written, else null. */
+export async function createBoard(
+  user: string,
+  name: string,
+  position: string,
+  columns: readonly string[] = [],
+): Promise<string | null> {
   const id = uuidv7();
   const values = { name };
   const result = await runWrite({
     name: "board_create",
-    run: () => mutate(user, { ...target(id), op: "create", data: { name, position } }),
+    run: async () => {
+      const written = await mutate(user, { ...target(id), op: "create", data: { name, position } });
+      const positions = startPositions(columns.length);
+      for (const [index, column] of columns.entries()) {
+        await mutate(user, columnCreate(uuidv7(), id, column, positions[index] ?? "V"));
+      }
+      return written;
+    },
     success: i18n.t("kanban.done.create", values),
     undo: () => newStep("board.create", { key: "undo.labels.boardCreated", values }, { user, id }),
   });

@@ -11,15 +11,17 @@
 //   LOCAL_SCHEMA 3 for the same reason.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Kanban boards (D-90) in their own table (Dexie version 4);
 //   LOCAL_SCHEMA 4 for the same reason.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns (D-91) in their own table (Dexie version 5);
+//   LOCAL_SCHEMA 5 for the same reason.
 import Dexie, { type Table } from "dexie";
 
 import { log } from "@/lib/log";
 
-export const LOCAL_SCHEMA = 4;
+export const LOCAL_SCHEMA = 5;
 
 export type EntityType =
-  "calendar" | "item" | "attachment" | "share" | "settings" | "reminder" | "checklist_item" | "board";
-export type MutableEntity = "calendar" | "item" | "reminder" | "checklist_item" | "board";
+  "calendar" | "item" | "attachment" | "share" | "settings" | "reminder" | "checklist_item" | "board" | "board_column";
+export type MutableEntity = "calendar" | "item" | "reminder" | "checklist_item" | "board" | "board_column";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
 export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
@@ -76,6 +78,7 @@ export class LocalDb extends Dexie {
   reminders!: Table<Row, string>;
   checklistItems!: Table<Row, string>;
   boards!: Table<Row, string>;
+  boardColumns!: Table<Row, string>;
   outbox!: Table<OutboxEntry, number>;
   conflicts!: Table<ConflictRecord, string>;
   meta!: Table<MetaRow, string>;
@@ -99,6 +102,7 @@ export class LocalDb extends Dexie {
     this.version(2).stores({ reminders: "id, item_id" });
     this.version(3).stores({ checklistItems: "id, item_id, [container_kind+container_id]" });
     this.version(4).stores({ boards: "id, owner_id" });
+    this.version(5).stores({ boardColumns: "id, board_id, [container_kind+container_id]" });
   }
 
   /** Every table of server rows (for transactions over all of them). */
@@ -112,13 +116,22 @@ export class LocalDb extends Dexie {
       this.reminders,
       this.checklistItems,
       this.boards,
+      this.boardColumns,
     ];
   }
 }
 
 export const ENTITY_TABLE: Record<
   EntityType,
-  "calendars" | "items" | "attachments" | "shares" | "settings" | "reminders" | "checklistItems" | "boards"
+  | "calendars"
+  | "items"
+  | "attachments"
+  | "shares"
+  | "settings"
+  | "reminders"
+  | "checklistItems"
+  | "boards"
+  | "boardColumns"
 > = {
   calendar: "calendars",
   item: "items",
@@ -128,6 +141,7 @@ export const ENTITY_TABLE: Record<
   reminder: "reminders",
   checklist_item: "checklistItems",
   board: "boards",
+  board_column: "boardColumns",
 };
 
 export function dbName(user: string): string {

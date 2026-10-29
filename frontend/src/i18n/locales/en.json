@@ -729,7 +729,8 @@
       "item": "Item",
       "reminder": "Reminder",
       "checklist_item": "Checklist item",
-      "board": "Board"
+      "board": "Board",
+      "board_column": "Column"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -823,7 +824,10 @@
       "checklistToggled": "the check of {{item}} in {{title}}",
       "boardCreated": "creating {{name}}",
       "boardChanged": "the change to {{name}}",
-      "boardDeleted": "deleting {{name}}"
+      "boardDeleted": "deleting {{name}}",
+      "columnCreated": "adding {{name}}",
+      "columnChanged": "the change to {{name}}",
+      "columnDeleted": "deleting {{name}}"
     }
   },
   "bulk": {
@@ -1372,6 +1376,52 @@
       "archive": "Archived {{name}}",
       "unarchive": "Unarchived {{name}}",
       "delete": "Deleted {{name}}"
+    },
+    "columns": {
+      "add": "Add column",
+      "addTitle": "New column",
+      "renameTitle": "Rename column",
+      "menu": "Options for column {{name}}",
+      "wip": "WIP limit…",
+      "wipTitle": "WIP limit of {{name}}",
+      "wipHint": "How many cards should this column hold at most? Leave it empty for no limit. Going over the limit is marked, never refused.",
+      "wipLabel": "Most cards",
+      "wipInvalid": "Use a whole number from 1 to {{max}}, or leave it empty.",
+      "moveLeft": "Move left",
+      "moveRight": "Move right",
+      "count_one": "{{count}} card",
+      "count_other": "{{count}} cards",
+      "countLimit_one": "{{count}} card, limit {{limit}}",
+      "countLimit_other": "{{count}} cards, limit {{limit}}",
+      "countOver_one": "{{count}} card, over the limit of {{limit}}",
+      "countOver_other": "{{count}} cards, over the limit of {{limit}}",
+      "overLimit": "Over the WIP limit",
+      "noCards": "No cards",
+      "deleteTitle": "Delete column?",
+      "deleteBody_one": "Delete “{{name}}”? Its {{count}} card goes to the trash with it. It can be undone.",
+      "deleteBody_other": "Delete “{{name}}”? Its {{count}} cards go to the trash with it. It can be undone.",
+      "dots": "Columns",
+      "show": "Show {{name}}",
+      "dragInstructions": "To move a column with the keyboard, use Move left or Move right in its menu.",
+      "archivedTitle": "Archived columns",
+      "archivedNone": "No archived columns.",
+      "archivedItem_one": "Archived columns ({{count}})…",
+      "archivedItem_other": "Archived columns ({{count}})…",
+      "unarchiveNamed": "Unarchive {{name}}",
+      "starter": {
+        "todo": "To do",
+        "doing": "In progress",
+        "done": "Done"
+      },
+      "done": {
+        "create": "Column added: {{name}}",
+        "rename": "Renamed to {{name}}",
+        "wip": "WIP limit of {{name}} saved",
+        "move": "Moved {{name}}",
+        "archive": "Archived {{name}}",
+        "unarchive": "Unarchived {{name}}",
+        "delete": "Deleted {{name}}"
+      }
     }
   }
 }

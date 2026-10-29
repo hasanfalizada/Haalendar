@@ -3,6 +3,8 @@
 // confirmation naming its cards; to the trash with Undo, then back to all boards); for a grantee the owner's name and
 // Leave. An archived board says it is read-only and offers Unarchive to its owner. Columns and cards follow with
 // HAAL-111/112; until then the board invites them. A board that is not (or no longer) there says so.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. The board shows its columns (D-91); the board menu lists the archived
+// columns. Columns are written by the owner and edit shares while the board is not archived.
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArrowLeft, Columns3, MoreHorizontal } from "lucide-react";
@@ -22,13 +24,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { STANDALONE_LINK } from "@/components/ui/link-styles";
+import { columnsOf } from "@/lib/columns";
 import { localKeys, localRows } from "@/sync";
 
-import { BoardNameDialog } from "./BoardNameDialog";
+import { ArchivedColumnsDialog } from "./ArchivedColumnsDialog";
+import { BoardColumns } from "./BoardColumns";
 import { deleteBoard, updateBoard } from "./boardWrites";
+import { NameDialog } from "./NameDialog";
 import { useBoards } from "./useBoards";
 
-type Dialog = "rename" | "share" | "delete" | null;
+type Dialog = "rename" | "share" | "delete" | "archivedColumns" | null;
+
+function useLocal(user: string, entity: "item" | "board_column" | "share") {
+  return useQuery({
+    queryKey: [...localKeys.table(entity), user],
+    queryFn: () => (user ? localRows(user, entity) : Promise.resolve([])),
+    enabled: Boolean(user),
+  }).data;
+}
 
 export function BoardPage({ boardId }: { boardId: string }) {
   const { t } = useTranslation();
@@ -45,11 +58,19 @@ export function BoardPage({ boardId }: { boardId: string }) {
     enabled: Boolean(row) && !owner,
   });
   const share = received.data?.find((s) => s.container_id === boardId);
-  const { data: items = [] } = useQuery({
-    queryKey: [...localKeys.table("item"), user],
-    queryFn: () => (user ? localRows(user, "item") : Promise.resolve([])),
-    enabled: Boolean(user) && dialog === "delete",
-  });
+  const items = useLocal(user, "item") ?? [];
+  const columnRows = useLocal(user, "board_column") ?? [];
+  const shareRows = useLocal(user, "share") ?? [];
+  const columns = columnsOf(columnRows, boardId);
+  const editShare = shareRows.some(
+    (s) =>
+      s.container_kind === "board" &&
+      s.container_id === boardId &&
+      s.grantee_id === user &&
+      s.permission === "edit" &&
+      !s.revoked_at,
+  );
+  const canWrite = !archived && (owner || editShare);
   const cards = items.filter(
     (item) => item.container_kind === "board" && item.container_id === boardId && !item.deleted_at,
   ).length;
@@ -95,6 +116,15 @@ export function BoardPage({ boardId }: { boardId: string }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {columns.archived.length > 0 ? (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setDialog("archivedColumns");
+                  }}
+                >
+                  {t("kanban.columns.archivedItem", { count: columns.archived.length })}
+                </DropdownMenuItem>
+              ) : null}
               {owner ? (
                 <>
                   <DropdownMenuItem
@@ -171,20 +201,44 @@ export function BoardPage({ boardId }: { boardId: string }) {
         </div>
       ) : null}
 
-      <div className="grid flex-1 place-items-center p-6 text-center">
-        <div className="flex max-w-sm flex-col items-center gap-2">
-          <div className="grid size-12 place-items-center rounded-md bg-primary-tint text-primary">
-            <Columns3 className="size-6" aria-hidden />
+      {columns.active.length === 0 && !canWrite ? (
+        <div className="grid flex-1 place-items-center p-6 text-center">
+          <div className="flex max-w-sm flex-col items-center gap-2">
+            <div className="grid size-12 place-items-center rounded-md bg-primary-tint text-primary">
+              <Columns3 className="size-6" aria-hidden />
+            </div>
+            <h2 className="text-[15px] font-semibold">{t("kanban.noColumnsTitle")}</h2>
+            <p className="text-muted">{t("kanban.noColumnsBody")}</p>
           </div>
-          <h2 className="text-[15px] font-semibold">{t("kanban.noColumnsTitle")}</h2>
-          <p className="text-muted">{t("kanban.noColumnsBody")}</p>
         </div>
-      </div>
+      ) : (
+        <BoardColumns
+          user={user}
+          boardId={boardId}
+          active={columns.active}
+          allColumns={columnRows}
+          items={items}
+          canWrite={canWrite}
+        />
+      )}
 
       {dialog === "rename" ? (
-        <BoardNameDialog
-          row={row}
+        <NameDialog
+          title={t("kanban.renameTitle")}
+          submitLabel={t("kanban.save")}
+          maxLength={100}
+          initial={name}
           onSave={(next) => updateBoard(user, row, "rename", { name: next })}
+          onClose={() => {
+            setDialog(null);
+          }}
+        />
+      ) : null}
+      {dialog === "archivedColumns" ? (
+        <ArchivedColumnsDialog
+          user={user}
+          columns={columns.archived}
+          canWrite={canWrite}
           onClose={() => {
             setDialog(null);
           }}

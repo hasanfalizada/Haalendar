@@ -2,6 +2,7 @@
 // their order, boards shared with the user (owner named) and the archive (folded); New board writes the board after the
 // last one and opens it; the board page renames, archives (read-only notice, Unarchive) and deletes (confirmation, back
 // to all boards, Undo) through sync; a grantee only leaves; a board that is not there says so.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A new board starts with three columns (D-91).
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -88,22 +89,34 @@ describe("Kanban boards", { timeout: 20_000 }, () => {
     expect(screen.queryByText("Deleted one")).not.toBeInTheDocument();
   });
 
-  it("creates a board after the last one and opens it", async () => {
+  it("creates a board after the last one with its starting columns and opens it", async () => {
     const { user, router } = await open();
     await user.click(await screen.findByRole("button", { name: "New board" }));
     const dialog = await screen.findByRole("dialog", { name: "New board" });
     expect(within(dialog).getByRole("button", { name: "Create" })).toBeDisabled();
     await user.type(within(dialog).getByLabelText("Name"), "  Garden  {Enter}");
     await screen.findByText("Board created: Garden");
-    const [entry] = await outbox();
+    const [entry, ...columns] = await outbox();
     expect(entry).toMatchObject({ entity_type: "board", op: "create", data: { name: "Garden" } });
+    // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. With the columns To do, In progress, Done, left to right (D-91).
+    expect(columns.map((c) => [c.entity_type, c.data?.board_id, c.data?.name])).toEqual([
+      ["board_column", entry?.entity_id, "To do"],
+      ["board_column", entry?.entity_id, "In progress"],
+      ["board_column", entry?.entity_id, "Done"],
+    ]);
+    const keys = columns.map((c) => String(c.data?.position));
+    expect([...keys].sort(comparePositions)).toEqual(keys);
     // After every own board, archived ones too.
     expect(comparePositions(String(entry?.data?.position), "Z")).toBe(1);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe(`/kanban/${String(entry?.entity_id)}`);
     });
     expect(await screen.findByRole("heading", { name: "Garden", level: 1 })).toBeInTheDocument();
-    expect(screen.getByText("No columns yet")).toBeInTheDocument();
+    expect((await screen.findAllByRole("heading", { level: 2 })).map((heading) => heading.textContent)).toEqual([
+      "To do",
+      "In progress",
+      "Done",
+    ]);
     // Before the server has it, it is already the user's own and stands last.
     await user.click(screen.getByRole("link", { name: "All boards" }));
     await waitFor(() => {
@@ -136,8 +149,9 @@ describe("Kanban boards", { timeout: 20_000 }, () => {
   });
 
   it("deletes a board after a confirmation naming its cards, goes back and can undo", async () => {
-    const { user, router, db } = await open(`/kanban/${REVAMP}`);
-    await db.items.put({
+    await (
+      await localDb(USER)
+    ).items.put({
       id: "0199f000-0000-7000-8000-0000000000c1",
       kind: "card",
       container_kind: "board",
@@ -145,6 +159,7 @@ describe("Kanban boards", { timeout: 20_000 }, () => {
       title: "Plan",
       deleted_at: null,
     });
+    const { user, router, db } = await open(`/kanban/${REVAMP}`);
     await screen.findByRole("heading", { name: "Revamp", level: 1 });
     await user.click(screen.getByRole("button", { name: "Options for Revamp" }));
     await user.click(await screen.findByRole("menuitem", { name: "Delete…" }));

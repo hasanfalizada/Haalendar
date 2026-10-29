@@ -2,6 +2,7 @@
 // "My boards", "Shared with me" (the owner named when the shares could be read) and "Archived" (folded) —, each opening
 // its board at /kanban/<id>; New board (in the header from tablets, a floating button on phones) asks for a name, writes
 // the board through sync (offline too, with Undo) and opens it. Without boards the page invites the first one.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A new board starts with the columns To do, In progress, Done (D-91).
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Columns3, Plus } from "lucide-react";
@@ -14,7 +15,7 @@ import { newBoardPosition } from "@/lib/boards";
 import { TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { localRows } from "@/sync";
 
-import { BoardNameDialog } from "./BoardNameDialog";
+import { NameDialog } from "./NameDialog";
 import { createBoard } from "./boardWrites";
 import { useBoards } from "./useBoards";
 
@@ -38,7 +39,12 @@ export function BoardsPage() {
   async function create(name: string): Promise<boolean> {
     // Read anew: the rows shown may not have arrived yet right after the page opened.
     const rows = await localRows(boards.user, "board");
-    const id = await createBoard(boards.user, name, newBoardPosition(rows, boards.user));
+    const starters = [
+      t("kanban.columns.starter.todo"),
+      t("kanban.columns.starter.doing"),
+      t("kanban.columns.starter.done"),
+    ];
+    const id = await createBoard(boards.user, name, newBoardPosition(rows, boards.user), starters);
     if (id) void navigate({ to: "/kanban/$boardId", params: { boardId: id } });
     return id !== null;
   }
@@ -144,8 +150,10 @@ export function BoardsPage() {
       ) : null}
 
       {creating ? (
-        <BoardNameDialog
-          row={null}
+        <NameDialog
+          title={t("kanban.newTitle")}
+          submitLabel={t("kanban.create")}
+          maxLength={100}
           onSave={create}
           onClose={() => {
             setCreating(false);
