@@ -27,7 +27,6 @@
 | HAAL-039 | E02 Cross-cutting | Full-text search across all modules with highlighting, offline local index; keeps title autocomplete and YYYY-MM-DD jump | Must | 016, 052 | — | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-046 | E02 Cross-cutting | Search filters: date range, module, calendar, color, priority, label | Must | 039 | C-14 | Postponed | — | owner, 2026-10-19 (chat) |
 | HAAL-069 | E04 Calendar parity | Single editor instance guard | Should | 063 | F-19 | To do | — | owner backlog file |
-| HAAL-094 | E05 Calendar new | Multiple calendars per user: default calendar, create, rename, color, hide/show, archive; unit of sharing | Must | 013 | C-08 | In progress | — | owner backlog file |
 | HAAL-095 | E05 Calendar new | ICS import (RRULE, EXDATE, report) into chosen calendar and .ics export | Must | 092, 094 | C-09 | To do | — | owner backlog file |
 | HAAL-096 | E05 Calendar new | Duplicate event to another date | Must | 064 | C-10 | To do | — | owner backlog file |
 | HAAL-097 | E05 Calendar new | ISO week numbers in mini month calendar | Must | 061 | C-12 | To do | — | owner backlog file |
@@ -137,6 +136,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-091 | 2026-10-28 | e7a443e, e7abe0f | feat(calendar): event reminders (stage 1: editor, worker, notification center) and Web Push to closed browsers (stage 2) (HAAL-091) |
 | HAAL-092 | 2026-10-29 | 4098ec1 | feat(calendar): extended repeat rules — every N, weekdays, Nth or last weekday, last day of month, until a date or N times (HAAL-092) |
 | HAAL-093 | 2026-10-29 | 9bf4f63 | feat(calendar): edit, delete and move this and following occurrences — the series is split at the occurrence (HAAL-093) |
+| HAAL-094 | 2026-10-29 | 613d5f5, — | feat(calendar): multiple calendars — default for every user, archive, hidden calendars (stage 1) and the calendar list in the sidebar with sharing (stage 2) (HAAL-094) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
 | HAAL-160 | 2026-10-15 | 27255ce | docs(architecture): note user_account table name in domain model (HAAL-160) |

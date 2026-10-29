@@ -121,8 +121,6 @@
       "repeat": "Repeat",
       "repeatHint": "A repeating event lasts one day.",
       "calendar": "Calendar",
-      "newCalendar": "My calendar (created with this event)",
-      "defaultCalendar": "My calendar",
       "location": "Location",
       "description": "Description",
       "color": "Color",
@@ -789,7 +787,11 @@
       "eventsMoved": "moving {{count}} events to the next day",
       "eventMovedTo": "moving {{title}} to {{where}}",
       "followingDeleted": "deleting {{title}} from {{date}} on",
-      "followingEdited": "the change to {{title}} from {{date}} on"
+      "followingEdited": "the change to {{title}} from {{date}} on",
+      "calendarCreated": "creating {{name}}",
+      "calendarChanged": "the change to {{name}}",
+      "calendarDefault": "making {{name}} the default",
+      "calendarDeleted": "deleting {{name}}"
     }
   },
   "bulk": {
@@ -1155,6 +1157,42 @@
       "count": "Enter a number of occurrences from 1 to 999.",
       "until": "The end date cannot be before the start.",
       "startNotInRule": "The start date is not one of the repeat dates — change the date or the rule."
+    }
+  },
+  "calendars": {
+    "own": "My calendars",
+    "shared": "Shared with me",
+    "archived_one": "Archived ({{count}})",
+    "archived_other": "Archived ({{count}})",
+    "new": "New calendar",
+    "newTitle": "New calendar",
+    "editTitle": "Edit calendar",
+    "name": "Name",
+    "color": "Color",
+    "create": "Create",
+    "save": "Save",
+    "show": "Show {{name}}",
+    "menu": "Options for {{name}}",
+    "defaultMark": "(default)",
+    "edit": "Edit name and color…",
+    "share": "Share…",
+    "makeDefault": "Make default",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "delete": "Delete…",
+    "leave": "Leave",
+    "sharedBy": "Shared by {{name}}",
+    "deleteTitle": "Delete calendar?",
+    "deleteBody_one": "Delete “{{name}}”? Its {{count}} event goes to the trash with it. It can be undone.",
+    "deleteBody_other": "Delete “{{name}}”? Its {{count}} events go to the trash with it. It can be undone.",
+    "deleteConfirm": "Delete",
+    "created": "Calendar created: {{name}}",
+    "done": {
+      "edit": "Saved {{name}}",
+      "default": "{{name}} is now the default calendar",
+      "archive": "Archived {{name}}",
+      "unarchive": "Unarchived {{name}}",
+      "delete": "Deleted {{name}}"
     }
   }
 }

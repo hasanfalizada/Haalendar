@@ -2,6 +2,8 @@
 // the day shown, the user's colour), the first calendar created with the first event, 15-minute times and their
 // defaults, end before start (shown, Save blocked) and the start taking the end along, repeat hiding the end date,
 // editing sending only what changed with its starting values, undo, the unsaved-changes question, offline saving.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. No calendar is created with the first event any more: it goes to the
+// default calendar, archived calendars are not offered (D-82).
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -91,7 +93,22 @@ async function outbox() {
   return db.outbox.orderBy("seq").toArray();
 }
 
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Every user has a default calendar (D-82); new events start in it.
+const DEFAULT_CAL = "0199f000-0000-7000-8000-0000000000c0";
+
 async function openApp(extra: Parameters<typeof stubApi>[0] = {}) {
+  const db = await localDb(USER);
+  await db.calendars.bulkPut([
+    { id: DEFAULT_CAL, name: "My calendar", owner_id: USER, is_default: true, deleted_at: null, version: 1 },
+    {
+      id: "0199f000-0000-7000-8000-0000000000c9",
+      name: "Archive",
+      owner_id: USER,
+      archived_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
+      version: 1,
+    },
+  ]);
   // Pushes never answer here, so the outbox keeps what the editor wrote.
   stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined), ...extra });
   const { router } = renderApp(`/calendar?date=${DAY}`);
@@ -100,15 +117,19 @@ async function openApp(extra: Parameters<typeof stubApi>[0] = {}) {
 }
 
 describe("editor", { timeout: 15_000 }, () => {
-  it("creates an all-day event and the first calendar with it", async () => {
+  it("creates an all-day event in the default calendar; an archived calendar is not offered", async () => {
     const { user } = await openApp({ "GET /me/settings": () => json(settings({ default_color: "green" })) });
     await user.keyboard("n");
     const dialog = await screen.findByRole("dialog", { name: "New event" });
     expect(within(dialog).getByRole("checkbox", { name: "All day" })).toBeChecked();
     expect(within(dialog).getByLabelText("From")).toHaveValue(DAY);
-    expect(within(dialog).getByRole("combobox", { name: "Calendar" })).toHaveDisplayValue(
-      "My calendar (created with this event)",
-    );
+    const calendarSelect = within(dialog).getByRole("combobox", { name: "Calendar" });
+    expect(calendarSelect).toHaveDisplayValue("My calendar");
+    expect(
+      within(calendarSelect)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["My calendar"]);
     await user.type(within(dialog).getByLabelText("Title"), "Dentist");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
@@ -116,14 +137,14 @@ describe("editor", { timeout: 15_000 }, () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
-    const [calendar, item] = await outbox();
-    expect(calendar).toMatchObject({ entity_type: "calendar", op: "create", data: { name: "My calendar" } });
+    const [item, ...rest] = await outbox();
+    expect(rest).toEqual([]);
     expect(item).toMatchObject({
       entity_type: "item",
       op: "create",
       data: {
         kind: "event",
-        container_id: calendar?.entity_id,
+        container_id: DEFAULT_CAL,
         title: "Dentist",
         all_day: true,
         start_date: DAY,

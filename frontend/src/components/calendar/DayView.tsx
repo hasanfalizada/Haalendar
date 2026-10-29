@@ -82,6 +82,7 @@ import type { DragData } from "./EventButton";
 import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
+import { CalendarList } from "./CalendarList";
 import { MiniMonth } from "./MiniMonth";
 import { moveToNextDay, planSteps, runMoves, writePlan } from "./moveNextDay";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
@@ -330,11 +331,16 @@ export function DayView({
   const tablet = useMediaQuery(TABLET_UP);
   const { data: me } = useQuery(meQuery);
   const user = me?.id;
-  const { data: rows = [] } = useQuery({
+  const { data: allRows = [] } = useQuery({
     queryKey: [...localKeys.table("item"), user ?? ""],
     queryFn: () => (user ? localRows(user, "item") : Promise.resolve([])),
     enabled: Boolean(user),
   });
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. The views show only events of calendars that are neither archived
+  // nor hidden by the user (D-82); the overdue counter follows them.
+  const calendars = useCalendars(user);
+  const { shown } = calendars;
+  const rows = useMemo(() => allRows.filter((row) => shown(row.container_id)), [allRows, shown]);
   const entries = useMemo(() => entriesOn(rows, date, viewerTz), [rows, date, viewerTz]);
   const today = todayIn(viewerTz);
   const label = dayLabel(date, i18n.language);
@@ -384,7 +390,6 @@ export function DayView({
   } | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
   const [details, setDetails] = useState<DayEntry | null>(null);
-  const calendars = useCalendars(user);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The "this occurrence or all?" question waiting for an answer.
@@ -713,6 +718,8 @@ export function DayView({
         }}
       />
       <OverdueCounter rows={rows} viewerTz={viewerTz} />
+      {/* +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. The user's calendars (D-82). */}
+      {user ? <CalendarList user={user} calendars={calendars} items={allRows} /> : null}
     </>
   );
   const sidebarOpen = desktop ? pinned : overlayOpen;

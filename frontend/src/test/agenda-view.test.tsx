@@ -62,6 +62,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. The day headings of the agenda: the sidebar (on wide screens) has
+// headings of its own now (the calendar list).
+const dayHeadings = () => screen.getAllByRole("heading", { level: 2 }).filter((heading) => !heading.closest("aside"));
+
 describe("agenda", { timeout: 15_000 }, () => {
   it("lists the days with events from today for the user's range, today whole", async () => {
     const { router, user } = await open(`/calendar?date=${TODAY}`);
@@ -87,7 +91,7 @@ describe("agenda", { timeout: 15_000 }, () => {
     expect(screen.getByRole("button", { name: "Details of Dentist" })).toHaveTextContent("11:00–12:00Dentist");
     // 30 days: the event 40 days ahead is not in the range; days without events are left out.
     expect(screen.queryByRole("button", { name: "Details of Far away" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(3); // today, tomorrow, in three days
+    expect(dayHeadings()).toHaveLength(3); // today, tomorrow, in three days
     expect(screen.queryByTitle(/^Day \d+ of/)).not.toBeInTheDocument();
   });
 
@@ -138,12 +142,12 @@ describe("agenda of a long range", { timeout: 15_000 }, () => {
     });
     renderApp(`/calendar?date=${TODAY}&view=agenda`);
     await waitFor(() => {
-      expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(31);
+      expect(dayHeadings()).toHaveLength(31);
     });
     act(() => {
       reachEnd?.();
     });
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(62);
+    expect(dayHeadings()).toHaveLength(62);
   });
 });
 

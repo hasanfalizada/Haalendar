@@ -5,7 +5,8 @@
 // and attachments once the event exists. The end may not be before the start (shown, Save blocked); moving the start
 // past the end moves the end along. Saving goes through the local store (offline too) with undo; an edit sends only
 // what changed with the values it started from. Typed values are kept as a draft on this device; closing with changes
-// asks first; Ctrl+Enter saves. With no writable calendar yet, "My calendar" is created on the first save.
+// asks first; Ctrl+Enter saves. With no writable calendar yet, "My calendar" is created on the first save (until
+// HAAL-094: every user has a default calendar now, D-82).
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. With `occurrence`, the editor works on a one-off copy of that date of
 // the series (FR-CAL-13, D-67): nothing is written until Save, which creates the copy and excludes the date from the
 // series in one undo step; Cancel leaves both untouched. The copy has no repeat and starts without attachments.
@@ -56,7 +57,6 @@ import {
   withAllDay,
   withStart,
 } from "@/lib/eventForm";
-import { log } from "@/lib/log";
 import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
 import {
   NO_REPEAT,
@@ -200,18 +200,9 @@ export function EventEditor({ date, event, occurrence, following = false, onClos
   }
 
   async function save(): Promise<boolean> {
-    let calendarId = form.calendar_id;
-    if (!calendarId) {
-      // No writable calendar yet: the first one is created with the event (the default calendar arrives in HAAL-094).
-      calendarId = uuidv7();
-      await mutate(user, {
-        entity_type: "calendar",
-        entity_id: calendarId,
-        op: "create",
-        data: { name: t("calendar.editor.defaultCalendar"), color: form.color },
-      });
-      log.info("calendar_created_for_event");
-    }
+    // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. Every user has a default calendar (D-82): no calendar is made
+    // here any more; new events start in the default one (first among the writable calendars).
+    const calendarId = form.calendar_id;
     const title = form.title.trim() || t("calendar.day.noTitle");
     const wantedReminders = specsFromText(form.reminders);
     const reminderLabel = { key: "undo.labels.eventEdited", values: { title } };
@@ -579,7 +570,6 @@ export function EventEditor({ date, event, occurrence, following = false, onClos
                       set({ calendar_id: e.target.value });
                     }}
                   >
-                    {calendars.length === 0 ? <option value="">{t("calendar.editor.newCalendar")}</option> : null}
                     {calendars.map((calendar) => (
                       <option key={String(calendar.id)} value={String(calendar.id)}>
                         {String(calendar.name)}
@@ -671,7 +661,7 @@ export function EventEditor({ date, event, occurrence, following = false, onClos
 
           <DialogFooter>
             <Button onClick={close}>{t("common.cancel")}</Button>
-            <Button type="submit" variant="primary" disabled={busy || invalid}>
+            <Button type="submit" variant="primary" disabled={busy || invalid || !form.calendar_id}>
               {t("calendar.editor.save")}
             </Button>
           </DialogFooter>
