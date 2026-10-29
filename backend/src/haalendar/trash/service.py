@@ -113,6 +113,16 @@ SOURCES: dict[str, TrashSource] = {
         parent_in_trash=_calendar_in_trash,
         scope=lambda: Item.kind == "event",
     ),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Notes with their attachments (D-87); a note has no parent.
+    "note": TrashSource(
+        kind="note",
+        model=Item,
+        title=lambda row: row.title or "",
+        may_restore=lambda user_id: _edit_access(Item),
+        refuse=lambda row, user_id: None,
+        children=(("attachment", Attachment),),
+        scope=lambda: Item.kind == "note",
+    ),
     "attachment": TrashSource(
         kind="attachment",
         model=Attachment,

@@ -176,6 +176,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | [common] | | soft-deleting an exception = undo (FR-X-06) |
 
 ### 5.7 `note` (subtype, also its own container)
+<!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. As built (migration 0022, D-87): the key column is `id` (= item.id) and the row carries `container_kind` = `note` / `container_id` = its own id (CHECK), like `event`; `position` is text ≤ 64 of letters and digits (CHECK). The note item is its own container: `haalendar_owns_container('note', id)` is the note item's owner; the `item` read / insert policies also admit the owner's own note while it is inserted. An archived note stays editable. -->
 | Column | Type | Rules |
 |---|---|---|
 | item_id | uuid PK FK item | |

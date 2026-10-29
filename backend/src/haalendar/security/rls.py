@@ -38,6 +38,7 @@ PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "s
     "reminder": "self",  # HAAL-091: self_policies (reminders are personal, also on shared events)
     "reminder_schedule": "self",  # HAAL-091: self_policies (the worker works as the owner)
     "push_subscription": "self",  # HAAL-091: self_policies (one browser of one user)
+    "note": "content",  # HAAL-100: content_child_policies (a note is its own container)
 }
 
 CURRENT_USER_FUNCTION = """
@@ -154,4 +155,40 @@ def share_leave_policy() -> list[str]:
     return [
         f"CREATE POLICY share_leave ON share FOR UPDATE USING (grantee_id = {me} AND revoked_at IS NULL) "
         f"WITH CHECK (grantee_id = {me} AND revoked_at IS NOT NULL)",
+    ]
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100 (migration 0022). A note is its own container (domain model 5.7): its
+# owner is the owner of the note item. The function gains that branch (written out: `item` has a column `kind` too).
+OWNS_CONTAINER_FUNCTION_0022 = """
+CREATE OR REPLACE FUNCTION haalendar_owns_container(kind text, container uuid) RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = pg_catalog, public
+AS $$
+DECLARE me uuid := haalendar_current_user_id();
+BEGIN
+  IF me IS NULL THEN RETURN false; END IF;
+  CASE kind
+    WHEN 'calendar' THEN RETURN EXISTS (SELECT 1 FROM calendar c WHERE c.id = container AND c.owner_id = me);
+    WHEN 'note' THEN RETURN EXISTS (
+      SELECT 1 FROM item i WHERE i.id = container AND i.kind = 'note' AND i.owner_id = me);
+    ELSE RETURN false;
+  END CASE;
+END
+$$
+"""
+
+
+def item_policies_0022() -> list[str]:
+    """The `item` policies of content_policies("item", "owner_id"), plus a note of the user's own that is its own
+    container: while it is being inserted the container lookup cannot see it yet (insert and the row it returns)."""
+    me = "haalendar_current_user_id()"
+    owns = "haalendar_owns_container(container_kind, container_id)"
+    shared = "haalendar_share_permission(container_kind, container_id)"
+    writable = f"({owns} OR {shared} = 'edit')"
+    own_note = f"(kind = 'note' AND container_kind = 'note' AND container_id = id AND owner_id = {me})"
+    return [
+        "DROP POLICY item_read ON item",
+        "DROP POLICY item_insert ON item",
+        f"CREATE POLICY item_read ON item FOR SELECT USING ({owns} OR {shared} IS NOT NULL OR {own_note})",
+        f"CREATE POLICY item_insert ON item FOR INSERT WITH CHECK (({writable} OR {own_note}) AND owner_id = {me})",
     ]

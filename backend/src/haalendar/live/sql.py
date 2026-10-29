@@ -77,3 +77,17 @@ AS $$
   SELECT grantee_id FROM share WHERE container_kind = kind AND container_id = container AND revoked_at IS NULL
 $$
 """  # noqa: S608 — kinds and tables are constants from migration code
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100 (migration 0022). A note is its own container: its owner is told too.
+AUDIENCE_FUNCTION_0022 = """
+CREATE OR REPLACE FUNCTION haalendar_sync_audience(kind text, container uuid) RETURNS SETOF uuid
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public
+AS $$
+  SELECT c.owner_id FROM calendar c WHERE $1 = 'calendar' AND c.id = $2
+  UNION
+  SELECT i.owner_id FROM item i WHERE $1 = 'note' AND i.kind = 'note' AND i.id = $2
+  UNION
+  SELECT s.grantee_id FROM share s WHERE s.container_kind = $1 AND s.container_id = $2 AND s.revoked_at IS NULL
+$$
+"""

@@ -5,6 +5,9 @@ ADR-0005 section 7). Facts are read inside the request transaction, i.e. already
 the user may not read is simply not found, which matches the atom's 404. Refusals are logged with ids only.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. An archived calendar is read-only (D-82): writing its items is refused
 with 409 invalid_state even for the owner; reading and sharing stay.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. A note is its own container (D-87): its owner is the note's owner; an
+archived note stays writable (archive ≠ delete, only hidden from the main list), and a note in the trash is still
+found, so its delete can repeat and its restore can run (the note row says it is deleted).
 """
 
 from __future__ import annotations
@@ -18,12 +21,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from haalendar.atoms.authz.check import Action, Decision, SharePermission, check
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Calendar
+from haalendar.planning.models import Calendar, Item
 from haalendar.security.rls import ContainerKind
 
 log = get_logger(__name__)
 
-# Container kind → model; board and note join when their tables exist.
+# Container kind → model of the container tables (sharing, archive); a note is its own container (below), the board
+# joins with its table.
 CONTAINERS: dict[ContainerKind, type[Calendar]] = {"calendar": Calendar}
 
 
@@ -38,6 +42,8 @@ async def container_access(
     db: AsyncSession, kind: ContainerKind, container_id: uuid.UUID
 ) -> ContainerAccess | None:
     """Owner and the current user's active share of a live container, or None when it is not visible."""
+    if kind == "note":
+        return await _note_access(db, container_id)
     model = CONTAINERS.get(kind)
     if model is None:
         return None
@@ -56,6 +62,16 @@ async def container_access(
         owner_id=owner_id,
         share_permission=permission if permission in ("view", "edit") else None,
         archived=archived_at is not None,
+    )
+
+
+async def _note_access(db: AsyncSession, note_id: uuid.UUID) -> ContainerAccess | None:
+    owner_id = await db.scalar(select(Item.owner_id).where(Item.id == note_id, Item.kind == "note"))
+    if owner_id is None:
+        return None
+    permission = await db.scalar(select(func.haalendar_share_permission("note", note_id)))
+    return ContainerAccess(
+        owner_id=owner_id, share_permission=permission if permission in ("view", "edit") else None
     )
 
 

@@ -21,6 +21,9 @@ calendar, made when the user is created (`create_default_calendar`); the owner c
 (`is_default: true` moves it there, `false` is refused), archive (`archived_at`: any timestamp archives — the server
 takes its own time —, null unarchives) and unarchive. The default calendar cannot be archived or deleted, an archived
 one cannot become the default; an archived calendar is read-only (haalendar.authz).
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Notes (haalendar.planning.notes, D-87): created through `create_item`
+(kind `note`, its own container, the owner only); `update_item` also merges the note fields (archived as a flag);
+a note cannot move. Delete and restore are the same as for every item.
 """
 
 from __future__ import annotations
@@ -37,8 +40,8 @@ from haalendar.attachments.models import Attachment
 from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import events
-from haalendar.planning.models import Calendar, Event, Item, RecurrenceException
+from haalendar.planning import events, notes
+from haalendar.planning.models import Calendar, Event, Item, Note, RecurrenceException
 from haalendar.security.rls import ContainerKind
 from haalendar.softdelete import new_batch, restore_batch
 
@@ -261,11 +264,20 @@ ITEM_FIELDS = ("title", "body", "color", "priority")
 async def create_item(
     db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID, data: dict[str, Any]
 ) -> Outcome:
-    """A new item; only events can be created through sync so far (notes and cards arrive with their modules)."""
+    """A new item: an event in a calendar or a note (cards arrive with their module)."""
+    item_values = {name: data[name] for name in ITEM_FIELDS if name in data}
+    if data.get("kind") == "note":
+        if data.get("container_id") not in (None, item_id) or data.get("container_kind", "note") != "note":
+            raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A note is its own container")
+        note_values = {name: data[name] for name in notes.NOTE_FIELDS if name in data}
+        return Outcome(version=await notes.create_note(db, user_id, item_id, item_values, note_values))
+    if data.get("container_id") is None or data.get("container_kind") != "calendar":
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "An event belongs to a calendar")
+    if any(name in notes.NOTE_FIELDS for name in data):
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only notes have note fields")
     container_id = uuid.UUID(str(data["container_id"]))
     await _writable(db, user_id, "calendar", container_id)
     await _calendar(db, container_id)
-    item_values = {name: data[name] for name in ITEM_FIELDS if name in data}
     event_values = {name: data[name] for name in events.EVENT_FIELDS if name in data}
     version = await events.create_event(db, user_id, item_id, container_id, item_values, event_values)
     if data.get("copy_attachments_from") is not None:
@@ -337,10 +349,16 @@ async def update_item(
     event = await db.get(Event, item_id) if item.kind == "event" else None
     if event is None and any(name in events.EVENT_FIELDS for name in new):
         raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only events have event fields")
+    note = await db.get(Note, item_id) if item.kind == "note" else None
+    if note is None and any(name in notes.NOTE_FIELDS for name in new):
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only notes have note fields")
     current = {name: getattr(item, name) for name in ITEM_FIELDS}
     if event is not None:
         current.update(events.state_of(event))
     new, base = events.normalize(new), events.normalize(base)
+    if note is not None:
+        current.update(notes.state_of(note))
+        new, base = notes.as_flag(new), notes.as_flag(base)
     apply, conflicts = merge(current, base, new)
     if event is not None:
         changed = [name for name, value in new.items() if current.get(name) != value]
@@ -351,6 +369,10 @@ async def update_item(
             events.apply(event, events.checked({**events.state_of(event), **event_changes}))
         if "title" in apply:
             apply["title"] = events.title_of(apply["title"])
+    if note is not None:
+        notes.apply(note, {name: value for name, value in apply.items() if name in notes.NOTE_FIELDS})
+        if "title" in apply:
+            apply["title"] = (apply["title"] or "").strip()
     if apply:
         for name, value in apply.items():
             if name in ITEM_FIELDS:
@@ -373,6 +395,8 @@ async def move_item(
 ) -> Outcome:
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
+    if item.kind == "note":
+        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A note is its own container")
     await _writable(db, user_id, target_kind, target_id)
     if item.deleted_at is not None:
         raise _deleted(current_state)

@@ -4,6 +4,8 @@
 created it; nothing from other people's containers (their owners export those, ADR-0005). Soft-deleted records are
 included with deleted_at. A module adds a Section to SECTIONS; today the calendar module contributes calendars, their
 iCalendar files and the attachments of items in them. The To-Do and Kanban sections come with their modules.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. To-Do: the user's notes (archived and deleted ones included) and
+their attachments.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ from haalendar.exports.archive import ArchiveWriter, safe_name
 from haalendar.exports.schemas import Module
 from haalendar.planning.ics import calendar_ics
 from haalendar.planning.ics_service import calendar_events
-from haalendar.planning.models import Calendar, Item
+from haalendar.planning.models import Calendar, Item, Note
 from haalendar.storage import Storage
 
 
@@ -121,8 +123,39 @@ async def calendar_section(ctx: ExportContext) -> None:
     await _attachments(ctx, "calendar", [c.id for c in calendars], "calendar")
 
 
+async def todo_section(ctx: ExportContext) -> None:
+    rows = (
+        await ctx.db.execute(
+            select(Item, Note)
+            .join(Note, Note.id == Item.id)
+            .where(Item.kind == "note", Item.owner_id == ctx.owner_id)
+            .order_by(Note.pinned.desc(), Note.position, Item.id)
+        )
+    ).all()
+    for item, note in rows:
+        ctx.archive.add_row(
+            "notes",
+            {
+                "id": item.id,
+                "owner_id": item.owner_id,
+                "title": item.title,
+                "body": item.body,
+                "color": item.color,
+                "priority": item.priority,
+                "pinned": note.pinned,
+                "archived_at": note.archived_at,
+                "position": note.position,
+                "due_at": note.due_at,
+                "is_checklist": note.is_checklist,
+                "permission": "owner",
+                **_meta(item),
+            },
+        )
+    await _attachments(ctx, "note", [item.id for item, _ in rows], "todo")
+
+
 SECTIONS: dict[Module, list[Section]] = {
     "calendar": [calendar_section],
-    "todo": [],
+    "todo": [todo_section],
     "kanban": [],
 }

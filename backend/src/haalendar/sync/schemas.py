@@ -4,6 +4,8 @@
 database (lengths, colours, priorities); unknown fields are refused.
 +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Items carry the event fields (checked as a whole event by
 haalendar.planning.events); ItemCreateData creates an item — only events so far.
++++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Notes too (D-87): kind `note`, its own container (container_kind
+`note` and container_id = its id, or left out), with the note fields pinned, archived_at and position.
 """
 
 from __future__ import annotations
@@ -49,12 +51,15 @@ class ItemData(ApiModel):
     end_time: str | None = Field(default=None, max_length=8)
     tzid: str | None = Field(default=None, max_length=64)
     rrule: str | None = Field(default=None, max_length=500)
+    pinned: bool | None = None
+    archived_at: datetime | None = None
+    position: str | None = Field(default=None, max_length=64)
 
 
 class ItemCreateData(ItemData):
-    kind: Literal["event"]
-    container_kind: Literal["calendar"]
-    container_id: uuid.UUID
+    kind: Literal["event", "note"]
+    container_kind: Literal["calendar", "note"] | None = None
+    container_id: uuid.UUID | None = None
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. A duplicate (D-84): the event whose attachments it takes along.
     copy_attachments_from: uuid.UUID | None = None
 

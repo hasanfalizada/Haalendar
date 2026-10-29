@@ -55,11 +55,19 @@ EVENT_FIELDS_SQL = (
 )
 
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. An item of kind `note` carries its note fields (D-87; the copied
+# container stays on the server).
+NOTE_FIELDS_SQL = (
+    "coalesce((SELECT to_jsonb(n) - 'id' - 'container_kind' - 'container_id' FROM note n WHERE n.id = {alias}.id), "
+    "'{{}}'::jsonb)"
+)
+
+
 def _data_expr(alias: str, hidden: tuple[str, ...], entity: str = "") -> str:
     drops = "".join(f" - '{column}'" for column in ("sync_seq", "sync_xid", *hidden))
     expression = f"to_jsonb({alias}){drops}"
     if entity == "item":
-        expression = f"({expression}) || {EVENT_FIELDS_SQL.format(alias=alias)}"
+        expression = f"({expression}) || {EVENT_FIELDS_SQL.format(alias=alias)} || {NOTE_FIELDS_SQL.format(alias=alias)}"
     if entity == "reminder":
         expression = (
             f"({expression}) || jsonb_build_object('all_day_time', to_char({alias}.all_day_time, 'HH24:MI'))"

@@ -41,6 +41,8 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     "recurrence_exception": ("ref", ()),
     # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders: personal content of their owner, no container.
     "reminder": ("none", ()),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Note details (the note is its own container).
+    "note": ("ref", ()),
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.

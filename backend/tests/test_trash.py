@@ -111,10 +111,11 @@ def test_containers_are_restored_only_by_their_owner(trash: Trash) -> None:
 def test_restore_brings_back_the_batch_and_is_audited(trash: Trash) -> None:
     ada = trash.sign_in("ada")
     work = trash.calendars["Work"]
-    result = trash.restore(ada, ("calendar", work), ("calendar", work), ("note", str(uuid.uuid7())))
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Notes are restorable now; cards are not yet.
+    result = trash.restore(ada, ("calendar", work), ("calendar", work), ("card", str(uuid.uuid7())))
     assert result["restored"] == 1 and result["rows"] == 1  # duplicates count once
     assert result["failed"] == [
-        {"type": "note", "id": result["failed"][0]["id"], "code": "unsupported", "parent": None}
+        {"type": "card", "id": result["failed"][0]["id"], "code": "unsupported", "parent": None}
     ]
     assert [e["title"] for e in trash.api.get("/api/v1/trash").json()["data"]] == ["Old"]
     again = trash.restore(ada, ("calendar", work))

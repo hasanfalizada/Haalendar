@@ -208,3 +208,20 @@ class ReminderSchedule(Base):
     next_occurrence: Mapped[date | None] = mapped_column(Date)
     last_occurrence: Mapped[date | None] = mapped_column(Date)
     last_fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. A note (domain model 5.7, FR-TODO-01/03): the note details of an item
+# of kind `note` (1:1, same id). A note is its own container (container_kind `note`, container_id = its id), copied
+# here like on `event` for row-level security and the audit log. `position` orders the notes (fractional index,
+# lexicographic); archived ≠ deleted. Due date and checklist mode are used by HAAL-101/104.
+class Note(Base):
+    __tablename__ = "note"
+
+    id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), primary_key=True)
+    container_kind: Mapped[str] = mapped_column(String(10), default="note")
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    position: Mapped[str] = mapped_column(String(64))
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_checklist: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
