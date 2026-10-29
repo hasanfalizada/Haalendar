@@ -130,7 +130,8 @@ describe("calendar list", { timeout: 15_000 }, () => {
     const items = within(menu)
       .getAllByRole("menuitem")
       .map((item) => item.textContent);
-    expect(items).toEqual(["Edit name and color…", "Share…"]); // the default: no default, archive or delete
+    // The default: no default, archive or delete. +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095: import and export.
+    expect(items).toEqual(["Edit name and color…", "Share…", "Import .ics…", "Export .ics"]);
   });
 
   it("hiding saves the setting and the events go", async () => {
@@ -233,5 +234,50 @@ describe("calendar list", { timeout: 15_000 }, () => {
     await user.click(within(await menuOf(user, sidebar, "Family")).getByRole("menuitem", { name: "Leave" }));
     await screen.findByText("You left “Family”.");
     expect(left).toBe(true);
+  });
+
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. ICS import (D-83): the file as the body, the report, Undo.
+  it("imports an .ics file: the report, Undo; a calendar shared for viewing offers only the export", async () => {
+    const report = {
+      imported: 2,
+      skipped: 1,
+      warnings: ["Reminders of 1 events were not imported: set them in Haalendar"],
+      item_ids: ["0199f000-0000-7000-8000-0000000000f1", "0199f000-0000-7000-8000-0000000000f2"],
+      skipped_events: [{ title: "Ping", reason: "Its repeat rule is not supported" }],
+    };
+    const { sidebar, user, calls } = await open({ "POST /calendars/*/import-ics": () => json(report) });
+    let menu = await menuOf(user, sidebar, "Family");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent),
+    ).toEqual(["Export .ics", "Leave"]);
+    await user.keyboard("{Escape}");
+
+    await user.click(within(await menuOf(user, sidebar, "Work")).getByRole("menuitem", { name: "Import .ics…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Import into Work" });
+    const file = new File(["BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"], "work.ics", { type: "text/calendar" });
+    await user.upload(within(dialog).getByLabelText("iCalendar file"), file);
+    await user.click(within(dialog).getByRole("button", { name: "Import" }));
+
+    expect(await within(dialog).findByText("Imported: 2 · Skipped: 1")).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Ping — Its repeat rule is not supported");
+    expect(dialog).toHaveTextContent("Reminders of 1 events were not imported");
+    const sent = calls.find((call) => call.method === "POST" && call.path.endsWith("/import-ics"));
+    expect(sent?.path).toBe(`/calendars/${WORK}/import-ics`);
+    expect(sent?.headers.get("Content-Type")).toBe("text/calendar");
+
+    const toast = await screen.findByText("Imported 2 events into Work");
+    const closers = within(dialog).getAllByRole("button", { name: "Close" }); // the corner and the footer
+    await user.click(closers[closers.length - 1] as HTMLElement);
+    await user.click(within(toast.closest("li") ?? document.body).getByRole("button", { name: "Undo" }));
+    await waitFor(async () => {
+      expect((await outbox()).map((entry) => [entry.entity_id, entry.op])).toEqual([
+        [report.item_ids[1], "delete"],
+        [report.item_ids[0], "delete"],
+      ]);
+    });
+    menu = await menuOf(user, sidebar, "Work");
+    expect(within(menu).getByRole("menuitem", { name: "Export .ics" })).toBeInTheDocument();
   });
 });

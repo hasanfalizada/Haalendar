@@ -153,6 +153,9 @@ class Event(Base):
     end_utc: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     location: Mapped[str | None] = mapped_column(String(500))
     rrule: Mapped[str | None] = mapped_column(String(500))
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. The UID of an event imported from an .ics file (D-83): a second
+    # import of the same file into the same calendar skips it.
+    ics_uid: Mapped[str | None] = mapped_column(String(255))
 
 
 class RecurrenceException(Base):

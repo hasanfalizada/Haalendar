@@ -18,7 +18,6 @@ import tempfile
 import unicodedata
 import uuid
 import zipfile
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -64,90 +63,7 @@ def safe_name(name: str, suffix: str = "") -> str:
     return f"{clean[:80]}{suffix}"
 
 
-# ---------------------------------------------------------------- iCalendar (RFC 5545)
-
-
-@dataclass(frozen=True, slots=True)
-class IcsEvent:
-    uid: str
-    summary: str
-    start: date | datetime
-    end: date | datetime
-    all_day: bool
-    tzid: str | None = None
-    description: str | None = None
-    location: str | None = None
-    rrule: str | None = None
-    created: datetime | None = None
-    last_modified: datetime | None = None
-
-
-def _ics_text(value: str) -> str:
-    return (
-        value.replace("\\", "\\\\")
-        .replace(";", "\\;")
-        .replace(",", "\\,")
-        .replace("\r\n", "\\n")
-        .replace("\n", "\\n")
-    )
-
-
-def _fold(line: str) -> str:
-    """Lines longer than 75 octets continue on the next line after CRLF + space (RFC 5545 3.1)."""
-    out: list[str] = []
-    current = ""
-    for char in line:
-        if len((current + char).encode("utf-8")) > 75:
-            out.append(current)
-            current = " " + char
-        else:
-            current += char
-    out.append(current)
-    return "\r\n".join(out)
-
-
-def _utc(value: datetime) -> str:
-    return value.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
-
-
-def _moment(name: str, value: date | datetime, all_day: bool, tzid: str | None) -> str:
-    if all_day or not isinstance(value, datetime):
-        return f"{name};VALUE=DATE:{value.strftime('%Y%m%d')}"
-    if tzid:
-        return f"{name};TZID={tzid}:{value.strftime('%Y%m%dT%H%M%S')}"
-    return f"{name}:{_utc(value)}"
-
-
-def calendar_ics(name: str, events: Iterable[IcsEvent], stamp: datetime) -> str:
-    lines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Haalendar//Export 1.0//EN",
-        "CALSCALE:GREGORIAN",
-        f"X-WR-CALNAME:{_ics_text(name)}",
-    ]
-    for event in events:
-        lines += [
-            "BEGIN:VEVENT",
-            f"UID:{event.uid}@haalendar",
-            f"DTSTAMP:{_utc(stamp)}",
-            _moment("DTSTART", event.start, event.all_day, event.tzid),
-            _moment("DTEND", event.end, event.all_day, event.tzid),
-            f"SUMMARY:{_ics_text(event.summary)}",
-        ]
-        if event.description:
-            lines.append(f"DESCRIPTION:{_ics_text(event.description)}")
-        if event.location:
-            lines.append(f"LOCATION:{_ics_text(event.location)}")
-        if event.rrule:
-            lines.append(f"RRULE:{event.rrule}")
-        if event.created:
-            lines.append(f"CREATED:{_utc(event.created)}")
-        if event.last_modified:
-            lines.append(f"LAST-MODIFIED:{_utc(event.last_modified)}")
-        lines.append("END:VEVENT")
-    lines.append("END:VCALENDAR")
-    return "".join(_fold(line) + "\r\n" for line in lines)
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. The iCalendar writer moved to haalendar.planning.ics (D-83).
 
 
 # ---------------------------------------------------------------- the archive

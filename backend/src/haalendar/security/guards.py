@@ -25,7 +25,10 @@ from haalendar.security.uploads import (
     ATTACHMENT_TYPES,
     AVATAR_PATH,
     AVATAR_TYPES,
+    ICS_IMPORT_PATH,
+    ICS_TYPES,
     MAX_AVATAR_BYTES,
+    MAX_ICS_BYTES,
     MAX_IMAGE_BYTES,
 )
 
@@ -50,6 +53,8 @@ BODY_RULES: dict[str, BodyRule] = {AVATAR_PATH: BodyRule(MAX_AVATAR_BYTES, AVATA
 # +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Paths with an id in them (attachment upload: 10 MB, four image types).
 BODY_RULE_PATTERNS: tuple[tuple[re.Pattern[str], BodyRule], ...] = (
     (ATTACHMENT_PATH, BodyRule(MAX_IMAGE_BYTES, ATTACHMENT_TYPES)),
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. ICS import: 5 MB, text/calendar.
+    (ICS_IMPORT_PATH, BodyRule(MAX_ICS_BYTES, ICS_TYPES)),
 )
 
 

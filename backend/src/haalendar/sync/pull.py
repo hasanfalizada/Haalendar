@@ -44,7 +44,8 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
 # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. An item of kind `event` carries its event fields (times as "HH:MM";
 # the derived UTC columns and the copied container stay on the server). Read under the same row-level security.
 EVENT_FIELDS_SQL = (
-    "coalesce((SELECT (to_jsonb(e) - 'id' - 'container_kind' - 'container_id' - 'start_utc' - 'end_utc') "
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. The UID of an imported event stays on the server too (D-83).
+    "coalesce((SELECT (to_jsonb(e) - 'id' - 'container_kind' - 'container_id' - 'start_utc' - 'end_utc' - 'ics_uid') "
     "|| jsonb_build_object('start_time', to_char(e.start_time, 'HH24:MI'), "
     "'end_time', to_char(e.end_time, 'HH24:MI'), "
     # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The excluded dates of a series (active exceptions), ascending.

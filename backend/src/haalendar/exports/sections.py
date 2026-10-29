@@ -19,8 +19,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.attachments.models import Attachment
-from haalendar.exports.archive import ArchiveWriter, calendar_ics, safe_name
+from haalendar.exports.archive import ArchiveWriter, safe_name
 from haalendar.exports.schemas import Module
+from haalendar.planning.ics import calendar_ics
+from haalendar.planning.ics_service import calendar_events
 from haalendar.planning.models import Calendar, Item
 from haalendar.storage import Storage
 
@@ -111,8 +113,8 @@ async def calendar_section(ctx: ExportContext) -> None:
             },
         )
         if calendar.deleted_at is None:
-            # Events join with the events module (they register their rows and IcsEvent entries here).
-            ics = calendar_ics(calendar.name, [], ctx.exported_at)
+            # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. The calendar's live events (D-83; empty until now).
+            ics = calendar_ics(calendar.name, await calendar_events(ctx.db, calendar.id), ctx.exported_at)
             ctx.archive.add_file(
                 f"calendar/{safe_name(calendar.name, f' ({str(calendar.id)[:8]}).ics')}", ics
             )

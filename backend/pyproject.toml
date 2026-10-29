@@ -28,6 +28,8 @@ dependencies = [
   "procrastinate==3.10.0",
   # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Server-Sent Events for live updates (ADR-0003, ADR-0009).
   "sse-starlette==3.5.0",
+  # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. iCalendar (RFC 5545) import and export (BSD-2-Clause, D-83).
+  "icalendar==7.3.0",
 ]
 
 [dependency-groups]

@@ -791,7 +791,8 @@
       "calendarCreated": "creating {{name}}",
       "calendarChanged": "the change to {{name}}",
       "calendarDefault": "making {{name}} the default",
-      "calendarDeleted": "deleting {{name}}"
+      "calendarDeleted": "deleting {{name}}",
+      "icsImported": "the import into {{name}}"
     }
   },
   "bulk": {
@@ -1194,5 +1195,21 @@
       "unarchive": "Unarchived {{name}}",
       "delete": "Deleted {{name}}"
     }
+  },
+  "ics": {
+    "importItem": "Import .ics…",
+    "exportItem": "Export .ics",
+    "importTitle": "Import into {{name}}",
+    "intro": "Events from an iCalendar file (.ics) — from Google Calendar, Outlook, Apple Calendar and others — are added to this calendar. Importing the same file again skips what is already there.",
+    "file": "iCalendar file",
+    "tooLarge": "The file is larger than 5 MB.",
+    "import": "Import",
+    "importing": "Importing…",
+    "imported_one": "Imported {{count}} event into {{name}}",
+    "imported_other": "Imported {{count}} events into {{name}}",
+    "summary": "Imported: {{imported}} · Skipped: {{skipped}}",
+    "skippedTitle": "Skipped",
+    "warningsTitle": "Notes",
+    "offline": "Exporting needs a connection."
   }
 }

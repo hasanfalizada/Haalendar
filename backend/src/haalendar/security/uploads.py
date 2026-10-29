@@ -24,6 +24,10 @@ AVATAR_TYPES = ("image/png", "image/jpeg", "image/webp")
 # +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Attachments: raw-body upload, at most 10 MiB, four image types.
 ATTACHMENT_PATH = re.compile(r"^/api/v1/items/[0-9a-fA-F-]{36}/attachments$")
 ATTACHMENT_TYPES = ("image/png", "image/jpeg", "image/webp", "image/gif")
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. ICS import (D-83): the file as the body, at most 5 MB.
+ICS_IMPORT_PATH = re.compile(r"^/api/v1/calendars/[0-9a-fA-F-]{36}/import-ics$")
+ICS_TYPES = ("text/calendar", "application/octet-stream")
+MAX_ICS_BYTES = 5 * 1024 * 1024
 MAX_FILENAME_CHARS = 120
 EXTENSIONS = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
 _UNSAFE_CHARS = re.compile(r'[\x00-\x1f\x7f<>:"/\\|?*]')

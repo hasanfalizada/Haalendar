@@ -7,6 +7,8 @@
 // - "Shared with me": checkbox, the owner in the tooltip, Leave;
 // - "Archived" (folded): Unarchive, Delete….
 // Changes go through calendarWrites (sync with undo; hiding, sharing and leaving need a connection).
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. "Import .ics…" for calendars the user may write to (own active
+// ones, shared with "edit") and "Export .ics" for every calendar listed, archived ones too (D-83).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { type ReactNode, type SubmitEvent, useId, useState } from "react";
@@ -30,6 +32,8 @@ import {
 import { Field, Input } from "@/components/ui/input";
 
 import { createCalendar, deleteCalendar, setDefaultCalendar, setHidden, updateCalendar } from "./calendarWrites";
+import { IcsImportDialog } from "./IcsImportDialog";
+import { downloadIcs } from "./icsDownload";
 import type { CalendarRow, Calendars } from "./useCalendars";
 
 const NAME_MAX = 100;
@@ -48,6 +52,7 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
   const client = useQueryClient();
   const [editing, setEditing] = useState<Editing>(null);
   const [sharing, setSharing] = useState<CalendarRow | null>(null);
+  const [importing, setImporting] = useState<CalendarRow | null>(null);
   const [deleting, setDeleting] = useState<CalendarRow | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const shareActions = useShareActions();
@@ -155,6 +160,20 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
                   >
                     {t("calendars.share")}
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setImporting(row);
+                    }}
+                  >
+                    {t("ics.importItem")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      downloadIcs(row);
+                    }}
+                  >
+                    {t("ics.exportItem")}
+                  </DropdownMenuItem>
                   {row.is_default === true ? null : (
                     <>
                       <DropdownMenuItem
@@ -202,15 +221,34 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
                 true,
                 menu(
                   row,
-                  <DropdownMenuItem
-                    danger
-                    disabled={!share}
-                    onSelect={() => {
-                      if (share) void shareActions.revoke(share, "grantee");
-                    }}
-                  >
-                    {t("calendars.leave")}
-                  </DropdownMenuItem>,
+                  <>
+                    {calendars.canWrite(row.id) ? (
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          setImporting(row);
+                        }}
+                      >
+                        {t("ics.importItem")}
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        downloadIcs(row);
+                      }}
+                    >
+                      {t("ics.exportItem")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      danger
+                      disabled={!share}
+                      onSelect={() => {
+                        if (share) void shareActions.revoke(share, "grantee");
+                      }}
+                    >
+                      {t("calendars.leave")}
+                    </DropdownMenuItem>
+                  </>,
                 ),
                 share ? t("calendars.sharedBy", { name: share.owner_name }) : undefined,
               );
@@ -239,6 +277,13 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
                     >
                       {t("calendars.unarchive")}
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        downloadIcs(row);
+                      }}
+                    >
+                      {t("ics.exportItem")}
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       danger
@@ -262,6 +307,15 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
           row={editing.row}
           onClose={() => {
             setEditing(null);
+          }}
+        />
+      ) : null}
+      {importing ? (
+        <IcsImportDialog
+          user={user}
+          calendar={importing}
+          onClose={() => {
+            setImporting(null);
           }}
         />
       ) : null}

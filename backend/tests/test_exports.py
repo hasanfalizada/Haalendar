@@ -25,8 +25,9 @@ from jsonschema import Draft202012Validator
 from PIL import Image
 from sqlalchemy.engine import make_url
 
-from haalendar.exports.archive import IcsEvent, calendar_ics, safe_name
+from haalendar.exports.archive import safe_name
 from haalendar.exports.service import build
+from haalendar.planning.ics import IcsEvent, calendar_ics
 
 from .account_helpers import PASSWORD, create_user, login, sql, sql_maintenance
 from .conftest import make_settings
@@ -244,6 +245,8 @@ def test_exports_belong_to_their_owner(world: World) -> None:
     assert world.api.get(f"/api/v1/exports/{export['id']}/download").status_code == 404
 
 
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. The writer is haalendar.planning.ics now (icalendar library, D-83):
+# the same promises, plus VTIMEZONE for the zone used and UNTIL / EXDATE.
 def test_icalendar_writer_escapes_folds_and_uses_crlf() -> None:
     stamp = datetime(2026, 10, 18, 9, 0, tzinfo=UTC)
     text = calendar_ics(
@@ -264,7 +267,8 @@ def test_icalendar_writer_escapes_folds_and_uses_crlf() -> None:
                 end=datetime(2026, 10, 20, 10, 0),
                 all_day=False,
                 tzid="Asia/Baku",
-                rrule="FREQ=WEEKLY;BYDAY=MO",
+                rrule="FREQ=WEEKLY;BYDAY=TU;UNTIL=20261124",
+                exdates=(date(2026, 10, 27),),
             ),
         ],
         stamp,
@@ -274,7 +278,10 @@ def test_icalendar_writer_escapes_folds_and_uses_crlf() -> None:
     assert "X-WR-CALNAME:Work\\; team" in lines
     assert "SUMMARY:Review\\, plan\\; ship\\\\now" in lines
     assert "DTSTART;VALUE=DATE:20261020" in lines and "DTSTAMP:20261018T090000Z" in lines
-    assert "DTSTART;TZID=Asia/Baku:20261020T093000" in lines and "RRULE:FREQ=WEEKLY;BYDAY=MO" in lines
+    assert "DTSTART;TZID=Asia/Baku:20261020T093000" in lines
+    assert "RRULE:FREQ=WEEKLY;UNTIL=20261124T195959Z;BYDAY=TU" in lines  # end of 24 Nov in Baku (UTC+4)
+    assert "EXDATE;TZID=Asia/Baku:20261027T093000" in lines
+    assert "BEGIN:VTIMEZONE" in lines and "TZID:Asia/Baku" in lines
     assert all(len(line.encode("utf-8")) <= 75 for line in lines)
     assert any(line.startswith(" ") for line in lines)  # the long description continues on folded lines
 

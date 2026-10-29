@@ -67,22 +67,23 @@ paths:
         '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
         '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
   calendar_ics_import:
+    # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095 (D-83). Implemented; the file is the request body (like attachment
+    # uploads, no multipart parser), the report names the created items (for undo) and what was skipped and why.
     post:
       tags: [calendar]
       operationId: importIcs
-      summary: Import an .ics file (VEVENT, RRULE, EXDATE) into the calendar — FR-CAL-33
+      summary: Import an .ics file (VEVENT, RRULE, EXDATE, RECURRENCE-ID) into the calendar — FR-CAL-33
+      description: >-
+        Needs write access (own calendar or shared with edit, not archived). Events whose UID is already in the
+        calendar are skipped; rules outside the supported subset (D-80), multi-day repeating events and cancelled
+        events are skipped with the reason; each event is checked like an event from sync. At most 5 MB and 5000 events.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
-        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                file: { type: string, contentMediaType: text/calendar }
+          text/calendar: { schema: { type: string, format: binary } }
+          application/octet-stream: { schema: { type: string, format: binary } }
       responses:
         '200':
           description: Import report
@@ -90,22 +91,38 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [imported, skipped]
+                required: [imported, skipped, warnings, item_ids, skipped_events]
                 properties:
                   imported: { type: integer }
                   skipped: { type: integer }
                   warnings: { type: array, items: { type: string } }
+                  item_ids: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+                  skipped_events:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, reason]
+                      properties:
+                        title: { type: string }
+                        reason: { type: string }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '413': { $ref: '../components/common.yaml#/components/responses/PayloadTooLarge' }
         '415': { $ref: '../components/common.yaml#/components/responses/UnsupportedMediaType' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
   calendar_ics_export:
     get:
       tags: [calendar]
       operationId: exportIcs
-      summary: Export the calendar as .ics (RFC 5545)
+      summary: Export the calendar as .ics (RFC 5545) — every live event, VTIMEZONE for each zone used
+      description: Needs read access (also a calendar shared for viewing, hidden or archived); sent as a download.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
         '200': { description: iCalendar file, content: { text/calendar: { schema: { type: string } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
 
   events:
