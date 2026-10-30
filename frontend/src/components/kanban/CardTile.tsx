@@ -1,17 +1,41 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A card in its column (FR-KAN-03, D-92): its colour bar, labels, title,
 // priority (not the default), due date, checklist progress ("2/5") and attachments; the card opens the editor.
 // Overdue / due-soon badges come with HAAL-117.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A card is dragged with the mouse (after 5 px) or a finger (after a
+// 300 ms hold) and is a drop target — the upper half puts the moved card before it, the lower half after it; Alt+arrows
+// move it from the keyboard (FR-KAN-04). Only for whoever may write.
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CalendarClock, ListChecks, Paperclip } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
+import type { CardStep } from "@/lib/cards";
 import { PriorityBadge } from "@/components/ui/priority";
 import { dueText } from "@/lib/cards";
 import { DEFAULT_COLOR, swatchClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
 type Row = Record<string, unknown>;
+
+const STEPS: Partial<Record<string, CardStep>> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+};
+
+/** What a dragged card carries and what a card as a drop target says (BoardColumns). */
+export interface CardDragData {
+  type: "card";
+  row: Row;
+}
+
+export interface CardDropData {
+  type: "card";
+  columnId: string;
+  cardId: string;
+}
 
 interface CardTileProps {
   row: Row;
@@ -20,24 +44,54 @@ interface CardTileProps {
   progress: { done: number; total: number } | null;
   attachments: number;
   onOpen: () => void;
+  /** Alt+arrow on the card; without it (no right to write) the card is not dragged either. */
+  onStep?: (step: CardStep) => void;
 }
 
-export function CardTile({ row, labels, progress, attachments, onOpen }: CardTileProps) {
+export function CardTile({ row, labels, progress, attachments, onOpen, onStep }: CardTileProps) {
   const { t, i18n } = useTranslation();
+  const id = String(row.id);
+  const movable = onStep !== undefined;
+  const {
+    setNodeRef: dragRef,
+    listeners,
+    isDragging,
+  } = useDraggable({ id: `card-${id}`, data: { type: "card", row } satisfies CardDragData, disabled: !movable });
+  const { setNodeRef: dropRef } = useDroppable({
+    id: `over-${id}`,
+    data: { type: "card", columnId: String(row.column_id), cardId: id } satisfies CardDropData,
+    disabled: !movable,
+  });
   const { time_format: timeFormat } = useSettings();
   const title = typeof row.title === "string" ? row.title : "";
   const color = (typeof row.color === "string" ? row.color : DEFAULT_COLOR) as Color;
   const due = dueText(row, i18n.language, timeFormat);
 
   return (
-    <li>
+    // The padding (not a gap between cards) keeps the drop targets edge to edge.
+    <li ref={dropRef} className="py-1">
       <button
+        ref={dragRef}
         type="button"
+        data-card={id}
         onClick={onOpen}
+        {...(movable ? listeners : {})}
+        onKeyDown={(event) => {
+          const step = event.altKey && !event.ctrlKey && !event.metaKey ? STEPS[event.key] : undefined;
+          if (!step || !onStep) return;
+          // Alt+← / Alt+→ are also the browser's Back / Forward.
+          event.preventDefault();
+          onStep(step);
+        }}
         aria-label={t("kanban.cards.open", { title })}
+        aria-description={movable ? t("kanban.cards.moveHint") : undefined}
+        aria-keyshortcuts={movable ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight" : undefined}
         className={cn(
           "flex w-full flex-col gap-1.5 rounded-sm border border-line bg-bg p-2 pl-3 text-left text-[13px] wrap-anywhere",
           "hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
+          // A finger held on the card picks it up instead of selecting text or opening the system menu.
+          movable && "touch-manipulation select-none [-webkit-touch-callout:none]",
+          isDragging && "opacity-50",
           // The colour as a bar only, like the wireframe (D7); the tint stays for labels.
           `ev-${color} ev-bar`,
         )}

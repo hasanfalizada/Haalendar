@@ -126,6 +126,18 @@ def test_a_card_is_created_in_a_column_edited_and_moved(people: People) -> None:
     assert _pulled(people, "item")[card]["column_id"] == done
     stale = _edit(people, ada, card, {"position": "U"}, {"position": "W"})
     assert stale["status"] == "conflict" and stale["fields"] == ["position"], stale
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. Column and position merge as a pair (D-93): moved within its
+    # column on one device and into another column on a second one, the card stays where the first one put it.
+    within = _edit(people, ada, card, {"position": "V"}, {"position": "X"})
+    assert within["status"] == "applied", within
+    across = _edit(
+        people, ada, card, {"column_id": done, "position": "V"}, {"column_id": todo, "position": "a"}
+    )
+    assert across["status"] == "conflict" and across["fields"] == ["column_id", "position"], across
+    assert (_pulled(people, "item")[card]["column_id"], _pulled(people, "item")[card]["position"]) == (
+        done,
+        "X",
+    )
     into_archive = _edit(people, ada, card, {"column_id": done}, {"column_id": archived})
     assert into_archive["status"] == "rejected" and into_archive["problem"]["status"] == 409
     away = _push(

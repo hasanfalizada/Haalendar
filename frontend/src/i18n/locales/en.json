@@ -837,6 +837,7 @@
       "cardCreated": "adding {{title}}",
       "cardChanged": "the changes to {{title}}",
       "cardDeleted": "deleting {{title}}",
+      "cardMoved": "moving {{title}}",
       "labelCreated": "creating the label {{name}}",
       "labelChanged": "the change to the label {{name}}",
       "labelDeleted": "deleting the label {{name}}"
@@ -1414,7 +1415,7 @@
       "deleteBody_other": "Delete “{{name}}”? Its {{count}} cards go to the trash with it. It can be undone.",
       "dots": "Columns",
       "show": "Show {{name}}",
-      "dragInstructions": "To move a column with the keyboard, use Move left or Move right in its menu.",
+      "dragInstructions": "To move a column with the keyboard, use Move left or Move right in its menu. To move a card, use Alt with the arrow keys.",
       "archivedTitle": "Archived columns",
       "archivedNone": "No archived columns.",
       "archivedItem_one": "Archived columns ({{count}})…",
@@ -1460,9 +1461,17 @@
       "done": {
         "create": "Card added: {{title}}",
         "edit": "Saved {{title}}",
+        "move": "Moved {{title}}",
         "delete": "Deleted {{title}}"
       },
-      "attachmentsLater": "Images can be added once the card has reached the server."
+      "attachmentsLater": "Images can be added once the card has reached the server.",
+      "moveHint": "Alt with the arrow keys moves the card",
+      "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}"
+    },
+    "drag": {
+      "picked": "Picked up {{name}}",
+      "dropped": "Dropped {{name}}",
+      "cancelled": "{{name}} was not moved"
     },
     "labels": {
       "title": "Labels",

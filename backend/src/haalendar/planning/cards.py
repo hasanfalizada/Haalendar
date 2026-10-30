@@ -8,6 +8,9 @@ like notes and events, by the board's owner or an edit share (not on an archived
   whole day; a time needs a date (clearing the date clears the time);
 - the fields merge one by one like the item fields; moving to another column is an update of column_id and position.
 Title is required (1-200 after trimming); description, colour and priority are the item's.
++++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. The place of a card — column and position — merges as a pair (D-93): a
+conflict on one makes the other one changed a conflict too, so a card moved on two devices at once stays where the first
+one put it (never the column of one and the position of the other).
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ from haalendar.planning.notes import checked_position
 log = get_logger(__name__)
 
 CARD_FIELDS = ("column_id", "position", "due_date", "due_time")
+PLACE = ("column_id", "position")
 
 
 def _problem(field: str, message: str) -> ProblemError:
@@ -68,6 +72,13 @@ def normalize(values: dict[str, Any]) -> dict[str, Any]:
     if isinstance(value, str) and len(value) == 8 and value.endswith(":00"):
         out["due_time"] = value[:5]
     return out
+
+
+def group_conflicts(changed: list[str], conflicts: list[str]) -> list[str]:
+    """A conflict on the column or the position makes both a conflict when both are changed (the place stays)."""
+    if not any(name in PLACE for name in conflicts):
+        return conflicts
+    return sorted(set(conflicts) | {name for name in changed if name in PLACE})
 
 
 def state_of(card: Card) -> dict[str, Any]:

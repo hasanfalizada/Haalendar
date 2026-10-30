@@ -5,6 +5,8 @@
 // undone by sending the previous values back with the new ones as the base, so a change made meanwhile elsewhere
 // becomes a conflict. Checklist undo kinds are those of the notes (noteWrites).
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112 (stage 3). Save writes the labels put on and taken off the card too.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A move (drag and drop, Alt+arrows) writes the column and position
+// together (they merge as a pair, D-93); undone by moving it back.
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
 import type { ChecklistChanges } from "@/lib/checklist";
@@ -142,6 +144,28 @@ export async function saveCard(
       ];
       return steps.length === 1 && steps[0] ? steps[0] : batchStep(label, steps);
     },
+  });
+  return result.ok;
+}
+
+/** A card moved to `position` in the column `columnId` (the same one or another of its board). */
+export async function moveCard(user: string, row: Row, columnId: string, position: string): Promise<boolean> {
+  const id = String(row.id);
+  const values = { title: titleOf(row) };
+  const before = { column_id: row.column_id ?? null, position: row.position ?? null };
+  const after = { column_id: columnId, position };
+  const result = await runWrite({
+    name: "card_move",
+    run: () =>
+      mutate(user, {
+        ...target(id),
+        op: "update",
+        ...(typeof row.version === "number" ? { base_version: row.version } : {}),
+        base: before,
+        data: after,
+      }),
+    success: i18n.t("kanban.cards.done.move", values),
+    undo: () => newStep("card.update", { key: "undo.labels.cardMoved", values }, { user, id, before, after }),
   });
   return result.ok;
 }

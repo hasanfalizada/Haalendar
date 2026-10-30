@@ -1,7 +1,8 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards of a column, a new card's place, labels on a card, the due text.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A moved card's position and where Alt+arrows take it.
 import { describe, expect, it } from "vitest";
 
-import { cardsOf, dueText, labelsOf, newCardPosition } from "./cards";
+import { cardPositionAt, cardStepTarget, cardsOf, dueText, isCardAt, labelsOf, newCardPosition } from "./cards";
 import { comparePositions } from "./position";
 
 const items = [
@@ -41,5 +42,50 @@ describe("cards", () => {
     expect(dueText({ due_date: "2026-11-10", due_time: "09:30" }, "en", "24h", 2026)).toBe("Nov 10, 09:30");
     expect(dueText({ due_date: "2027-01-05", due_time: "21:00" }, "en", "12h", 2026)).toBe("Jan 5, 2027, 9:00 PM");
     expect(dueText({}, "en", "24h", 2026)).toBeNull();
+  });
+
+  it("puts a moved card between its new neighbours, at the top, at the end or into an empty column", () => {
+    const [alpha, beta] = cardsOf(items, "x") as [Record<string, unknown>, Record<string, unknown>];
+    const moved = (columnId: string, index: number, card = beta) => {
+      const position = cardPositionAt(items, card, columnId, index);
+      const after = items.map((row) => (row.id === card.id ? { ...row, column_id: columnId, position } : row));
+      return cardsOf(after, columnId).map((row) => row.id);
+    };
+    expect(moved("x", 0)).toEqual(["b", "a"]);
+    expect(moved("y", 0)).toEqual(["b", "e"]);
+    expect(moved("y", 1)).toEqual(["e", "b"]);
+    expect(moved("empty", 0)).toEqual(["b"]);
+    expect(isCardAt(items, alpha, { columnId: "x", index: 0 })).toBe(true);
+    expect(isCardAt(items, alpha, { columnId: "x", index: 1 })).toBe(false);
+    expect(isCardAt(items, alpha, { columnId: "y", index: 0 })).toBe(false);
+    // Two cards on one key (made on two devices at once): the moved one goes right after the one above.
+    const twins = [
+      { id: "p", kind: "card", column_id: "x", title: "P", position: "M" },
+      { id: "q", kind: "card", column_id: "x", title: "Q", position: "M" },
+      { id: "r", kind: "card", column_id: "x", title: "R", position: "a" },
+    ];
+    const position = cardPositionAt(twins, twins[2] as Record<string, unknown>, "x", 1);
+    expect(comparePositions(position, "M")).toBe(1);
+  });
+
+  it("takes a card one up or down in its column or to the same place in the column beside, stopping at the edges", () => {
+    const rows = [
+      ...items,
+      { id: "f", kind: "card", column_id: "y", title: "F", position: "B" },
+      { id: "g", kind: "card", column_id: "z", title: "G", position: "B" },
+    ];
+    const columns = ["x", "y", "z"];
+    const card = (id: string) => rows.find((row) => row.id === id) as Record<string, unknown>;
+    expect(cardStepTarget(rows, columns, card("a"), "up")).toBeNull();
+    expect(cardStepTarget(rows, columns, card("a"), "down")).toEqual({ columnId: "x", index: 1 });
+    expect(cardStepTarget(rows, columns, card("b"), "up")).toEqual({ columnId: "x", index: 0 });
+    expect(cardStepTarget(rows, columns, card("b"), "down")).toBeNull();
+    expect(cardStepTarget(rows, columns, card("a"), "left")).toBeNull();
+    expect(cardStepTarget(rows, columns, card("b"), "right")).toEqual({ columnId: "y", index: 1 });
+    // The column beside is shorter: the end of it.
+    expect(cardStepTarget(rows, columns, card("f"), "right")).toEqual({ columnId: "z", index: 1 });
+    expect(cardStepTarget(rows, columns, card("g"), "right")).toBeNull();
+    // A card of a column not on the board (archived) has nowhere to go.
+    expect(cardStepTarget(rows, ["y"], card("a"), "right")).toBeNull();
   });
 });

@@ -28,6 +28,7 @@ a note cannot move. Delete and restore are the same as for every item.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards (haalendar.planning.cards, D-92): created through `create_item`
 (kind `card` on a board, in a live column); `update_item` also merges the card fields (column, position, due date and
 time); a card never leaves its board. An item's delete takes its labels into the batch too.
++++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A card's column and position merge as a pair (D-93).
 """
 
 from __future__ import annotations
@@ -412,6 +413,9 @@ async def update_item(
         if "title" in apply:
             apply["title"] = (apply["title"] or "").strip()
     if card is not None:
+        changed = [name for name, value in new.items() if current.get(name) != value]
+        conflicts = cards.group_conflicts(changed, conflicts)
+        apply = {name: value for name, value in apply.items() if name not in conflicts}
         await cards.apply(
             db, card, {name: value for name, value in apply.items() if name in cards.CARD_FIELDS}
         )

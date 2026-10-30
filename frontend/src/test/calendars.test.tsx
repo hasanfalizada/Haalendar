@@ -106,8 +106,10 @@ async function open(extra: Parameters<typeof stubApi>[0] = {}, hidden: string[] 
   return { user: userEvent.setup(), db, calls, sidebar };
 }
 
+// +++===+++ 2026-10-30 — Hasan Alizada — The list follows the local store a moment after a write (a renamed calendar
+// may not be there yet under load): wait for the menu button instead of expecting it at once.
 const menuOf = async (user: ReturnType<typeof userEvent.setup>, sidebar: HTMLElement, name: string) => {
-  await user.click(within(sidebar).getByRole("button", { name: `Options for ${name}` }));
+  await user.click(await within(sidebar).findByRole("button", { name: `Options for ${name}` }));
   return screen.findByRole("menu");
 };
 

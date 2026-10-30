@@ -2,6 +2,8 @@
 // labels, due date, checklist progress and attachments; "+ Add card" adds cards at the end and stays open for the next
 // one; the card editor saves the changed fields, a move to another column and checklist changes as one step and
 // deletes with Undo; a view share sees the card read-only and adds nothing.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. Alt+arrows move a card within and between columns (one write of
+// column and position each, the focus stays on the card, the move is told and undone); a view share moves nothing.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -220,6 +222,60 @@ describe("cards on the board", { timeout: 20_000 }, () => {
     });
   });
 
+  it("moves a card with Alt+arrows, keeping the focus, telling where it went and undoing it", async () => {
+    const { user, db } = await open();
+    const todo = await screen.findByRole("region", { name: "To do" });
+    const done = screen.getByRole("region", { name: "Done" });
+    await waitFor(() => {
+      expect(cardTitles(todo)).toEqual(["Plan", "Ship"]);
+    });
+    const plan = within(todo).getByRole("button", { name: "Open Plan" });
+    expect(plan).toHaveAccessibleDescription("Alt with the arrow keys moves the card");
+    plan.focus();
+    // At the top and in the first column there is nowhere to go.
+    await user.keyboard("{Alt>}{ArrowUp}{ArrowLeft}{/Alt}");
+    expect(await outbox()).toEqual([]);
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}");
+    await waitFor(() => {
+      expect(cardTitles(todo)).toEqual(["Ship", "Plan"]);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Plan" }));
+    });
+    expect(await screen.findByText("Plan moved to To do, position 2 of 2")).toBeInTheDocument();
+
+    await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
+    await waitFor(() => {
+      expect(cardTitles(done)).toEqual(["Plan"]);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(within(done).getByRole("button", { name: "Open Plan" }));
+    });
+    expect(await screen.findByText("Plan moved to Done, position 1 of 1")).toBeInTheDocument();
+    // Both moves wait in the outbox as one update (merged there): from where the card was to where it is.
+    const [across, ...rest] = await outbox();
+    expect(rest).toEqual([]);
+    expect(across).toMatchObject({
+      entity_type: "item",
+      entity_id: PLAN,
+      op: "update",
+      base: { column_id: TODO, position: "C" },
+      data: { column_id: DONE },
+    });
+    expect(Object.keys(across?.data ?? {}).sort()).toEqual(["column_id", "position"]);
+
+    const toast = await screen.findAllByText("Moved Plan");
+    // The newest notification is on top: the move to Done.
+    await user.click(within(toast[0]?.closest("li") ?? document.body).getByRole("button", { name: "Undo" }));
+    await waitFor(async () => {
+      expect((await db.items.get(PLAN))?.column_id).toBe(TODO);
+    });
+    await waitFor(() => {
+      expect(cardTitles(todo)).toEqual(["Ship", "Plan"]);
+    });
+  });
+
   it("shows a card read-only to a view share, without adding cards", async () => {
     const { user } = await open(
       { owner_id: "someone-else" },
@@ -233,7 +289,12 @@ describe("cards on the board", { timeout: 20_000 }, () => {
       },
     );
     expect(screen.queryByRole("button", { name: /^Add a card/ })).not.toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "Open Plan" }));
+    const plan = await screen.findByRole("button", { name: "Open Plan" });
+    expect(plan).not.toHaveAccessibleDescription();
+    plan.focus();
+    await user.keyboard("{Alt>}{ArrowDown}{ArrowRight}{/Alt}");
+    expect(await outbox()).toEqual([]);
+    await user.click(plan);
     const viewer = await screen.findByRole("dialog", { name: "Card" });
     expect(within(viewer).getByLabelText("Title")).toBeDisabled();
     expect(within(viewer).queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
