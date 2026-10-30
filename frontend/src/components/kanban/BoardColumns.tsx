@@ -16,6 +16,7 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. Under the board filters (D-96) a column lists the cards shown, its
 // count reads "3 of 7"; moves work among the cards shown (lib/cards indexAmongAll) and a card added that the filters
 // hide says so.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. A card shows its assignees' initials (D-97).
 import {
   type Active,
   type CollisionDetection,
@@ -117,6 +118,8 @@ interface BoardColumnsProps {
   /** The user's reminder rows (the bell on a card) and the zone its due date is read in. */
   reminders: readonly Row[];
   timeZone: string;
+  /** The names of each card's assignees (by card id). */
+  assignees?: ReadonlyMap<string, string[]>;
   /** Whether a card passes the board filters; undefined without filters. */
   shown?: ((card: Row) => boolean) | undefined;
   onOpenCard: (card: Row) => void;
@@ -154,6 +157,7 @@ export function BoardColumns({
   reminders,
   timeZone,
   shown,
+  assignees,
   onOpenCard,
 }: BoardColumnsProps) {
   const { t } = useTranslation();
@@ -283,6 +287,7 @@ export function BoardColumns({
           attachments={attachments.get(cardId) ?? 0}
           reminder={cardReminderAhead(reminders, card, timeZone, now)}
           dueState={dueState(card, timeZone, now)}
+          assignees={assignees?.get(cardId) ?? []}
           onOpen={() => {
             onOpenCard(card);
           }}

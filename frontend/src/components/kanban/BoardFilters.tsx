@@ -2,10 +2,12 @@
 // search, the board's labels (a menu of checkboxes), priority and due date (toggle buttons: overdue, today, this week,
 // none) and Clear filters. On phones they fold behind "Filters (n)". Nothing is written: the page keeps them in the
 // address.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. An Assignees menu ("Me" first, then the members) on a shared board.
 import { Filter, Search, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { BoardMember } from "@/api/boards";
 import type { Color } from "@/api/generated/types.gen";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,10 +29,13 @@ interface BoardFiltersProps {
   filter: BoardFilter;
   /** The board's live labels, by name. */
   labels: readonly Row[];
+  /** The board's members and the user. */
+  members: readonly BoardMember[];
+  me: string;
   onChange: (next: BoardFilter) => void;
 }
 
-export function BoardFilters({ filter, labels, onChange }: BoardFiltersProps) {
+export function BoardFilters({ filter, labels, members, me, onChange }: BoardFiltersProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const count = filterCount(filter);
@@ -105,6 +110,39 @@ export function BoardFilters({ filter, labels, onChange }: BoardFiltersProps) {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        {members.length > 1 || filter.assignees.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                {filter.assignees.length > 0
+                  ? t("kanban.filters.assigneesCount", { count: filter.assignees.length })
+                  : t("kanban.filters.assignees")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {[
+                { value: "me", name: t("kanban.filters.me") },
+                ...members
+                  .filter((member) => member.user_id !== me)
+                  .map((member) => ({ value: member.user_id, name: member.display_name })),
+              ].map(({ value, name }) => (
+                <DropdownMenuCheckboxItem
+                  key={value}
+                  checked={filter.assignees.includes(value)}
+                  onCheckedChange={(checked) => {
+                    set({
+                      assignees: checked
+                        ? [...filter.assignees, value]
+                        : filter.assignees.filter((other) => other !== value),
+                    });
+                  }}
+                >
+                  {name}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
         <PriorityFilter
           value={filter.priorities}
           onChange={(priorities) => {

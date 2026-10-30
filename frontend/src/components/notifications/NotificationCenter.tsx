@@ -10,7 +10,7 @@
 // that leads elsewhere does not send the focus back to the bell (it would close the card it opened).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card's reminder opens the card on its board (D-94).
 import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, Bell, BellRing, Download, Share2, UserMinus, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bell, BellRing, Download, Share2, UserCheck, UserMinus, type LucideIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,6 +30,7 @@ const ICONS: Record<string, LucideIcon> = {
   export_ready: Download,
   sync_error: AlertTriangle,
   reminder: BellRing,
+  assigned: UserCheck,
 };
 
 function useText() {
@@ -63,6 +64,13 @@ function useText() {
         return t("notifications.syncError");
       case "reminder":
         return reminderText(item.payload);
+      // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. "Ada assigned you: Plan release · Revamp" (D-97).
+      case "assigned":
+        return t("notifications.assigned", {
+          by,
+          title: text("title") || t("notifications.unnamed"),
+          board: text("board_name") || t("notifications.unnamed"),
+        });
       default:
         return t("notifications.generic");
     }
@@ -97,6 +105,20 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
         else void navigate({ to: "/calendar", search: target.search });
         return;
       }
+    }
+    // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. An assignment opens the card on its board.
+    if (
+      item.kind === "assigned" &&
+      typeof item.payload.board_id === "string" &&
+      typeof item.payload.item_id === "string"
+    ) {
+      onNavigate();
+      void navigate({
+        to: "/kanban/$boardId",
+        params: { boardId: item.payload.board_id },
+        search: { card: item.payload.item_id },
+      });
+      return;
     }
     const hash = item.kind.startsWith("share_")
       ? "sharing"

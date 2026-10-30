@@ -7,6 +7,7 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A bell while one of the user's reminders of the card is ahead (D-94).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. The due date as a badge when overdue (red, a warning sign, "Overdue")
 // or due soon (amber, a clock, "Due soon") — never the colour alone (FR-KAN-08, D-95).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And its assignees' initials (D-97).
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { AlertTriangle, Bell, CalendarClock, Clock, ListChecks, Paperclip } from "lucide-react";
 import type { ReactNode } from "react";
@@ -15,6 +16,8 @@ import { useTranslation } from "react-i18next";
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
 import type { CardStep, DueState } from "@/lib/cards";
+
+import { AssigneeFaces } from "./CardAssignees";
 import { PriorityBadge } from "@/components/ui/priority";
 import { dueText } from "@/lib/cards";
 import { DEFAULT_COLOR, swatchClasses } from "@/lib/palette";
@@ -51,6 +54,8 @@ interface CardTileProps {
   reminder?: boolean;
   /** Overdue, due soon or neither (dueState). */
   dueState?: DueState;
+  /** The names of the card's assignees. */
+  assignees?: readonly string[];
   onOpen: () => void;
   /** Alt+arrow on the card; without it (no right to write) the card is not dragged either. */
   onStep?: (step: CardStep) => void;
@@ -81,6 +86,7 @@ export function CardTile({
   attachments,
   reminder = false,
   dueState = null,
+  assignees = [],
   onOpen,
   onStep,
 }: CardTileProps) {
@@ -148,7 +154,7 @@ export function CardTile({
           </span>
         ) : null}
         <span className="font-medium">{title}</span>
-        {due || progress || attachments > 0 || reminder || row.priority !== "medium" ? (
+        {due || progress || attachments > 0 || reminder || assignees.length > 0 || row.priority !== "medium" ? (
           <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
             <PriorityBadge priority={row.priority as Priority} hideDefault compact />
             {due && dueState ? (
@@ -168,6 +174,7 @@ export function CardTile({
               </span>
             ) : null}
             {reminder ? <Bell className="size-3.5" role="img" aria-label={t("kanban.cards.reminder")} /> : null}
+            <AssigneeFaces names={assignees} />
             {progress ? (
               <span
                 className="inline-flex items-center gap-1 tabular-nums"

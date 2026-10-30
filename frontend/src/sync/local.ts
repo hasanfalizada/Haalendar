@@ -60,6 +60,8 @@ async function removeContainer(db: LocalDb, kind: string, id: string): Promise<v
   await db.boardColumns.where("[container_kind+container_id]").equals(inside).delete();
   await db.labels.where("[container_kind+container_id]").equals(inside).delete();
   await db.itemLabels.where("[container_kind+container_id]").equals(inside).delete();
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the assignees of its cards.
+  await db.cardAssignees.where("[container_kind+container_id]").equals(inside).delete();
   await db.shares.where("[container_kind+container_id]").equals(inside).delete();
   if (kind === "calendar") await db.calendars.delete(id);
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A board no longer shared leaves the device too.

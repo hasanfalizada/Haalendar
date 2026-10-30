@@ -15,11 +15,13 @@
 //   LOCAL_SCHEMA 5 for the same reason.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Board labels and labels on cards (D-92) in their own tables (Dexie
 //   version 6); LOCAL_SCHEMA 6 for the same reason (and cards carry their card fields now).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees (D-97) in their own table (Dexie version 7);
+//   LOCAL_SCHEMA 7 for the same reason.
 import Dexie, { type Table } from "dexie";
 
 import { log } from "@/lib/log";
 
-export const LOCAL_SCHEMA = 6;
+export const LOCAL_SCHEMA = 7;
 
 export type EntityType =
   | "calendar"
@@ -32,9 +34,18 @@ export type EntityType =
   | "board"
   | "board_column"
   | "label"
-  | "item_label";
+  | "item_label"
+  | "card_assignee";
 export type MutableEntity =
-  "calendar" | "item" | "reminder" | "checklist_item" | "board" | "board_column" | "label" | "item_label";
+  | "calendar"
+  | "item"
+  | "reminder"
+  | "checklist_item"
+  | "board"
+  | "board_column"
+  | "label"
+  | "item_label"
+  | "card_assignee";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
 export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
@@ -94,6 +105,7 @@ export class LocalDb extends Dexie {
   boardColumns!: Table<Row, string>;
   labels!: Table<Row, string>;
   itemLabels!: Table<Row, string>;
+  cardAssignees!: Table<Row, string>;
   outbox!: Table<OutboxEntry, number>;
   conflicts!: Table<ConflictRecord, string>;
   meta!: Table<MetaRow, string>;
@@ -122,6 +134,7 @@ export class LocalDb extends Dexie {
       labels: "id, board_id, [container_kind+container_id]",
       itemLabels: "id, item_id, label_id, [container_kind+container_id]",
     });
+    this.version(7).stores({ cardAssignees: "id, item_id, user_id, [container_kind+container_id]" });
   }
 
   /** Every table of server rows (for transactions over all of them). */
@@ -138,6 +151,7 @@ export class LocalDb extends Dexie {
       this.boardColumns,
       this.labels,
       this.itemLabels,
+      this.cardAssignees,
     ];
   }
 }
@@ -155,6 +169,7 @@ export const ENTITY_TABLE: Record<
   | "boardColumns"
   | "labels"
   | "itemLabels"
+  | "cardAssignees"
 > = {
   calendar: "calendars",
   item: "items",
@@ -167,6 +182,7 @@ export const ENTITY_TABLE: Record<
   board_column: "boardColumns",
   label: "labels",
   item_label: "itemLabels",
+  card_assignee: "cardAssignees",
 };
 
 export function dbName(user: string): string {

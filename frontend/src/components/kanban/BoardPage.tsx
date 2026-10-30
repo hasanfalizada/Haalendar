@@ -10,12 +10,15 @@
 // it has arrived; closing it drops the parameter. The user's reminders give the cards their bell (D-94).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. The board filters (BoardFilters, D-96) under the header, kept in the
 // address; the columns show the cards that pass them.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. The board's members (for assignees, D-97): the cards show their
+// assignees, the editor assigns them, the filters take them.
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArrowLeft, Columns3, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { boardMembersQuery } from "@/api/boards";
 import { useSettings } from "@/api/settings";
 import { sharesQuery } from "@/api/sharing";
 import { ShareDialog } from "@/components/sharing/ShareDialog";
@@ -49,7 +52,7 @@ type Dialog = "rename" | "share" | "delete" | "archivedColumns" | null;
 
 function useLocal(
   user: string,
-  entity: "item" | "board_column" | "share" | "label" | "item_label" | "checklist_item" | "reminder",
+  entity: "item" | "board_column" | "share" | "label" | "item_label" | "checklist_item" | "reminder" | "card_assignee",
 ) {
   return useQuery({
     queryKey: [...localKeys.table(entity), user],
@@ -89,6 +92,18 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
   const itemLabelRows = useLocal(user, "item_label") ?? [];
   const checklistRows = useLocal(user, "checklist_item") ?? [];
   const reminderRows = useLocal(user, "reminder") ?? [];
+  const assigneeRows = useLocal(user, "card_assignee") ?? [];
+  const members = useQuery({ ...boardMembersQuery(boardId), enabled: Boolean(row) }).data ?? [];
+  const memberIds = new Set(members.map((member) => member.user_id));
+  // The names of each card's assignees (members only, in the members' order).
+  const assigneeNames = new Map<string, string[]>();
+  for (const member of members) {
+    for (const assignee of assigneeRows) {
+      if (assignee.user_id !== member.user_id || assignee.deleted_at) continue;
+      const cardId = String(assignee.item_id);
+      assigneeNames.set(cardId, [...(assigneeNames.get(cardId) ?? []), member.display_name]);
+    }
+  }
   const attachments = useAttachmentCounts(user);
   const boardLabels = labelRows
     .filter((label) => label.board_id === boardId && !label.deleted_at)
@@ -122,7 +137,16 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
   const toAll = () => void navigate({ to: "/kanban" });
   const filtering = filterCount(filter) > 0;
   const shown = (card: Record<string, unknown>) =>
-    cardMatches(card, filter, { itemLabels: itemLabelRows, checklistItems: checklistRows, timeZone, now, weekStart });
+    cardMatches(card, filter, {
+      itemLabels: itemLabelRows,
+      checklistItems: checklistRows,
+      assignees: assigneeRows,
+      members: memberIds,
+      me: user,
+      timeZone,
+      now,
+      weekStart,
+    });
   // Typing in the search replaces the address entry instead of adding one per letter.
   const setFilter = (next: BoardFilter) => {
     void navigate({
@@ -270,7 +294,7 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
         </div>
       ) : (
         <>
-          <BoardFilters filter={filter} labels={boardLabels} onChange={setFilter} />
+          <BoardFilters filter={filter} labels={boardLabels} members={members} me={user} onChange={setFilter} />
           <BoardColumns
             user={user}
             boardId={boardId}
@@ -285,6 +309,7 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
             reminders={reminderRows}
             timeZone={timeZone}
             shown={filtering ? shown : undefined}
+            assignees={assigneeNames}
             onOpenCard={(card) => {
               setEditing(String(card.id));
             }}
@@ -312,6 +337,8 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
           card={editingCard}
           labels={boardLabels}
           itemLabels={itemLabelRows}
+          members={members}
+          assigneeRows={assigneeRows}
           columns={columns.active}
           items={items}
           canWrite={canWrite}

@@ -8,6 +8,7 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A move (drag and drop, Alt+arrows) writes the column and position
 // together (they merge as a pair, D-93); undone by moving it back.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. Save writes the user's reminders of the card too (D-94).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And its assignees (D-97).
 import { runWrite } from "@/api/write";
 import type { ReminderChanges } from "@/components/calendar/reminderWrites";
 import i18n from "@/i18n";
@@ -18,6 +19,7 @@ import { mutate } from "@/sync";
 
 import "@/components/todo/noteWrites";
 
+import { type AssigneeChanges, assigneeTarget } from "./assigneeWrites";
 import type { LabelChanges } from "./labelWrites";
 
 type Row = Record<string, unknown>;
@@ -97,6 +99,7 @@ export async function createCard(user: string, card: NewCard, hidden = false): P
 
 const NO_CHANGES: ChecklistChanges = { create: [], update: [], remove: [] };
 const NO_LABELS: LabelChanges = { add: [], remove: [] };
+const NO_ASSIGNEES: AssigneeChanges = { add: [], remove: [] };
 
 /**
  * The editor's Save: the changed fields of the card (`data`), its checklist, labels and the user's reminders — one
@@ -109,6 +112,7 @@ export async function saveCard(
   items: ChecklistChanges = NO_CHANGES,
   labels: LabelChanges = NO_LABELS,
   reminders?: ReminderChanges,
+  assignees: AssigneeChanges = NO_ASSIGNEES,
 ): Promise<boolean> {
   const id = String(row.id);
   const fields = Object.keys(data).length > 0;
@@ -118,6 +122,8 @@ export async function saveCard(
     items.remove.length +
     labels.add.length +
     labels.remove.length +
+    assignees.add.length +
+    assignees.remove.length +
     (reminders?.count ?? 0);
   if (!fields && count === 0) return true;
   const values = { title: titleOf({ ...row, ...data }) };
@@ -140,6 +146,14 @@ export async function saveCard(
         await mutate(user, { ...labelTarget(added.id), op: "create", data: { item_id: id, label_id: added.label_id } });
       }
       for (const removed of labels.remove) await mutate(user, { ...labelTarget(removed), op: "delete" });
+      for (const added of assignees.add) {
+        await mutate(user, {
+          ...assigneeTarget(added.id),
+          op: "create",
+          data: { item_id: id, user_id: added.user_id },
+        });
+      }
+      for (const removed of assignees.remove) await mutate(user, { ...assigneeTarget(removed), op: "delete" });
       await reminders?.run();
       return written;
     },
@@ -154,6 +168,8 @@ export async function saveCard(
         ...items.remove.map((removed) => newStep("checklist.delete", label, { user, id: removed })),
         ...labels.add.map((added) => newStep("itemLabel.create", label, { user, id: added.id })),
         ...labels.remove.map((removed) => newStep("itemLabel.delete", label, { user, id: removed })),
+        ...assignees.add.map((added) => newStep("assignee.create", label, { user, id: added.id })),
+        ...assignees.remove.map((removed) => newStep("assignee.delete", label, { user, id: removed })),
         ...(reminders?.steps ?? []),
       ];
       return steps.length === 1 && steps[0] ? steps[0] : batchStep(label, steps);

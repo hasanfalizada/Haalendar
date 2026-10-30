@@ -12,11 +12,14 @@
 // a view share sets them too: the block stays open for it and Save appears once they change.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. The due fields show "Overdue" / "Due soon" for the date and time
 // entered (D-95).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. The card's assignees (CardAssignees, D-97): members of the board,
+// chosen in the form and written with Save in the same undo step.
 import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { BoardMember } from "@/api/boards";
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { Attachments } from "@/components/attachments/Attachments";
 import { ReminderPicker } from "@/components/calendar/ReminderPicker";
@@ -41,6 +44,8 @@ import { useNow } from "@/lib/useNow";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { localKeys, localRows } from "@/sync";
 
+import { assigneeChanges, assigneesOf } from "./assigneeWrites";
+import { CardAssignees } from "./CardAssignees";
 import { CardLabels } from "./CardLabels";
 import { DueBadge } from "./CardTile";
 import { deleteCard, saveCard } from "./cardWrites";
@@ -63,6 +68,8 @@ interface CardForm {
   checklist: string;
   /** The ids of the labels on the card as JSON (sorted). */
   labels: string;
+  /** The user ids of the card's assignees (members only) as JSON (sorted). */
+  assignees: string;
   /** The user's reminders of the card as canonical text (specsText). */
   reminders: string;
 }
@@ -78,6 +85,9 @@ interface CardEditorProps {
   /** The board's live labels, by name, and every label-on-item row of the local database. */
   labels: Row[];
   itemLabels: readonly Row[];
+  /** The board's members and every card assignee row of the local database. */
+  members: readonly BoardMember[];
+  assigneeRows: readonly Row[];
   /** The board's active columns, left to right. */
   columns: Row[];
   /** Every item row of the local database (where a moved card goes). */
@@ -92,6 +102,8 @@ export function CardEditor({
   card,
   labels,
   itemLabels,
+  members,
+  assigneeRows,
   columns,
   items,
   canWrite,
@@ -125,6 +137,8 @@ export function CardEditor({
         .sort(),
     [itemLabels, id, live],
   );
+  const memberIds = useMemo(() => members.map((member) => member.user_id), [members]);
+  const assigned = useMemo(() => assigneesOf(id, assigneeRows, memberIds).sort(), [id, assigneeRows, memberIds]);
   const baseline = useMemo<CardForm>(
     () => ({
       title: text(card.title),
@@ -141,9 +155,10 @@ export function CardEditor({
         }),
       ),
       labels: JSON.stringify(onCard),
+      assignees: JSON.stringify(assigned),
       reminders: specsText(existingReminders.map((reminder) => reminder.spec)),
     }),
-    [card, stored, onCard, existingReminders],
+    [card, stored, onCard, assigned, existingReminders],
   );
   const [form, setForm] = useState<CardForm>(baseline);
   // The items arrive from the local database after opening: an untouched form follows them.
@@ -220,6 +235,9 @@ export function CardEditor({
       canWrite ? checklistChanges(id, stored, entries) : undefined,
       canWrite ? labelChanges(id, itemLabels, chosen, live) : undefined,
       reminderChanges(user, id, existingReminders, specsFromText(form.reminders), label),
+      canWrite
+        ? assigneeChanges(id, assigneeRows, JSON.parse(form.assignees) as string[], new Set(memberIds))
+        : undefined,
     );
   }
 
@@ -363,6 +381,14 @@ export function CardEditor({
                 set({ labels: JSON.stringify([...next].sort()) });
               }}
               canWrite={canWrite}
+            />
+            <CardAssignees
+              me={user}
+              members={members}
+              chosen={JSON.parse(form.assignees) as string[]}
+              onChange={(next) => {
+                set({ assignees: JSON.stringify([...next].sort()) });
+              }}
             />
             <ColorPicker
               name="card-color"

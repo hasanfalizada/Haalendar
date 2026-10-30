@@ -1095,6 +1095,7 @@
     "reminderCard": "Reminder: {{title}} — {{when}} · {{board}}",
     "reminderCardLate": "Reminder: {{title}} — {{when}} · {{board}} (sent late)",
     "generic": "You have a new notification.",
+    "assigned": "{{by}} assigned you: {{title}} · {{board}}",
     "reminderLate": "Reminder: {{title}} — {{when}} (sent late)"
   },
   "pwa": {
@@ -1481,6 +1482,11 @@
       "reminder": "Reminder set",
       "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}"
     },
+    "assignees": {
+      "title": "Assignees",
+      "me": "{{name}} (me)",
+      "on": "Assigned to {{names}}"
+    },
     "filters": {
       "title": "Board filters",
       "toggle": "Filters",
@@ -1488,6 +1494,9 @@
       "search": "Search cards",
       "labels": "Labels",
       "labelsCount": "Labels ({{count}})",
+      "assignees": "Assignees",
+      "assigneesCount": "Assignees ({{count}})",
+      "me": "Me",
       "due": "Due date",
       "dueKinds": {
         "overdue": "Overdue",
