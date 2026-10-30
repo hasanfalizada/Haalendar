@@ -357,6 +357,7 @@ Conflict records (both values of a field changed on two devices) live on the dev
 - RLS policies (ADR-0005) on tables with `owner_id` / `container_*`: visible if owner = current user or an active share exists for the container.
 
 ## 8. Legacy mapping (FR-OPS-01)
+<!-- +++===+++ 2026-10-30 — Hasan Alizada — HAAL-130 closed without implementation (SRS D-100): no importer and no `import_run`; this mapping stays as a reference for the owner's manual move. -->
 | Legacy | New |
 |---|---|
 | `events.id` | `item.legacy_id` |
