@@ -114,6 +114,59 @@ RECHECK_CALENDAR_TRIGGER = (
     "FOR EACH ROW EXECUTE FUNCTION haalendar_reminders_recheck()"
 )
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. Migration 0028 (D-94): reminders on cards. Archiving or unarchiving a
+# board or a column marks the reminders of its cards "to check" (archived: they do not fire); a change of a card (its
+# due date and time, its column) marks the card's reminders like a change of its item.
+RECHECK_ITEM_FUNCTION_0028 = """
+CREATE OR REPLACE FUNCTION haalendar_reminders_recheck() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public
+AS $$
+DECLARE target uuid;
+BEGIN
+  IF TG_TABLE_NAME = 'calendar' OR TG_TABLE_NAME = 'board' THEN
+    IF OLD.archived_at IS DISTINCT FROM NEW.archived_at THEN
+      UPDATE reminder_schedule s SET needs_check = true
+      FROM reminder r JOIN item i ON i.id = r.item_id
+      WHERE s.reminder_id = r.id AND i.container_kind = TG_TABLE_NAME AND i.container_id = NEW.id
+        AND NOT s.needs_check;
+    END IF;
+    RETURN NULL;
+  END IF;
+  IF TG_TABLE_NAME = 'board_column' THEN
+    IF OLD.archived_at IS DISTINCT FROM NEW.archived_at THEN
+      UPDATE reminder_schedule s SET needs_check = true
+      FROM reminder r JOIN card c ON c.id = r.item_id
+      WHERE s.reminder_id = r.id AND c.column_id = NEW.id AND NOT s.needs_check;
+    END IF;
+    RETURN NULL;
+  END IF;
+  IF TG_TABLE_NAME = 'share' THEN
+    UPDATE reminder_schedule s SET needs_check = true
+    FROM reminder r JOIN item i ON i.id = r.item_id
+    WHERE s.reminder_id = r.id AND i.container_kind = NEW.container_kind AND i.container_id = NEW.container_id
+      AND NOT s.needs_check;
+    RETURN NULL;
+  END IF;
+  -- separate branches: PL/pgSQL resolves NEW.<field> at run time, and only exceptions have event_id
+  IF TG_TABLE_NAME = 'recurrence_exception' THEN
+    target := NEW.event_id;
+  ELSE
+    target := NEW.id;
+  END IF;
+  UPDATE reminder_schedule s SET needs_check = true
+  FROM reminder r
+  WHERE s.reminder_id = r.id AND r.item_id = target AND NOT s.needs_check;
+  RETURN NULL;
+END
+$$
+"""
+
+RECHECK_TRIGGERS_0028: tuple[str, ...] = tuple(
+    f"CREATE TRIGGER haalendar_reminders_recheck AFTER UPDATE ON {table} "
+    "FOR EACH ROW EXECUTE FUNCTION haalendar_reminders_recheck()"
+    for table in ("board", "board_column", "card")
+)
+
 DUE_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_reminders_due(at timestamptz, max_rows integer)
 RETURNS TABLE (reminder_id uuid, owner_id uuid)

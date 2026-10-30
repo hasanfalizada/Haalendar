@@ -19,6 +19,12 @@
   it was set (to the minute) does not fire —, also for an archived note, never for a deleted one; editing the note
   marks its reminders "to check" but neither loses a due one nor fires it twice. Its notification and Web Push
   name the note and open it on the To-Do page.
+- +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. Reminders on cards (FR-KAN-07, D-94): the two forms of an event,
+  counted from the card's due date — with its time a timed one-off event in the board owner's zone, without a time an
+  all-day one —; set by anyone who reads the board, only while the card has a due date. A card fires once per due
+  date: a due date moved to another day fires again (when still ahead), a cleared one leaves its reminders silent;
+  nothing fires for a deleted card, an archived or deleted column or board, or a board out of reach. The notification
+  and Web Push name the card, its due date and its board and open the card on the board.
 """
 
 from __future__ import annotations
@@ -39,7 +45,17 @@ from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
 from haalendar.notifications.models import Notification
 from haalendar.notifications.service import notify_self
-from haalendar.planning.models import Calendar, Event, Item, RecurrenceException, Reminder, ReminderSchedule
+from haalendar.planning.models import (
+    Board,
+    BoardColumn,
+    Calendar,
+    Card,
+    Event,
+    Item,
+    RecurrenceException,
+    Reminder,
+    ReminderSchedule,
+)
 from haalendar.planning.reminder_times import EventTimes, ReminderRule, next_fire
 from haalendar.planning.service import Outcome, merge
 from haalendar.preferences.models import UserSettings
@@ -148,10 +164,15 @@ async def create_reminder(
     if item is None or item.kind not in (
         "event",
         "note",
+        "card",
     ):  # unknown, not readable, or a kind without reminders
         raise _not_found()
     if item.deleted_at is not None:
         raise ProblemError(409, ProblemCode.INVALID_STATE, f"The {item.kind} was deleted")
+    if item.kind == "card":
+        card = await db.get(Card, item.id)
+        if card is None or card.due_date is None:
+            raise _invalid("Give the card a due date first")
     active = await db.scalar(
         select(func.count())
         .select_from(Reminder)
@@ -280,6 +301,25 @@ def _note_payload(item: Item, reminder: Reminder, fire_at: datetime, late: bool)
     }
 
 
+def _card_payload(
+    item: Item, card: Card, board: Board, tzid: str, reminder: Reminder, fire_at: datetime, late: bool
+) -> dict[str, Any]:
+    """Display data of a card's reminder notification (the due time is wall-clock in `tzid`, the board owner's)."""
+    return {
+        "reminder_id": str(reminder.id),
+        "item_id": str(item.id),
+        "kind": "card",
+        "title": item.title,
+        "board_id": str(board.id),
+        "board_name": board.name,
+        "due_date": card.due_date.isoformat() if card.due_date else None,
+        "due_time": card.due_time.strftime("%H:%M") if card.due_time else None,
+        "tzid": tzid,
+        "fire_at": fire_at.isoformat(),
+        "late": late,
+    }
+
+
 def _clock(value: time, twelve_hours: bool) -> str:
     if not twelve_hours:
         return value.strftime("%H:%M")
@@ -293,6 +333,8 @@ def push_message(
     zone = ZoneInfo(owner_tz)
     if payload.get("kind") == "note":
         return _note_push(payload, notification_id, zone, twelve_hours, now)
+    if payload.get("kind") == "card":
+        return _card_push(payload, notification_id, zone, twelve_hours, now)
     occurrence = date.fromisoformat(str(payload["occurrence_date"]))
     times = ""
     day = occurrence
@@ -350,6 +392,96 @@ def _note_push(
         "tag": f"reminder:{payload['reminder_id']}:{payload['fire_at']}",
         "notification_id": str(notification_id),
     }
+
+
+def _card_push(
+    payload: dict[str, Any], notification_id: uuid.UUID, zone: ZoneInfo, twelve_hours: bool, now: datetime
+) -> dict[str, Any]:
+    """ "Reminder: Plan release" / "Tomorrow, 09:30 · Revamp" — the due date (and time) in the owner's zone."""
+    day = date.fromisoformat(str(payload["due_date"]))
+    clock = ""
+    if payload.get("due_time"):
+        due = local_to_utc(day, time.fromisoformat(str(payload["due_time"])), str(payload["tzid"])).utc
+        local = due.astimezone(zone)
+        day, clock = local.date(), _clock(local.time(), twelve_hours)
+    when = ", ".join(part for part in (_when(day, now.astimezone(zone).date()), clock) if part)
+    return {
+        "type": "reminder",
+        "title": f"Reminder: {payload['title'] or '(No title)'}",
+        "body": f"{when} · {payload['board_name']}",
+        "url": f"/kanban/{payload['board_id']}?card={payload['item_id']}",
+        "tag": f"reminder:{payload['reminder_id']}:{payload['due_date']}",
+        "notification_id": str(notification_id),
+    }
+
+
+async def _card_times(db: AsyncSession, item: Item) -> tuple[Card, Board, EventTimes] | None:
+    """A card's due date as a one-off event in the board owner's zone; None when nothing fires for it."""
+    card = await db.get(Card, item.id)
+    if item.deleted_at is not None or card is None or card.due_date is None:
+        return None
+    board = await db.get(Board, card.board_id)
+    column = await db.get(BoardColumn, card.column_id)
+    if board is None or column is None:
+        return None
+    if any(
+        value is not None
+        for value in (board.deleted_at, board.archived_at, column.deleted_at, column.archived_at)
+    ):
+        return None
+    board_owner = await db.get(UserAccount, board.owner_id)
+    return (
+        card,
+        board,
+        EventTimes(
+            all_day=card.due_time is None,
+            start_date=card.due_date,
+            start_time=card.due_time,
+            tzid=board_owner.time_zone if board_owner is not None else "UTC",
+            rrule=None,
+            exceptions=frozenset(),
+        ),
+    )
+
+
+async def _handle_card(
+    db: AsyncSession, schedule: ReminderSchedule, reminder: Reminder, item: Item, now: datetime
+) -> tuple[str, dict[str, Any] | None]:
+    """A card's reminder: once per due date, counted like an event's (see _card_times)."""
+    owner = await db.get(UserAccount, reminder.owner_id)
+    found = await _card_times(db, item) if reminder.deleted_at is None else None
+    if found is None or owner is None:
+        schedule.next_fire_at, schedule.next_occurrence, schedule.needs_check = None, None, False
+        return "idle", None
+    card, board, times = found
+    rule = ReminderRule(reminder.offset_minutes, reminder.all_day_time, reminder.all_day_days_before)
+    outcome = "checked"
+    message: dict[str, Any] | None = None
+    if schedule.needs_check:
+        # Fired for this due date already: no more; a due date moved to another day may fire again.
+        fired_for = schedule.last_occurrence if schedule.last_occurrence == card.due_date else None
+        first = next_fire(
+            rule,
+            times,
+            owner.time_zone,
+            after_occurrence=fired_for,
+            not_before=now.replace(second=0, microsecond=0),
+        )
+        schedule.next_fire_at = first.at if first else None
+        schedule.next_occurrence = first.occurrence if first else None
+        schedule.needs_check = False
+    if schedule.next_fire_at is not None and schedule.next_fire_at <= now:
+        late = now - schedule.next_fire_at > LATE_AFTER
+        payload = _card_payload(item, card, board, times.tzid, reminder, schedule.next_fire_at, late)
+        note = await notify_self(db, reminder.owner_id, "reminder", payload, item_id=item.id)
+        if not late:
+            prefs = await db.get(UserSettings, reminder.owner_id)
+            twelve = prefs is not None and prefs.time_format == "12h"
+            message = push_message(payload, note.id, owner.time_zone, twelve, now)
+        schedule.last_occurrence, schedule.last_fired_at = card.due_date, now
+        schedule.next_fire_at, schedule.next_occurrence = None, None
+        outcome = "fired_late" if late else "fired"
+    return outcome, message
 
 
 async def _handle_note(
@@ -410,6 +542,8 @@ async def handle_with_push(
     item = await db.get(Item, reminder.item_id)
     if item is not None and item.kind == "note":
         return await _handle_note(db, schedule, reminder, item, now)
+    if item is not None and item.kind == "card":
+        return await _handle_card(db, schedule, reminder, item, now)
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. An archived calendar's reminders do not fire (D-82).
     calendar = (
         await db.get(Calendar, item.container_id)

@@ -39,4 +39,5 @@ def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110: Kanban boards (0025).
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111: board columns (0026).
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112: cards and labels (0027).
-    assert migration_head() == "0027"
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116: reminders on cards (0028).
+    assert migration_head() == "0028"

@@ -439,6 +439,9 @@ components:
       # size_bytes, expires_at. The client builds the text from kind + payload.
       # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (D-79). reminder: reminder_id, item_id, title, location, all_day,
       # occurrence_date, end_date, start_time, end_time (HH:MM in tzid), length_minutes, tzid, fire_at, late.
+      # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116 (D-94). reminder of a card (payload kind card): reminder_id, item_id,
+      # kind, title, board_id, board_name, due_date, due_time (HH:MM in tzid, the board owner's zone, or null), tzid, fire_at,
+      # late.
       type: object
       required: [id, kind, created_at, payload]
       properties:

@@ -32,7 +32,7 @@
 | HAAL-104 | E06 To-Do | Due date on note, visible in calendar | Should | 100 | — | To do | — | owner backlog file |
 | HAAL-114 | E07 Kanban | Card activity (from audit log) and comments | Should | 112, 032 | — | To do | — | owner backlog file |
 | HAAL-115 | E07 Kanban | Swimlanes | Could | 111 | — | To do | — | owner backlog file |
-| HAAL-116 | E07 Kanban | Due-date reminders on cards | Must | 091, 112 | K-01 | To do | — | owner backlog file |
+| HAAL-116 | E07 Kanban | Due-date reminders on cards | Must | 091, 112 | K-01 | In progress | — | owner backlog file |
 | HAAL-117 | E07 Kanban | Overdue and due-soon (24 h) badges on cards | Must | 112 | K-02 | To do | — | owner backlog file |
 | HAAL-118 | E07 Kanban | Board filters: label, priority, due date, assignee, text | Must | 112 | K-03 | To do | — | owner backlog file |
 | HAAL-119 | E07 Kanban | Card assignees on shared boards; filter assigned to me | Must | 112, 167 | K-04 | To do | — | owner backlog file |
@@ -136,7 +136,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-110 | 2026-10-29 | 168358e, b9f7ce7 | feat(kanban): boards — on the server with sharing, trash and export (stage 1) and the boards page with the board header, rename, archive, share, leave and delete with undo (stage 2) (HAAL-110) |
 | HAAL-111 | 2026-10-29 | 9907580, bbf3811 | feat(kanban): board columns — on the server with WIP limit, archive, trash and export (stage 1) and on the board side by side with add, rename, WIP limit, drag and menu moves, archive, delete with undo and starting columns for new boards (stage 2) (HAAL-111) |
 | HAAL-112 | 2026-10-30 | 796e712, ef6cbf0, 886d335 | feat(kanban): cards and board labels — on the server with due date and time, column moves, checklist, attachments, labels, trash and export (stage 1), cards on the board and the card editor (stage 2) and board labels in the card editor (stage 3) (HAAL-112) |
-| HAAL-113 | 2026-10-30 | — | feat(kanban): move cards by drag and drop (mouse, touch) and Alt+arrows, column and position merged as a pair, undoable (HAAL-113) |
+| HAAL-113 | 2026-10-30 | 145b694 | feat(kanban): move cards by drag and drop (mouse, touch) and Alt+arrows, column and position merged as a pair, undoable (HAAL-113) |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
