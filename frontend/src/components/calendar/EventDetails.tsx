@@ -36,6 +36,7 @@ import { useDisplayTimeZone } from "@/lib/datetime";
 import { eventRange } from "@/lib/dayView";
 import { describeRrule } from "@/lib/repeatRule";
 import { toPlainText } from "@/lib/markdown-text";
+import { ItemLinks } from "@/components/links/ItemLinks";
 import { reminderLabel, remindersOf } from "@/lib/reminders";
 import { useShortcut } from "@/lib/shortcuts";
 import { localKeys, localRows } from "@/sync";
@@ -182,6 +183,8 @@ export function EventDetails({
         </p>
       ) : null}
       <EventColor user={user} row={row} writable={writable} />
+      {/* +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. The event's links (D-98). */}
+      <ItemLinks user={user} item={row} canWrite={writable} />
 
       {body ? (
         <div className="flex flex-col gap-1">

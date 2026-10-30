@@ -62,6 +62,16 @@ async function removeContainer(db: LocalDb, kind: string, id: string): Promise<v
   await db.itemLabels.where("[container_kind+container_id]").equals(inside).delete();
   // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the assignees of its cards.
   await db.cardAssignees.where("[container_kind+container_id]").equals(inside).delete();
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. A link with an end there stays while its other end is still on the
+  // device (the user reads that one); otherwise it goes too.
+  const touching = [
+    ...(await db.links.where("[container_kind+container_id]").equals(inside).toArray()),
+    ...(await db.links.where("[to_container_kind+to_container_id]").equals(inside).toArray()),
+  ];
+  for (const link of touching) {
+    const other = link.container_kind === kind && link.container_id === id ? link.to_item_id : link.from_item_id;
+    if (!(await db.items.get(String(other)))) await db.links.delete(String(link.id));
+  }
   await db.shares.where("[container_kind+container_id]").equals(inside).delete();
   if (kind === "calendar") await db.calendars.delete(id);
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A board no longer shared leaves the device too.

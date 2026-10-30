@@ -33,6 +33,7 @@ import { uuidv7 } from "@/lib/uuid";
 import { localKeys, localRows } from "@/sync";
 
 import { reminderChanges } from "@/components/calendar/reminderWrites";
+import { ItemLinks } from "@/components/links/ItemLinks";
 
 import { ChecklistEditor } from "./ChecklistEditor";
 import { NoteReminders } from "./NoteReminders";
@@ -279,6 +280,18 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
           ) : (
             <p className="text-xs text-muted">{t("todo.editor.attachmentsLater")}</p>
           )}
+          {/* +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. The note's links (D-98), once it exists. */}
+          {note ? (
+            <ItemLinks
+              user={user}
+              item={note}
+              canWrite
+              onLeave={() => {
+                void draft.flush();
+                onClose();
+              }}
+            />
+          ) : null}
           {empty ? <p className="text-xs text-muted">{t("todo.editor.empty")}</p> : null}
           <DialogFooter>
             <Button onClick={close}>{t("common.cancel")}</Button>

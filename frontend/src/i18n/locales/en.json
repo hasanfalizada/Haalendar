@@ -739,7 +739,8 @@
       "board_column": "Column",
       "label": "Label",
       "item_label": "Label on a card",
-      "card_assignee": "Assignee of a card"
+      "card_assignee": "Assignee of a card",
+      "link": "Link between items"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -843,7 +844,33 @@
       "cardMoved": "moving {{title}}",
       "labelCreated": "creating the label {{name}}",
       "labelChanged": "the change to the label {{name}}",
-      "labelDeleted": "deleting the label {{name}}"
+      "labelDeleted": "deleting the label {{name}}",
+      "linked": "linking {{title}}",
+      "unlinked": "the link to {{title}}"
+    }
+  },
+  "links": {
+    "title": "Links",
+    "none": "No links yet.",
+    "add": "Add link…",
+    "addTitle": "Link to {{title}}",
+    "search": "Search events, notes and cards",
+    "nothing": "Nothing found.",
+    "link_one": "Link {{count}} item",
+    "link_other": "Link {{count}} items",
+    "open": "Open {{title}}",
+    "remove": "Remove the link to {{title}}",
+    "inTrash": "in the trash",
+    "closed": "Item you can't open",
+    "kinds": {
+      "event": "Event",
+      "note": "Note",
+      "card": "Card"
+    },
+    "done": {
+      "create_one": "Linked {{count}} item to {{title}}",
+      "create_other": "Linked {{count}} items to {{title}}",
+      "delete": "Removed the link to {{title}}"
     }
   },
   "bulk": {

@@ -14,6 +14,7 @@
 // entered (D-95).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. The card's assignees (CardAssignees, D-97): members of the board,
 // chosen in the form and written with Save in the same undo step.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. The card's links (ItemLinks, D-98), written at once; opening a linked item keeps a draft.
 import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -24,6 +25,7 @@ import type { Color, Priority } from "@/api/generated/types.gen";
 import { Attachments } from "@/components/attachments/Attachments";
 import { ReminderPicker } from "@/components/calendar/ReminderPicker";
 import { reminderChanges } from "@/components/calendar/reminderWrites";
+import { ItemLinks } from "@/components/links/ItemLinks";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { ChecklistEditor } from "@/components/todo/ChecklistEditor";
 import { Button } from "@/components/ui/button";
@@ -420,6 +422,15 @@ export function CardEditor({
           ) : (
             <p className="text-xs text-muted">{t("kanban.cards.attachmentsLater")}</p>
           )}
+          <ItemLinks
+            user={user}
+            item={card}
+            canWrite={canWrite}
+            onLeave={() => {
+              void draft.flush();
+              onClose();
+            }}
+          />
           {typeof card.created_at === "string" && typeof card.updated_at === "string" ? (
             <RecordTimestamps record={card as unknown as RecordTimes} />
           ) : null}
