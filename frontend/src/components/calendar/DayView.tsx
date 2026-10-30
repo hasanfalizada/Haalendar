@@ -43,9 +43,13 @@
 // the copy, then the view goes to the copy's date with its card open.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-098. On touch, a swipe left / right over the content moves to the next /
 // previous period in every view, like › / ‹ (FR-CAL-36, D-86).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. Time blocking (FR-INT-04, D-99): in the day and week views "Notes &
+// cards" opens a panel (beside the content from tablets on, remembered on this device; a bottom sheet on phones). In
+// the week a note or card dropped on a time column or the all-day row becomes an event at once (one undo step, its card
+// opens); in the day list, which has no hours, a drop and "Schedule…" open the event editor for it, linked on Save.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus, StickyNote } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -77,12 +81,18 @@ import { type DropTarget, type EventTimes, droppedTimes, planDrop, seriesMovable
 import { addMonths, monthOf, sameDayIn } from "@/lib/monthGrid";
 import { monthTitle, monthWeeks } from "@/lib/monthView";
 import { weekDays, rangeTitle } from "@/lib/weekView";
+import type { EventForm } from "@/lib/eventForm";
+import { blockForm, suggestedStart } from "@/lib/timeBlock";
 import { localKeys, localRows, mutate } from "@/sync";
 
 import { DayNumberLabel, IsoWeekLabel, LiveClock, WeekAbBadge } from "./HeaderInfo";
 import { AgendaList } from "./AgendaView";
 import { MonthGrid } from "./MonthView";
 import { WeekGrid } from "./WeekView";
+import { DropArea } from "./DropArea";
+import { CalendarDnd } from "./EventDrag";
+import { TimeBlockPanel } from "./TimeBlockPanel";
+import { blockItem, sourceTitle } from "./timeBlockWrites";
 import type { DragData } from "./EventButton";
 import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
@@ -123,6 +133,38 @@ function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (vie
       ))}
     </div>
   );
+}
+
+const PANEL_KEY = "haalendar.calendar.timeBlock";
+
+function storedPanelOpen(): boolean {
+  try {
+    return window.localStorage.getItem(PANEL_KEY) === "open";
+  } catch {
+    return false;
+  }
+}
+
+function storePanelOpen(open: boolean): void {
+  try {
+    window.localStorage.setItem(PANEL_KEY, open ? "open" : "closed");
+  } catch {
+    // Blocked storage: the panel's state lasts for this page only.
+  }
+}
+
+/** Minutes after midnight now in `timeZone`. */
+function minutesNow(timeZone: string): number {
+  const [h = 0, m = 0] = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone,
+  })
+    .format(new Date())
+    .split(":")
+    .map(Number);
+  return h * 60 + m;
 }
 
 function storedSidebarOpen(): boolean {
@@ -332,7 +374,12 @@ export function DayView({
   const navigate = useNavigate();
   const router = useRouter();
   const viewerTz = useDisplayTimeZone();
-  const { week_start: weekStart, agenda_days: agendaLength, time_format: timeFormat } = useSettings();
+  const {
+    week_start: weekStart,
+    agenda_days: agendaLength,
+    time_format: timeFormat,
+    default_color: defaultColor,
+  } = useSettings();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
   const { data: me } = useQuery(meQuery);
@@ -393,7 +440,14 @@ export function DayView({
     event: Record<string, unknown> | null;
     occurrence?: string;
     following?: boolean;
+    // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. "Schedule…" of a note or card: its day, values and the item.
+    date?: string;
+    prefill?: Partial<EventForm>;
+    linkTo?: string;
   } | null>(null);
+  const [panelOpen, setPanelOpen] = useState(storedPanelOpen);
+  // On phones the panel is a sheet over the page: opened by the button each time, never remembered.
+  const [sheetOpen, setSheetOpen] = useState(false);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
   const [details, setDetails] = useState<DayEntry | null>(null);
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. The event (and its shown date) being duplicated.
@@ -522,6 +576,39 @@ export function DayView({
     else void applyDrop(row, occurrence, next, target, "this");
   }
   const canDrag = (entry: DayEntry) => calendars.canWrite(rowOf(entry)?.container_id);
+
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. Time blocking (D-99).
+  const timeBlocking = view === "day" || view === "week";
+  const showPanel = timeBlocking && (tablet ? panelOpen : sheetOpen);
+  const defaultCalendar = typeof calendars.writable[0]?.id === "string" ? calendars.writable[0].id : "";
+  const togglePanel = () => {
+    if (!tablet) {
+      setSheetOpen(!sheetOpen);
+      return;
+    }
+    storePanelOpen(!panelOpen);
+    setPanelOpen(!panelOpen);
+  };
+  // "Schedule…" (and a drop on the day list): the editor for the item on `day`, at the next quarter hour today.
+  function openSchedule(source: Record<string, unknown>, day: string) {
+    const start = suggestedStart(day, today, minutesNow(viewerTz));
+    const form = blockForm(sourceTitle(source), day, start, defaultColor, defaultCalendar);
+    const { title, all_day, start_time, end_date, end_time } = form;
+    setSheetOpen(false);
+    setEditing({
+      event: null,
+      date: day,
+      prefill: { title, all_day, start_time, end_date, end_time },
+      linkTo: String(source.id),
+    });
+  }
+  // A drop on the week: the event at once, then its card.
+  async function scheduleDrop(source: Record<string, unknown>, target: DropTarget) {
+    if (!user || !defaultCalendar) return;
+    const form = blockForm(sourceTitle(source), target.day, target.minutes, defaultColor, defaultCalendar);
+    const id = await blockItem(user, String(source.id), form, me.time_zone);
+    if (id) void navigate({ to: "/calendar", search: { date: target.day, view, event: id }, replace: true });
+  }
   async function deleteEvent(row: Record<string, unknown>): Promise<boolean> {
     if (!user) return false;
     const id = String(row.id);
@@ -739,6 +826,49 @@ export function DayView({
   );
   const sidebarOpen = desktop ? pinned : overlayOpen;
 
+  const dayList = (
+    <DayList
+      user={user}
+      date={date}
+      entries={entries}
+      openKey={details?.key ?? null}
+      inPopover={tablet}
+      onOpen={setDetails}
+      onClose={() => {
+        setDetails(null);
+      }}
+      details={detailsOf}
+      onDelete={(entry) => {
+        const row = rows.find((candidate) => candidate.id === entry.id);
+        if (row) requestDelete(row, occurrenceOf(entry));
+      }}
+      selection={selection}
+      canMoveSelected={canMoveSelected}
+      moving={moving}
+      onMoveSelected={() => {
+        void moveSelected();
+      }}
+    />
+  );
+  const panel = (draggable: boolean) =>
+    user ? (
+      <TimeBlockPanel
+        user={user}
+        draggable={draggable}
+        hint={t(
+          !draggable
+            ? "calendar.timeBlock.phoneHint"
+            : view === "week"
+              ? "calendar.timeBlock.hint"
+              : "calendar.timeBlock.dayHint",
+        )}
+        showTitle={tablet}
+        onSchedule={(source) => {
+          openSchedule(source, date);
+        }}
+      />
+    ) : null;
+
   return (
     <div className="flex h-full min-h-0">
       {desktop && pinned ? (
@@ -824,6 +954,18 @@ export function DayView({
             <WeekAbBadge date={date} />
             {view === "day" ? <DayNumberLabel date={date} /> : null}
           </div>
+          {timeBlocking ? (
+            <Button
+              variant={showPanel ? "primary" : "secondary"}
+              aria-pressed={showPanel}
+              aria-label={t("calendar.timeBlock.toggle")}
+              onClick={togglePanel}
+            >
+              <StickyNote aria-hidden />
+              {/* A narrow header keeps it on the line as an icon, like New event. */}
+              <span className="@max-[80rem]:sr-only">{t("calendar.timeBlock.toggle")}</span>
+            </Button>
+          ) : null}
           <div className="max-md:ml-auto">
             <ViewSwitch view={view} onChange={switchView} />
           </div>
@@ -908,33 +1050,38 @@ export function DayView({
                   details={detailsOf}
                   canDrag={canDrag}
                   onDrop={dropEvent}
+                  {...(tablet && showPanel
+                    ? {
+                        aside: (
+                          <aside className="flex w-72 shrink-0 flex-col border-l border-line p-3">{panel(true)}</aside>
+                        ),
+                        onSchedule: (source: Record<string, unknown>, target: DropTarget) =>
+                          void scheduleDrop(source, target),
+                      }
+                    : {})}
                 />
               </div>
+            ) : tablet && showPanel ? (
+              // The day list has no hours: a note or card dropped on it opens the editor for that day.
+              <CalendarDnd
+                onDrop={() => undefined}
+                onSchedule={(source) => {
+                  openSchedule(source, date);
+                }}
+              >
+                <div className="flex min-h-0 flex-1">
+                  <DropArea
+                    id={`day:${date}`}
+                    data={{ kind: "day", day: date }}
+                    className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+                  >
+                    {dayList}
+                  </DropArea>
+                  <aside className="flex w-72 shrink-0 flex-col border-l border-line p-3">{panel(true)}</aside>
+                </div>
+              </CalendarDnd>
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <DayList
-                  user={user}
-                  date={date}
-                  entries={entries}
-                  openKey={details?.key ?? null}
-                  inPopover={tablet}
-                  onOpen={setDetails}
-                  onClose={() => {
-                    setDetails(null);
-                  }}
-                  details={detailsOf}
-                  onDelete={(entry) => {
-                    const row = rows.find((candidate) => candidate.id === entry.id);
-                    if (row) requestDelete(row, occurrenceOf(entry));
-                  }}
-                  selection={selection}
-                  canMoveSelected={canMoveSelected}
-                  moving={moving}
-                  onMoveSelected={() => {
-                    void moveSelected();
-                  }}
-                />
-              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">{dayList}</div>
             )}
           </div>
         </div>
@@ -945,6 +1092,19 @@ export function DayView({
             {miniMonth(() => {
               setOverlayOpen(false);
             })}
+          </SheetContent>
+        </Sheet>
+      ) : null}
+      {/* +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. On phones the panel is a sheet: Schedule… only. */}
+      {!tablet ? (
+        <Sheet
+          open={showPanel}
+          onOpenChange={(open) => {
+            if (!open) setSheetOpen(false);
+          }}
+        >
+          <SheetContent title={t("calendar.timeBlock.title")} closeLabel={t("common.close")}>
+            <div className="flex max-h-[70dvh] min-h-0 flex-col">{panel(false)}</div>
           </SheetContent>
         </Sheet>
       ) : null}
@@ -1054,10 +1214,12 @@ export function DayView({
       />
       {editing ? (
         <EventEditor
-          date={date}
+          date={editing.date ?? date}
           event={editing.event}
           {...(editing.occurrence ? { occurrence: editing.occurrence } : {})}
           {...(editing.following ? { following: true } : {})}
+          {...(editing.prefill ? { prefill: editing.prefill } : {})}
+          {...(editing.linkTo ? { linkTo: editing.linkTo } : {})}
           onShowEvent={(id, day) => {
             go(day);
             setDetails(entriesOn(rows, day, viewerTz).find((entry) => entry.id === id) ?? null);

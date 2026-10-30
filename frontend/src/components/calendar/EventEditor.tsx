@@ -76,6 +76,7 @@ import { localKeys, localRows, mutate } from "@/sync";
 
 import { type DuplicateMatch, DuplicateWarning } from "./DuplicateWarning";
 import { ReminderPicker } from "./ReminderPicker";
+import { linkStep, timeBlockLink } from "./timeBlockWrites";
 import { RepeatCustom, RepeatSelect } from "./RepeatPicker";
 import { planSteps, writePlan } from "./moveNextDay";
 import { reminderChanges } from "./reminderWrites";
@@ -95,6 +96,10 @@ interface EventEditorProps {
   onClose: () => void;
   /** "Show" in the duplicate warning: open that event on that day (the editor has closed). */
   onShowEvent?: (id: string, day: string) => void;
+  /** +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. A new event's starting values ("Schedule…" of a note or card). */
+  prefill?: Partial<EventForm>;
+  /** A new event is linked to this item when saved (a time block, D-99). */
+  linkTo?: string;
 }
 
 function nowIn(timeZone: string): string {
@@ -106,7 +111,16 @@ function nowIn(timeZone: string): string {
 // A stable empty list while the reminders load (a new [] on every render would change the form's baseline each time).
 const NO_ROWS: Record<string, unknown>[] = [];
 
-export function EventEditor({ date, event, occurrence, following = false, onClose, onShowEvent }: EventEditorProps) {
+export function EventEditor({
+  date,
+  event,
+  occurrence,
+  following = false,
+  onClose,
+  onShowEvent,
+  prefill,
+  linkTo,
+}: EventEditorProps) {
   const { t, i18n } = useTranslation();
   const { data: me } = useQuery(meQuery);
   const user = me?.id ?? "";
@@ -136,9 +150,9 @@ export function EventEditor({ date, event, occurrence, following = false, onClos
       ? following && occurrence
         ? followingForm(event, occurrence)
         : formFromRow(event, occurrence)
-      : newEventForm(date, settings.default_color, firstCalendar);
+      : { ...newEventForm(date, settings.default_color, firstCalendar), ...prefill };
     return { ...form, reminders: specsText(existingReminders.map((reminder) => reminder.spec)) };
-  }, [event, occurrence, following, date, settings.default_color, firstCalendar, existingReminders]);
+  }, [event, occurrence, following, date, settings.default_color, firstCalendar, existingReminders, prefill]);
   const [form, setForm] = useState<EventForm>(baseline);
   // The starting values can change after opening (the calendars arrive from the local database): an untouched form
   // follows them — adjusted while rendering, React's pattern for state derived from changed inputs.
@@ -282,6 +296,7 @@ export function EventEditor({ date, event, occurrence, following = false, onClos
       const newId = uuidv7();
       const reminders = reminderChanges(user, newId, [], wantedReminders, reminderLabel);
       const created = { key: "undo.labels.eventCreated", values: { title } };
+      const link = linkTo ? timeBlockLink(newId, linkTo) : null;
       const result = await runWrite({
         name: "event_create",
         run: async () => {
@@ -300,12 +315,14 @@ export function EventEditor({ date, event, occurrence, following = false, onClos
             },
           });
           await reminders.run();
+          if (link) await link.write(user, link.id);
           return written;
         },
         success: t("calendar.editor.created", { title }),
         undo: () => {
           const step = newStep("event.create", created, { user, id: newId });
-          return reminders.count > 0 ? batchStep(created, [step, ...reminders.steps]) : step;
+          const steps = [step, ...reminders.steps, ...(link ? [linkStep(created, user, link.id)] : [])];
+          return steps.length > 1 ? batchStep(created, steps) : step;
         },
       });
       return result.ok;

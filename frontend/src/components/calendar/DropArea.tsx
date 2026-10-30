@@ -24,7 +24,10 @@ interface DropAreaProps {
 
 export function DropArea({ id, data, as: Tag = "div", className, style, children, ...rest }: DropAreaProps) {
   const { setNodeRef, isOver, active } = useDroppable({ id, data });
-  const fits = (active?.data.current as { accepts?: DropData["kind"] } | undefined)?.accepts === data.kind;
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. A note or card from the panel fits several kinds of place.
+  const accepts = (active?.data.current as { accepts?: DropData["kind"] | readonly DropData["kind"][] } | undefined)
+    ?.accepts;
+  const fits = Array.isArray(accepts) ? accepts.includes(data.kind) : accepts === data.kind;
   return (
     <Tag
       ref={setNodeRef}

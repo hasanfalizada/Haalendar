@@ -215,6 +215,24 @@
       "instructions": "Drag the event with the mouse, or hold it with a finger, and drop it on another day or time. Esc cancels.",
       "at": "{{day}}, {{time}}",
       "moved": "Moved {{title}} to {{where}}"
+    },
+    "timeBlock": {
+      "toggle": "Notes & cards",
+      "title": "Notes and cards",
+      "notes": "Notes",
+      "cards": "Cards",
+      "search": "Search notes and cards",
+      "none": "Nothing to schedule here.",
+      "hint": "Drag one onto the week to schedule it, or use Schedule…",
+      "dayHint": "Drop one on the day, or use Schedule…",
+      "schedule": "Schedule…",
+      "scheduleNamed": "Schedule {{title}}",
+      "scheduled": "Scheduled already",
+      "due": "Due {{date}}",
+      "onBoard": "on {{board}}",
+      "done": "Scheduled {{title}}",
+      "drag": "Drag {{title}} onto the calendar",
+      "phoneHint": "Use Schedule… to put one on the calendar."
     }
   },
   "pages": {
@@ -846,7 +864,8 @@
       "labelChanged": "the change to the label {{name}}",
       "labelDeleted": "deleting the label {{name}}",
       "linked": "linking {{title}}",
-      "unlinked": "the link to {{title}}"
+      "unlinked": "the link to {{title}}",
+      "timeBlocked": "scheduling {{title}}"
     }
   },
   "links": {

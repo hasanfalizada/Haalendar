@@ -35,7 +35,6 @@
 | HAAL-121 | E08 Integration | Note/card due dates as toggleable calendar layers | Must | 104, 112, 060 | — | To do | — | owner backlog file |
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
-| HAAL-124 | E08 Integration | Time-blocking: drag note/card onto day/week view creates linked event | Must | 087, 100, 112, 120 | C-11 | To do | — | owner backlog file |
 | HAAL-130 | E09 Migration | Legacy SQLite importer into a chosen user: events, RRULE, exclusions, colors, deleted kept as deleted (deleted_at = import time), log, timestamp parsing, dry-run report (CRITICAL) | Must | 066, 030, 160 | — | To do | — | owner backlog file |
 | HAAL-140 | E10 QA | Test strategy: unit, integration, contract, E2E Playwright, coverage gate 80% | Must | 010 | — | To do | — | owner backlog file |
 | HAAL-141 | E10 QA | Legacy regression suite: one E2E scenario per F-01..F-34 (docs repo: requirements/legacy-feature-inventory.md) (CRITICAL) | Must | 140, 060, 067 | — | To do | — | owner backlog file |
@@ -136,7 +135,8 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-117 | 2026-10-30 | 1d1d8e2 | feat(kanban): overdue and due-soon badges on cards and in the card editor — whole-day dates, word and sign besides the colour (HAAL-117) |
 | HAAL-118 | 2026-10-30 | d78be55 | feat(kanban): board filters — text, labels, priority and due date in the address, phone panel, moves among the cards shown (HAAL-118; assignee filter with HAAL-119) |
 | HAAL-119 | 2026-10-30 | c692422, 4576aac | feat(kanban): card assignees — board members, sync add and remove, assigned notification, trash and export (stage 1), assignees in the card editor, initials on cards, assignee filter and the notification opening the card (stage 2) (HAAL-119) |
-| HAAL-120 | 2026-10-30 | a9522db, — | feat(links): links between events, notes and cards — either end reads, one writable end changes, sync, live updates, export (stage 1), links in the card and note editors and the event details, add link search, backlinks (stage 2) (HAAL-120) |
+| HAAL-120 | 2026-10-30 | a9522db, 5cf0bab | feat(links): links between events, notes and cards — either end reads, one writable end changes, sync, live updates, export (stage 1), links in the card and note editors and the event details, add link search, backlinks (stage 2) (HAAL-120) |
+| HAAL-124 | 2026-10-30 | — | feat(calendar): time blocking — a Notes & cards panel in the day and week views, drop a note or card on the week to make a linked event, Schedule… through the editor, one undo step (HAAL-124) |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
