@@ -8,12 +8,15 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards in the columns; a card opens the card editor (D-92).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. `focusCard` (from a reminder, `?card=`) opens that card's editor once
 // it has arrived; closing it drops the parameter. The user's reminders give the cards their bell (D-94).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. The board filters (BoardFilters, D-96) under the header, kept in the
+// address; the columns show the cards that pass them.
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArrowLeft, Columns3, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSettings } from "@/api/settings";
 import { sharesQuery } from "@/api/sharing";
 import { ShareDialog } from "@/components/sharing/ShareDialog";
 import { useShareActions } from "@/components/sharing/useShareActions";
@@ -27,13 +30,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { STANDALONE_LINK } from "@/components/ui/link-styles";
+import { type BoardFilter, cardMatches, filterCount, formatBoardFilter } from "@/lib/boardFilter";
 import { columnsOf } from "@/lib/columns";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { useAttachmentCounts } from "@/lib/eventRow";
+import { useNow } from "@/lib/useNow";
 import { localKeys, localRows } from "@/sync";
 
 import { ArchivedColumnsDialog } from "./ArchivedColumnsDialog";
 import { BoardColumns } from "./BoardColumns";
+import { BoardFilters } from "./BoardFilters";
 import { CardEditor } from "./CardEditor";
 import { deleteBoard, updateBoard } from "./boardWrites";
 import { NameDialog } from "./NameDialog";
@@ -52,9 +58,17 @@ function useLocal(
   }).data;
 }
 
-export function BoardPage({ boardId, focusCard }: { boardId: string; focusCard?: string }) {
+interface BoardPageProps {
+  boardId: string;
+  filter: BoardFilter;
+  focusCard?: string;
+}
+
+export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
   const { t } = useTranslation();
   const timeZone = useDisplayTimeZone();
+  const now = useNow();
+  const { week_start: weekStart } = useSettings();
   const navigate = useNavigate();
   const boards = useBoards();
   const { user } = boards;
@@ -106,6 +120,18 @@ export function BoardPage({ boardId, focusCard }: { boardId: string; focusCard?:
     (item) => item.container_kind === "board" && item.container_id === boardId && !item.deleted_at,
   ).length;
   const toAll = () => void navigate({ to: "/kanban" });
+  const filtering = filterCount(filter) > 0;
+  const shown = (card: Record<string, unknown>) =>
+    cardMatches(card, filter, { itemLabels: itemLabelRows, checklistItems: checklistRows, timeZone, now, weekStart });
+  // Typing in the search replaces the address entry instead of adding one per letter.
+  const setFilter = (next: BoardFilter) => {
+    void navigate({
+      to: "/kanban/$boardId",
+      params: { boardId },
+      search: (previous) => ({ ...previous, ...formatBoardFilter(next) }),
+      replace: next.text !== filter.text,
+    });
+  };
 
   const back = (
     <Link to="/kanban" className={`${STANDALONE_LINK} gap-1 text-[13px]`}>
@@ -243,23 +269,27 @@ export function BoardPage({ boardId, focusCard }: { boardId: string; focusCard?:
           </div>
         </div>
       ) : (
-        <BoardColumns
-          user={user}
-          boardId={boardId}
-          active={columns.active}
-          allColumns={columnRows}
-          items={items}
-          canWrite={canWrite}
-          labels={boardLabels}
-          itemLabels={itemLabelRows}
-          checklistItems={checklistRows}
-          attachments={attachments}
-          reminders={reminderRows}
-          timeZone={timeZone}
-          onOpenCard={(card) => {
-            setEditing(String(card.id));
-          }}
-        />
+        <>
+          <BoardFilters filter={filter} labels={boardLabels} onChange={setFilter} />
+          <BoardColumns
+            user={user}
+            boardId={boardId}
+            active={columns.active}
+            allColumns={columnRows}
+            items={items}
+            canWrite={canWrite}
+            labels={boardLabels}
+            itemLabels={itemLabelRows}
+            checklistItems={checklistRows}
+            attachments={attachments}
+            reminders={reminderRows}
+            timeZone={timeZone}
+            shown={filtering ? shown : undefined}
+            onOpenCard={(card) => {
+              setEditing(String(card.id));
+            }}
+          />
+        </>
       )}
 
       {dialog === "rename" ? (
@@ -287,7 +317,13 @@ export function BoardPage({ boardId, focusCard }: { boardId: string; focusCard?:
           canWrite={canWrite}
           onClose={() => {
             setEditing(null);
-            if (focusCard) void navigate({ to: "/kanban/$boardId", params: { boardId }, search: {} });
+            if (focusCard) {
+              void navigate({
+                to: "/kanban/$boardId",
+                params: { boardId },
+                search: (previous) => ({ ...previous, card: undefined }),
+              });
+            }
           }}
         />
       ) : null}

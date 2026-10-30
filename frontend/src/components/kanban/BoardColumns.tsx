@@ -13,6 +13,9 @@
 // column beside (keeping the focus on it). Each move is one write with Undo and is told to screen readers.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card shows a bell while one of the user's reminders is ahead (D-94).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. And its overdue / due-soon badge, moved on every minute (D-95).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. Under the board filters (D-96) a column lists the cards shown, its
+// count reads "3 of 7"; moves work among the cards shown (lib/cards indexAmongAll) and a card added that the filters
+// hide says so.
 import {
   type Active,
   type CollisionDetection,
@@ -50,6 +53,7 @@ import {
   cardStepTarget,
   cardsOf,
   dueState,
+  indexAmongAll,
   isCardAt,
   labelsOf,
   newCardPosition,
@@ -113,6 +117,8 @@ interface BoardColumnsProps {
   /** The user's reminder rows (the bell on a card) and the zone its due date is read in. */
   reminders: readonly Row[];
   timeZone: string;
+  /** Whether a card passes the board filters; undefined without filters. */
+  shown?: ((card: Row) => boolean) | undefined;
   onOpenCard: (card: Row) => void;
 }
 
@@ -147,6 +153,7 @@ export function BoardColumns({
   attachments,
   reminders,
   timeZone,
+  shown,
   onOpenCard,
 }: BoardColumnsProps) {
   const { t } = useTranslation();
@@ -165,6 +172,12 @@ export function BoardColumns({
     useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
   );
   const name = (row: Row) => String(row.name);
+  // The rows with only the cards shown (places are counted among them).
+  const visible = shown ? items.filter((item) => item.kind !== "card" || shown(item)) : items;
+  const toAll = (card: Row, place: CardPlace): CardPlace => ({
+    columnId: place.columnId,
+    index: indexAmongAll(items, visible, card, place.columnId, place.index),
+  });
   const titleOf = (row: Row) => (typeof row.title === "string" ? row.title : "");
   const dragName = (data: DragData | undefined) =>
     data ? (data.type === "column" ? name(data.row) : titleOf(data.row)) : "";
@@ -182,12 +195,14 @@ export function BoardColumns({
     void updateColumn(user, row, "move", { position: positionAt(active, row, index) });
   }
 
+  // `place` counts the cards shown.
   async function moveTo(card: Row, place: CardPlace, keepFocus = false) {
-    if (isCardAt(items, card, place)) return;
-    const position = cardPositionAt(items, card, place.columnId, place.index);
+    const target = toAll(card, place);
+    if (isCardAt(items, card, target)) return;
+    const position = cardPositionAt(items, card, target.columnId, target.index);
     const column = active.find((row) => row.id === place.columnId);
     if (keepFocus) refocus.current = { id: String(card.id), position };
-    const total = cardsOf(items, place.columnId).filter((row) => row.id !== card.id).length + 1;
+    const total = cardsOf(visible, place.columnId).filter((row) => row.id !== card.id).length + 1;
     const ok = await moveCard(user, card, place.columnId, position);
     if (!ok) {
       refocus.current = null;
@@ -205,7 +220,7 @@ export function BoardColumns({
 
   function step(card: Row, direction: CardStep) {
     const place = cardStepTarget(
-      items,
+      visible,
       active.map((row) => String(row.id)),
       card,
       direction,
@@ -219,7 +234,7 @@ export function BoardColumns({
     const over = event.over;
     const drop = over?.data.current as DropData | undefined;
     if (data?.type !== "card" || !over || !drop) return null;
-    const others = cardsOf(items, drop.columnId).filter((row) => row.id !== data.row.id);
+    const others = cardsOf(visible, drop.columnId).filter((row) => row.id !== data.row.id);
     if (drop.type === "column") return { columnId: drop.columnId, index: others.length };
     const at = others.findIndex((row) => row.id === drop.cardId);
     if (at < 0) return null; // over itself: it stays
@@ -231,8 +246,8 @@ export function BoardColumns({
   function onDragMove(event: DragMoveEvent) {
     const place = placeOf(event);
     const data = dragOf(event.active);
-    const shown = place && data?.type === "card" && !isCardAt(items, data.row, place) ? place : null;
-    setDropAt((was) => (was?.columnId === shown?.columnId && was?.index === shown?.index ? was : shown));
+    const line = place && data?.type === "card" && !isCardAt(items, data.row, toAll(data.row, place)) ? place : null;
+    setDropAt((was) => (was?.columnId === line?.columnId && was?.index === line?.index ? was : line));
   }
 
   function onDragEnd(event: DragEndEvent) {
@@ -254,7 +269,7 @@ export function BoardColumns({
     const lineAt = (at: number) => {
       if (line === at) nodes.push(<DropLine key="drop-line" />);
     };
-    for (const card of cardsOf(items, columnId)) {
+    for (const card of cardsOf(visible, columnId)) {
       const cardId = String(card.id);
       if (card.id !== moving) lineAt(index++);
       const list = checklistOf(checklistItems, cardId);
@@ -349,6 +364,7 @@ export function BoardColumns({
               row={row}
               index={index}
               count={cardCount(items, String(row.id))}
+              shownCount={shown ? cardsOf(visible, String(row.id)).length : null}
               canWrite={canWrite}
               first={index === 0}
               last={index === active.length - 1}
@@ -362,13 +378,19 @@ export function BoardColumns({
                     <AddCard
                       columnName={name(row)}
                       onAdd={(title) =>
-                        createCard(user, {
-                          boardId,
-                          columnId: String(row.id),
-                          title,
-                          position: newCardPosition(items, String(row.id)),
-                          color: defaultColor,
-                        })
+                        createCard(
+                          user,
+                          {
+                            boardId,
+                            columnId: String(row.id),
+                            title,
+                            position: newCardPosition(items, String(row.id)),
+                            color: defaultColor,
+                          },
+                          // A new card has its title only: the filters may hide it.
+                          shown !== undefined &&
+                            !shown({ id: "", kind: "card", title, body: "", priority: "medium", due_date: null }),
+                        )
                       }
                     />
                   ) : null}
@@ -508,13 +530,15 @@ interface ColumnProps {
   cards: ReactNode;
   index: number;
   count: number;
+  /** The cards shown under the board filters; null without filters. */
+  shownCount: number | null;
   canWrite: boolean;
   first: boolean;
   last: boolean;
   onAction: (action: Action) => void;
 }
 
-function Column({ row, target, cards, index, count, canWrite, first, last, onAction }: ColumnProps) {
+function Column({ row, target, cards, index, count, shownCount, canWrite, first, last, onAction }: ColumnProps) {
   const { t } = useTranslation();
   const id = String(row.id);
   const name = String(row.name);
@@ -569,6 +593,9 @@ function Column({ row, target, cards, index, count, canWrite, first, last, onAct
         >
           {limit === null ? count : `${String(count)} / ${String(limit)}`}
         </span>
+        {shownCount !== null ? (
+          <span className="text-xs text-muted tabular-nums">{t("kanban.filters.shown", { count: shownCount })}</span>
+        ) : null}
         {canWrite ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

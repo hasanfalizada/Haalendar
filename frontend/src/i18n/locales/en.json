@@ -1462,6 +1462,7 @@
       "delete": "Delete",
       "done": {
         "create": "Card added: {{title}}",
+        "createHidden": "Card added: {{title}} — hidden by the filters",
         "edit": "Saved {{title}}",
         "move": "Moved {{title}}",
         "delete": "Deleted {{title}}"
@@ -1476,6 +1477,24 @@
       "remindersNeedDue": "Reminders need a due date.",
       "reminder": "Reminder set",
       "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}"
+    },
+    "filters": {
+      "title": "Board filters",
+      "toggle": "Filters",
+      "toggleCount": "Filters ({{count}})",
+      "search": "Search cards",
+      "labels": "Labels",
+      "labelsCount": "Labels ({{count}})",
+      "due": "Due date",
+      "dueKinds": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "week": "This week",
+        "none": "No due date"
+      },
+      "clear": "Clear filters",
+      "shown_one": "{{count}} shown",
+      "shown_other": "{{count}} shown"
     },
     "drag": {
       "picked": "Picked up {{name}}",

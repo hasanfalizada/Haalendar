@@ -8,6 +8,8 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Whether a card is overdue or due soon (FR-KAN-08, D-95): with a due
 // time, due soon within 24 hours before it and overdue from it on; a date alone is the whole day — due soon on that day,
 // overdue from the next one. Read in the given zone (the reader's).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. Under a filter a card is moved among the cards shown: its place among
+// all cards is right after the shown card above it (before the first shown one at the top); hidden cards keep theirs.
 import { localToUtc } from "@/atoms/time/localToUtc";
 
 import { positionAt } from "./columns";
@@ -122,4 +124,23 @@ export function dueState(card: Row, timeZone: string, now: number): DueState {
   }
   if (now >= instant(addDays(day, 1), "00:00")) return "overdue";
   return now >= instant(day, "00:00") ? "soon" : null;
+}
+
+/**
+ * The index among all live cards of the column (counted without `moving`) for `index` among the shown ones: right
+ * after the shown card above it, before the first shown one at the top, the end when none is shown.
+ */
+export function indexAmongAll(
+  items: readonly Row[],
+  shown: readonly Row[],
+  moving: Row,
+  columnId: string,
+  index: number,
+): number {
+  const all = cardsOf(items, columnId).filter((row) => row.id !== moving.id);
+  const visible = cardsOf(shown, columnId).filter((row) => row.id !== moving.id);
+  const above = visible[index - 1];
+  if (above) return all.findIndex((row) => row.id === above.id) + 1;
+  const first = visible[0];
+  return first ? all.findIndex((row) => row.id === first.id) : all.length;
 }

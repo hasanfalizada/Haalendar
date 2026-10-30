@@ -1,6 +1,7 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards of a column, a new card's place, labels on a card, the due text.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A moved card's position and where Alt+arrows take it.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Overdue and due soon at their edges (also across a clock change).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. A place among the cards shown under a filter, among all cards.
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,6 +10,7 @@ import {
   cardsOf,
   dueState,
   dueText,
+  indexAmongAll,
   isCardAt,
   labelsOf,
   newCardPosition,
@@ -118,5 +120,23 @@ describe("cards", () => {
     expect(at("2026-03-28T23:00:00Z")).toBe("soon");
     expect(at("2026-03-29T21:59:00Z")).toBe("soon");
     expect(at("2026-03-29T22:00:00Z")).toBe("overdue");
+  });
+
+  it("puts a card moved under a filter right after the shown card above it", () => {
+    const all = ["p", "q", "r", "s", "t"].map((id, i) => ({
+      id,
+      kind: "card",
+      column_id: "x",
+      title: id,
+      position: "BCDEF"[i],
+    }));
+    // Shown: p, r, t (q and s hidden); t moves.
+    const shown = all.filter((row) => ["p", "r", "t"].includes(row.id));
+    const t = all[4] as Record<string, unknown>;
+    expect(indexAmongAll(all, shown, t, "x", 0)).toBe(0); // before p
+    expect(indexAmongAll(all, shown, t, "x", 1)).toBe(1); // right after p, before the hidden q
+    expect(indexAmongAll(all, shown, t, "x", 2)).toBe(3); // right after r, before the hidden s
+    // Into another column with nothing shown: its end.
+    expect(indexAmongAll([...all, { id: "u", kind: "card", column_id: "y", position: "B" }], shown, t, "y", 0)).toBe(1);
   });
 });

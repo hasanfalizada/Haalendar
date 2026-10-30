@@ -66,7 +66,7 @@ export interface NewCard {
 }
 
 /** "+ Add card": a card with its title at the end of the column. */
-export async function createCard(user: string, card: NewCard): Promise<boolean> {
+export async function createCard(user: string, card: NewCard, hidden = false): Promise<boolean> {
   const id = uuidv7();
   const values = { title: card.title };
   const result = await runWrite({
@@ -88,7 +88,8 @@ export async function createCard(user: string, card: NewCard): Promise<boolean> 
       }),
     // A repeat would make a second card.
     retry: false,
-    success: i18n.t("kanban.cards.done.create", values),
+    // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. Hidden by the board filters: the message says so (D-96).
+    success: i18n.t(hidden ? "kanban.cards.done.createHidden" : "kanban.cards.done.create", values),
     undo: () => newStep("card.create", { key: "undo.labels.cardCreated", values }, { user, id }),
   });
   return result.ok;
