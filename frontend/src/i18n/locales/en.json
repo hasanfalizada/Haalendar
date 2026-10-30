@@ -836,7 +836,10 @@
       "columnDeleted": "deleting {{name}}",
       "cardCreated": "adding {{title}}",
       "cardChanged": "the changes to {{title}}",
-      "cardDeleted": "deleting {{title}}"
+      "cardDeleted": "deleting {{title}}",
+      "labelCreated": "creating the label {{name}}",
+      "labelChanged": "the change to the label {{name}}",
+      "labelDeleted": "deleting the label {{name}}"
     }
   },
   "bulk": {
@@ -1458,6 +1461,26 @@
         "create": "Card added: {{title}}",
         "edit": "Saved {{title}}",
         "delete": "Deleted {{title}}"
+      },
+      "attachmentsLater": "Images can be added once the card has reached the server."
+    },
+    "labels": {
+      "title": "Labels",
+      "none": "This board has no labels yet.",
+      "new": "New label…",
+      "newTitle": "New label",
+      "editTitle": "Edit label",
+      "color": "Color",
+      "taken": "This board already has a label with this name.",
+      "menu": "Options for the label {{name}}",
+      "edit": "Rename or recolor…",
+      "deleteTitle": "Delete label?",
+      "deleteBody_one": "Delete the label “{{name}}” from the board? It comes off {{count}} card. It can be undone.",
+      "deleteBody_other": "Delete the label “{{name}}” from the board? It comes off {{count}} cards. It can be undone.",
+      "done": {
+        "create": "Label created: {{name}}",
+        "edit": "Saved the label {{name}}",
+        "delete": "Deleted the label {{name}}"
       }
     }
   }

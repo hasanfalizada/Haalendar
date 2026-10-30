@@ -68,7 +68,9 @@ export function BoardPage({ boardId }: { boardId: string }) {
   const itemLabelRows = useLocal(user, "item_label") ?? [];
   const checklistRows = useLocal(user, "checklist_item") ?? [];
   const attachments = useAttachmentCounts(user);
-  const boardLabels = labelRows.filter((label) => label.board_id === boardId && !label.deleted_at);
+  const boardLabels = labelRows
+    .filter((label) => label.board_id === boardId && !label.deleted_at)
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
   const [editing, setEditing] = useState<string | null>(null);
   const editingCard = editing ? items.find((item) => item.id === editing && !item.deleted_at) : undefined;
   const columns = columnsOf(columnRows, boardId);
@@ -255,7 +257,10 @@ export function BoardPage({ boardId }: { boardId: string }) {
         <CardEditor
           key={String(editingCard.id)}
           user={user}
+          boardId={boardId}
           card={editingCard}
+          labels={boardLabels}
+          itemLabels={itemLabelRows}
           columns={columns.active}
           items={items}
           canWrite={canWrite}

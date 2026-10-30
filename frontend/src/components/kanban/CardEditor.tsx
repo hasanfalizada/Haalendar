@@ -4,6 +4,8 @@
 // times. Save (or Ctrl+Enter) writes the changed fields and the checklist changes through the local store (offline too)
 // as one undo step; Delete puts the card in the trash with Undo. It keeps a draft while typing and asks before unsaved
 // changes are lost. Without the right to write (view share, archived board) everything is shown read-only.
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112 (stage 3). The card's labels (CardLabels): chosen in the form, written
+// with Save in the same undo step.
 import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -28,7 +30,9 @@ import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { localKeys, localRows } from "@/sync";
 
+import { CardLabels } from "./CardLabels";
 import { deleteCard, saveCard } from "./cardWrites";
+import { labelChanges } from "./labelWrites";
 
 type Row = Record<string, unknown>;
 
@@ -45,6 +49,8 @@ interface CardForm {
   priority: string;
   /** The checklist as JSON (ChecklistEntry[]: unchecked in order, then checked). */
   checklist: string;
+  /** The ids of the labels on the card as JSON (sorted). */
+  labels: string;
 }
 
 // A stable empty list while the items load.
@@ -53,7 +59,11 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 interface CardEditorProps {
   user: string;
+  boardId: string;
   card: Row;
+  /** The board's live labels, by name, and every label-on-item row of the local database. */
+  labels: Row[];
+  itemLabels: readonly Row[];
   /** The board's active columns, left to right. */
   columns: Row[];
   /** Every item row of the local database (where a moved card goes). */
@@ -62,7 +72,17 @@ interface CardEditorProps {
   onClose: () => void;
 }
 
-export function CardEditor({ user, card, columns, items, canWrite, onClose }: CardEditorProps) {
+export function CardEditor({
+  user,
+  boardId,
+  card,
+  labels,
+  itemLabels,
+  columns,
+  items,
+  canWrite,
+  onClose,
+}: CardEditorProps) {
   const { t } = useTranslation();
   const id = String(card.id);
   const { data: itemRows = NO_ROWS } = useQuery({
@@ -74,6 +94,15 @@ export function CardEditor({ user, card, columns, items, canWrite, onClose }: Ca
     const groups = checklistOf(itemRows, id);
     return [...groups.unchecked, ...groups.checked];
   }, [itemRows, id]);
+  const live = useMemo(() => new Set(labels.map((label) => String(label.id))), [labels]);
+  const onCard = useMemo(
+    () =>
+      itemLabels
+        .filter((row) => row.item_id === id && !row.deleted_at && live.has(String(row.label_id)))
+        .map((row) => String(row.label_id))
+        .sort(),
+    [itemLabels, id, live],
+  );
   const baseline = useMemo<CardForm>(
     () => ({
       title: text(card.title),
@@ -89,8 +118,9 @@ export function CardEditor({ user, card, columns, items, canWrite, onClose }: Ca
           checked: stored.filter((row) => row.checked === true),
         }),
       ),
+      labels: JSON.stringify(onCard),
     }),
-    [card, stored],
+    [card, stored, onCard],
   );
   const [form, setForm] = useState<CardForm>(baseline);
   // The items arrive from the local database after opening: an untouched form follows them.
@@ -153,7 +183,14 @@ export function CardEditor({ user, card, columns, items, canWrite, onClose }: Ca
       changed.column_id = form.column_id;
       changed.position = newCardPosition(items, form.column_id);
     }
-    return saveCard(user, card, changed, checklistChanges(id, stored, entries));
+    const chosen = JSON.parse(form.labels) as string[];
+    return saveCard(
+      user,
+      card,
+      changed,
+      checklistChanges(id, stored, entries),
+      labelChanges(id, itemLabels, chosen, live),
+    );
   }
 
   async function onSubmit(submitted: SubmitEvent<HTMLFormElement>) {
@@ -270,6 +307,17 @@ export function CardEditor({ user, card, columns, items, canWrite, onClose }: Ca
                 </Button>
               ) : null}
             </div>
+            <CardLabels
+              user={user}
+              boardId={boardId}
+              labels={labels}
+              itemLabels={itemLabels}
+              chosen={JSON.parse(form.labels) as string[]}
+              onChange={(next) => {
+                set({ labels: JSON.stringify([...next].sort()) });
+              }}
+              canWrite={canWrite}
+            />
             <ColorPicker
               name="card-color"
               legend={t("kanban.cards.color")}
@@ -294,7 +342,12 @@ export function CardEditor({ user, card, columns, items, canWrite, onClose }: Ca
               }}
             />
           </fieldset>
-          <Attachments itemId={id} editable={canWrite} />
+          {/* A card made on this device that the server has not received yet (version 0) has no attachments there. */}
+          {typeof card.version === "number" && card.version > 0 ? (
+            <Attachments itemId={id} editable={canWrite} />
+          ) : (
+            <p className="text-xs text-muted">{t("kanban.cards.attachmentsLater")}</p>
+          )}
           {typeof card.created_at === "string" && typeof card.updated_at === "string" ? (
             <RecordTimestamps record={card as unknown as RecordTimes} />
           ) : null}

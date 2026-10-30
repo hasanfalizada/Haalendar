@@ -166,6 +166,10 @@ describe("cards on the board", { timeout: 20_000 }, () => {
       data: { kind: "card", container_kind: "board", container_id: BOARD, column_id: DONE, title: "First" },
     });
     expect(comparePositions(String(first?.data?.position), String(second?.data?.position))).toBe(-1);
+    // Not on the server yet: no attachments to load, a hint instead.
+    await user.click(within(done).getByRole("button", { name: "Open First" }));
+    const editor = await screen.findByRole("dialog", { name: "Edit card" });
+    expect(within(editor).getByText("Images can be added once the card has reached the server.")).toBeInTheDocument();
   });
 
   it("saves the changed fields, a move and the checklist in one step, and deletes with Undo", async () => {

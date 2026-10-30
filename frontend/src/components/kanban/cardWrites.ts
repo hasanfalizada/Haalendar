@@ -4,6 +4,7 @@
 // with its attachments, checklist items and labels; undone by a restore — the trash restores it too). Updates are
 // undone by sending the previous values back with the new ones as the base, so a change made meanwhile elsewhere
 // becomes a conflict. Checklist undo kinds are those of the notes (noteWrites).
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112 (stage 3). Save writes the labels put on and taken off the card too.
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
 import type { ChecklistChanges } from "@/lib/checklist";
@@ -12,6 +13,8 @@ import { uuidv7 } from "@/lib/uuid";
 import { mutate } from "@/sync";
 
 import "@/components/todo/noteWrites";
+
+import type { LabelChanges } from "./labelWrites";
 
 type Row = Record<string, unknown>;
 
@@ -27,6 +30,7 @@ interface CardEdit extends CardRef {
 
 const target = (id: string) => ({ entity_type: "item" as const, entity_id: id });
 const itemTarget = (id: string) => ({ entity_type: "checklist_item" as const, entity_id: id });
+const labelTarget = (id: string) => ({ entity_type: "item_label" as const, entity_id: id });
 
 registerUndo<CardRef>("card.create", {
   undo: ({ user, id }) => ({ run: () => mutate(user, { ...target(id), op: "delete" }) }),
@@ -87,6 +91,7 @@ export async function createCard(user: string, card: NewCard): Promise<boolean> 
 }
 
 const NO_CHANGES: ChecklistChanges = { create: [], update: [], remove: [] };
+const NO_LABELS: LabelChanges = { add: [], remove: [] };
 
 /** The editor's Save: the changed fields of the card (`data`) and its checklist changes — one write, one undo step. */
 export async function saveCard(
@@ -94,10 +99,12 @@ export async function saveCard(
   row: Row,
   data: Row,
   items: ChecklistChanges = NO_CHANGES,
+  labels: LabelChanges = NO_LABELS,
 ): Promise<boolean> {
   const id = String(row.id);
   const fields = Object.keys(data).length > 0;
-  const count = items.create.length + items.update.length + items.remove.length;
+  const count =
+    items.create.length + items.update.length + items.remove.length + labels.add.length + labels.remove.length;
   if (!fields && count === 0) return true;
   const values = { title: titleOf({ ...row, ...data }) };
   const base = Object.fromEntries(Object.keys(data).map((name) => [name, row[name] ?? null]));
@@ -115,6 +122,10 @@ export async function saveCard(
         await mutate(user, { ...itemTarget(entry.id), op: "update", base: entry.base, data: entry.data });
       }
       for (const removed of items.remove) await mutate(user, { ...itemTarget(removed), op: "delete" });
+      for (const added of labels.add) {
+        await mutate(user, { ...labelTarget(added.id), op: "create", data: { item_id: id, label_id: added.label_id } });
+      }
+      for (const removed of labels.remove) await mutate(user, { ...labelTarget(removed), op: "delete" });
       return written;
     },
     success: i18n.t("kanban.cards.done.edit", values),
@@ -126,6 +137,8 @@ export async function saveCard(
           newStep("checklist.update", label, { user, id: entry.id, before: entry.base, after: entry.data }),
         ),
         ...items.remove.map((removed) => newStep("checklist.delete", label, { user, id: removed })),
+        ...labels.add.map((added) => newStep("itemLabel.create", label, { user, id: added.id })),
+        ...labels.remove.map((removed) => newStep("itemLabel.delete", label, { user, id: removed })),
       ];
       return steps.length === 1 && steps[0] ? steps[0] : batchStep(label, steps);
     },
