@@ -1,8 +1,18 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards of a column, a new card's place, labels on a card, the due text.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A moved card's position and where Alt+arrows take it.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Overdue and due soon at their edges (also across a clock change).
 import { describe, expect, it } from "vitest";
 
-import { cardPositionAt, cardStepTarget, cardsOf, dueText, isCardAt, labelsOf, newCardPosition } from "./cards";
+import {
+  cardPositionAt,
+  cardStepTarget,
+  cardsOf,
+  dueState,
+  dueText,
+  isCardAt,
+  labelsOf,
+  newCardPosition,
+} from "./cards";
 import { comparePositions } from "./position";
 
 const items = [
@@ -87,5 +97,26 @@ describe("cards", () => {
     expect(cardStepTarget(rows, columns, card("g"), "right")).toBeNull();
     // A card of a column not on the board (archived) has nowhere to go.
     expect(cardStepTarget(rows, ["y"], card("a"), "right")).toBeNull();
+  });
+
+  it("is due soon within 24 hours of its due time and overdue from it on", () => {
+    const card = { due_date: "2026-11-10", due_time: "09:30" };
+    const at = (iso: string) => dueState(card, "Europe/Berlin", Date.parse(iso));
+    // 09:30 in Berlin is 08:30 UTC in November.
+    expect(at("2026-11-09T08:29:00Z")).toBeNull();
+    expect(at("2026-11-09T08:30:00Z")).toBe("soon");
+    expect(at("2026-11-10T08:29:00Z")).toBe("soon");
+    expect(at("2026-11-10T08:30:00Z")).toBe("overdue");
+    expect(dueState({ due_date: null }, "UTC", 0)).toBeNull();
+  });
+
+  it("takes a date alone as the whole day: due soon on it, overdue from the next one", () => {
+    // 29 March 2026: Berlin moves to summer time, the day is 23 hours long.
+    const card = { due_date: "2026-03-29", due_time: null };
+    const at = (iso: string) => dueState(card, "Europe/Berlin", Date.parse(iso));
+    expect(at("2026-03-28T22:59:00Z")).toBeNull();
+    expect(at("2026-03-28T23:00:00Z")).toBe("soon");
+    expect(at("2026-03-29T21:59:00Z")).toBe("soon");
+    expect(at("2026-03-29T22:00:00Z")).toBe("overdue");
   });
 });

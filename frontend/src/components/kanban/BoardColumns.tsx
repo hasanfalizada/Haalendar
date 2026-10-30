@@ -12,6 +12,7 @@
 // rests while dragging); Esc cancels. Alt+↑ / Alt+↓ move the card in its column, Alt+← / Alt+→ to the same place in the
 // column beside (keeping the focus on it). Each move is one write with Undo and is told to screen readers.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card shows a bell while one of the user's reminders is ahead (D-94).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. And its overdue / due-soon badge, moved on every minute (D-95).
 import {
   type Active,
   type CollisionDetection,
@@ -48,6 +49,7 @@ import {
   cardPositionAt,
   cardStepTarget,
   cardsOf,
+  dueState,
   isCardAt,
   labelsOf,
   newCardPosition,
@@ -265,6 +267,7 @@ export function BoardColumns({
           progress={total > 0 ? { done: list.checked.length, total } : null}
           attachments={attachments.get(cardId) ?? 0}
           reminder={cardReminderAhead(reminders, card, timeZone, now)}
+          dueState={dueState(card, timeZone, now)}
           onOpen={() => {
             onOpenCard(card);
           }}

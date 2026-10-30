@@ -21,6 +21,9 @@
   --primary-tint: #e6f6f3;
   --accent: #f59e0b;
   --danger: #b42318;
+  /* +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Behind danger text (the overdue badge, D-95); ≥ 4.5:1 in both themes,
+     checked by palette-contrast.test.ts. */
+  --danger-bg: #fee4e2;
   --ok: #15803d;
   --warn-bg: #fef3c7;
   --warn-fg: #78350f;
@@ -50,6 +53,7 @@
   --primary-tint: #0f2e2b;
   --accent: #fbbf24;
   --danger: #f97066;
+  --danger-bg: #3b1210;
   --ok: #4ade80;
   --warn-bg: #3a2a08;
   --warn-fg: #fde68a;
@@ -74,6 +78,7 @@
   --color-primary-tint: var(--primary-tint);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
   --color-ok: var(--ok);
   --color-warn-bg: var(--warn-bg);
   --color-warn-fg: var(--warn-fg);

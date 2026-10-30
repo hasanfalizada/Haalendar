@@ -103,3 +103,19 @@ describe.each([
     expect(contrast(value ?? "", bg), "colour bar against the page").toBeGreaterThanOrEqual(3);
   });
 });
+
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. The due badges (D-95): their text on their background ≥ 4.5:1.
+describe.each([
+  ["light", light],
+  ["dark", dark],
+] as const)("due badges — %s theme", (_theme, tokens) => {
+  it.each([
+    ["overdue", "danger", "danger-bg"],
+    ["due soon", "warn-fg", "warn-bg"],
+  ])("%s", (_name, text, background) => {
+    expect(
+      contrast(tokens[text] ?? "", tokens[background] ?? ""),
+      `--${text} on --${background}`,
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+});

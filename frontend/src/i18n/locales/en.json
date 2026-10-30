@@ -1469,6 +1469,10 @@
       "attachmentsLater": "Images can be added once the card has reached the server.",
       "moveHint": "Alt with the arrow keys moves the card",
       "atDue": "At the due time",
+      "overdue": "Overdue",
+      "dueSoon": "Due soon",
+      "dueOverdue": "Overdue, due {{when}}",
+      "dueSoonAt": "Due soon, {{when}}",
       "remindersNeedDue": "Reminders need a due date.",
       "reminder": "Reminder set",
       "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}"

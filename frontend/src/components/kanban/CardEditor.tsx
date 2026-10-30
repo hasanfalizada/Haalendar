@@ -10,6 +10,8 @@
 // counted from the due date (timed ones with a due time, whole-day ones without), saved with Save in the same undo
 // step. Without a due date nothing can be added (the chosen ones stay and can be removed). Reminders are personal, so
 // a view share sets them too: the block stays open for it and Save appears once they change.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. The due fields show "Overdue" / "Due soon" for the date and time
+// entered (D-95).
 import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -29,15 +31,18 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { PrioritySelect } from "@/components/ui/priority";
 import { type RecordTimes, RecordTimestamps } from "@/components/ui/record-timestamps";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
-import { newCardPosition } from "@/lib/cards";
+import { dueState, newCardPosition } from "@/lib/cards";
+import { useDisplayTimeZone } from "@/lib/datetime";
 import { type ChecklistEntry, checklistChanges, checklistOf, entriesOf } from "@/lib/checklist";
 import { DEFAULT_COLOR } from "@/lib/palette";
 import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
 import { useDraft } from "@/lib/useDraft";
+import { useNow } from "@/lib/useNow";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { localKeys, localRows } from "@/sync";
 
 import { CardLabels } from "./CardLabels";
+import { DueBadge } from "./CardTile";
 import { deleteCard, saveCard } from "./cardWrites";
 import { labelChanges } from "./labelWrites";
 
@@ -94,6 +99,8 @@ export function CardEditor({
 }: CardEditorProps) {
   const { t } = useTranslation();
   const id = String(card.id);
+  const timeZone = useDisplayTimeZone();
+  const now = useNow();
   const { data: itemRows = NO_ROWS } = useQuery({
     queryKey: [...localKeys.table("checklist_item"), user],
     queryFn: () => localRows(user, "checklist_item"),
@@ -175,6 +182,8 @@ export function CardEditor({
   const options = columns.some((column) => column.id === card.column_id)
     ? columns
     : [{ id: card.column_id, name: t("kanban.cards.hiddenColumn") }, ...columns];
+
+  const dueNow = dueState({ due_date: form.due_date, due_time: form.due_time }, timeZone, now);
 
   const set = (patch: Partial<CardForm>) => {
     setForm((current) => ({ ...current, ...patch }) as CardForm);
@@ -326,6 +335,11 @@ export function CardEditor({
                 >
                   {t("kanban.cards.clearDue")}
                 </Button>
+              ) : null}
+              {dueNow ? (
+                <span className="self-center text-xs" role="status">
+                  <DueBadge state={dueNow} />
+                </span>
               ) : null}
             </div>
           </fieldset>

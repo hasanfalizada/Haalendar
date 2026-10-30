@@ -4,10 +4,12 @@
 // deletes with Undo; a view share sees the card read-only and adds nothing.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. Alt+arrows move a card within and between columns (one write of
 // column and position each, the focus stays on the card, the move is told and undone); a view share moves nothing.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Overdue and due-soon badges on the cards and in the editor.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import { addDays, todayIn } from "@/lib/datetime";
 import { comparePositions } from "@/lib/position";
 import { localDb } from "@/sync/db";
 
@@ -56,7 +58,11 @@ const card = (id: string, title: string, extra: Record<string, unknown> = {}) =>
   ...extra,
 });
 
-async function open(board: Record<string, unknown> = {}, share: Record<string, unknown> | null = null) {
+async function open(
+  board: Record<string, unknown> = {},
+  share: Record<string, unknown> | null = null,
+  cards: Record<string, unknown>[] = [],
+) {
   const db = await localDb(USER);
   await db.boards.put({
     id: BOARD,
@@ -74,6 +80,7 @@ async function open(board: Record<string, unknown> = {}, share: Record<string, u
     card(SHIP, "Ship", { position: "M" }),
     card("gone", "Deleted card", { deleted_at: "2026-10-02T10:00:00Z" }),
   ]);
+  await db.items.bulkPut(cards);
   await db.labels.put({
     id: URGENT,
     board_id: BOARD,
@@ -274,6 +281,33 @@ describe("cards on the board", { timeout: 20_000 }, () => {
     await waitFor(() => {
       expect(cardTitles(todo)).toEqual(["Ship", "Plan"]);
     });
+  });
+
+  it("marks overdue and due-soon cards with a word and a sign, not the colour alone", async () => {
+    const today = todayIn(me().time_zone);
+    const { user } = await open({}, null, [
+      card(PLAN, "Plan", { position: "C", due_date: addDays(today, -1) }),
+      card(SHIP, "Ship", { position: "M", due_date: today }),
+      card("later", "Later", { position: "N", due_date: addDays(today, 3) }),
+    ]);
+    const todo = await screen.findByRole("region", { name: "To do" });
+    const plan = await within(todo).findByRole("button", { name: "Open Plan" });
+    await waitFor(() => {
+      expect(within(plan).getByText("Overdue")).toBeInTheDocument();
+    });
+    expect(within(plan).getByLabelText(/^Overdue, due /)).toBeInTheDocument();
+    const ship = within(todo).getByRole("button", { name: "Open Ship" });
+    expect(within(ship).getByText("Due soon")).toBeInTheDocument();
+    const later = within(todo).getByRole("button", { name: "Open Later" });
+    expect(within(later).queryByText(/Overdue|Due soon/)).not.toBeInTheDocument();
+    expect(within(later).getByLabelText(/^Due /)).toBeInTheDocument();
+
+    await user.click(plan);
+    const editor = await screen.findByRole("dialog", { name: "Edit card" });
+    expect(within(editor).getByText("Overdue")).toBeInTheDocument();
+    await user.clear(within(editor).getByLabelText("Due date"));
+    await user.type(within(editor).getByLabelText("Due date"), addDays(today, 3));
+    expect(within(editor).queryByText("Overdue")).not.toBeInTheDocument();
   });
 
   it("shows a card read-only to a view share, without adding cards", async () => {

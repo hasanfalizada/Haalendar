@@ -5,7 +5,13 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. Moving a card (FR-KAN-04): the position that puts it at a place in a
 // column, and where Alt+arrow takes it — one up or down in its column, or the same place (the end when shorter) in the
 // column to the left or right.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Whether a card is overdue or due soon (FR-KAN-08, D-95): with a due
+// time, due soon within 24 hours before it and overdue from it on; a date alone is the whole day — due soon on that day,
+// overdue from the next one. Read in the given zone (the reader's).
+import { localToUtc } from "@/atoms/time/localToUtc";
+
 import { positionAt } from "./columns";
+import { addDays } from "./datetime";
 import { clockText } from "./dayView";
 import { comparePositions, keyBetween } from "./position";
 
@@ -98,4 +104,22 @@ export function cardStepTarget(
   const next = columnIds[column + (step === "left" ? -1 : 1)];
   if (next === undefined) return null;
   return { columnId: next, index: Math.min(index, cardsOf(items, next).length) };
+}
+
+export type DueState = "overdue" | "soon" | null;
+
+const DAY_MS = 86_400_000;
+
+/** Overdue, due soon (within 24 hours) or neither — the card's due date read in `timeZone` at `now` (ms). */
+export function dueState(card: Row, timeZone: string, now: number): DueState {
+  const day = textOf(card.due_date);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const time = textOf(card.due_time);
+  const instant = (date: string, clock: string) => Date.parse(localToUtc(date, clock, timeZone).utc);
+  if (/^\d{2}:\d{2}$/.test(time)) {
+    const due = instant(day, time);
+    return now >= due ? "overdue" : now >= due - DAY_MS ? "soon" : null;
+  }
+  if (now >= instant(addDays(day, 1), "00:00")) return "overdue";
+  return now >= instant(day, "00:00") ? "soon" : null;
 }

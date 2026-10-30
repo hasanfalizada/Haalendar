@@ -5,13 +5,16 @@
 // 300 ms hold) and is a drop target — the upper half puts the moved card before it, the lower half after it; Alt+arrows
 // move it from the keyboard (FR-KAN-04). Only for whoever may write.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A bell while one of the user's reminders of the card is ahead (D-94).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. The due date as a badge when overdue (red, a warning sign, "Overdue")
+// or due soon (amber, a clock, "Due soon") — never the colour alone (FR-KAN-08, D-95).
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { Bell, CalendarClock, ListChecks, Paperclip } from "lucide-react";
+import { AlertTriangle, Bell, CalendarClock, Clock, ListChecks, Paperclip } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
-import type { CardStep } from "@/lib/cards";
+import type { CardStep, DueState } from "@/lib/cards";
 import { PriorityBadge } from "@/components/ui/priority";
 import { dueText } from "@/lib/cards";
 import { DEFAULT_COLOR, swatchClasses } from "@/lib/palette";
@@ -46,12 +49,41 @@ interface CardTileProps {
   attachments: number;
   /** One of the user's reminders of the card is still ahead. */
   reminder?: boolean;
+  /** Overdue, due soon or neither (dueState). */
+  dueState?: DueState;
   onOpen: () => void;
   /** Alt+arrow on the card; without it (no right to write) the card is not dragged either. */
   onStep?: (step: CardStep) => void;
 }
 
-export function CardTile({ row, labels, progress, attachments, reminder = false, onOpen, onStep }: CardTileProps) {
+/** "Overdue" / "Due soon" with its sign, and what follows (the date on a card). */
+export function DueBadge({ state, children }: { state: "overdue" | "soon"; children?: ReactNode }) {
+  const { t } = useTranslation();
+  const Icon = state === "overdue" ? AlertTriangle : Clock;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-sm px-1 font-medium",
+        state === "overdue" ? "bg-danger-bg text-danger" : "bg-warn-bg text-warn-fg",
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden />
+      <span>{t(state === "overdue" ? "kanban.cards.overdue" : "kanban.cards.dueSoon")}</span>
+      {children}
+    </span>
+  );
+}
+
+export function CardTile({
+  row,
+  labels,
+  progress,
+  attachments,
+  reminder = false,
+  dueState = null,
+  onOpen,
+  onStep,
+}: CardTileProps) {
   const { t, i18n } = useTranslation();
   const id = String(row.id);
   const movable = onStep !== undefined;
@@ -119,7 +151,17 @@ export function CardTile({ row, labels, progress, attachments, reminder = false,
         {due || progress || attachments > 0 || reminder || row.priority !== "medium" ? (
           <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
             <PriorityBadge priority={row.priority as Priority} hideDefault compact />
-            {due ? (
+            {due && dueState ? (
+              <span
+                aria-label={t(dueState === "overdue" ? "kanban.cards.dueOverdue" : "kanban.cards.dueSoonAt", {
+                  when: due,
+                })}
+              >
+                <DueBadge state={dueState}>
+                  <span aria-hidden>· {due}</span>
+                </DueBadge>
+              </span>
+            ) : due ? (
               <span className="inline-flex items-center gap-1" aria-label={t("kanban.cards.due", { when: due })}>
                 <CalendarClock className="size-3.5" aria-hidden />
                 {due}
