@@ -6,10 +6,11 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklists on the cards and "New list" next to New note (D-88).
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The cards show the next reminder (D-89); `focusNote` (from a
 // reminder) opens that note once it is in the local database, whichever tab it is on.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. The minute clock moved to lib/useNow (the board's cards use it too).
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Archive, ListChecks, ListPlus, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Priority } from "@/atoms/items/priority";
@@ -20,6 +21,7 @@ import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
 import { type NotesTab, isNote, noteGroups, notePositions } from "@/lib/notes";
 import { atLabel, nextReminder } from "@/lib/reminders";
+import { useNow } from "@/lib/useNow";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { useSettings } from "@/api/settings";
 import { formatPriorityParam } from "@/lib/priority";
@@ -33,20 +35,6 @@ import { NoteEditor } from "./NoteEditor";
 type Row = Record<string, unknown>;
 
 const TABS: readonly NotesTab[] = ["notes", "archive"];
-
-/** Now, moved every minute (which reminders are still ahead). */
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(Date.now());
-    }, 60_000);
-    return () => {
-      clearInterval(timer);
-    };
-  }, []);
-  return now;
-}
 
 interface TodoPageProps {
   tab: NotesTab;

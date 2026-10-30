@@ -171,7 +171,7 @@ describe("reminders in the editor and the card", { timeout: 15_000 }, () => {
     await user.selectOptions(within(group).getByRole("combobox", { name: "Time" }), "18:30");
     await user.click(within(group).getByRole("button", { name: "Add" }));
     expect(within(group).getByText("3 days before at 18:30")).toBeInTheDocument();
-    expect(within(group).getByText("At most 5 reminders per event.")).toBeInTheDocument();
+    expect(within(group).getByText("At most 5 reminders.")).toBeInTheDocument();
     expect(within(group).queryByRole("combobox", { name: "Add reminder" })).not.toBeInTheDocument();
   });
 });

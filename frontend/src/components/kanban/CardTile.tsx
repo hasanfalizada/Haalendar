@@ -4,8 +4,9 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. A card is dragged with the mouse (after 5 px) or a finger (after a
 // 300 ms hold) and is a drop target — the upper half puts the moved card before it, the lower half after it; Alt+arrows
 // move it from the keyboard (FR-KAN-04). Only for whoever may write.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A bell while one of the user's reminders of the card is ahead (D-94).
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { CalendarClock, ListChecks, Paperclip } from "lucide-react";
+import { Bell, CalendarClock, ListChecks, Paperclip } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
@@ -43,12 +44,14 @@ interface CardTileProps {
   /** Checked and all checklist items; null without a checklist. */
   progress: { done: number; total: number } | null;
   attachments: number;
+  /** One of the user's reminders of the card is still ahead. */
+  reminder?: boolean;
   onOpen: () => void;
   /** Alt+arrow on the card; without it (no right to write) the card is not dragged either. */
   onStep?: (step: CardStep) => void;
 }
 
-export function CardTile({ row, labels, progress, attachments, onOpen, onStep }: CardTileProps) {
+export function CardTile({ row, labels, progress, attachments, reminder = false, onOpen, onStep }: CardTileProps) {
   const { t, i18n } = useTranslation();
   const id = String(row.id);
   const movable = onStep !== undefined;
@@ -113,7 +116,7 @@ export function CardTile({ row, labels, progress, attachments, onOpen, onStep }:
           </span>
         ) : null}
         <span className="font-medium">{title}</span>
-        {due || progress || attachments > 0 || row.priority !== "medium" ? (
+        {due || progress || attachments > 0 || reminder || row.priority !== "medium" ? (
           <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
             <PriorityBadge priority={row.priority as Priority} hideDefault compact />
             {due ? (
@@ -122,6 +125,7 @@ export function CardTile({ row, labels, progress, attachments, onOpen, onStep }:
                 {due}
               </span>
             ) : null}
+            {reminder ? <Bell className="size-3.5" role="img" aria-label={t("kanban.cards.reminder")} /> : null}
             {progress ? (
               <span
                 className="inline-flex items-center gap-1 tabular-nums"

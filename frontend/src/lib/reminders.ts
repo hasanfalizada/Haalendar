@@ -6,6 +6,10 @@
 // - the day and time a reminder notification is about, in the reader's zone (payload of the worker).
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The third form, of notes (D-89): a date and time (`remind_at`, an
 // instant kept as UTC "YYYY-MM-DDTHH:MM:00.000Z"), shown and entered in the reader's zone.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. Cards (D-94) take the two event forms, counted from the due date
+// (with its time, else its 00:00): what a card's reminder notification is about, and whether a reminder of a card is
+// still ahead (the due date read in the reader's zone — the board owner's on the server; the same zone on one's own
+// boards).
 import { localToUtc, wallClock } from "@/atoms/time/localToUtc";
 import i18n from "@/i18n";
 
@@ -195,4 +199,45 @@ export function nextReminder(rows: readonly Row[], itemId: string, now: number):
     isAt(spec) && Date.parse(spec.remind_at) > now ? [spec.remind_at] : [],
   );
   return ahead.sort()[0] ?? null;
+}
+
+/** What a card's reminder notification is about, in the reader's zone: its due day and time. */
+export function cardReminderWhen(
+  payload: Row,
+  viewerTz: string,
+): { day: string; start: string | null; end: string | null } | null {
+  const due = typeof payload.due_date === "string" ? payload.due_date : null;
+  if (!due) return null;
+  const time = typeof payload.due_time === "string" ? payload.due_time : null;
+  return reminderWhen(
+    { occurrence_date: due, start_time: time, all_day: time === null, tzid: payload.tzid, length_minutes: 0 },
+    viewerTz,
+  );
+}
+
+/** When a card's reminder fires (ms), the due date and time read in `timeZone`; null without a due date. */
+export function cardFireTime(
+  spec: ReminderSpec,
+  dueDate: string | null,
+  dueTime: string | null,
+  timeZone: string,
+): number | null {
+  if (!dueDate || isAt(spec)) return null;
+  if (isBefore(spec)) {
+    return Date.parse(localToUtc(dueDate, dueTime ?? "00:00", timeZone).utc) - spec.offset_minutes * 60_000;
+  }
+  const day = new Date(Date.parse(`${dueDate}T12:00:00Z`) - spec.all_day_days_before * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  return Date.parse(localToUtc(day, spec.all_day_time, timeZone).utc);
+}
+
+/** Whether the user has a reminder of the card still ahead of `now`. */
+export function cardReminderAhead(rows: readonly Row[], card: Row, timeZone: string, now: number): boolean {
+  const dueDate = typeof card.due_date === "string" ? card.due_date : null;
+  const dueTime = typeof card.due_time === "string" ? card.due_time : null;
+  return remindersOf(rows, String(card.id)).some(({ spec }) => {
+    const at = cardFireTime(spec, dueDate, dueTime, timeZone);
+    return at !== null && at >= now;
+  });
 }

@@ -11,6 +11,7 @@
 // where the card goes, a column's empty part means its end; near the strip's edge the columns scroll (phones: the snap
 // rests while dragging); Esc cancels. Alt+↑ / Alt+↓ move the card in its column, Alt+← / Alt+→ to the same place in the
 // column beside (keeping the focus on it). Each move is one write with Undo and is told to screen readers.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card shows a bell while one of the user's reminders is ahead (D-94).
 import {
   type Active,
   type CollisionDetection,
@@ -53,6 +54,8 @@ import {
 } from "@/lib/cards";
 import { checklistOf } from "@/lib/checklist";
 import { cardCount, newColumnPosition, overLimit, positionAt } from "@/lib/columns";
+import { cardReminderAhead } from "@/lib/reminders";
+import { useNow } from "@/lib/useNow";
 import { cn } from "@/lib/utils";
 
 import { AddCard } from "./AddCard";
@@ -105,6 +108,9 @@ interface BoardColumnsProps {
   itemLabels: readonly Row[];
   checklistItems: readonly Row[];
   attachments: ReadonlyMap<string, number>;
+  /** The user's reminder rows (the bell on a card) and the zone its due date is read in. */
+  reminders: readonly Row[];
+  timeZone: string;
   onOpenCard: (card: Row) => void;
 }
 
@@ -137,6 +143,8 @@ export function BoardColumns({
   itemLabels,
   checklistItems,
   attachments,
+  reminders,
+  timeZone,
   onOpenCard,
 }: BoardColumnsProps) {
   const { t } = useTranslation();
@@ -145,6 +153,7 @@ export function BoardColumns({
   const [dragging, setDragging] = useState<DragData | null>(null);
   const [dropAt, setDropAt] = useState<CardPlace | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const now = useNow();
   const [current, setCurrent] = useState(0);
   const strip = useRef<HTMLDivElement>(null);
   // The card moved from the keyboard gets the focus back once it is in its new place.
@@ -255,6 +264,7 @@ export function BoardColumns({
           labels={labelsOf(cardId, itemLabels, labels)}
           progress={total > 0 ? { done: list.checked.length, total } : null}
           attachments={attachments.get(cardId) ?? 0}
+          reminder={cardReminderAhead(reminders, card, timeZone, now)}
           onOpen={() => {
             onOpenCard(card);
           }}

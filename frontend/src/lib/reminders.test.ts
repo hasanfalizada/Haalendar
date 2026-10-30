@@ -1,10 +1,22 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders on the client (D-79): labels of both forms, equal keys,
 // the user's active reminders of an item in firing order, the editor's text field, and the day and time a reminder
 // notification is about in the reader's zone.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. Cards (D-94): what a card's reminder is about, when one fires from the
+// due date and time, and whether one is still ahead.
 import "@/i18n";
 import { describe, expect, it } from "vitest";
 
-import { reminderLabel, reminderWhen, remindersOf, specKey, specsFromText, specsText } from "./reminders";
+import {
+  cardFireTime,
+  cardReminderAhead,
+  cardReminderWhen,
+  reminderLabel,
+  reminderWhen,
+  remindersOf,
+  specKey,
+  specsFromText,
+  specsText,
+} from "./reminders";
 
 describe("reminder labels", () => {
   it("names both forms", () => {
@@ -65,3 +77,42 @@ describe("reminderWhen", () => {
     expect(reminderWhen({}, "Asia/Baku")).toBeNull();
   });
 });
+
+describe("reminders on cards", () => {
+  it("fire from the due time, or from the due date as a whole day, in the zone given", () => {
+    expect(cardFireTime({ offset_minutes: 30 }, "2026-11-10", "09:30", "Europe/Berlin")).toBe(
+      at("2026-11-10T08:00:00Z"),
+    );
+    expect(cardFireTime({ offset_minutes: 0 }, "2026-11-10", null, "Europe/Berlin")).toBe(at("2026-11-09T23:00:00Z"));
+    expect(cardFireTime({ all_day_time: "09:00", all_day_days_before: 1 }, "2026-11-10", "18:00", "UTC")).toBe(
+      at("2026-11-09T09:00:00Z"),
+    );
+    expect(cardFireTime({ offset_minutes: 30 }, null, null, "UTC")).toBeNull();
+  });
+
+  it("tell whether one of the user's reminders of a card is still ahead", () => {
+    const rows = [
+      { id: "r1", item_id: "c1", offset_minutes: 60, deleted_at: null },
+      { id: "r2", item_id: "c1", offset_minutes: 0, deleted_at: "2026-11-01T00:00:00Z" },
+    ];
+    const card = { id: "c1", due_date: "2026-11-10", due_time: "09:30" };
+    expect(cardReminderAhead(rows, card, "UTC", at("2026-11-10T08:30:00Z"))).toBe(true);
+    expect(cardReminderAhead(rows, card, "UTC", at("2026-11-10T08:31:00Z"))).toBe(false);
+    expect(cardReminderAhead(rows, { ...card, due_date: null }, "UTC", 0)).toBe(false);
+  });
+
+  it("read a card's notification as its due day and time in the reader's zone", () => {
+    const payload = { due_date: "2026-11-10", due_time: "09:30", tzid: "Europe/Berlin" };
+    expect(cardReminderWhen(payload, "Asia/Tokyo")).toEqual({ day: "2026-11-10", start: "17:30", end: null });
+    expect(cardReminderWhen({ ...payload, due_time: null }, "Asia/Tokyo")).toEqual({
+      day: "2026-11-10",
+      start: null,
+      end: null,
+    });
+    expect(cardReminderWhen({}, "UTC")).toBeNull();
+  });
+});
+
+function at(iso: string): number {
+  return Date.parse(iso);
+}

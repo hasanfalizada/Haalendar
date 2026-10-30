@@ -1089,6 +1089,8 @@
     "exportReady": "Your data export is ready to download.",
     "syncError": "Some changes made on this device could not be saved to the server.",
     "reminder": "Reminder: {{title}} — {{when}}",
+    "reminderCard": "Reminder: {{title}} — {{when}} · {{board}}",
+    "reminderCardLate": "Reminder: {{title}} — {{when}} · {{board}} (sent late)",
     "generic": "You have a new notification.",
     "reminderLate": "Reminder: {{title}} — {{when}} (sent late)"
   },
@@ -1117,7 +1119,7 @@
     "add": "Add reminder",
     "custom": "Custom…",
     "remove": "Remove reminder: {{label}}",
-    "limit": "At most {{count}} reminders per event.",
+    "limit": "At most {{count}} reminders.",
     "none": "No reminders",
     "amount": "Amount",
     "unit": "Unit",
@@ -1131,7 +1133,7 @@
     "timeField": "Time",
     "addCustom": "Add",
     "cancelCustom": "Cancel",
-    "personal": "Reminders are yours only; people you share the calendar with set their own.",
+    "personal": "Reminders are yours only; others who see it set their own.",
     "notification": "Reminder: {{title}} — {{when}}",
     "late": "(late)",
     "open": "Open"
@@ -1466,6 +1468,9 @@
       },
       "attachmentsLater": "Images can be added once the card has reached the server.",
       "moveHint": "Alt with the arrow keys moves the card",
+      "atDue": "At the due time",
+      "remindersNeedDue": "Reminders need a due date.",
+      "reminder": "Reminder set",
       "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}"
     },
     "drag": {

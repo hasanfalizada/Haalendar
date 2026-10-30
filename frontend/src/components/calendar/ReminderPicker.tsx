@@ -5,6 +5,8 @@
 // offered again. Reminders are personal — the note says so.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (stage 2). With reminders chosen and browser notifications off on this
 // device, an offer to turn them on (the browser asks for permission on that click); "Not now" is remembered per user.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. Also for cards (D-94): "at the start" can be named otherwise ("At the
+// due time"), and adding can be off with a hint (a card without a due date) while the chosen ones stay removable.
 import { useQuery } from "@tanstack/react-query";
 import { Bell, BellRing, X } from "lucide-react";
 import { useId, useState } from "react";
@@ -77,9 +79,13 @@ interface ReminderPickerProps {
   value: readonly ReminderSpec[];
   allDay: boolean;
   onChange: (next: ReminderSpec[]) => void;
+  /** The name of "0 minutes before" (default "At the start"). */
+  startLabel?: string;
+  /** Adding is off and this says why (the chosen reminders can still be removed). */
+  noAdd?: string;
 }
 
-export function ReminderPicker({ value, allDay, onChange }: ReminderPickerProps) {
+export function ReminderPicker({ value, allDay, onChange, startLabel, noAdd }: ReminderPickerProps) {
   const { t, i18n } = useTranslation();
   const { time_format: timeFormat } = useSettings();
   const labelId = useId();
@@ -91,7 +97,10 @@ export function ReminderPicker({ value, allDay, onChange }: ReminderPickerProps)
   const chosen = new Set(value.map(specKey));
   const full = value.length >= MAX_REMINDERS;
   const presets = (allDay ? ALL_DAY_PRESETS : TIMED_PRESETS).filter((spec) => !chosen.has(specKey(spec)));
-  const label = (spec: ReminderSpec) => reminderLabel(spec, timeFormat);
+  const label = (spec: ReminderSpec) =>
+    startLabel !== undefined && "offset_minutes" in spec && spec.offset_minutes === 0
+      ? startLabel
+      : reminderLabel(spec, timeFormat);
 
   const add = (spec: ReminderSpec) => {
     if (chosen.has(specKey(spec)) || full) return;
@@ -136,7 +145,9 @@ export function ReminderPicker({ value, allDay, onChange }: ReminderPickerProps)
           ))}
         </ul>
       ) : null}
-      {full ? (
+      {noAdd !== undefined ? (
+        <p className="text-xs text-muted">{noAdd}</p>
+      ) : full ? (
         <p className="text-xs text-muted">{t("reminders.limit", { count: MAX_REMINDERS })}</p>
       ) : custom ? (
         <div className="flex flex-wrap items-end gap-2">

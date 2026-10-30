@@ -6,6 +6,10 @@
 // changes are lost. Without the right to write (view share, archived board) everything is shown read-only.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112 (stage 3). The card's labels (CardLabels): chosen in the form, written
 // with Save in the same undo step.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. The user's reminders of the card (FR-KAN-07, D-94): the event presets
+// counted from the due date (timed ones with a due time, whole-day ones without), saved with Save in the same undo
+// step. Without a due date nothing can be added (the chosen ones stay and can be removed). Reminders are personal, so
+// a view share sets them too: the block stays open for it and Save appears once they change.
 import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -13,6 +17,8 @@ import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { Attachments } from "@/components/attachments/Attachments";
+import { ReminderPicker } from "@/components/calendar/ReminderPicker";
+import { reminderChanges } from "@/components/calendar/reminderWrites";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { ChecklistEditor } from "@/components/todo/ChecklistEditor";
 import { Button } from "@/components/ui/button";
@@ -26,6 +32,7 @@ import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { newCardPosition } from "@/lib/cards";
 import { type ChecklistEntry, checklistChanges, checklistOf, entriesOf } from "@/lib/checklist";
 import { DEFAULT_COLOR } from "@/lib/palette";
+import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
 import { useDraft } from "@/lib/useDraft";
 import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { localKeys, localRows } from "@/sync";
@@ -51,6 +58,8 @@ interface CardForm {
   checklist: string;
   /** The ids of the labels on the card as JSON (sorted). */
   labels: string;
+  /** The user's reminders of the card as canonical text (specsText). */
+  reminders: string;
 }
 
 // A stable empty list while the items load.
@@ -94,6 +103,12 @@ export function CardEditor({
     const groups = checklistOf(itemRows, id);
     return [...groups.unchecked, ...groups.checked];
   }, [itemRows, id]);
+  const { data: reminderRows = NO_ROWS } = useQuery({
+    queryKey: [...localKeys.table("reminder"), user],
+    queryFn: () => localRows(user, "reminder"),
+    enabled: Boolean(user),
+  });
+  const existingReminders = useMemo(() => remindersOf(reminderRows, id), [reminderRows, id]);
   const live = useMemo(() => new Set(labels.map((label) => String(label.id))), [labels]);
   const onCard = useMemo(
     () =>
@@ -119,8 +134,9 @@ export function CardEditor({
         }),
       ),
       labels: JSON.stringify(onCard),
+      reminders: specsText(existingReminders.map((reminder) => reminder.spec)),
     }),
-    [card, stored, onCard],
+    [card, stored, onCard, existingReminders],
   );
   const [form, setForm] = useState<CardForm>(baseline);
   // The items arrive from the local database after opening: an untouched form follows them.
@@ -137,10 +153,13 @@ export function CardEditor({
   const [busy, setBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
+  const remindersDirty = form.reminders !== baseline.reminders;
+  // What this user may save: everything with the right to write, else (a view share) the own reminders.
+  const saving = canWrite || remindersDirty;
   const empty = form.title.trim() === "";
   const draft = useDraft({ scope: `card:${id}`, values: form, baseline, enabled: canWrite });
   const guard = useUnsavedGuard({
-    dirty: canWrite && dirty,
+    dirty: (canWrite && dirty) || remindersDirty,
     hasDraft: canWrite,
     inDialog: true,
     scope: formRef,
@@ -184,18 +203,20 @@ export function CardEditor({
       changed.position = newCardPosition(items, form.column_id);
     }
     const chosen = JSON.parse(form.labels) as string[];
+    const label = { key: "undo.labels.cardChanged", values: { title: form.title.trim() } };
     return saveCard(
       user,
       card,
-      changed,
-      checklistChanges(id, stored, entries),
-      labelChanges(id, itemLabels, chosen, live),
+      canWrite ? changed : {},
+      canWrite ? checklistChanges(id, stored, entries) : undefined,
+      canWrite ? labelChanges(id, itemLabels, chosen, live) : undefined,
+      reminderChanges(user, id, existingReminders, specsFromText(form.reminders), label),
     );
   }
 
   async function onSubmit(submitted: SubmitEvent<HTMLFormElement>) {
     submitted.preventDefault();
-    if (busy || empty || !canWrite) return;
+    if (busy || empty || !saving) return;
     setBusy(true);
     await draft.flush();
     const ok = await save();
@@ -307,6 +328,17 @@ export function CardEditor({
                 </Button>
               ) : null}
             </div>
+          </fieldset>
+          <ReminderPicker
+            value={specsFromText(form.reminders)}
+            allDay={!form.due_time}
+            startLabel={t("kanban.cards.atDue")}
+            {...(form.due_date ? {} : { noAdd: t("kanban.cards.remindersNeedDue") })}
+            onChange={(next) => {
+              set({ reminders: specsText(next) });
+            }}
+          />
+          <fieldset disabled={!canWrite} className="flex min-w-0 flex-col gap-4">
             <CardLabels
               user={user}
               boardId={boardId}
@@ -369,8 +401,8 @@ export function CardEditor({
                 {t("kanban.cards.delete")}
               </Button>
             ) : null}
-            <Button onClick={close}>{t(canWrite ? "common.cancel" : "common.close")}</Button>
-            {canWrite ? (
+            <Button onClick={close}>{t(saving ? "common.cancel" : "common.close")}</Button>
+            {saving ? (
               <Button type="submit" variant="primary" disabled={busy || empty}>
                 {t("kanban.save")}
               </Button>

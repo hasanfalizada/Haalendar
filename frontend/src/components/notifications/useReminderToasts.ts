@@ -2,6 +2,7 @@
 // message with "Open" (the day with the event's card; the notification is marked read). The notifications list comes
 // live over the stream (D-59) or by its regular check; what was already there when the app started stays in the
 // center only. Mounted once, in the app shell.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card's reminder opens the card on its board (D-94).
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
@@ -50,6 +51,7 @@ export function useReminderToasts(user: string | null): void {
             onSuccess: () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
           });
           if (target?.to === "/todo") void navigate({ to: "/todo", search: target.search });
+          else if (target?.to === "/kanban/$boardId") void navigate(target);
           else if (target) void navigate({ to: "/calendar", search: target.search });
         },
       });

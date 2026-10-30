@@ -6,6 +6,8 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. The board shows its columns (D-91); the board menu lists the archived
 // columns. Columns are written by the owner and edit shares while the board is not archived.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards in the columns; a card opens the card editor (D-92).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. `focusCard` (from a reminder, `?card=`) opens that card's editor once
+// it has arrived; closing it drops the parameter. The user's reminders give the cards their bell (D-94).
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArrowLeft, Columns3, MoreHorizontal } from "lucide-react";
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { STANDALONE_LINK } from "@/components/ui/link-styles";
 import { columnsOf } from "@/lib/columns";
+import { useDisplayTimeZone } from "@/lib/datetime";
 import { useAttachmentCounts } from "@/lib/eventRow";
 import { localKeys, localRows } from "@/sync";
 
@@ -38,7 +41,10 @@ import { useBoards } from "./useBoards";
 
 type Dialog = "rename" | "share" | "delete" | "archivedColumns" | null;
 
-function useLocal(user: string, entity: "item" | "board_column" | "share" | "label" | "item_label" | "checklist_item") {
+function useLocal(
+  user: string,
+  entity: "item" | "board_column" | "share" | "label" | "item_label" | "checklist_item" | "reminder",
+) {
   return useQuery({
     queryKey: [...localKeys.table(entity), user],
     queryFn: () => (user ? localRows(user, entity) : Promise.resolve([])),
@@ -46,8 +52,9 @@ function useLocal(user: string, entity: "item" | "board_column" | "share" | "lab
   }).data;
 }
 
-export function BoardPage({ boardId }: { boardId: string }) {
+export function BoardPage({ boardId, focusCard }: { boardId: string; focusCard?: string }) {
   const { t } = useTranslation();
+  const timeZone = useDisplayTimeZone();
   const navigate = useNavigate();
   const boards = useBoards();
   const { user } = boards;
@@ -67,12 +74,24 @@ export function BoardPage({ boardId }: { boardId: string }) {
   const labelRows = useLocal(user, "label") ?? [];
   const itemLabelRows = useLocal(user, "item_label") ?? [];
   const checklistRows = useLocal(user, "checklist_item") ?? [];
+  const reminderRows = useLocal(user, "reminder") ?? [];
   const attachments = useAttachmentCounts(user);
   const boardLabels = labelRows
     .filter((label) => label.board_id === boardId && !label.deleted_at)
     .sort((a, b) => String(a.name).localeCompare(String(b.name)));
   const [editing, setEditing] = useState<string | null>(null);
   const editingCard = editing ? items.find((item) => item.id === editing && !item.deleted_at) : undefined;
+  // The card a reminder leads to opens once it has arrived (adjusted while rendering, not in an effect).
+  const [focused, setFocused] = useState<string | null>(null);
+  if (focusCard && focusCard !== focused) {
+    const target = items.find(
+      (item) => item.id === focusCard && item.container_id === boardId && item.kind === "card" && !item.deleted_at,
+    );
+    if (target) {
+      setFocused(focusCard);
+      setEditing(focusCard);
+    }
+  }
   const columns = columnsOf(columnRows, boardId);
   const editShare = shareRows.some(
     (s) =>
@@ -235,6 +254,8 @@ export function BoardPage({ boardId }: { boardId: string }) {
           itemLabels={itemLabelRows}
           checklistItems={checklistRows}
           attachments={attachments}
+          reminders={reminderRows}
+          timeZone={timeZone}
           onOpenCard={(card) => {
             setEditing(String(card.id));
           }}
@@ -266,6 +287,7 @@ export function BoardPage({ boardId }: { boardId: string }) {
           canWrite={canWrite}
           onClose={() => {
             setEditing(null);
+            if (focusCard) void navigate({ to: "/kanban/$boardId", params: { boardId }, search: {} });
           }}
         />
       ) : null}

@@ -4,12 +4,14 @@
 // the day view with the event's card.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. A note's reminder (D-89): "Reminder: Shopping — Today, 09:00" (the time
 // it was set for) and it opens the note on the To-Do page.
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card's reminder (D-94): "Reminder: Plan release — Tomorrow, 09:30 ·
+// Revamp" (its due date, with the time when it has one, and its board) and it opens the card on its board.
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { clockText, dayLabel } from "@/lib/dayView";
-import { atLabel, reminderWhen } from "@/lib/reminders";
+import { atLabel, cardReminderWhen, reminderWhen } from "@/lib/reminders";
 
 type Payload = Record<string, unknown>;
 
@@ -27,7 +29,8 @@ export function useReminderText(): (payload: Payload) => string {
         when: at,
       });
     }
-    const when = reminderWhen(payload, viewerTz);
+    const card = payload.kind === "card";
+    const when = card ? cardReminderWhen(payload, viewerTz) : reminderWhen(payload, viewerTz);
     let text = "";
     if (when) {
       const today = todayIn(viewerTz);
@@ -41,18 +44,32 @@ export function useReminderText(): (payload: Payload) => string {
       const time = when.start ? (when.end ? `${clock(when.start)}–${clock(when.end)}` : clock(when.start)) : null;
       text = time ? `${day}, ${time}` : day;
     }
+    if (card) {
+      const board = typeof payload.board_name === "string" ? payload.board_name : "";
+      return t(payload.late === true ? "notifications.reminderCardLate" : "notifications.reminderCard", {
+        title,
+        when: text,
+        board,
+      });
+    }
     return t(payload.late === true ? "notifications.reminderLate" : "notifications.reminder", { title, when: text });
   };
 }
 
 export type ReminderTarget =
-  { to: "/calendar"; search: { date: string; view: "day"; event: string } } | { to: "/todo"; search: { note: string } };
+  | { to: "/calendar"; search: { date: string; view: "day"; event: string } }
+  | { to: "/todo"; search: { note: string } }
+  | { to: "/kanban/$boardId"; params: { boardId: string }; search: { card: string } };
 
-/** Where a reminder leads: the event's day with its card, or the note on the To-Do page; null without its item. */
+/** Where a reminder leads: the event's day with its card, the note, or the card on its board; null without its item. */
 export function reminderTarget(payload: Payload, viewerTz: string): ReminderTarget | null {
   const item = typeof payload.item_id === "string" ? payload.item_id : null;
   if (!item) return null;
   if (payload.kind === "note") return { to: "/todo", search: { note: item } };
+  if (payload.kind === "card") {
+    const board = typeof payload.board_id === "string" ? payload.board_id : null;
+    return board ? { to: "/kanban/$boardId", params: { boardId: board }, search: { card: item } } : null;
+  }
   const when = reminderWhen(payload, viewerTz);
   return when ? { to: "/calendar", search: { date: when.day, view: "day", event: item } } : null;
 }

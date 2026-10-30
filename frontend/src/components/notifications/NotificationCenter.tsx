@@ -8,6 +8,7 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. A reminder (D-79) reads "Reminder: Dentist — Today, 11:00–12:00" in
 // the reader's zone (marked when it was sent late) and opens its day in the calendar with the event's card. A notification
 // that leads elsewhere does not send the focus back to the bell (it would close the card it opened).
+// +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card's reminder opens the card on its board (D-94).
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Bell, BellRing, Download, Share2, UserMinus, type LucideIcon } from "lucide-react";
 import { useRef, useState } from "react";
@@ -92,6 +93,7 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
       if (target) {
         onNavigate();
         if (target.to === "/todo") void navigate({ to: "/todo", search: target.search });
+        else if (target.to === "/kanban/$boardId") void navigate(target);
         else void navigate({ to: "/calendar", search: target.search });
         return;
       }
