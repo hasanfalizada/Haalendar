@@ -54,6 +54,7 @@ from haalendar.planning.models import (
     Event,
     Item,
     ItemLabel,
+    Link,
     Note,
     RecurrenceException,
 )
@@ -478,6 +479,19 @@ async def move_item(
             update(Attachment)
             .where(Attachment.item_id == item_id)
             .values(container_kind=target_kind, container_id=target_id)
+            .execution_options(synchronize_session=False)
+        )
+        # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Its links carry the new container (D-98).
+        await db.execute(
+            update(Link)
+            .where(Link.from_item_id == item_id)
+            .values(container_kind=target_kind, container_id=target_id)
+            .execution_options(synchronize_session=False)
+        )
+        await db.execute(
+            update(Link)
+            .where(Link.to_item_id == item_id)
+            .values(to_container_kind=target_kind, to_container_id=target_id)
             .execution_options(synchronize_session=False)
         )
         await db.flush()

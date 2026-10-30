@@ -263,6 +263,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | [common] | | binary never deleted (P2) |
 
 ### 5.14 `link`
++++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. As built (migration 0030, D-98): plus the containers of both ends (`container_kind` / `container_id` of `from_item_id`, `to_container_kind` / `to_container_id` of `to_item_id`) for row-level security of its own (either end reads; both read and one writes to change); unique live unordered pair as an index on `least` / `greatest` of the two ids; CHECK `from_item_id <> to_item_id`; `updated_at`, `updated_by`, `delete_batch_id`, `version`, `sync_seq`.
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid PK | |

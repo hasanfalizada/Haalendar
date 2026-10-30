@@ -29,6 +29,7 @@ NOTIFIED_TABLES: tuple[str, ...] = (
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns: told like items, to their board's audience.
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Labels and labels on items: told like items.
 # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees: told like items.
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links: told to both ends' audiences.
 NOTIFIED_TABLES_LATER: tuple[str, ...] = (
     "reminder",
     "checklist_item",
@@ -37,6 +38,7 @@ NOTIFIED_TABLES_LATER: tuple[str, ...] = (
     "label",
     "item_label",
     "card_assignee",
+    "link",
 )
 
 NOTIFY_FUNCTION = f"""
@@ -101,6 +103,16 @@ NOTIFY_FUNCTION_0029 = NOTIFY_FUNCTION_0027.replace(
     "WHEN 'item', 'attachment', 'checklist_item', 'board_column', 'label', 'item_label' THEN",
     "WHEN 'item', 'attachment', 'checklist_item', 'board_column', 'label', 'item_label', 'card_assignee' THEN",
 )
+
+
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. (migration 0030): a link is told to the audience of each end.
+NOTIFY_FUNCTION_0030 = NOTIFY_FUNCTION_0029.replace(
+    "    ELSE RETURN NULL;",
+    "    WHEN 'link' THEN\n"
+    "      PERFORM pg_notify('{channel}', jsonb_build_object('c', NEW.to_container_kind, 'i', NEW.to_container_id)::text);\n"
+    "      message := jsonb_build_object('c', NEW.container_kind, 'i', NEW.container_id);\n"
+    "    ELSE RETURN NULL;",
+).replace("{channel}", CHANNEL)
 
 
 def notify_trigger(table: str) -> str:

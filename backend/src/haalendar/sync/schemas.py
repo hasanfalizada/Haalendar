@@ -129,6 +129,13 @@ class CardAssigneeCreateData(ApiModel):
     user_id: uuid.UUID
 
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. A link between two items: its ends (and origin) when created, nothing to change afterwards.
+class LinkCreateData(ApiModel):
+    from_item_id: uuid.UUID
+    to_item_id: uuid.UUID
+    origin: Literal["manual", "time_block", "conversion"] | None = None
+
+
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A board column (D-91): its board when created, then its fields
 # (checked by haalendar.planning.columns).
 class ColumnData(ApiModel):
@@ -159,6 +166,7 @@ class MutationIn(ApiModel):
         "label",
         "item_label",
         "card_assignee",
+        "link",
     ]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]

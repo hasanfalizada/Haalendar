@@ -49,6 +49,8 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
     "item_label": ("item_label", "id", ()),
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees of the boards the user reads.
     "card_assignee": ("card_assignee", "id", ()),
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links with an end the user reads.
+    "link": ("link", "id", ()),
 }
 
 
@@ -147,7 +149,11 @@ def _container_content_sql() -> str:
         f"WHERE t.container_kind = :kind AND t.container_id = :container "
         # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the assignees of its cards.
         f"UNION ALL SELECT 'card_assignee', t.id, t.sync_seq, {_data_expr('t', ())} FROM card_assignee t "
-        f"WHERE t.container_kind = :kind AND t.container_id = :container"
+        f"WHERE t.container_kind = :kind AND t.container_id = :container "
+        # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. And the links with an end in it.
+        f"UNION ALL SELECT 'link', t.id, t.sync_seq, {_data_expr('t', ())} FROM link t "
+        f"WHERE (t.container_kind = :kind AND t.container_id = :container) "
+        f"OR (t.to_container_kind = :kind AND t.to_container_id = :container)"
     )
 
 

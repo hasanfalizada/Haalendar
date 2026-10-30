@@ -28,7 +28,7 @@ from haalendar.errors import ProblemCode, ProblemError
 from haalendar.exports.archive import SCHEMA_VERSION, ArchiveWriter, readme_html
 from haalendar.exports.models import ExportRequest
 from haalendar.exports.schemas import ExportOut, Module
-from haalendar.exports.sections import SECTIONS, ExportContext
+from haalendar.exports.sections import SECTIONS, ExportContext, links_section
 from haalendar.logging import get_logger
 from haalendar.notifications.service import notify_self
 from haalendar.preferences.service import get_settings
@@ -205,6 +205,8 @@ async def _write_archive(
             for module in row.modules:
                 for section in SECTIONS.get(cast(Module, module), []):
                     await section(ctx)
+            # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links across the modules, once (D-98).
+            await links_section(ctx, list(row.modules))
             archive.finish(readme_html(header, archive.counts, archive.files))
             counts = dict(archive.counts)
         row.status = "ready"

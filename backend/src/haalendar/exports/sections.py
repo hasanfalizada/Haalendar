@@ -12,6 +12,8 @@ columns and cards join with HAAL-111/112.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Each board carries its columns (deleted ones included), left to right.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Each column its cards; the boards' labels, the cards' checklist items and
 their attachments (folder kanban/) in their sections.
++++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links (D-98) with at least one end among the items exported (an event
+in the user's calendars, the user's note, a card on the user's boards), deleted ones included — after the modules.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.attachments.models import Attachment
@@ -41,6 +43,7 @@ from haalendar.planning.models import (
     Item,
     ItemLabel,
     Label,
+    Link,
     Note,
 )
 from haalendar.storage import Storage
@@ -308,3 +311,41 @@ SECTIONS: dict[Module, list[Section]] = {
     "todo": [todo_section],
     "kanban": [kanban_section],
 }
+
+
+async def links_section(ctx: ExportContext, modules: list[str]) -> None:
+    """The links touching the items of the exported modules."""
+    owned = []
+    if "calendar" in modules:
+        owned.append(
+            select(Item.id)
+            .join(Calendar, (Item.container_kind == "calendar") & (Calendar.id == Item.container_id))
+            .where(Calendar.owner_id == ctx.owner_id)
+        )
+    if "todo" in modules:
+        owned.append(select(Item.id).where(Item.kind == "note", Item.owner_id == ctx.owner_id))
+    if "kanban" in modules:
+        owned.append(
+            select(Item.id)
+            .join(Board, (Item.container_kind == "board") & (Board.id == Item.container_id))
+            .where(Board.owner_id == ctx.owner_id)
+        )
+    if not owned:
+        return
+    ids = owned[0].union(*owned[1:]).subquery()
+    rows = await ctx.db.scalars(
+        select(Link)
+        .where(or_(Link.from_item_id.in_(select(ids.c.id)), Link.to_item_id.in_(select(ids.c.id))))
+        .order_by(Link.created_at, Link.id)
+    )
+    for link in rows:
+        ctx.archive.add_row(
+            "links",
+            {
+                "id": link.id,
+                "from_item_id": link.from_item_id,
+                "to_item_id": link.to_item_id,
+                "origin": link.origin,
+                **_meta(link),
+            },
+        )

@@ -139,6 +139,20 @@ class World:
                 "VALUES (%s, %s, %s, 'board', %s, %s)",
                 (uuid.uuid7(), self.items["Release"], self.items["Urgent"], revamp, self.ids["ada"]),
             )
+            # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. The card linked to the note.
+            self.items["link"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO link (id, from_item_id, to_item_id, container_kind, container_id, to_container_kind, "
+                "to_container_id, created_by) VALUES (%s, %s, %s, 'board', %s, 'note', %s, %s)",
+                (
+                    self.items["link"],
+                    self.items["Release"],
+                    self.items["Shopping"],
+                    revamp,
+                    self.items["Shopping"],
+                    self.ids["ada"],
+                ),
+            )
         with _as(db_url, self.ids["bob"]) as conn:
             conn.execute(
                 "INSERT INTO calendar (id, owner_id, name) VALUES (%s, %s, 'Bobs')",
@@ -244,6 +258,7 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "checklist_items": 1,
         "boards": 1,
         "labels": 1,
+        "links": 1,  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120.
     }
     response = world.api.get(listed[0]["download_url"])
     assert response.status_code == 200 and response.headers["content-type"] == "application/zip"
@@ -295,6 +310,13 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         [world.items["Urgent"]],
     )
     assert [(label["name"], label["color"]) for label in document["labels"]] == [("Urgent", "red")]
+    [link] = document["links"]  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Once, across the modules.
+    assert (link["id"], link["from_item_id"], link["to_item_id"], link["origin"]) == (
+        world.items["link"],
+        world.items["Release"],
+        world.items["Shopping"],
+        "manual",
+    )
     [note] = document["notes"]
     assert (note["id"], note["title"], note["color"], note["pinned"], note["position"]) == (
         world.items["Shopping"],

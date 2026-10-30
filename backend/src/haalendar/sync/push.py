@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import assignees, boards, checklists, columns, labels, occurrences, reminders
+from haalendar.planning import assignees, boards, checklists, columns, labels, links, occurrences, reminders
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
@@ -49,6 +49,7 @@ from haalendar.sync.schemas import (
     ItemLabelCreateData,
     LabelCreateData,
     LabelData,
+    LinkCreateData,
     MoveData,
     MutationIn,
     OccurrenceData,
@@ -86,6 +87,7 @@ def _fields(
     | type[LabelCreateData]
     | type[ItemLabelCreateData]
     | type[CardAssigneeCreateData]
+    | type[LinkCreateData]
     | type[ItemData]
     | type[ItemCreateData]
     | type[ReminderData]
@@ -175,6 +177,15 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await assignees.unassign(db, user_id, m.entity_id)
         if m.op == "restore":
             return await assignees.restore_assignment(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links (D-98): added and removed, never changed.
+    if m.entity_type == "link":
+        if m.op == "create":
+            return await links.create_link(db, user_id, m.entity_id, _fields(LinkCreateData, m.data))
+        if m.op == "delete":
+            return await links.delete_link(db, user_id, m.entity_id)
+        if m.op == "restore":
+            return await links.restore_link(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.entity_type == "reminder":
         if m.op == "create":

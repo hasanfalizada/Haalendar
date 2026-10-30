@@ -32,7 +32,7 @@
 | HAAL-104 | E06 To-Do | Due date on note, visible in calendar | Should | 100 | — | To do | — | owner backlog file |
 | HAAL-114 | E07 Kanban | Card activity (from audit log) and comments | Should | 112, 032 | — | To do | — | owner backlog file |
 | HAAL-115 | E07 Kanban | Swimlanes | Could | 111 | — | To do | — | owner backlog file |
-| HAAL-120 | E08 Integration | Links between events, notes, cards; backlinks | Must | 013 | — | To do | — | owner backlog file |
+| HAAL-120 | E08 Integration | Links between events, notes, cards; backlinks | Must | 013 | — | In progress | — | owner backlog file |
 | HAAL-121 | E08 Integration | Note/card due dates as toggleable calendar layers | Must | 104, 112, 060 | — | To do | — | owner backlog file |
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
@@ -136,7 +136,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-116 | 2026-10-30 | 8a35dad, 1735659 | feat(kanban): due-date reminders on cards — event forms from the due date in the board owner's zone, notification and web push (stage 1), reminders in the card editor, bell on the card, ?card= from the notification (stage 2) (HAAL-116) |
 | HAAL-117 | 2026-10-30 | 1d1d8e2 | feat(kanban): overdue and due-soon badges on cards and in the card editor — whole-day dates, word and sign besides the colour (HAAL-117) |
 | HAAL-118 | 2026-10-30 | d78be55 | feat(kanban): board filters — text, labels, priority and due date in the address, phone panel, moves among the cards shown (HAAL-118; assignee filter with HAAL-119) |
-| HAAL-119 | 2026-10-30 | c692422, — | feat(kanban): card assignees — board members, sync add and remove, assigned notification, trash and export (stage 1), assignees in the card editor, initials on cards, assignee filter and the notification opening the card (stage 2) (HAAL-119) |
+| HAAL-119 | 2026-10-30 | c692422, 4576aac | feat(kanban): card assignees — board members, sync add and remove, assigned notification, trash and export (stage 1), assignees in the card editor, initials on cards, assignee filter and the notification opening the card (stage 2) (HAAL-119) |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |

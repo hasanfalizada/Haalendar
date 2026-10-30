@@ -435,3 +435,39 @@ class CardAssignee(Base):
     delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. A link between two items (domain model 5.14, D-98): its own synced row
+# carrying the containers of both ends — `container_kind` / `container_id` of the first (as every content row, for the
+# audit log and live updates) and `to_container_kind` / `to_container_id` of the second — so whoever reads either end
+# reads the link. At most one live link per unordered pair; soft-deleted only.
+class Link(Base):
+    __tablename__ = "link"
+    __table_args__ = (
+        Index(
+            "uq_link_live_pair",
+            func.least(text("from_item_id"), text("to_item_id")),
+            func.greatest(text("from_item_id"), text("to_item_id")),
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    from_item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), index=True)
+    to_item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), index=True)
+    container_kind: Mapped[str] = mapped_column(String(10))
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    to_container_kind: Mapped[str] = mapped_column(String(10))
+    to_container_id: Mapped[uuid.UUID] = mapped_column()
+    origin: Mapped[str] = mapped_column(String(12), default="manual")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)
