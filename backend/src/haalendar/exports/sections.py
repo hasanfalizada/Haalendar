@@ -36,6 +36,7 @@ from haalendar.planning.models import (
     BoardColumn,
     Calendar,
     Card,
+    CardAssignee,
     ChecklistItem,
     Item,
     ItemLabel,
@@ -217,6 +218,15 @@ async def kanban_section(ctx: ExportContext) -> None:
         .order_by(ItemLabel.created_at, ItemLabel.id)
     ):
         item_labels.setdefault(row.item_id, []).append(row.label_id)
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the ids of their assignees.
+    assigned: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for assignee in await ctx.db.scalars(
+        select(CardAssignee)
+        .where(CardAssignee.container_kind == "board", CardAssignee.container_id.in_(board_ids))
+        .where(CardAssignee.deleted_at.is_(None))
+        .order_by(CardAssignee.created_at, CardAssignee.id)
+    ):
+        assigned.setdefault(assignee.item_id, []).append(assignee.user_id)
     cards: dict[uuid.UUID, list[dict[str, Any]]] = {}
     for item, card in (
         await ctx.db.execute(
@@ -239,6 +249,7 @@ async def kanban_section(ctx: ExportContext) -> None:
                 "due_date": card.due_date,
                 "due_time": card.due_time.strftime("%H:%M") if card.due_time else None,
                 "label_ids": item_labels.get(item.id, []),
+                "assignee_ids": assigned.get(item.id, []),
                 **_meta(item),
             }
         )

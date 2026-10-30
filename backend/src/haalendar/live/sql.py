@@ -28,6 +28,7 @@ NOTIFIED_TABLES: tuple[str, ...] = (
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards: told to their audience like calendars.
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns: told like items, to their board's audience.
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Labels and labels on items: told like items.
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees: told like items.
 NOTIFIED_TABLES_LATER: tuple[str, ...] = (
     "reminder",
     "checklist_item",
@@ -35,6 +36,7 @@ NOTIFIED_TABLES_LATER: tuple[str, ...] = (
     "board_column",
     "label",
     "item_label",
+    "card_assignee",
 )
 
 NOTIFY_FUNCTION = f"""
@@ -91,6 +93,13 @@ NOTIFY_FUNCTION_0026 = NOTIFY_FUNCTION_0025.replace(
 NOTIFY_FUNCTION_0027 = NOTIFY_FUNCTION_0026.replace(
     "WHEN 'item', 'attachment', 'checklist_item', 'board_column' THEN",
     "WHEN 'item', 'attachment', 'checklist_item', 'board_column', 'label', 'item_label' THEN",
+)
+
+
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119 (migration 0029): card assignees are told like items.
+NOTIFY_FUNCTION_0029 = NOTIFY_FUNCTION_0027.replace(
+    "WHEN 'item', 'attachment', 'checklist_item', 'board_column', 'label', 'item_label' THEN",
+    "WHEN 'item', 'attachment', 'checklist_item', 'board_column', 'label', 'item_label', 'card_assignee' THEN",
 )
 
 

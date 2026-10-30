@@ -200,6 +200,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | archived_at | timestamptz | |
 
 ### 5.9 `card_assignee`
++++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. As built (migration 0029, D-97): a row of its own (`id` primary key, unique live `(item_id, user_id)`) synced as add / remove like `item_label`; `item_id` (the card's item), `user_id`, the board as `container_kind` / `container_id` (content policies, author `created_by`), `updated_at`, `updated_by`, `delete_batch_id`, `version`, `sync_seq`. Membership is checked by the application (`haalendar_board_members`), not by a constraint: a revoked member's rows stay.
 | Column | Type | Rules |
 |---|---|---|
 | card_id | uuid FK card | PK (card_id, user_id) among active rows |

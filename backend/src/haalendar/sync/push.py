@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import boards, checklists, columns, labels, occurrences, reminders
+from haalendar.planning import assignees, boards, checklists, columns, labels, occurrences, reminders
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
@@ -39,6 +39,7 @@ from haalendar.sync.pull import current_state
 from haalendar.sync.schemas import (
     BoardData,
     CalendarData,
+    CardAssigneeCreateData,
     ChecklistItemCreateData,
     ChecklistItemData,
     ColumnCreateData,
@@ -84,6 +85,7 @@ def _fields(
     | type[LabelData]
     | type[LabelCreateData]
     | type[ItemLabelCreateData]
+    | type[CardAssigneeCreateData]
     | type[ItemData]
     | type[ItemCreateData]
     | type[ReminderData]
@@ -164,6 +166,15 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await labels.remove_label(db, user_id, m.entity_id)
         if m.op == "restore":
             return await labels.restore_item_label(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees (D-97): added and removed, never changed.
+    if m.entity_type == "card_assignee":
+        if m.op == "create":
+            return await assignees.assign(db, user_id, m.entity_id, _fields(CardAssigneeCreateData, m.data))
+        if m.op == "delete":
+            return await assignees.unassign(db, user_id, m.entity_id)
+        if m.op == "restore":
+            return await assignees.restore_assignment(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.entity_type == "reminder":
         if m.op == "create":

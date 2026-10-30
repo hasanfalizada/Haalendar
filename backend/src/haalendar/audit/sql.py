@@ -53,6 +53,8 @@ AUDITED_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
     "card": ("ref", ()),
     "label": ("ref", ()),
     "item_label": ("ref", ()),
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees.
+    "card_assignee": ("ref", ()),
 }
 # Sessions, tokens and recovery codes are numerous and secret (structured logs cover them); the log itself and
 # alembic's bookkeeping are not audited either.

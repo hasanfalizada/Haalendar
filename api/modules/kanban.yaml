@@ -230,7 +230,7 @@ paths:
     get:
       tags: [kanban]
       operationId: listBoardMembers
-      summary: Owner and users with a share — candidates for assignment
+      summary: Owner and users with an active share — candidates for assignment; for readers of the board, 404 otherwise (FR-KAN-10, D-97)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:

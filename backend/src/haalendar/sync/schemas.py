@@ -123,6 +123,12 @@ class ItemLabelCreateData(ApiModel):
     label_id: uuid.UUID
 
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. A card's assignee: the card and the member when created, nothing to change afterwards.
+class CardAssigneeCreateData(ApiModel):
+    item_id: uuid.UUID
+    user_id: uuid.UUID
+
+
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A board column (D-91): its board when created, then its fields
 # (checked by haalendar.planning.columns).
 class ColumnData(ApiModel):
@@ -144,7 +150,15 @@ class MoveData(ApiModel):
 class MutationIn(ApiModel):
     mutation_id: uuid.UUID
     entity_type: Literal[
-        "calendar", "item", "reminder", "checklist_item", "board", "board_column", "label", "item_label"
+        "calendar",
+        "item",
+        "reminder",
+        "checklist_item",
+        "board",
+        "board_column",
+        "label",
+        "item_label",
+        "card_assignee",
     ]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]

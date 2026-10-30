@@ -285,6 +285,9 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     [column] = board["columns"]
     assert (column["id"], column["name"], column["wip_limit"]) == (world.items["Doing"], "Doing", 3)
     [card] = column["cards"]
+    assert (
+        card["assignee_ids"] == []
+    )  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119: assignees travel too.
     assert (card["title"], card["due_date"], card["due_time"], card["label_ids"]) == (
         "Release",
         "2026-11-10",

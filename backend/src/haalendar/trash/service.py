@@ -43,6 +43,7 @@ from haalendar.planning.models import (
     BoardColumn,
     Calendar,
     Card,
+    CardAssignee,
     ChecklistItem,
     Item,
     ItemLabel,
@@ -142,6 +143,8 @@ SOURCES: dict[str, TrashSource] = {
             # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Its labels and the labels on its cards.
             ("label", Label),
             ("item_label", ItemLabel),
+            # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the cards' assignees.
+            ("card_assignee", CardAssignee),
         ),
     ),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A column deleted on its own (D-91): restored by the board's owner
@@ -165,6 +168,7 @@ SOURCES: dict[str, TrashSource] = {
             ("attachment", Attachment),
             ("checklist_item", ChecklistItem),
             ("item_label", ItemLabel),
+            ("card_assignee", CardAssignee),
         ),
     ),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards (D-92): restored with their attachments, checklist items and
@@ -176,7 +180,12 @@ SOURCES: dict[str, TrashSource] = {
         title=lambda row: row.title or "",
         may_restore=lambda user_id: _edit_access(Item),
         refuse=lambda row, user_id: None,
-        children=(("attachment", Attachment), ("checklist_item", ChecklistItem), ("item_label", ItemLabel)),
+        children=(
+            ("attachment", Attachment),
+            ("checklist_item", ChecklistItem),
+            ("item_label", ItemLabel),
+            ("card_assignee", CardAssignee),
+        ),
         root_only=lambda: (
             ~exists().where(Board.id == Item.container_id, Board.delete_batch_id == Item.delete_batch_id)
             & ~exists().where(

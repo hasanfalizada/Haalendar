@@ -49,6 +49,7 @@ from haalendar.planning import cards, events, notes
 from haalendar.planning.models import (
     Calendar,
     Card,
+    CardAssignee,
     ChecklistItem,
     Event,
     Item,
@@ -492,7 +493,8 @@ async def delete_item(
     edited = item.deleted_at is None and base_version is not None and item.version != base_version
     if item.deleted_at is None:
         batch, now = new_batch(), datetime.now(UTC)
-        for model in (Attachment, ChecklistItem, ItemLabel):
+        # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. A card's assignees go with it.
+        for model in (Attachment, ChecklistItem, ItemLabel, CardAssignee):
             await db.execute(
                 update(model)
                 .where(model.item_id == item_id, model.deleted_at.is_(None))
@@ -510,6 +512,8 @@ async def restore_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID)
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
     if item.deleted_at is not None and item.delete_batch_id is not None:
-        await restore_batch(db, [Item, Attachment, ChecklistItem, ItemLabel], item.delete_batch_id, user_id)
+        await restore_batch(
+            db, [Item, Attachment, ChecklistItem, ItemLabel, CardAssignee], item.delete_batch_id, user_id
+        )
         await db.refresh(item)
     return Outcome(version=item.version)

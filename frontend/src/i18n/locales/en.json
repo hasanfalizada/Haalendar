@@ -652,7 +652,9 @@
       "label_one": "{{count}} label",
       "label_other": "{{count}} labels",
       "item_label_one": "{{count}} label on a card",
-      "item_label_other": "{{count}} labels on cards"
+      "item_label_other": "{{count}} labels on cards",
+      "card_assignee_one": "{{count}} assignee",
+      "card_assignee_other": "{{count}} assignees"
     },
     "select": "Select {{title}}",
     "restore": "Restore",
@@ -736,7 +738,8 @@
       "board": "Board",
       "board_column": "Column",
       "label": "Label",
-      "item_label": "Label on a card"
+      "item_label": "Label on a card",
+      "card_assignee": "Assignee of a card"
     },
     "kind": {
       "fields": "Changed here and on another device",

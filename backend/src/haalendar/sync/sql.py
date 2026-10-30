@@ -17,6 +17,7 @@ SYNCED_TABLES_0014: tuple[str, ...] = ("calendar", "share", "item", "attachment"
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards join (migration 0025).
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns join (migration 0026).
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Labels and labels on items join (migration 0027).
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees join (migration 0029).
 SYNCED_TABLES: tuple[str, ...] = (
     *SYNCED_TABLES_0014,
     "reminder",
@@ -25,6 +26,7 @@ SYNCED_TABLES: tuple[str, ...] = (
     "board_column",
     "label",
     "item_label",
+    "card_assignee",
 )
 
 SYNC_STAMP_FUNCTION = """

@@ -17,9 +17,9 @@ export PATH="$HOME/.local/bin:$PATH"
 DB=haalendar-dev-db
 DEV_DIR="$ROOT/.dev"
 URL="http://localhost:5173"
-mkdir -p "$DEV_DIR/storage" "$DEV_DIR/mail"
-
 "$ROOT/scripts/dev/stack-down.sh" >/dev/null 2>&1
+# +++===+++ 2026-10-30 — Hasan Alizada — After stack-down, which removes the previous stack's uploads and mail.
+mkdir -p "$DEV_DIR/storage" "$DEV_DIR/mail"
 docker run -d --name "$DB" -e POSTGRES_USER=haalendar -e POSTGRES_PASSWORD=haalendar -e POSTGRES_DB=haalendar \
   -p 127.0.0.1:55434:5432 postgres:18 >/dev/null || { echo "docker run failed"; exit 1; }
 for _ in $(seq 1 60); do docker exec "$DB" pg_isready -U haalendar -q && break; sleep 1; done

@@ -47,6 +47,8 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Board labels and labels on items (D-92).
     "label": ("label", "id", ()),
     "item_label": ("item_label", "id", ()),
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees of the boards the user reads.
+    "card_assignee": ("card_assignee", "id", ()),
 }
 
 
@@ -142,6 +144,9 @@ def _container_content_sql() -> str:
         f"UNION ALL SELECT 'label', t.id, t.sync_seq, {_data_expr('t', ())} FROM label t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container "
         f"UNION ALL SELECT 'item_label', t.id, t.sync_seq, {_data_expr('t', ())} FROM item_label t "
+        f"WHERE t.container_kind = :kind AND t.container_id = :container "
+        # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the assignees of its cards.
+        f"UNION ALL SELECT 'card_assignee', t.id, t.sync_seq, {_data_expr('t', ())} FROM card_assignee t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container"
     )
 
