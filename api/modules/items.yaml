@@ -64,6 +64,8 @@ paths:
         '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        # +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. An attachment the user cannot see (found by the isolation test).
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   attachment_thumbnail:
     get:
       tags: [items]

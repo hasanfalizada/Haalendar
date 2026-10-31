@@ -36,7 +36,7 @@
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
-| HAAL-144 | E10 QA | Security testing: SAST, dependency/license scans, DAST on demo, multi-user isolation tests | Must | 020, 165 | — | To do | — | owner backlog file |
+| HAAL-144 | E10 QA | Security testing: SAST, dependency/license scans, DAST on demo, multi-user isolation tests | Must | 020, 165 | — | In progress | — | owner backlog file |
 | HAAL-145 | E10 QA | UAT by owner on migrated real data; written sign-off | Must | 130 (closed; counts as met, owner 2026-11-01), 141 | — | To do | — | owner backlog file |
 | HAAL-150 | E11 Delivery | Docker images (x86_64 + arm64) + docker compose for on-prem, volumes, env config | Must | 011, 016 | — | To do | — | owner backlog file |
 | HAAL-151 | E11 Delivery | CI/CD GitHub Actions: lint, tests, build, SBOM, license check, image publish on tag | Must | 006, 140 | — | To do | — | owner backlog file |
