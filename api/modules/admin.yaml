@@ -1,4 +1,4 @@
-# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Administration, instance settings, legacy import, demo status, health (FR-ACC-06, FR-OPS-01/03, SRS 4.5). Admins manage accounts, never content (ADR-0005).
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Administration, instance settings, demo status, health (FR-ACC-06, FR-OPS-03, SRS 4.5). Admins manage accounts, never content (ADR-0005).
 # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
 paths:
   admin_users:
@@ -24,6 +24,7 @@ paths:
                     properties:
                       data: { type: array, items: { $ref: '#/components/schemas/AdminUser' } }
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
   # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Invitations can be listed and revoked; every admin mutation
   # requires a recent re-authentication (403 reauth_required); admins cannot change, deactivate or reset themselves.
   admin_invites:
@@ -122,6 +123,7 @@ paths:
         '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
         '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
   admin_user_action:
     post:
       tags: [admin]
@@ -151,6 +153,7 @@ paths:
         '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
         '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
   admin_settings:
     get:
       tags: [admin]
@@ -159,6 +162,7 @@ paths:
       responses:
         '200': { description: Settings, content: { application/json: { schema: { $ref: '#/components/schemas/InstanceSettings' } } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
     patch:
       tags: [admin]
       operationId: adminUpdateInstanceSettings
@@ -189,58 +193,13 @@ paths:
         '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
         '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
-  admin_imports:
-    get:
-      tags: [admin]
-      operationId: adminListImports
-      summary: Legacy import runs
-      responses:
-        '200':
-          description: Runs
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data: { type: array, items: { $ref: '#/components/schemas/ImportRun' } }
-        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
-    post:
-      tags: [admin]
-      operationId: adminStartLegacyImport
-      summary: Import a legacy Haalendar db.db into a user's default calendar (dry run by default) — FR-OPS-01
-      parameters:
-        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file, target_user_id]
-              properties:
-                file: { type: string, contentMediaType: application/octet-stream }
-                target_user_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                dry_run: { type: boolean, default: true }
-      responses:
-        '202': { description: Started, content: { application/json: { schema: { $ref: '#/components/schemas/ImportRun' } } } }
-        '413': { $ref: '../components/common.yaml#/components/responses/PayloadTooLarge' }
-        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
-  admin_import:
-    get:
-      tags: [admin]
-      operationId: adminGetImport
-      summary: Import run with report
-      parameters:
-        - $ref: '../components/common.yaml#/components/parameters/Id'
-      responses:
-        '200': { description: Run, content: { application/json: { schema: { $ref: '#/components/schemas/ImportRun' } } } }
-        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The legacy import operations are gone: no importer is built (SRS D-100).
 
   demo_status:
     get:
       tags: [system]
       operationId: getDemoStatus
+      x-not-implemented: 'Planned: HAAL-154.'
       summary: Demo mode and next reset time (FR-OPS-03)
       security: []
       responses:
@@ -305,23 +264,3 @@ components:
         demo_mode: { type: boolean, readOnly: true, description: 'Set by deployment (environment), not via API.' }
         smtp_configured: { type: boolean, readOnly: true }
         version: { type: integer }
-    ImportRun:
-      type: object
-      required: [id, target_user_id, dry_run, status, started_at]
-      properties:
-        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        target_user_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-        dry_run: { type: boolean }
-        status: { type: string, enum: [running, succeeded, failed] }
-        started_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
-        finished_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
-        report:
-          type: object
-          description: Counts per legacy table, created/skipped items, unmapped values, warnings.
-          properties:
-            events_total: { type: integer }
-            events_imported: { type: integer }
-            events_deleted: { type: integer }
-            exclusions_imported: { type: integer }
-            log_entries_imported: { type: integer }
-            warnings: { type: array, items: { type: string } }

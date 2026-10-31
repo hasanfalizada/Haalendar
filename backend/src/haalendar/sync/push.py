@@ -251,7 +251,9 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
 
 
 def _problem(error: ProblemError) -> dict[str, Any]:
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. With its `type` like every problem (found by the contract check).
     problem: dict[str, Any] = {
+        "type": f"/problems/{error.code.value}",
         "status": error.status,
         "code": error.code.value,
         "title": HTTPStatus(error.status).phrase,

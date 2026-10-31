@@ -11,6 +11,7 @@ paths:
       responses:
         '200': { description: Attachments, content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Attachment' } } } } } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
     # +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040 (D-45). Raw request body like the avatar upload (no multipart):
     # the image bytes, the original file name in X-File-Name (percent-encoded UTF-8), an optional client-generated id.
     post:
@@ -62,6 +63,7 @@ paths:
       responses:
         '200': { $ref: '../components/common.yaml#/components/responses/Deleted' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
   attachment_thumbnail:
     get:
       tags: [items]
@@ -77,6 +79,7 @@ paths:
     get:
       tags: [items]
       operationId: listReminders
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Current user's reminders on an item
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -86,6 +89,7 @@ paths:
     post:
       tags: [items]
       operationId: createReminder
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Add a reminder (FR-CAL-29, FR-TODO-07, FR-KAN-07)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -100,6 +104,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteReminder
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable.'
       summary: Soft-delete reminder
       parameters:
@@ -112,6 +117,7 @@ paths:
     get:
       tags: [items]
       operationId: listLinks
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Links and backlinks; unreadable ends shown as restricted (FR-INT-01). Built through sync instead (entity `link`, HAAL-120, D-98); this path is not served
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -121,6 +127,7 @@ paths:
     post:
       tags: [items]
       operationId: createLink
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create link
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -142,6 +149,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteLink
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable.'
       summary: Soft-delete link
       parameters:
@@ -154,6 +162,7 @@ paths:
     put:
       tags: [items]
       operationId: setItemLabels
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Replace the label set of a note or card
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -173,6 +182,7 @@ paths:
     get:
       tags: [items]
       operationId: listPersonalLabels
+      x-not-implemented: 'Planned: HAAL-102.'
       summary: Personal labels (notes); board labels are under boards
       responses:
         '200': { description: Labels, content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Label' } } } } } } }
@@ -180,6 +190,7 @@ paths:
     post:
       tags: [items]
       operationId: createPersonalLabel
+      x-not-implemented: 'Planned: HAAL-102.'
       summary: Create personal label
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
@@ -193,6 +204,7 @@ paths:
     patch:
       tags: [items]
       operationId: updateLabel
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Update label
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -206,6 +218,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteLabel
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable.'
       summary: Soft-delete label
       parameters:
@@ -218,6 +231,7 @@ paths:
     get:
       tags: [items]
       operationId: listChecklistItems
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: List checklist items
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -227,6 +241,7 @@ paths:
     post:
       tags: [items]
       operationId: createChecklistItem
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create checklist item
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -249,6 +264,7 @@ paths:
     patch:
       tags: [items]
       operationId: updateChecklistItem
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Edit text, check/uncheck, reorder
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -270,6 +286,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteChecklistItem
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable.'
       summary: Soft-delete checklist item
       parameters:
@@ -282,6 +299,7 @@ paths:
     get:
       tags: [items]
       operationId: listComments
+      x-not-implemented: 'Planned: HAAL-114.'
       summary: List comments
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -303,6 +321,7 @@ paths:
     post:
       tags: [items]
       operationId: createComment
+      x-not-implemented: 'Planned: HAAL-114.'
       summary: Create comment
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -324,6 +343,7 @@ paths:
     patch:
       tags: [items]
       operationId: updateComment
+      x-not-implemented: 'Planned: HAAL-114.'
       summary: Author only
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -343,6 +363,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteComment
+      x-not-implemented: 'Planned: HAAL-114.'
       x-soft-delete: 'Sets deleted_at; restorable.'
       summary: Soft-delete comment
       parameters:
@@ -355,6 +376,7 @@ paths:
     get:
       tags: [items]
       operationId: getItemHistory
+      x-not-implemented: 'Planned: HAAL-114 (activity from the audit log).'
       summary: Audit history of an item, newest first (FR-X-03)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -377,6 +399,7 @@ paths:
     post:
       tags: [items]
       operationId: convertItem
+      x-not-implemented: 'Planned: HAAL-122.'
       summary: Convert note ↔ card ↔ event keeping content, attachments and links (FR-INT-02)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'

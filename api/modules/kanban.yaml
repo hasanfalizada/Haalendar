@@ -5,6 +5,7 @@ paths:
     get:
       tags: [kanban]
       operationId: listBoards
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: List boards
       parameters:
         - { name: view, in: query, schema: { type: string, enum: [active, archived], default: active } }
@@ -14,6 +15,7 @@ paths:
     post:
       tags: [kanban]
       operationId: createBoard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create board
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
@@ -35,6 +37,7 @@ paths:
     get:
       tags: [kanban]
       operationId: getBoard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Board with columns and cards (card filters FR-KAN-09)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -49,6 +52,7 @@ paths:
     patch:
       tags: [kanban]
       operationId: updateBoard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Rename, reorder, archive (owner only)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -70,6 +74,7 @@ paths:
     delete:
       tags: [kanban]
       operationId: deleteBoard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at with one delete_batch_id for the board, its columns and cards; restorable from the trash.'
       summary: Soft-delete board with columns and cards (one delete batch)
       parameters:
@@ -82,6 +87,7 @@ paths:
     post:
       tags: [kanban]
       operationId: createColumn
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create column
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -105,6 +111,7 @@ paths:
     patch:
       tags: [kanban]
       operationId: updateColumn
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Update column
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -127,6 +134,7 @@ paths:
     delete:
       tags: [kanban]
       operationId: deleteColumn
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at with one delete_batch_id for the column and its cards; restorable from the trash.'
       summary: Soft-delete column with its cards (one delete batch)
       parameters:
@@ -139,6 +147,7 @@ paths:
     post:
       tags: [kanban]
       operationId: createCard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create card
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -153,6 +162,7 @@ paths:
     get:
       tags: [kanban]
       operationId: getCard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Get card
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -162,6 +172,7 @@ paths:
     patch:
       tags: [kanban]
       operationId: updateCard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Edit fields or move (column_id + position) — FR-KAN-04; WIP limit exceeded is a warning, not an error
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -176,6 +187,7 @@ paths:
     delete:
       tags: [kanban]
       operationId: deleteCard
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable from the trash.'
       summary: Soft-delete card
       parameters:
@@ -188,6 +200,7 @@ paths:
     put:
       tags: [kanban]
       operationId: setCardAssignees
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Replace assignees; each must have access to the board (FR-KAN-10)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -207,6 +220,7 @@ paths:
     get:
       tags: [kanban]
       operationId: listBoardLabels
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: List board labels
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -216,6 +230,7 @@ paths:
     post:
       tags: [kanban]
       operationId: createBoardLabel
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create board label
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -252,6 +267,7 @@ paths:
                         display_name: { type: string }
                         permission: { type: string, enum: [owner, edit, view] }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
 
 components:
   schemas:

@@ -19,6 +19,7 @@ import {
   validate,
   withStart,
 } from "@/lib/eventForm";
+import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
 
 import { json, me, renderApp, settings, stubApi } from "./fake-api";
@@ -156,6 +157,39 @@ describe("editor", { timeout: 15_000 }, () => {
       },
     });
     expect(await screen.findByRole("button", { name: "Details of Dentist" })).toBeInTheDocument();
+  });
+
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Found by the end-to-end tests: right after signing in the calendars
+  // may reach the device only after the user started typing; the touched form takes the default calendar then, so
+  // Save does not stay disabled.
+  it("takes the default calendar that arrives after the user started typing", async () => {
+    stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+    renderApp(`/calendar?date=${DAY}`);
+    await screen.findByRole("button", { name: /Account menu/ });
+    const user = userEvent.setup();
+    await user.keyboard("n");
+    const dialog = await screen.findByRole("dialog", { name: "New event" });
+    await user.type(within(dialog).getByLabelText("Title"), "Dentist");
+    expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+
+    const db = await localDb(USER);
+    await db.calendars.put({
+      id: DEFAULT_CAL,
+      name: "My calendar",
+      owner_id: USER,
+      is_default: true,
+      deleted_at: null,
+      version: 1,
+    });
+    localChanged(USER);
+    await waitFor(() => {
+      expect(within(dialog).getByRole("button", { name: "Save" })).toBeEnabled();
+    });
+    expect(within(dialog).getByLabelText("Title")).toHaveValue("Dentist");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Event created: Dentist")).toBeInTheDocument();
+    const [item] = await outbox();
+    expect(item).toMatchObject({ op: "create", data: { container_id: DEFAULT_CAL, title: "Dentist" } });
   });
 
   it("timed: 15-minute defaults, end before start blocks Save, the start takes the end along; repeat hides To", async () => {

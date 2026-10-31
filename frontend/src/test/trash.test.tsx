@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { TrashEntry } from "@/api/generated/types.gen";
+import { mutate } from "@/sync";
 
 import { type Call, json, me, renderApp, stubApi } from "./fake-api";
 
@@ -41,6 +42,26 @@ describe("trash page", () => {
     stubApi({ "GET /me": () => json(ADA), "GET /trash": () => json({ data: [], next_cursor: null }) });
     renderApp("/trash");
     expect(await screen.findByText("Trash is empty")).toBeInTheDocument();
+  });
+
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Found by the end-to-end tests: a delete that reaches the server
+  // after the trash was opened shows up without a reload.
+  it("shows a delete pushed while it is open", async () => {
+    let entries: TrashEntry[] = [];
+    const calls = stubApi({
+      "GET /me": () => json(ADA),
+      "GET /trash": () => json({ data: entries, next_cursor: null }),
+      "POST /sync/push": (call) => {
+        entries = [entry(1, { type: "event", title: "Dentist" })];
+        const { mutations } = call.body as { mutations: { mutation_id: string }[] };
+        return json({ results: mutations.map((m) => ({ mutation_id: m.mutation_id, status: "applied", version: 2 })) });
+      },
+    });
+    renderApp("/trash");
+    expect(await screen.findByText("Trash is empty")).toBeInTheDocument();
+    await mutate(ADA.id, { entity_type: "item", entity_id: "0199f000-0000-7000-8000-0000000000e1", op: "delete" });
+    expect(await screen.findByText("Dentist")).toBeInTheDocument();
+    expect(calls.some((c) => c.path === "/sync/push")).toBe(true);
   });
 
   it("lists entries with their contents and who deleted them, and restores one", async () => {

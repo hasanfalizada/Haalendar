@@ -1,0 +1,4 @@
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Playwright output and the signed-in state of the test run.
+playwright-report/
+test-results/
+.auth/

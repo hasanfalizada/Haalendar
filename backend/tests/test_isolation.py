@@ -261,6 +261,8 @@ def test_require_maps_decisions_to_404_and_403(world: World) -> None:
 # ---------- request context ----------
 
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Calls routes outside the contract on purpose (test routes, unknown paths).
+@pytest.mark.no_contract
 def test_request_transaction_carries_the_signed_in_user(clean_db: str) -> None:
     app = create_app(make_settings(database_url=clean_db))
 

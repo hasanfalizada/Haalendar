@@ -20,8 +20,8 @@ data and which gates a change must pass (SRS 4.7, D-20; ADR-0003 test stack, ADR
 | Atoms | pytest + Vitest over shared vectors | `atoms/` (vectors), `test_*_atom.py`, `src/atoms/**/*.test.ts` | A rule implemented in Python and TypeScript gives the same result for every vector (ADR-0006) |
 | Backend integration | pytest + FastAPI `TestClient` on PostgreSQL 18 (marker `db`) | `backend/tests/` | Endpoints and sync end to end on a real database as the least-privilege app role: row-level security, soft delete, audit triggers, versions, notifications, jobs |
 | Frontend component | Vitest + jsdom + Testing Library, fake API (`src/test/fake-api.tsx`), fresh IndexedDB per test | `frontend/src/test/*.test.tsx` | Screens as a user drives them: roles and names, keyboard, local database and outbox, undo, offline queue |
-| Contract | Redocly lint; spec comparison; Schemathesis | `api/`, `backend/tests/` | The server implements `api/openapi.yaml`: the same operations and responses, answers valid against the schemas (stage 2 of HAAL-140) |
-| End to end | Playwright | `e2e/` | The built app against a real stack in Chromium: the main paths of each module, a clean browser console (stage 2 of HAAL-140; legacy scenarios F-01..F-34 HAAL-141, offline HAAL-142) |
+| Contract | Redocly lint; `test_contract.py`; every response of every backend test checked (`tests/contract.py`) | `api/`, `backend/tests/` | The server implements `api/openapi.yaml`: its routes are contract operations (path, method, operationId, success status), operations it does not serve say why (`x-not-implemented`), and every answer the tests receive has a documented status and matches its schema |
+| End to end | Playwright | `e2e/` | The app on the throw-away stack in Chromium: signing in and out, an event through the trash and back, a note, a board with a card; every test fails on a console error or warning, an uncaught exception or an unexpected API answer ≥ 400 (more: legacy scenarios F-01..F-34 HAAL-141, offline HAAL-142) |
 | Live check | Playwright scripts on the throw-away stack | session scratch space | After each task: the changed screens on desktop, tablet and phone widths, console and API errors (owner working rules) |
 | Security | `pnpm audit`, pip-audit with expiring exceptions; isolation tests | root `security:audit`, `test_isolation.py`, `test_audit_ignores.py` | Known vulnerabilities, data of one user never reaching another (more: HAAL-144) |
 
@@ -49,14 +49,38 @@ the live check, and the logic around it is factored into pure functions with uni
 | Backend line coverage | ≥ 80 % of `src/haalendar` (D-20) | `pnpm backend:check` (`pytest --cov`, `[tool.coverage.report] fail_under` in `backend/pyproject.toml`) |
 | Frontend coverage | Floors just under the level when the gate came: lines 90 %, statements 88 %, functions 85 %, branches 80 % | `pnpm check` (`vitest run --coverage`, `test.coverage.thresholds` in `frontend/vite.config.ts`) |
 | All tests pass, database tests included | Without a database the backend coverage falls far below 80 %, so skipped database tests fail the gate | `scripts/dev/check-all.sh` (starts PostgreSQL itself) |
-| Contract, E2E | Stage 2 of HAAL-140 | `check-all.sh` |
+| Contract | Every route in the contract, every unserved operation explained, every response the tests receive valid | `pnpm backend:check` (part of pytest) |
+| End to end | All scenarios pass with a clean console | `pnpm e2e` / `scripts/dev/check-all.sh --e2e` (TypeScript and Prettier of `e2e/` always) |
 | Dependencies | No known vulnerability without a listed, unexpired exception | `pnpm security:audit`, `test_audit_ignores.py` |
 
 Coverage counts the project's own code: the generated API client, the route tree, tests and type-only files are left
 out. Floors are raised as tests grow and are never lowered without the owner's decision. Coverage reports are written
 to `backend/.coverage` / `htmlcov` and `frontend/coverage/` (git-ignored).
 
-## 5. Rules for every task
+## 5. Contract conformance
+
+ADR-0007 named Schemathesis for property-based contract tests. It depends on Hypothesis (MPL-2.0), which is outside
+the allowed licences, so the backend checks conformance itself (no new dependency; `jsonschema` and `referencing`,
+MIT):
+
+- `backend/tests/contract.py` reads `api/openapi.yaml` and its module files as they are and validates JSON bodies
+  against the response schemas (JSON Schema 2020-12, as OpenAPI 3.1); `conftest.contract_responses` runs it on every
+  response of every test, so the 580-odd API tests are the examples. A test that calls routes outside the contract on
+  purpose (error handlers, security guards on test routes) is marked `no_contract`.
+- `backend/tests/test_contract.py` compares the app's routes with the contract both ways.
+- A breaking change of a shape therefore fails the tests that use it, with the operation, status and JSON path.
+
+## 6. End-to-end tests
+
+- `pnpm e2e` runs `e2e/` with Playwright (Chromium, Europe/Berlin, en-US, one worker): without `E2E_BASE_URL` it
+  starts the throw-away stack and stops it afterwards; the global setup creates the first administrator through the
+  setup wizard (or signs in, `E2E_ADMIN_*`) and keeps the session for the scenarios.
+- `e2e/fixtures.ts`: the `watch` fixture fails a test on console errors and warnings, uncaught exceptions and API
+  answers ≥ 400 unless the test allows them (`watch.allow(...)`); `unique(title)` keeps titles apart within a run.
+- Scenarios use roles and accessible names as the user perceives them, never CSS classes or test ids; a failed run
+  keeps a trace and a screenshot in `e2e/test-results/` (`pnpm --filter haalendar-e2e exec playwright show-trace …`).
+
+## 7. Rules for every task
 
 1. A change comes with tests at the levels of §2 that see it: a server rule → unit or API test; a screen → component
    test; a rule in both languages → an atom with shared vectors.
@@ -66,7 +90,7 @@ to `backend/.coverage` / `htmlcov` and `frontend/coverage/` (git-ignored).
 4. `check-all.sh` green, then the live check, then the report (owner working rules).
 5. Tests describe behaviour in their names ("an invited user must change the password first"), not implementation.
 
-## 6. Related tasks
+## 8. Related tasks
 
 HAAL-141 legacy regression (E2E per F-xx), HAAL-142 offline and sync, HAAL-143 accessibility and performance, HAAL-144
 security testing, HAAL-151 CI (the same commands as `check-all.sh`).

@@ -3,7 +3,17 @@
 # backend (Ruff, mypy, pytest incl. database tests on a throw-away PostgreSQL 18), dependency audit, frontend
 # (codegen, TypeScript, ESLint, Prettier, Vitest) and the production build. Read-only: it never formats or fixes code.
 # Usage: scripts/dev/check-all.sh   (exit code 0 only when every step passes)
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Coverage gates in the backend and frontend steps; the end-to-end
+# tests' TypeScript and Prettier always, the end-to-end tests themselves with --e2e (they start and stop the throw-away
+# stack, about a minute more): scripts/dev/check-all.sh --e2e
 set -uo pipefail
+E2E=0
+for arg in "$@"; do
+  case "$arg" in
+    --e2e) E2E=1 ;;
+    *) echo "unknown option: $arg (only --e2e)"; exit 2 ;;
+  esac
+done
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 export PATH="$HOME/.local/bin:$PATH"
@@ -37,5 +47,7 @@ step "backend" pnpm backend:check
 step "dependency audit" pnpm security:audit
 step "frontend" pnpm check
 step "build" pnpm build
+step "e2e static" pnpm --filter haalendar-e2e check
+if [ "$E2E" -eq 1 ]; then step "e2e" pnpm e2e; fi
 
 if [ ${#FAILED[@]} -eq 0 ]; then echo "ALL CHECKS PASSED"; else echo "FAILED: ${FAILED[*]}"; exit 1; fi

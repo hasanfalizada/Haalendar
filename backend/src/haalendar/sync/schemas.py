@@ -181,6 +181,8 @@ class PushIn(ApiModel):
 
 
 class ProblemOut(BaseModel):
+    # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. `type` as in every problem (Problem in the contract).
+    type: str
     status: int
     code: str
     title: str

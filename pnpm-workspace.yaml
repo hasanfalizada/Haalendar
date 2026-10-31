@@ -1,6 +1,8 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. pnpm workspace (ADR-0003: uv + pnpm, no Pants). JS packages are members.
 packages:
   - frontend
+  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. End-to-end tests.
+  - e2e
 
 # Supply-chain protection (instructions Section K): never install a version published less than 7 days ago.
 minimumReleaseAge: 10080
@@ -31,3 +33,5 @@ overrides:
 auditConfig:
   ignoreGhsas:
     - GHSA-gcqx-w48m-w2h4
+    - GHSA-3g3m-2fjr-6pw4
+    - GHSA-g3hv-75wg-m249

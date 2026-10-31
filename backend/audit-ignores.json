@@ -11,6 +11,36 @@
         "GHSA-gcqx-w48m-w2h4"
       ],
       "reason": "No fixed version exists (all of >=4.2.0 <=4.3.1 is affected; 4.3.1 of 2023-03-16 is the latest). Build time only: vite-plugin-pwa > workbox-build > @rollup/plugin-node-resolve merges our own build options with it; it never reaches the browser bundle or the server, and no untrusted input is merged. Added 2026-10-28 (owner decision, option A); on expiry upgrade or replace the parent if a fix exists, otherwise review and extend."
+    },
+    {
+      "package": "glob",
+      "version": "11.1.0",
+      "fixed_in": "14.0.2",
+      "expires": "2026-11-04",
+      "ids": [
+        "GHSA-3g3m-2fjr-6pw4"
+      ],
+      "reason": "Reported by pnpm audit on 2026-10-31; build and lint time only: workbox-build (vite-plugin-pwa) globs our own build output, ESLint matches our own config patterns — no user input reaches them and nothing of them ships to the browser or the server. The fix (glob 14.0.2, a new major, published 2026-10-27 22:07 UTC) passes the 7-day minimum release age at 2026-11-03 22:07 UTC. Added 2026-10-31 (HAAL-140); on 2026-11-04 override or update workbox-build and remove this entry."
+    },
+    {
+      "package": "minimatch",
+      "version": "10.2.6",
+      "fixed_in": "11.0.1",
+      "expires": "2026-11-04",
+      "ids": [
+        "GHSA-g3hv-75wg-m249"
+      ],
+      "reason": "Reported by pnpm audit on 2026-10-31; build and lint time only: workbox-build (vite-plugin-pwa) globs our own build output, ESLint matches our own config patterns — no user input reaches them and nothing of them ships to the browser or the server. Via glob (workbox-build) and eslint. The fix (minimatch 11.0.1, a new major, published 2026-10-27 22:26 UTC) passes the 7-day minimum at 2026-11-03 22:26 UTC. Added 2026-10-31 (HAAL-140); on 2026-11-04 override or update the parents and remove this entry."
+    },
+    {
+      "package": "minimatch",
+      "version": "5.1.9",
+      "fixed_in": "11.0.1",
+      "expires": "2026-11-04",
+      "ids": [
+        "GHSA-g3hv-75wg-m249"
+      ],
+      "reason": "Reported by pnpm audit on 2026-10-31; build and lint time only: workbox-build (vite-plugin-pwa) globs our own build output, ESLint matches our own config patterns — no user input reaches them and nothing of them ships to the browser or the server. Via workbox-build > rollup-plugin-off-main-thread > ejs > jake > filelist, which needs minimatch 5 (an override to 11 would change its API): on 2026-11-04 check whether the parents moved on, else review and extend. Added 2026-10-31 (HAAL-140)."
     }
   ]
 }

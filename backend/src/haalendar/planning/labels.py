@@ -33,7 +33,10 @@ NAME_MAX = 40
 
 def _problem(field: str, message: str) -> ProblemError:
     return ProblemError(
-        422, ProblemCode.VALIDATION_FAILED, "Invalid label", errors=[{"field": field, "message": message}]
+        422,
+        ProblemCode.VALIDATION_FAILED,
+        "Invalid label",
+        errors=[{"pointer": f"/{field}", "detail": message}],
     )
 
 

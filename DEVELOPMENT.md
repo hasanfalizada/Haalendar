@@ -174,7 +174,15 @@ pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnp
 Or the whole set in one run, including the contract lint, the database tests on a throw-away PostgreSQL 18 (port 55433) and the production build — read-only, exit code 0 only when every step passes:
 
 ```bash
-scripts/dev/check-all.sh
+scripts/dev/check-all.sh          # add --e2e to run the end-to-end tests too (starts and stops the throw-away stack)
+```
+
+End-to-end tests (Playwright, `e2e/`; see `docs/architecture/test-strategy.md`). The first run needs the browser
+once: `pnpm --filter haalendar-e2e exec playwright install chromium`.
+
+```bash
+pnpm e2e                                        # starts the throw-away stack, runs the scenarios, stops it
+E2E_BASE_URL=http://localhost:5173 pnpm e2e     # against a stack you already started (scripts/dev/stack-up.sh)
 ```
 
 ### Throw-away full stack for live checks
@@ -192,6 +200,7 @@ The stack listens on `127.0.0.1` only; open it at `http://localhost:5173`. From 
 |---|---|
 | `uv run pytest` | Unit and API tests; database tests are skipped unless `HAALENDAR_TEST_DATABASE_URL` is set (see below) |
 | `uv run pytest -k health -v` | Run selected tests verbosely |
+| `uv run pytest tests/test_contract.py` | The routes against `api/openapi.yaml` (every test also checks its responses against the contract) |
 | `uv run pytest --cov` | All tests with line coverage (gate 80 %, missing lines listed); `--cov-report=html` writes `htmlcov/` |
 | `uv run ruff check .` | Lint |
 | `uv run ruff format .` | Format (use `--check` in CI) |

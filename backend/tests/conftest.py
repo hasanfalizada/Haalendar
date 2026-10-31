@@ -18,6 +18,7 @@ import tempfile
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import psycopg
 import pytest
@@ -31,6 +32,8 @@ from haalendar.config import Settings, load_settings
 from haalendar.db import ALEMBIC_INI
 from haalendar.dbroles import bootstrap
 from haalendar.main import create_app
+
+from . import contract
 
 UNREACHABLE_DB = "postgresql+psycopg://user:pw@127.0.0.1:1/none"
 TEST_DB_ENV = "HAALENDAR_TEST_DATABASE_URL"
@@ -56,6 +59,34 @@ def make_settings(**overrides: str) -> Settings:
 @pytest.fixture
 def settings() -> Settings:
     return make_settings()
+
+
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Every response a test receives from /api/v1 is checked against the
+# contract (tests/contract.py); a test that calls routes outside the contract on purpose is marked `no_contract`.
+@pytest.fixture(autouse=True)
+def contract_responses(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    if request.node.get_closest_marker("no_contract"):
+        return
+    original = TestClient.request
+
+    def checked(self: TestClient, method: str, url: Any, *args: Any, **kwargs: Any) -> Any:
+        response = original(self, method, url, *args, **kwargs)
+        found = contract.problems(
+            method,
+            response.request.url.path,
+            response.status_code,
+            response.headers.get("content-type", ""),
+            response.content,
+        )
+        if found:
+            if os.environ.get("HAALENDAR_CONTRACT_COLLECT"):
+                with open(os.environ["HAALENDAR_CONTRACT_COLLECT"], "a", encoding="utf-8") as out:
+                    out.writelines(f"{request.node.nodeid} | {line}\n" for line in found)
+            else:
+                raise AssertionError("Response breaks the contract:\n" + "\n".join(found))
+        return response
+
+    monkeypatch.setattr(TestClient, "request", checked)
 
 
 @pytest.fixture

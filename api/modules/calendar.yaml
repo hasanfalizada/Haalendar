@@ -5,6 +5,7 @@ paths:
     get:
       tags: [calendar]
       operationId: listCalendars
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Own and shared calendars with per-user visibility
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IncludeDeleted'
@@ -22,6 +23,7 @@ paths:
     post:
       tags: [calendar]
       operationId: createCalendar
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create a calendar (FR-CAL-32)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
@@ -35,6 +37,7 @@ paths:
     get:
       tags: [calendar]
       operationId: getCalendar
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Get calendar
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -44,6 +47,7 @@ paths:
     patch:
       tags: [calendar]
       operationId: updateCalendar
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Rename, recolor, archive (owner only)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -58,6 +62,7 @@ paths:
     delete:
       tags: [calendar]
       operationId: deleteCalendar
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at with one delete_batch_id for the calendar and its events; restorable from the trash.'
       summary: Soft-delete calendar with its events (one delete batch); default calendar cannot be deleted
       parameters:
@@ -129,6 +134,7 @@ paths:
     post:
       tags: [calendar]
       operationId: createEvent
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create an event; client may supply a UUIDv7 `id` (idempotent create for offline sync)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
@@ -144,6 +150,7 @@ paths:
     get:
       tags: [calendar]
       operationId: getEvent
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Get event
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -153,6 +160,7 @@ paths:
     patch:
       tags: [calendar]
       operationId: updateEvent
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Update an event; for recurring events choose scope this / following / all (FR-CAL-13, FR-CAL-31)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -169,6 +177,7 @@ paths:
     delete:
       tags: [calendar]
       operationId: deleteEvent
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at, adds an exception or ends the series; restorable from the trash.'
       summary: Soft-delete; for recurring events scope this (exception) / following (series ends) / all (FR-CAL-11, FR-CAL-12, FR-CAL-31)
       parameters:
@@ -183,6 +192,7 @@ paths:
     post:
       tags: [calendar]
       operationId: moveEventToNextDay
+      x-not-implemented: 'The web app moves the event through /sync (HAAL-084).'
       summary: Shift by +1 day keeping times; an occurrence becomes exception + one-off (FR-CAL-20)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -195,6 +205,7 @@ paths:
     post:
       tags: [calendar]
       operationId: duplicateEvent
+      x-not-implemented: 'The web app writes the copy through /sync (HAAL-096).'
       summary: Copy an event to another date (FR-CAL-34)
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -216,6 +227,7 @@ paths:
     get:
       tags: [calendar]
       operationId: checkDuplicateTitle
+      x-not-implemented: 'Checked in the web app over its local database (HAAL-080).'
       summary: Active events of the user with the same title, exact and case-insensitive (FR-CAL-16)
       parameters:
         - { name: title, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 150 } }
@@ -243,6 +255,7 @@ paths:
     get:
       tags: [calendar]
       operationId: listOccurrences
+      x-not-implemented: 'Expanded in the web app over its local database (D-61, calendar.recurrence.v2).'
       summary: Expanded occurrences in a date range for day, week, month and agenda views (FR-CAL-01, 25-27)
       parameters:
         - { name: from, in: query, required: true, schema: { $ref: '../components/common.yaml#/components/schemas/Date' } }
@@ -264,6 +277,7 @@ paths:
     get:
       tags: [calendar]
       operationId: getOverdueCount
+      x-not-implemented: 'Counted in the web app over its local database (D-68).'
       summary: Overdue counter per legacy rule (FR-CAL-17)
       parameters:
         - { name: today, in: query, required: true, schema: { $ref: '../components/common.yaml#/components/schemas/Date' }, description: Client's local date }

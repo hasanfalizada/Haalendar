@@ -64,15 +64,16 @@ async def add_subscription(
     return SubscriptionOut(id=row.id)
 
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The path parameter is named `id` as in the contract.
 @router.delete(
-    "/me/push-subscriptions/{subscription_id}",
+    "/me/push-subscriptions/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="removePushSubscription",
 )
 async def remove_subscription(
-    subscription_id: uuid.UUID,
+    id: uuid.UUID,
     auth: Auth,
     db: DbSession,
     reason: Annotated[Literal["user", "sign_out"], Query()] = "user",
 ) -> None:
-    await service.revoke(db, auth.user.id, subscription_id, reason)
+    await service.revoke(db, auth.user.id, id, reason)

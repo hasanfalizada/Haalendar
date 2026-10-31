@@ -28,7 +28,10 @@ POSITION = re.compile(r"[0-9A-Za-z]{1,64}")
 
 def _problem(field: str, message: str) -> ProblemError:
     return ProblemError(
-        422, ProblemCode.VALIDATION_FAILED, "Invalid note", errors=[{"field": field, "message": message}]
+        422,
+        ProblemCode.VALIDATION_FAILED,
+        "Invalid note",
+        errors=[{"pointer": f"/{field}", "detail": message}],
     )
 
 

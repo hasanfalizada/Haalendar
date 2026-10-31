@@ -66,7 +66,7 @@ async def _checked_member(db: AsyncSession, board_id: uuid.UUID, user_id: uuid.U
             422,
             ProblemCode.VALIDATION_FAILED,
             "Only members of the board can be assigned",
-            errors=[{"field": "user_id", "message": "Not a member of this board"}],
+            errors=[{"pointer": "/user_id", "detail": "Not a member of this board"}],
         )
 
 

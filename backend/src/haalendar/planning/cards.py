@@ -34,7 +34,10 @@ PLACE = ("column_id", "position")
 
 def _problem(field: str, message: str) -> ProblemError:
     return ProblemError(
-        422, ProblemCode.VALIDATION_FAILED, "Invalid card", errors=[{"field": field, "message": message}]
+        422,
+        ProblemCode.VALIDATION_FAILED,
+        "Invalid card",
+        errors=[{"pointer": f"/{field}", "detail": message}],
     )
 
 

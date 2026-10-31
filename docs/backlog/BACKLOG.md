@@ -17,6 +17,7 @@
 
 | Due | What | Where it is enforced |
 |---|---|---|
+| 2026-11-04 | Upgrade glob 11.1.0 → 14.0.2 (GHSA-3g3m-2fjr-6pw4) and minimatch 10.2.6 / 5.1.9 → 11.0.1 (GHSA-g3hv-75wg-m249), build and lint time only (workbox-build, eslint); the fixes pass the 7-day minimum on 2026-11-03 ~22:30 UTC; minimatch 5 via filelist may need its parents to move on — otherwise review and extend | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 | 2026-11-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 
 ## Open tasks
@@ -34,7 +35,6 @@
 | HAAL-121 | E08 Integration | Note/card due dates as toggleable calendar layers | Must | 104, 112, 060 | — | To do | — | owner backlog file |
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
-| HAAL-140 | E10 QA | Test strategy: unit, integration, contract, E2E Playwright, coverage gate 80% | Must | 010 | — | In progress | — | owner backlog file |
 | HAAL-141 | E10 QA | Legacy regression suite: one E2E scenario per F-01..F-34 (docs repo: requirements/legacy-feature-inventory.md) (CRITICAL) | Must | 140, 060, 067 | — | To do | — | owner backlog file |
 | HAAL-142 | E10 QA | Offline/sync tests: network cut, offline reload, concurrent edits, conflicts | Must | 054 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
@@ -143,6 +143,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-119 | 2026-10-30 | c692422, 4576aac | feat(kanban): card assignees — board members, sync add and remove, assigned notification, trash and export (stage 1), assignees in the card editor, initials on cards, assignee filter and the notification opening the card (stage 2) (HAAL-119) |
 | HAAL-120 | 2026-10-30 | a9522db, 5cf0bab | feat(links): links between events, notes and cards — either end reads, one writable end changes, sync, live updates, export (stage 1), links in the card and note editors and the event details, add link search, backlinks (stage 2) (HAAL-120) |
 | HAAL-124 | 2026-10-30 | cc155a5 | feat(calendar): time blocking — a Notes & cards panel in the day and week views, drop a note or card on the week to make a linked event, Schedule… through the editor (HAAL-124) |
+| HAAL-140 | 2026-10-31 | e600db4, — | test: test strategy with coverage gates (stage 1); contract conformance of every route and every tested response, Playwright end-to-end tests with a clean-console guard (stage 2) |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |

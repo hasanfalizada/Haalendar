@@ -33,6 +33,13 @@ api/
 
 Endpoints tagged `sync` follow ADR-0009 (offline sync): pull and push are implemented (HAAL-053); the event stream is marked `x-status: planned` until HAAL-055. <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. -->
 
+<!-- +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. -->
+**Conformance.** The backend tests compare the app's routes with this contract both ways and check every response
+they receive against its schemas (`backend/tests/contract.py`, `test_contract.py`; see
+`docs/architecture/test-strategy.md`). An operation the server does not serve carries `x-not-implemented` with the
+reason — served through `/sync` (the web app's local database), computed in the web app, or planned with its task;
+the tests fail when a served operation still has it, or an unserved one lacks it.
+
 ## Lint
 
 ```bash

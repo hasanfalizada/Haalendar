@@ -64,6 +64,8 @@ def test_metrics_expose_http_pool_and_build_info() -> None:
     assert 'haalendar_build_info{env="test",version="0.1.0"} 1.0' in body
 
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Calls routes outside the contract on purpose (test routes, unknown paths).
+@pytest.mark.no_contract
 def test_unknown_paths_never_become_metric_labels() -> None:
     with _metrics_client() as client:
         client.get("/api/v1/users/secret-user-42/orders")

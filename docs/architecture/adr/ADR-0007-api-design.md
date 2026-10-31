@@ -40,6 +40,7 @@ Task HAAL-015 requires an OpenAPI contract for all modules with RFC 9457 errors,
 ADR-0003 said "OpenAPI generated from Pydantic is the single source for the TS client". With contract-first, **the hand-written `api/openapi.yaml` is the source of truth**:
 - TS client is generated from the bundled contract (@hey-api/openapi-ts).
 - Backend Pydantic models implement it; CI checks conformance: (1) the FastAPI-generated spec is compared with the contract (no breaking differences, oasdiff), (2) property-based contract tests run against the running backend (Schemathesis).
+  <!-- +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140 (SRS D-101): as built, both checks run in the backend tests without new tools: (1) `test_contract.py` compares the app's routes with the contract both ways (instead of oasdiff, a Go tool); (2) every response of every API test is validated against the contract's schemas (`tests/contract.py`) instead of Schemathesis, which needs Hypothesis (MPL-2.0, outside the allowed licences). Operations the server does not serve carry `x-not-implemented`. -->
 
 ## Consequences
 - Frontend (HAAL-017 and later) can be built against the mock immediately.

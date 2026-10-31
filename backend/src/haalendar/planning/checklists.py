@@ -36,7 +36,7 @@ def _problem(field: str, message: str) -> ProblemError:
         422,
         ProblemCode.VALIDATION_FAILED,
         "Invalid checklist item",
-        errors=[{"field": field, "message": message}],
+        errors=[{"pointer": f"/{field}", "detail": message}],
     )
 
 

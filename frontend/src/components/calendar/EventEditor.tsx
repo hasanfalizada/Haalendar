@@ -159,6 +159,9 @@ export function EventEditor({
   const [seen, setSeen] = useState(baseline);
   if (seen !== baseline) {
     if (JSON.stringify(form) === JSON.stringify(seen)) setForm(baseline);
+    // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. A form touched before any calendar arrived takes the first one
+    // when it comes (else Save stayed disabled while the list showed it).
+    else if (!form.calendar_id && baseline.calendar_id) setForm({ ...form, calendar_id: baseline.calendar_id });
     setSeen(baseline);
   }
   const [touched, setTouched] = useState(false);

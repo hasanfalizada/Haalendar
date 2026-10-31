@@ -26,6 +26,9 @@ from haalendar.security.uploads import (
 
 from .conftest import make_settings
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The guards and error handlers are tested on routes outside the contract on purpose (test routes, unknown paths).
+pytestmark = pytest.mark.no_contract
+
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 8
 GIF = b"GIF89a" + b"\x00" * 8

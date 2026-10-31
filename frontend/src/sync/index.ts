@@ -9,6 +9,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 
+import { trashKeys } from "@/api/trash";
 import { log } from "@/lib/log";
 
 import { ENTITY_TABLE, type EntityType, type OutboxEntry, type Row, deleteLocalDb, localDb } from "./db";
@@ -39,6 +40,9 @@ export function startSync(user: string, queryClient: QueryClient): void {
     user,
     () => {
       void queryClient.invalidateQueries({ queryKey: localKeys.all });
+      // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The trash is read from the server: a delete pushed after the
+      // trash was opened shows up there too (found by the end-to-end tests).
+      void queryClient.invalidateQueries({ queryKey: trashKeys.all });
     },
     // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. A notification arrived live (or the stream dropped).
     () => {

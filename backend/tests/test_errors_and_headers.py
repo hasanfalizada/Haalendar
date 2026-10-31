@@ -16,6 +16,9 @@ from haalendar.main import create_app
 
 from .conftest import make_settings
 
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The guards and error handlers are tested on routes outside the contract on purpose (test routes, unknown paths).
+pytestmark = pytest.mark.no_contract
+
 
 def _app_with_test_routes(**settings_overrides: str) -> FastAPI:
     app = create_app(make_settings(**settings_overrides))

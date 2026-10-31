@@ -75,6 +75,7 @@ paths:
       responses:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
   auth_register:
     post:
       tags: [auth]
@@ -215,6 +216,7 @@ paths:
     get:
       tags: [auth]
       operationId: startOidcLogin
+      x-not-implemented: 'Planned: HAAL-168.'
       summary: Redirect to the configured OIDC provider (Authorization Code + PKCE) — Could, HAAL-168
       security: []
       responses:
@@ -224,6 +226,7 @@ paths:
     get:
       tags: [auth]
       operationId: oidcCallback
+      x-not-implemented: 'Planned: HAAL-168.'
       summary: OIDC callback; validates state/nonce and issues the session cookie
       security: []
       parameters:
@@ -344,6 +347,7 @@ paths:
         '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Settings' } } } }
         '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+        '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
   me_sessions:
     get:
       tags: [account]
@@ -477,6 +481,7 @@ paths:
       responses:
         '201': { description: Registered, content: { application/json: { schema: { type: object, properties: { id: { $ref: '../components/common.yaml#/components/schemas/Uuid' } } } } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
   me_push_subscription:
     delete:
       tags: [account]
@@ -490,6 +495,7 @@ paths:
       responses:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   push_vapid_key:
     get:
       tags: [account]
@@ -538,7 +544,8 @@ components:
         locale: { type: string, enum: [en] }
         totp_enabled: { type: boolean }
         must_change_password: { type: boolean }
-        csrf_token: { type: string, description: Present on GET /me. }
+        # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Null as the server sends it (found by the contract check).
+        csrf_token: { oneOf: [{ type: string }, { type: 'null' }], description: 'Set on GET /me and the account writes that return the user; null in the login answer, which carries it beside the user.' }
         version: { type: integer }
     ProfilePatch:
       type: object
@@ -606,5 +613,6 @@ components:
         created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
         last_seen_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
         device: { type: string, description: User-agent summary }
-        ip_prefix: { type: string }
+        # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Null as the server sends it (found by the contract check).
+        ip_prefix: { oneOf: [{ type: string }, { type: 'null' }], description: 'Null when the client address was not known.' }
         current: { type: boolean }

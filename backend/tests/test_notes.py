@@ -98,7 +98,7 @@ def test_rules_of_a_note(people: People) -> None:
         _, result = _create(people, ada, **data)
         assert result["status"] == "rejected", (data, result)
         if field:
-            assert result["problem"]["errors"][0]["field"] == field
+            assert result["problem"]["errors"][0]["pointer"] == f"/{field}"
     note, _ = _create(people, ada)
     for mutation in (
         _m("item", note, "update", base={}, data={"start_date": "2026-11-01"}),

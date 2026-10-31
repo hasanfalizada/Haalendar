@@ -6,6 +6,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
 
 import { json, me, renderApp, stubApi } from "./fake-api";
@@ -100,6 +101,35 @@ const titles = (region: HTMLElement) =>
     .map((button) => button.getAttribute("aria-label")?.replace(/^Open /, ""));
 
 describe("card assignees", { timeout: 20_000 }, () => {
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Found by the end-to-end tests: a board just made on this device is
+  // not on the server yet (version 0), so its members are asked only once it arrived there.
+  it("asks for the members only once the board is on the server", async () => {
+    const db = await localDb(USER);
+    await db.boards.put({
+      id: BOARD,
+      owner_id: USER,
+      name: "Fresh",
+      position: "U",
+      archived_at: null,
+      deleted_at: null,
+      version: 0,
+    });
+    const calls = stubApi({
+      "GET /me": () => json(me()),
+      "POST /sync/push": () => new Promise<Response>(() => undefined),
+      [`GET /boards/${BOARD}/members`]: () => json({ data: MEMBERS }),
+    });
+    renderApp(`/kanban/${BOARD}`);
+    await screen.findByRole("heading", { name: "Fresh" });
+    expect(calls.some((c) => c.path.endsWith("/members"))).toBe(false);
+
+    await db.boards.update(BOARD, { version: 1 });
+    localChanged(USER);
+    await waitFor(() => {
+      expect(calls.some((c) => c.path === `/boards/${BOARD}/members`)).toBe(true);
+    });
+  });
+
   it("shows a card's assignees and changes them with Save in one undo step", async () => {
     const { user, db } = await open();
     const plan = await screen.findByRole("button", { name: "Open Plan" });

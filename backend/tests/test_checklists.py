@@ -101,7 +101,7 @@ def test_rules(people: People) -> None:
         mutation = _m("checklist_item", str(uuid.uuid7()), "create", data={"item_id": note, **data})
         [result] = _push(people.api, ada, mutation)
         assert result["status"] == "rejected", (data, result)
-        assert result["problem"]["errors"][0]["field"] == field
+        assert result["problem"]["errors"][0]["pointer"] == f"/{field}"
     event = str(uuid.uuid7())
     body = {
         "kind": "event",

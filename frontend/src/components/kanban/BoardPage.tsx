@@ -93,7 +93,10 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
   const checklistRows = useLocal(user, "checklist_item") ?? [];
   const reminderRows = useLocal(user, "reminder") ?? [];
   const assigneeRows = useLocal(user, "card_assignee") ?? [];
-  const members = useQuery({ ...boardMembersQuery(boardId), enabled: Boolean(row) }).data ?? [];
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Asked only once the board is on the server (version > 0): a board
+  // just made here is not there yet, and the server would answer 404 (found by the end-to-end tests).
+  const onServer = typeof row?.version === "number" && row.version > 0;
+  const members = useQuery({ ...boardMembersQuery(boardId), enabled: onServer }).data ?? [];
   const memberIds = new Set(members.map((member) => member.user_id));
   // The names of each card's assignees (members only, in the members' order).
   const assigneeNames = new Map<string, string[]>();

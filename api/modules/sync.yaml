@@ -73,6 +73,7 @@ paths:
                         # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. ADR-0009 rule 4: the user is told.
                         edited_elsewhere: { type: boolean, description: 'delete: applied, but the record had been changed since base_version (it can be restored from the trash)' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
   stream:
     get:
       tags: [sync]

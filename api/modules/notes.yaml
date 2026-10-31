@@ -5,6 +5,7 @@ paths:
     get:
       tags: [todo]
       operationId: listNotes
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Own and shared notes; pinned first, then position
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Cursor'
@@ -28,6 +29,7 @@ paths:
     post:
       tags: [todo]
       operationId: createNote
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create note
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
@@ -42,6 +44,7 @@ paths:
     get:
       tags: [todo]
       operationId: getNote
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Get note
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -51,6 +54,7 @@ paths:
     patch:
       tags: [todo]
       operationId: updateNote
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Edit, pin, archive, reorder, set due date
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -65,6 +69,7 @@ paths:
     delete:
       tags: [todo]
       operationId: deleteNote
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable from the trash.'
       summary: Soft-delete note
       parameters:

@@ -45,6 +45,9 @@ dev = [
   # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Line coverage of the backend with an 80 % gate (D-20).
   "pytest-cov==7.1.0",
   "coverage==7.17.0",
+  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The contract check reads api/*.yaml.
+  "pyyaml==6.0.3",
+  "types-pyyaml==6.0.12.20260906",
 ]
 
 [project.scripts]
@@ -63,7 +66,10 @@ packages = ["src/haalendar"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra --strict-markers"
-markers = ["db: needs PostgreSQL via HAALENDAR_TEST_DATABASE_URL (skipped otherwise)"]
+markers = [
+  "db: needs PostgreSQL via HAALENDAR_TEST_DATABASE_URL (skipped otherwise)",
+  "no_contract: calls routes outside the API contract on purpose (responses are not checked against it)",
+]
 
 # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Coverage (D-20, test strategy): lines of src/haalendar, measured by
 # `pnpm backend:check` (pytest --cov); below 80 % the check fails.

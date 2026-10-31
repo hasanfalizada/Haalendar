@@ -75,8 +75,6 @@ paths:
   /admin/invites: { $ref: './modules/admin.yaml#/paths/admin_invites' }
   /admin/invites/{id}: { $ref: './modules/admin.yaml#/paths/admin_invite' }
   /admin/settings: { $ref: './modules/admin.yaml#/paths/admin_settings' }
-  /admin/imports: { $ref: './modules/admin.yaml#/paths/admin_imports' }
-  /admin/imports/{id}: { $ref: './modules/admin.yaml#/paths/admin_import' }
   /demo/status: { $ref: './modules/admin.yaml#/paths/demo_status' }
   /health/live: { $ref: './modules/admin.yaml#/paths/health_live' }
   /health/ready: { $ref: './modules/admin.yaml#/paths/health_ready' }
