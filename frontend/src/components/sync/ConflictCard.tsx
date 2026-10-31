@@ -36,6 +36,21 @@ const KNOWN_FIELDS = [
   "pinned",
   "archived_at",
   "is_checklist",
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. Event, card, column, reminder and calendar fields.
+  "location",
+  "all_day",
+  "start_date",
+  "start_time",
+  "end_date",
+  "end_time",
+  "tzid",
+  "rrule",
+  "column_id",
+  "due_date",
+  "due_time",
+  "wip_limit",
+  "remind_at",
+  "is_default",
 ] as const;
 type KnownField = (typeof KNOWN_FIELDS)[number];
 

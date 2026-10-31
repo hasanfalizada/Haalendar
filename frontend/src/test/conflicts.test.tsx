@@ -126,6 +126,33 @@ describe("unresolved conflicts are shown", () => {
     expect(screen.getAllByRole("status")).toHaveLength(1); // nothing for a record without conflicts
     expect(screen.getByRole("link", { name: "Resolve" })).toHaveAttribute("href", "/settings#sync");
   });
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. Found by the E2E conflict scenario: the event's location showed as
+  // "location". Every field the server merges is named as the screens name it.
+  it("names every field of events, cards, columns, reminders and calendars", async () => {
+    const fields = {
+      location: "Location",
+      all_day: "All day",
+      start_date: "Start date",
+      start_time: "Start time",
+      end_date: "End date",
+      end_time: "End time",
+      tzid: "Time zone",
+      rrule: "Repeat",
+      column_id: "Column",
+      due_date: "Due date",
+      due_time: "Due time",
+      wip_limit: "WIP limit",
+      remind_at: "Reminder time",
+      is_default: "Default calendar",
+    };
+    const names = Object.keys(fields);
+    const values = Object.fromEntries(names.map((name) => [name, `mine-${name}`]));
+    await seed(conflict({ fields: names, mine: values, theirs: { ...theirsItem, ...values } }));
+    const { section } = await openSync();
+    const card = await within(section).findByRole("listitem", { name: "Item: Dentist 10:00" });
+    for (const label of Object.values(fields)) expect(within(card).getByText(label, { exact: true })).toBeVisible();
+    for (const name of names) expect(within(card).queryByText(name, { exact: true })).not.toBeInTheDocument();
+  });
 });
 
 describe("resolving", () => {
