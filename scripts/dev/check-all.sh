@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # +++===+++ 2026-10-28 CET — Hasan Alizada — Full check before a task is called done (rule 0.9): API contract lint,
-# backend (Ruff, mypy, pytest incl. database tests on a throw-away PostgreSQL 18), dependency audit, frontend
-# (codegen, TypeScript, ESLint, Prettier, Vitest) and the production build. Read-only: it never formats or fixes code.
+# backend (Ruff, mypy, pytest incl. database tests on a throw-away PostgreSQL 18), dependency audit, secret scan and
+# licences (HAAL-144), frontend (codegen, TypeScript, ESLint, Prettier, Vitest) and the production build. Read-only: it
+# never formats or fixes code.
 # Usage: scripts/dev/check-all.sh   (exit code 0 only when every step passes)
 # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Coverage gates in the backend and frontend steps; the end-to-end
 # tests' TypeScript and Prettier always, the end-to-end tests themselves with --e2e (they start and stop the throw-away
@@ -45,6 +46,10 @@ step "test database" start_db
 export HAALENDAR_TEST_DATABASE_URL="postgresql+psycopg://haalendar:haalendar@127.0.0.1:$PORT/postgres"
 step "backend" pnpm backend:check
 step "dependency audit" pnpm security:audit
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. Secrets in the history and the working tree; licences of every
+# dependency against the policy (docs/security/security-baseline.md §7).
+step "secret scan" scripts/dev/secrets-scan.sh
+step "licences" pnpm security:licences
 step "frontend" pnpm check
 step "build" pnpm build
 step "e2e static" pnpm --filter haalendar-e2e check

@@ -18,7 +18,7 @@ function worker(windows: { visibilityState: string }[]) {
     location: { origin: "https://cal.example.org" },
   };
   // The worker's own file, run as the browser would run it inside the service worker.
-  const run = new Function("self", SCRIPT) as (scope: typeof self) => void; // eslint-disable-line @typescript-eslint/no-implied-eval
+  const run = new Function("self", SCRIPT) as (scope: typeof self) => void; // eslint-disable-line no-new-func, @typescript-eslint/no-implied-eval
   run(self);
   const fire = async (type: string, event: Record<string, unknown>) => {
     let done: Promise<unknown> = Promise.resolve();

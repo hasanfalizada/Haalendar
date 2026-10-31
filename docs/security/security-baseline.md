@@ -44,7 +44,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V12 Secure Communication | 🟡 | HTTPS required in production, HSTS ✅; TLS termination via Caddy ⏳ HAAL-150 |
 | V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; container hardening ⏳ HAAL-150 |
 | V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) and for every role (no-delete triggers, ORM/SQL guards, source scan, contract `x-soft-delete` — HAAL-030) ✅; export ⏳ HAAL-043; GDPR erasure open (O-01) |
-| V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SBOM + licence gate ⏳ HAAL-151 |
+| V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate ✅ HAAL-144; SBOM ⏳ HAAL-151 |
 | V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections); tamper-proof audit log of all changes written by database triggers, append-only, readable under RLS, linked by request id (HAAL-032) |
 | V17 WebRTC | — | Not used |
 
@@ -84,5 +84,31 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 3. Prism mock is not a project dependency (vulnerable transitive packages, dev-only); it runs via `pnpm dlx` on demand.
 
 ## 6. Recurring checks
-- Before every PR: `pnpm check`, `pnpm backend:check`, `pnpm security:audit`.
-- In CI (HAAL-151): the same plus secret scanning, SAST, SBOM, licence gate; scheduled weekly audit.
+- Before every commit: `scripts/dev/check-all.sh` — besides the tests and the audit (`pnpm security:audit`):
+  <!-- +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. -->
+  - SAST: Ruff with the Bandit rules (`S`) on the backend; on the web app ESLint forbids code from strings (`eval`,
+    `new Function`, `javascript:` URLs), raw HTML (`dangerouslySetInnerHTML`, `innerHTML`/`outerHTML`,
+    `insertAdjacentHTML`, `document.write`) and new-tab links without `rel="noopener"` (`frontend/eslint.config.js`);
+  - secret scan: `scripts/dev/secrets-scan.sh` (gitleaks 8.30.1, MIT, Docker image pinned by digest) over the whole
+    git history and the working tree; test data that looks like a secret is marked `gitleaks:allow` on its line or
+    listed in `.gitleaksignore` with the reason;
+  - licences: `pnpm security:licences` (`scripts/dev/licences.py`, policy in §7).
+- In CI (HAAL-151): the same plus SBOM; scheduled weekly audit.
+
+## 7. Licence policy
+
+<!-- +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. Owner decisions of 2026-11-01. -->
+Machine-readable in `backend/licence-policy.json`, checked for every Python and npm dependency (runtime and tooling)
+by `pnpm security:licences`; its rules are pinned by `backend/tests/test_licences.py`.
+
+- **Allowed:** MIT, BSD (2- and 3-clause), Apache-2.0, PostgreSQL, and the permissive licences counted with them:
+  ISC, 0BSD, MIT-0, MIT-CMU, BlueOak-1.0.0, Unlicense, CC0-1.0, PSF-2.0 / Python-2.0. A dual licence passes when one of
+  its options is allowed; a combined one (`A AND B`) when all are.
+- **Not allowed** as a dependency of the app: copyleft (GPL, AGPL) and weak copyleft (LGPL, MPL), except as listed:
+  - psycopg (LGPL-3.0, server runtime): the PostgreSQL driver, required by the job queue (procrastinate); used
+    unmodified as a separately installed library, which the LGPL permits;
+  - MPL-2.0 only in tooling that never ships: lightningcss (Tailwind CSS 4 build), certifi (pip-audit), pathspec
+    (mypy) — the gate fails if one of them reaches the app. A new MPL dependency of the app is still refused (as
+    Hypothesis was, HAAL-140);
+  - OFL-1.1 for fonts (Inter, shipped) and CC-BY-4.0 for data used at build time (caniuse-lite).
+- A new exception needs the owner's decision; an exception no package needs any more fails the gate.

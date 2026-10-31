@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from haalendar.accounts import service
 
-PASSWORD = "quiet-mountain-river-42"
+PASSWORD = "quiet-mountain-river-42"  # gitleaks:allow (throw-away test account)
 TZ = "Europe/Berlin"
 
 

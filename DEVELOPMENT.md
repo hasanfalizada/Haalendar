@@ -169,6 +169,8 @@ gates: [`docs/architecture/test-strategy.md`](docs/architecture/test-strategy.md
 pnpm check           # frontend: generate API client, TypeScript, ESLint, Prettier, unit tests with coverage floors
 pnpm backend:check   # backend: Ruff lint, Ruff format, mypy (strict), pytest with the 80 % coverage gate (needs the test database)
 pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnpm audit + pip-audit)
+pnpm security:licences  # every dependency under a licence the policy allows (backend/licence-policy.json)
+scripts/dev/secrets-scan.sh  # gitleaks over the git history and the working tree (Docker)
 ```
 
 Or the whole set in one run, including the contract lint, the database tests on a throw-away PostgreSQL 18 (port 55433) and the production build — read-only, exit code 0 only when every step passes:

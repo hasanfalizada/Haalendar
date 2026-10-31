@@ -147,7 +147,7 @@ describe("Markdown sanitising", () => {
     expect(safeUrl("https://example.org")).toBe("https://example.org/");
     expect(safeUrl(" mailto:a@b.c ")).toBe("mailto:a@b.c");
     for (const bad of [
-      "javascript:alert(1)",
+      "javascript:alert(1)", // eslint-disable-line no-script-url -- the refused link itself
       "data:text/html,x",
       "/relative",
       "#top",

@@ -1,0 +1,64 @@
+{
+  "$comment": "+++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. Licence policy (owner decisions of 2026-11-01, docs/security/security-baseline.md §7), checked by scripts/dev/licences.py (`pnpm security:licences`, part of check-all). `allowed`: MIT, BSD, Apache-2.0 and PostgreSQL, and the permissive licences the owner counts with them; an expression passes when it is allowed as a whole (one side of OR, both sides of AND). Everything else is an exception for named packages: `shipped: false` means tooling only (build, tests, linters) and fails once the package reaches the app; an exception nothing matches any more fails as well.",
+  "allowed": [
+    "MIT",
+    "BSD",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Apache-2.0",
+    "PostgreSQL",
+    "ISC",
+    "0BSD",
+    "MIT-0",
+    "MIT-CMU",
+    "BlueOak-1.0.0",
+    "Unlicense",
+    "CC0-1.0",
+    "PSF-2.0",
+    "Python-2.0"
+  ],
+  "exceptions": [
+    {
+      "ecosystem": "python",
+      "package": "psycopg*",
+      "licence": "LGPL-3.0-only",
+      "shipped": true,
+      "reason": "The PostgreSQL driver of the server (psycopg, psycopg-binary, psycopg-pool); procrastinate, the job queue, works only with psycopg 3. Used unmodified as a separately installed library, which the LGPL permits in an Apache-2.0 project. Owner, 2026-11-01."
+    },
+    {
+      "ecosystem": "python",
+      "package": "certifi",
+      "licence": "MPL-2.0",
+      "shipped": false,
+      "reason": "Development only: comes with pip-audit (dependency audit). Owner, 2026-11-01: MPL allowed in tooling that never ships, never as a dependency of the app."
+    },
+    {
+      "ecosystem": "python",
+      "package": "pathspec",
+      "licence": "MPL-2.0",
+      "shipped": false,
+      "reason": "Development only: comes with mypy. Owner, 2026-11-01: MPL allowed in tooling that never ships."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "lightningcss*",
+      "licence": "MPL-2.0",
+      "shipped": false,
+      "reason": "Build only: the CSS engine of Tailwind CSS 4 (lightningcss and its platform package); the CSS it writes is ours. Owner, 2026-11-01: MPL allowed in tooling that never ships."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@fontsource-variable/inter",
+      "licence": "OFL-1.1",
+      "shipped": true,
+      "reason": "The Inter font of the web app (SIL Open Font License, made for fonts bundled with software). Owner, 2026-11-01: OFL allowed for fonts."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "caniuse-lite",
+      "licence": "CC-BY-4.0",
+      "shipped": false,
+      "reason": "Build only: browser support data for the CSS and JavaScript build tools. Owner, 2026-11-01: CC-BY allowed for data used at build time."
+    }
+  ]
+}

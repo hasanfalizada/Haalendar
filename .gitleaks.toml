@@ -1,0 +1,23 @@
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. Secret scan (scripts/dev/secrets-scan.sh): gitleaks' own rules; the
+# working-tree scan skips what git ignores anyway (dependencies, build output, caches, local .env, test sessions).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignored by git: never committed"
+paths = [
+  '''(^|/)\.git/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)\.dev/''',
+  '''(^|/)dist/''',
+  '''(^|/)dev-dist/''',
+  '''(^|/)coverage/''',
+  '''(^|/)htmlcov/''',
+  '''(^|/)\.auth/''',
+  '''(^|/)test-results/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)\.env$''',
+  '''(^|/)__pycache__/''',
+  '''(^|/)\.(mypy|ruff|pytest)_cache/''',
+]

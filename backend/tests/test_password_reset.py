@@ -17,7 +17,7 @@ from .conftest import make_settings
 
 pytestmark = pytest.mark.db
 
-NEW_PASSWORD = "silver-lantern-orchard-77"
+NEW_PASSWORD = "silver-lantern-orchard-77"  # gitleaks:allow (throw-away test account)
 
 
 def _request_reset(api: TestClient, address: str) -> int:

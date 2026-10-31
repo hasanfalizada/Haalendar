@@ -1,0 +1,12 @@
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. Findings that are test data, not secrets (checked one by one):
+# passwords of throw-away test accounts, password-policy vectors and the example key of RFC 8291, section 5.
+# Lines in the working tree carry "gitleaks:allow" where the file takes comments; these entries are their commits.
+e7abe0fdccb7550723b1da45bef2ec9b3a8dbec9:backend/tests/test_webpush.py:generic-api-key:25
+fd597381dd30bb1827b22098bce7d91fe87f7454:backend/tests/account_helpers.py:generic-api-key:22
+fd597381dd30bb1827b22098bce7d91fe87f7454:backend/tests/test_password_reset.py:generic-api-key:20
+5c204e1833a0de28507bd9ec623a5f02936f6783:backend/tests/test_accounts.py:generic-api-key:29
+5c204e1833a0de28507bd9ec623a5f02936f6783:atoms/accounts.password_policy.v1/vectors.json:generic-api-key:22
+5c204e1833a0de28507bd9ec623a5f02936f6783:atoms/accounts.password_policy.v1/vectors.json:generic-api-key:32
+# The vectors file is JSON (no comments): its lines in the working tree.
+atoms/accounts.password_policy.v1/vectors.json:generic-api-key:22
+atoms/accounts.password_policy.v1/vectors.json:generic-api-key:32
