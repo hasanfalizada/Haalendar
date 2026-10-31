@@ -160,13 +160,14 @@ docker rm -f haalendar-db && docker volume rm haalendar-db   # delete the dev da
 
 ## 5. Testing and checks
 
-All checks must pass before a pull request (see `CONTRIBUTING.md`).
+All checks must pass before a pull request (see `CONTRIBUTING.md`). What each level of tests is for, test data and the
+gates: [`docs/architecture/test-strategy.md`](docs/architecture/test-strategy.md).
 
 ### Everything at once
 
 ```bash
-pnpm check           # frontend: generate API client, TypeScript, ESLint, Prettier, unit tests
-pnpm backend:check   # backend: Ruff lint, Ruff format, mypy (strict), pytest
+pnpm check           # frontend: generate API client, TypeScript, ESLint, Prettier, unit tests with coverage floors
+pnpm backend:check   # backend: Ruff lint, Ruff format, mypy (strict), pytest with the 80 % coverage gate (needs the test database)
 pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnpm audit + pip-audit)
 ```
 
@@ -191,6 +192,7 @@ The stack listens on `127.0.0.1` only; open it at `http://localhost:5173`. From 
 |---|---|
 | `uv run pytest` | Unit and API tests; database tests are skipped unless `HAALENDAR_TEST_DATABASE_URL` is set (see below) |
 | `uv run pytest -k health -v` | Run selected tests verbosely |
+| `uv run pytest --cov` | All tests with line coverage (gate 80 %, missing lines listed); `--cov-report=html` writes `htmlcov/` |
 | `uv run ruff check .` | Lint |
 | `uv run ruff format .` | Format (use `--check` in CI) |
 | `uv run mypy src tests` | Static types (strict) |
@@ -226,6 +228,7 @@ kill %1; docker rm -f haalendar-db-test
 |---|---|
 | `pnpm test` | Unit/component tests (Vitest, jsdom) |
 | `pnpm --filter haalendar-frontend exec vitest` | Tests in watch mode |
+| `pnpm --filter haalendar-frontend exec vitest run --coverage` | Tests with coverage floors; HTML report in `frontend/coverage/` |
 | `pnpm --filter haalendar-frontend typecheck` | TypeScript |
 | `pnpm --filter haalendar-frontend lint` | ESLint |
 | `pnpm --filter haalendar-frontend format` | Prettier (write) |

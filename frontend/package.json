@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "pnpm gen:api && vitest run",
-    "check": "pnpm gen:api && tsc -b && eslint . && prettier --check . && vitest run",
+    "check": "pnpm gen:api && tsc -b && eslint . && prettier --check . && vitest run --coverage",
     "mock:api": "pnpm dlx @stoplight/prism-cli@5.16.0 mock -d -p 4010 ../api/openapi.yaml"
   },
   "dependencies": {
@@ -57,6 +57,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
+    "@vitest/coverage-v8": "5.0.3",
     "eslint": "10.12.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",

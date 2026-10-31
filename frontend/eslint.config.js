@@ -7,7 +7,8 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "src/api/generated", "src/routeTree.gen.ts"] },
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. And the generated coverage report.
+  { ignores: ["dist", "coverage", "src/api/generated", "src/routeTree.gen.ts"] },
   {
     files: ["**/*.{ts,tsx}"],
     extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked],

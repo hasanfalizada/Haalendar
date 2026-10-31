@@ -132,6 +132,10 @@ export class SyncEngine {
     if (!this.stopped) this.channel?.postMessage(message);
   }
 
+  private isStopped(): boolean {
+    return this.stopped;
+  }
+
   private async refreshCounts(): Promise<void> {
     if (this.stopped) return;
     try {
@@ -139,6 +143,9 @@ export class SyncEngine {
       const open = await db.conflicts.filter((c) => !c.resolved_at).count();
       this.setStatus({ pending: await db.outbox.count(), conflicts: open });
     } catch (error) {
+      // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Stopped meanwhile (sign-out closes the local database): a
+      // count still in flight has nothing to report (read through a method: the check above narrowed the field).
+      if (this.isStopped()) return;
       log.warn("sync_counts_failed", { error: describeError(error) });
     }
   }

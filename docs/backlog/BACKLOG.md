@@ -17,7 +17,6 @@
 
 | Due | What | Where it is enforced |
 |---|---|---|
-| 2026-10-30 | Override serialize-javascript 7.1.2 → 7.1.3 and remove its exception (GHSA-m5mm-p8h7-m29v, build time only; 7.1.3 passes the 7-day minimum on 2026-10-29 21:24 UTC) | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 | 2026-11-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 
 ## Open tasks
@@ -35,7 +34,7 @@
 | HAAL-121 | E08 Integration | Note/card due dates as toggleable calendar layers | Must | 104, 112, 060 | — | To do | — | owner backlog file |
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
-| HAAL-140 | E10 QA | Test strategy: unit, integration, contract, E2E Playwright, coverage gate 80% | Must | 010 | — | To do | — | owner backlog file |
+| HAAL-140 | E10 QA | Test strategy: unit, integration, contract, E2E Playwright, coverage gate 80% | Must | 010 | — | In progress | — | owner backlog file |
 | HAAL-141 | E10 QA | Legacy regression suite: one E2E scenario per F-01..F-34 (docs repo: requirements/legacy-feature-inventory.md) (CRITICAL) | Must | 140, 060, 067 | — | To do | — | owner backlog file |
 | HAAL-142 | E10 QA | Offline/sync tests: network cut, offline reload, concurrent edits, conflicts | Must | 054 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |

@@ -42,6 +42,9 @@ dev = [
   # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043. Tests validate export archives against the published JSON Schema.
   "jsonschema==4.26.0",
   "types-jsonschema==4.26.0.20261006",
+  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Line coverage of the backend with an 80 % gate (D-20).
+  "pytest-cov==7.1.0",
+  "coverage==7.17.0",
 ]
 
 [project.scripts]
@@ -61,6 +64,17 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra --strict-markers"
 markers = ["db: needs PostgreSQL via HAALENDAR_TEST_DATABASE_URL (skipped otherwise)"]
+
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Coverage (D-20, test strategy): lines of src/haalendar, measured by
+# `pnpm backend:check` (pytest --cov); below 80 % the check fails.
+[tool.coverage.run]
+source = ["haalendar"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "if __name__ == .__main__.:"]
 
 [tool.ruff]
 line-length = 110

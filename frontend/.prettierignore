@@ -3,3 +3,5 @@ dist
 src/api/generated
 src/routeTree.gen.ts
 public
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The coverage report is generated.
+coverage

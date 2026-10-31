@@ -72,6 +72,24 @@ export default defineConfig(({ mode }) => {
       // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. At most 4 parallel workers: on WSL /mnt drives starting one
       // fork per core made late workers miss Vitest's fixed 60 s start timeout.
       maxWorkers: 4,
+      // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Coverage of the web app's own code (test strategy); the
+      // generated API client, the tests and type-only files do not count.
+      coverage: {
+        provider: "v8",
+        include: ["src/**/*.{ts,tsx}"],
+        exclude: [
+          "src/api/generated/**",
+          "src/test/**",
+          "src/**/*.test.{ts,tsx}",
+          "src/**/*.d.ts",
+          "src/routeTree.gen.ts",
+        ],
+        reporter: ["text-summary", "html"],
+        reportsDirectory: "coverage",
+        // Floors just under the level measured when the gate came (lines 91.4 %, statements 89.0 %, functions 86.8 %,
+        // branches 81.5 %); raised as tests grow, never lowered without the owner.
+        thresholds: { lines: 90, statements: 88, functions: 85, branches: 80 },
+      },
     },
   };
 });
