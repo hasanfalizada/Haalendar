@@ -40,6 +40,18 @@ export async function createEvent(page: Page, event: NewEvent): Promise<void> {
   if (event.color) await editor.getByRole("radio", { name: event.color }).check({ force: true });
   await editor.getByRole("button", { name: "Save" }).click();
   await expect(editor).toBeHidden();
+  // The write has finished when its notification shows; leaving the page earlier is held by the app (unload_held).
+  await written(page, `Event created: ${event.title || "(No title)"}`);
+}
+
+/** Waits for the success notification of a write (the app holds a page unload while a write is unanswered). */
+export async function written(page: Page, notification: string): Promise<void> {
+  await expect(
+    page
+      .getByRole("region", { name: /^Notifications/ })
+      .getByText(notification)
+      .first(),
+  ).toBeVisible();
 }
 
 /** The row of an event in the day list. */

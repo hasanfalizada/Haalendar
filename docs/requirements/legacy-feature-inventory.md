@@ -86,4 +86,10 @@
 | F-10..F-17 | `events.spec.ts` | runs |
 | F-18 | `live.spec.ts` (a second browser context as the other device) | runs |
 | F-19 | `events.spec.ts` | fixme — HAAL-069 |
-| F-20..F-23, F-30..F-34 | stage 2 of HAAL-141 | — |
+| F-20..F-23 | `recurrence.spec.ts` (F-23 seen through the overdue counter, which uses the effective start) | runs |
+| F-30 | `misc.spec.ts` | fixme — search is HAAL-039 (postponed) |
+| F-31, F-32, F-34 | `misc.spec.ts` | runs |
+| F-33 | `misc.spec.ts` | fixme — the history screen is HAAL-114; the audit log itself is covered by the backend tests (`backend/tests/test_audit.py`) |
+
+`inventory.spec.ts` fails when a feature of §2 has no scenario, more than one, or a scenario names a feature that is
+not in §2.
