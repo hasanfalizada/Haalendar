@@ -48,6 +48,18 @@ export function startSync(user: string, queryClient: QueryClient): void {
     () => {
       void queryClient.invalidateQueries({ queryKey: ["session", "notifications"] });
     },
+    // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. Started on the profile from this device (no CSRF token, D-55):
+    // the live session is fetched before anything is sent (["session", "me"] is meQueryKey of api/session, which
+    // imports this module).
+    async () => {
+      type Session = { csrf_token?: string | null } | null | undefined;
+      const current = queryClient.getQueryData<Session>(["session", "me"]);
+      // No profile here (yet) or a live session with its token: nothing to wait for.
+      if (!current || current.csrf_token) return "ready";
+      await queryClient.refetchQueries({ queryKey: ["session", "me"], exact: true });
+      const fresh = queryClient.getQueryData<Session>(["session", "me"]);
+      return fresh === null ? "signedOut" : fresh?.csrf_token ? "ready" : "unreachable";
+    },
   );
   engine.subscribe(notifyStatus);
   engine.start();

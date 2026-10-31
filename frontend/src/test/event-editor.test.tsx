@@ -317,6 +317,26 @@ describe("editor", { timeout: 15_000 }, () => {
     });
   });
 
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. When the browser goes offline, TanStack Query pauses queries that
+  // need the network; the local database needs none, so its rows must still follow a change (found by the offline
+  // end-to-end tests: an event saved offline did not show until the connection was back).
+  it("shows an event saved after the browser went offline at once", async () => {
+    const { user } = await openApp();
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    window.dispatchEvent(new Event("offline"));
+    try {
+      await user.click(screen.getByRole("button", { name: "New event" }));
+      const dialog = await screen.findByRole("dialog", { name: "New event" });
+      await user.type(within(dialog).getByLabelText("Title"), "Written offline");
+      await user.click(within(dialog).getByRole("button", { name: "Save" }));
+      await screen.findByText("Saved on this device. It will sync when the connection is back.");
+      expect(await screen.findByRole("button", { name: "Details of Written offline" })).toBeInTheDocument();
+    } finally {
+      vi.restoreAllMocks();
+      window.dispatchEvent(new Event("online"));
+    }
+  });
+
   it("asks before closing with changes, and says offline saves stay on this device", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     const { user } = await openApp();

@@ -21,7 +21,7 @@ data and which gates a change must pass (SRS 4.7, D-20; ADR-0003 test stack, ADR
 | Backend integration | pytest + FastAPI `TestClient` on PostgreSQL 18 (marker `db`) | `backend/tests/` | Endpoints and sync end to end on a real database as the least-privilege app role: row-level security, soft delete, audit triggers, versions, notifications, jobs |
 | Frontend component | Vitest + jsdom + Testing Library, fake API (`src/test/fake-api.tsx`), fresh IndexedDB per test | `frontend/src/test/*.test.tsx` | Screens as a user drives them: roles and names, keyboard, local database and outbox, undo, offline queue |
 | Contract | Redocly lint; `test_contract.py`; every response of every backend test checked (`tests/contract.py`) | `api/`, `backend/tests/` | The server implements `api/openapi.yaml`: its routes are contract operations (path, method, operationId, success status), operations it does not serve say why (`x-not-implemented`), and every answer the tests receive has a documented status and matches its schema |
-| End to end | Playwright | `e2e/` | The app on the throw-away stack in Chromium: signing in and out, an event through the trash and back, a note, a board with a card; the legacy regression suite, one scenario per F-xx (`e2e/tests/legacy/`, HAAL-141); every test fails on a console error or warning, an uncaught exception or an unexpected API answer ≥ 400 (more: offline HAAL-142) |
+| End to end | Playwright | `e2e/` | The app on the throw-away stack in Chromium: signing in and out, an event through the trash and back, a note, a board with a card; the legacy regression suite, one scenario per F-xx (`e2e/tests/legacy/`, HAAL-141); every test fails on a console error or warning, an uncaught exception or an unexpected API answer ≥ 400 the offline and sync scenarios on the production build (`e2e/tests/offline/`, HAAL-142) |
 | Live check | Playwright scripts on the throw-away stack | session scratch space | After each task: the changed screens on desktop, tablet and phone widths, console and API errors (owner working rules) |
 | Security | `pnpm audit`, pip-audit with expiring exceptions; isolation tests | root `security:audit`, `test_isolation.py`, `test_audit_ignores.py` | Known vulnerabilities, data of one user never reaching another (more: HAAL-144) |
 
@@ -81,6 +81,12 @@ MIT):
   `docs/requirements/legacy-feature-inventory.md`, named `F-xx …` (`pnpm --filter haalendar-e2e exec playwright test -g F-14` runs one); a feature not built
   yet is a `test.fixme` naming its task. Scenarios that depend on "today" fix the browser clock (`fixToday`), and every
   scenario works on its own day with unique titles, so they pass against a stack that already has data.
+- `e2e/tests/offline/` (project `offline`, HAAL-142): offline and sync on the production build with its service
+  worker (`stack-up.sh --preview`, port 4173, same API; `E2E_OFFLINE_URL` for another stack): the network cut and
+  back, a reload without network, a server answering 503, a change applied once although its answer was lost, two
+  tabs of one device, signing out with unsent changes (a second browser context is another device: its own local
+  database). A scenario waits until the outbox is empty
+  (`allSent`) before it cuts the network, so the counts it expects are its own.
 - Scenarios use roles and accessible names as the user perceives them, never CSS classes or test ids; a failed run
   keeps a trace and a screenshot in `e2e/test-results/` (`pnpm --filter haalendar-e2e exec playwright show-trace …`).
 

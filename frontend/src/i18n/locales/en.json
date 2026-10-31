@@ -25,6 +25,8 @@
     "pending_other": "{{count}} changes not sent yet",
     "offlinePending_one": "Offline — {{count}} change waits on this device",
     "offlinePending_other": "Offline — {{count}} changes wait on this device",
+    "unreachablePending_one": "Server unreachable — {{count}} change waits on this device",
+    "unreachablePending_other": "Server unreachable — {{count}} changes wait on this device",
     "syncError": "Sync failed — retrying",
     "syncPaused": "Sync paused — sign in again",
     "conflicts_one": "{{count}} sync conflict — resolve",

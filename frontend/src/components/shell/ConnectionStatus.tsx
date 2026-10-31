@@ -32,6 +32,9 @@ export function ConnectionStatus({ compact = false }: { compact?: boolean }) {
     }
   } else if (state === "offline" && sync.pending > 0) {
     label = t("status.offlinePending", { count: sync.pending });
+  } else if (state === "serverUnreachable" && sync.pending > 0) {
+    // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. As offline: how many changes wait for the server.
+    label = t("status.unreachablePending", { count: sync.pending });
   }
   const dot = (
     <span

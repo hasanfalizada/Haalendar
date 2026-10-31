@@ -15,7 +15,8 @@ const scripts = resolve(here, "../scripts/dev");
 
 export default async function globalSetup(config: FullConfig): Promise<() => void> {
   const own = !process.env.E2E_BASE_URL;
-  if (own) execFileSync(resolve(scripts, "stack-up.sh"), { stdio: "inherit" });
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. With the production build for the offline project.
+  if (own) execFileSync(resolve(scripts, "stack-up.sh"), ["--preview"], { stdio: "inherit" });
   const baseURL = config.projects[0]?.use.baseURL ?? "http://localhost:5173";
   const browser = await chromium.launch();
   const page = await browser.newPage({ baseURL, locale: "en-US", timezoneId: "Europe/Berlin" });

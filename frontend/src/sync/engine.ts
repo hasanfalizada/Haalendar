@@ -80,6 +80,9 @@ async function call<T>(request: () => Promise<{ data?: T; response?: Response }>
   }
 }
 
+/** Whether the session can send changes: ready, not reachable yet, or signed out. */
+export type SessionState = "ready" | "unreachable" | "signedOut";
+
 export class SyncEngine {
   readonly user: string;
   status: SyncStatus = { state: "idle", pending: 0, conflicts: 0, lastSyncAt: null, live: false };
@@ -95,6 +98,7 @@ export class SyncEngine {
   private tick: ReturnType<typeof setInterval> | null = null;
   private releaseLock: (() => void) | null = null;
   private readonly onNotification: () => void;
+  private readonly session: () => Promise<SessionState>;
   private source: EventSource | null = null;
   private liveRetry: ReturnType<typeof setTimeout> | null = null;
   private liveFailures = 0;
@@ -106,10 +110,16 @@ export class SyncEngine {
     if (document.visibilityState === "visible") this.request();
   };
 
-  constructor(user: string, onChanged: () => void, onNotification: () => void = () => undefined) {
+  constructor(
+    user: string,
+    onChanged: () => void,
+    onNotification: () => void = () => undefined,
+    session: () => Promise<SessionState> = () => Promise.resolve("ready"),
+  ) {
     this.user = user;
     this.onChanged = onChanged;
     this.onNotification = onNotification;
+    this.session = session;
     this.channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`haalendar-sync-${user}`);
   }
 
@@ -302,7 +312,10 @@ export class SyncEngine {
     let outcome: "ok" | "network" | "auth" | "error";
     try {
       const db = await localDb(this.user);
-      const pushed = await this.push(db);
+      // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. A live session (with its CSRF token) first: an app started on
+      // the profile from this device had none and its pushes were refused (403) until the profile was checked again.
+      const session = await this.session();
+      const pushed = session === "ready" ? await this.push(db) : session === "signedOut" ? "auth" : "network";
       outcome = pushed === "ok" ? await this.pull(db) : pushed;
     } catch (error) {
       // The local database failed (quota, closed by sign-out): retried like a server error unless stopped.

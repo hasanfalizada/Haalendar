@@ -182,13 +182,16 @@ once: `pnpm --filter haalendar-e2e exec playwright install chromium`.
 
 ```bash
 pnpm e2e                                        # starts the throw-away stack, runs the scenarios, stops it
-E2E_BASE_URL=http://localhost:5173 pnpm e2e     # against a stack you already started (scripts/dev/stack-up.sh)
+E2E_BASE_URL=http://localhost:5173 E2E_OFFLINE_URL=http://localhost:4173 pnpm e2e
+                                                # against a stack you already started (scripts/dev/stack-up.sh --preview);
+                                                # without E2E_OFFLINE_URL the offline scenarios are left out
 ```
 
 ### Throw-away full stack for live checks
 
 ```bash
 scripts/dev/stack-up.sh     # PostgreSQL 18 (port 55434), API 8081, worker, Vite 5173 — prints the URL to open
+scripts/dev/stack-up.sh --preview   # the same plus the production build (service worker, works offline) on 4173
 scripts/dev/stack-down.sh   # stops everything and drops the database and the uploads
 ```
 

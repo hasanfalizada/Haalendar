@@ -35,7 +35,7 @@
 | HAAL-121 | E08 Integration | Note/card due dates as toggleable calendar layers | Must | 104, 112, 060 | — | To do | — | owner backlog file |
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
-| HAAL-142 | E10 QA | Offline/sync tests: network cut, offline reload, concurrent edits, conflicts | Must | 054 | — | To do | — | owner backlog file |
+| HAAL-142 | E10 QA | Offline/sync tests: network cut, offline reload, concurrent edits, conflicts | Must | 054 | — | In progress | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
 | HAAL-144 | E10 QA | Security testing: SAST, dependency/license scans, DAST on demo, multi-user isolation tests | Must | 020, 165 | — | To do | — | owner backlog file |
 | HAAL-145 | E10 QA | UAT by owner on migrated real data; written sign-off | Must | 130, 141 | — | To do | — | owner backlog file |
@@ -143,7 +143,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-120 | 2026-10-30 | a9522db, 5cf0bab | feat(links): links between events, notes and cards — either end reads, one writable end changes, sync, live updates, export (stage 1), links in the card and note editors and the event details, add link search, backlinks (stage 2) (HAAL-120) |
 | HAAL-124 | 2026-10-30 | cc155a5 | feat(calendar): time blocking — a Notes & cards panel in the day and week views, drop a note or card on the week to make a linked event, Schedule… through the editor (HAAL-124) |
 | HAAL-140 | 2026-10-31 | e600db4, 32c0cc2 | test: test strategy with coverage gates (stage 1); contract conformance of every route and every tested response, Playwright end-to-end tests with a clean-console guard (stage 2) |
-| HAAL-141 | 2026-10-31 | 6fc4300, — | test(e2e): legacy regression suite — one Playwright scenario per F-01..F-34 (F-06/F-30 wait for HAAL-039, F-19 for HAAL-069, F-33's screen for HAAL-114) and a completeness check; attachments asked only once an event or note is on the server |
+| HAAL-141 | 2026-10-31 | 6fc4300, c8eb0ec | test(e2e): legacy regression suite — one Playwright scenario per F-01..F-34 (F-06/F-30 wait for HAAL-039, F-19 for HAAL-069, F-33's screen for HAAL-114) and a completeness check; attachments asked only once an event or note is on the server |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |

@@ -7,6 +7,9 @@
 # worker) are missing there. Logs, uploads and the session ids live in <repo>/.dev (git-ignored);
 # each process runs in its own session (setsid), so stack-down stops it with all its children.
 # Usage: scripts/dev/stack-up.sh   then open the printed URL; stop with scripts/dev/stack-down.sh
+# +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. --preview also builds the web app for production and serves it with
+# `vite preview` on http://localhost:4173 (same API): the build with the service worker, so the app opens offline
+# after a reload (D-55). The offline end-to-end tests use it.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
@@ -14,6 +17,8 @@ export PATH="$HOME/.local/bin:$PATH"
 # shellcheck disable=SC1091
 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" >/dev/null
 
+PREVIEW=0
+[ "${1:-}" = "--preview" ] && PREVIEW=1
 DB=haalendar-dev-db
 DEV_DIR="$ROOT/.dev"
 URL="http://localhost:5173"
@@ -29,6 +34,8 @@ export HAALENDAR_DATABASE_URL=postgresql+psycopg://haalendar_app:haalendar_app@l
 export HAALENDAR_MIGRATION_DATABASE_URL=postgresql+psycopg://haalendar:haalendar@localhost:55434/haalendar
 export HAALENDAR_STORAGE_DIR="$DEV_DIR/storage" HAALENDAR_MAIL_DIR="$DEV_DIR/mail"
 export HAALENDAR_BIND_HOST=127.0.0.1 HAALENDAR_PORT=8081 HAALENDAR_PUBLIC_URL="$URL"
+# The production build on 4173 sends unsafe requests from its own origin (CSRF Origin check).
+export HAALENDAR_EXTRA_ALLOWED_ORIGINS=http://localhost:4173,http://127.0.0.1:4173
 cd backend
 uv run haalendar-db-bootstrap >"$DEV_DIR/bootstrap.log" 2>&1 || { echo "bootstrap failed, see $DEV_DIR/bootstrap.log"; exit 1; }
 uv run alembic upgrade head >"$DEV_DIR/migrate.log" 2>&1 || { echo "migrations failed, see $DEV_DIR/migrate.log"; exit 1; }
@@ -39,10 +46,18 @@ start api.log uv run haalendar-api
 start worker.log uv run haalendar-worker
 cd ../frontend
 VITE_API_TARGET=http://127.0.0.1:8081 start vite.log pnpm exec vite --host 127.0.0.1 --port 5173 --strictPort
+if [ "$PREVIEW" = 1 ]; then
+  pnpm build >"$DEV_DIR/build.log" 2>&1 || { echo "build failed, see $DEV_DIR/build.log"; exit 1; }
+  VITE_API_TARGET=http://127.0.0.1:8081 start preview.log pnpm exec vite preview --host 127.0.0.1 --port 4173 --strictPort
+fi
 
 for _ in $(seq 1 90); do curl -s -o /dev/null "http://127.0.0.1:5173/api/v1/health/live" && break; sleep 1; done
 echo "api:   $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8081/api/v1/health/ready)"
 echo "web:   $(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/)"
 echo "setup: $(curl -s http://127.0.0.1:5173/api/v1/setup/status)"
+if [ "$PREVIEW" = 1 ]; then
+  for _ in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:4173/" && break; sleep 1; done
+  echo "build: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:4173/)   (production build with the service worker)"
+fi
 echo "open:  $URL   (logs: $DEV_DIR)"
 echo "from another computer: ssh -N -L 5173:localhost:5173 $USER@$(hostname -f)   then open $URL there"

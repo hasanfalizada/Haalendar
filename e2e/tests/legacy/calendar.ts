@@ -19,6 +19,8 @@ export interface NewEvent {
   description?: string;
   color?: string;
   repeat?: string;
+  /** The notification that says the write is done (default: "Event created: …"). */
+  notification?: string;
 }
 
 /** Opens the day, makes the event in the editor and waits until the editor is closed. */
@@ -41,7 +43,7 @@ export async function createEvent(page: Page, event: NewEvent): Promise<void> {
   await editor.getByRole("button", { name: "Save" }).click();
   await expect(editor).toBeHidden();
   // The write has finished when its notification shows; leaving the page earlier is held by the app (unload_held).
-  await written(page, `Event created: ${event.title || "(No title)"}`);
+  await written(page, event.notification ?? `Event created: ${event.title || "(No title)"}`);
 }
 
 /** Waits for the success notification of a write (the app holds a page unload while a write is unanswered). */

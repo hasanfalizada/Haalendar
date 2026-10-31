@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { isDeviceProfile, meQuery } from "@/api/session";
 import { cachedProfile, forgetProfile, rememberProfile } from "@/lib/profileCache";
 import { MANIFEST, NETWORK_ONLY_PATHS, PRECACHE_GLOBS } from "@/pwa-config";
+import { mutate, syncNow } from "@/sync";
 
 import { json, me, problem, renderApp, stubApi } from "./fake-api";
 
@@ -83,6 +84,42 @@ describe("profile on the device", () => {
     expect(await screen.findByRole("heading", { name: /^Calendar:/, level: 1 })).toBeInTheDocument();
     // The health check retries once before it calls the server unreachable.
     expect(await screen.findByText(/The server cannot be reached/, undefined, { timeout: 5_000 })).toBeInTheDocument();
+  });
+
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. The indicator says how many changes wait while the server cannot
+  // be reached, as it does offline (it said only "Server unreachable"; found by the offline end-to-end tests).
+  it("counts the changes waiting on the device while the server cannot be reached", async () => {
+    await rememberProfile(me());
+    const unreachable = () => Promise.reject(new TypeError("Failed to fetch"));
+    stubApi({ "GET /me": unreachable, "GET /health/live": unreachable, "POST /sync/push": unreachable });
+    renderApp("/calendar");
+    expect(await screen.findByText(/The server cannot be reached/, undefined, { timeout: 5_000 })).toBeInTheDocument();
+    await mutate(me().id, {
+      entity_type: "calendar",
+      entity_id: "0199f000-0000-7000-8000-0000000000c7",
+      op: "create",
+      data: { name: "Work" },
+    });
+    expect((await screen.findAllByText("Server unreachable — 1 change waits on this device")).length).toBeGreaterThan(
+      0,
+    );
+
+    // The server is back: the sync that gets through tells the indicator at once (it waited for its 60 s check).
+    stubApi({
+      "GET /me": () => json(me()),
+      "GET /health/live": () => json({}),
+      "POST /sync/push": (call) =>
+        json({
+          results: (call.body as { mutations: { mutation_id: string }[] }).mutations.map((m) => ({
+            mutation_id: m.mutation_id,
+            status: "applied",
+            version: 1,
+          })),
+        }),
+      "GET /sync/pull": () => json({ changes: [], cursor: "c1", has_more: false }),
+    });
+    syncNow();
+    expect((await screen.findAllByText("Connected", undefined, { timeout: 5_000 })).length).toBeGreaterThan(0);
   });
 });
 

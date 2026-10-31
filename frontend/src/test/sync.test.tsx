@@ -10,9 +10,11 @@ import userEvent from "@testing-library/user-event";
 import Dexie from "dexie";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import "@/api/client";
+import { setCsrfToken } from "@/api/client";
+import { isDeviceProfile, meQuery } from "@/api/session";
 import { runWrite } from "@/api/write";
 import { listLocalNotifications } from "@/lib/localNotifications";
+import { forgetProfile, rememberProfile } from "@/lib/profileCache";
 import { mutate, prepareSignOut, startSync, syncStatus } from "@/sync";
 import { dbName, localDb } from "@/sync/db";
 import { applyServerChanges } from "@/sync/local";
@@ -165,6 +167,42 @@ describe("sync engine", () => {
     await waitFor(() => {
       expect(syncStatus()).toMatchObject({ state: "idle", pending: 0 });
     });
+  });
+
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. Started while the server could not be reached, the app holds the
+  // profile from this device, without a CSRF token; once the server answers, sync first takes the live session (and its
+  // token) instead of sending without one (403 until the 30 s re-check; found by the offline end-to-end tests).
+  it("takes the live session before it sends when the app started on the profile from this device", async () => {
+    setOnline(true);
+    await rememberProfile(me());
+    setCsrfToken(null);
+    let reachable = false;
+    const calls = stubApi({
+      "GET /me": () => (reachable ? json(me()) : Promise.reject(new TypeError("Failed to fetch"))),
+      "POST /sync/push": (call) =>
+        json({
+          results: (call.body as { mutations: { mutation_id: string }[] }).mutations.map((m) => ({
+            mutation_id: m.mutation_id,
+            status: "applied",
+            version: 1,
+          })),
+        }),
+      "GET /sync/pull": () => json({ changes: [], cursor: "c1", has_more: false }),
+    });
+    const queryClient = engineClient();
+    expect(isDeviceProfile(await queryClient.query(meQuery))).toBe(true);
+    const db = await localDb(USER);
+    await enqueue(db, { entity_type: "calendar", entity_id: CAL, op: "create", data: { name: "Work" } }, false);
+
+    reachable = true;
+    startSync(USER, queryClient);
+    await waitFor(async () => {
+      expect(await db.outbox.count()).toBe(0);
+    });
+    const push = calls.find((c) => c.path === "/sync/push");
+    expect(push?.headers.get("X-CSRF-Token")).toBe("csrf-1");
+    expect(calls.findIndex((c) => c.path === "/me")).toBeLessThan(calls.indexOf(push as Call));
+    await forgetProfile();
   });
 
   it("keeps a conflict with both versions and tells the user on this device", async () => {
