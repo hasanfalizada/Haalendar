@@ -270,6 +270,53 @@ describe("editor", { timeout: 15_000 }, () => {
     });
   });
 
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-141. An event made on this device that the server has not received yet
+  // (version 0) has no attachments there: the editor waits instead of asking (it got 404 before).
+  it("asks for the attachments only once the event is on the server", async () => {
+    const db = await localDb(USER);
+    await db.calendars.put({ id: CAL, name: "Family", owner_id: USER, deleted_at: null, version: 1 });
+    await db.items.put({
+      id: EVENT,
+      kind: "event",
+      container_kind: "calendar",
+      container_id: CAL,
+      title: "Fresh",
+      color: "brown",
+      priority: "medium",
+      all_day: true,
+      start_date: DAY,
+      end_date: DAY,
+      start_time: null,
+      end_time: null,
+      tzid: me().time_zone,
+      rrule: null,
+      location: null,
+      body: null,
+      version: 0,
+      deleted_at: null,
+    });
+    const calls = stubApi({
+      "GET /me": () => json(me()),
+      "POST /sync/push": () => new Promise<Response>(() => undefined),
+      [`GET /items/${EVENT}/attachments`]: () => json({ data: [] }),
+    });
+    renderApp(`/calendar?date=${DAY}`);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Details of Fresh" }));
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Event details" })).getByRole("button", { name: "Edit" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Edit event" });
+    expect(within(dialog).getByText("Images can be added once the event has reached the server.")).toBeVisible();
+    expect(calls.some((c) => c.path.endsWith("/attachments"))).toBe(false);
+
+    await db.items.update(EVENT, { version: 1 });
+    localChanged(USER);
+    await waitFor(() => {
+      expect(calls.some((c) => c.path === `/items/${EVENT}/attachments`)).toBe(true);
+    });
+  });
+
   it("asks before closing with changes, and says offline saves stay on this device", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     const { user } = await openApp();

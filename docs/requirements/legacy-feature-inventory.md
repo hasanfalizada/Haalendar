@@ -74,3 +74,16 @@
 10. Multiple DB connections opened per request; timestamps stored as locale strings.
 11. Tests: only CLI-generated "should create" stubs; e2e is Protractor (deprecated).
 12. Outdated stack: Angular 9-next/Material 8 mix, TSLint, Protractor, `entryComponents`, hammerjs.
+
+## 6. Regression tests (HAAL-141)
++++===+++ 2026-10-31 — Hasan Alizada — One Playwright scenario per feature in `e2e/tests/legacy/`, named after it
+(`F-14 …`); a feature the new app does not have yet is a `test.fixme` naming its task, so the report lists it as skipped.
+
+| F-xx | Scenario | State |
+|------|----------|-------|
+| F-01..F-05 | `navigation.spec.ts` | runs |
+| F-06 | `navigation.spec.ts` | fixme — search is HAAL-039 (postponed) |
+| F-10..F-17 | `events.spec.ts` | runs |
+| F-18 | `live.spec.ts` (a second browser context as the other device) | runs |
+| F-19 | `events.spec.ts` | fixme — HAAL-069 |
+| F-20..F-23, F-30..F-34 | stage 2 of HAAL-141 | — |

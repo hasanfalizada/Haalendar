@@ -138,6 +138,7 @@
       "description": "Description",
       "color": "Color",
       "attachmentsLater": "Save the event to add attachments.",
+      "attachmentsSyncing": "Images can be added once the event has reached the server.",
       "save": "Save",
       "created": "Event created: {{title}}",
       "saved": "Event saved: {{title}}"
@@ -1358,7 +1359,8 @@
       "color": "Color",
       "save": "Save",
       "empty": "Write a title or some text to save the note.",
-      "attachmentsLater": "Images can be added once the note is saved."
+      "attachmentsLater": "Images can be added once the note is saved.",
+      "attachmentsSyncing": "Images can be added once the note has reached the server."
     },
     "done": {
       "created": "Created {{title}}",

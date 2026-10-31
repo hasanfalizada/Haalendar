@@ -87,6 +87,15 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
     queryFn: () => localRows(user, "reminder"),
     enabled: Boolean(user) && note !== null,
   });
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-141. Whether the server has the note (version > 0), from the local rows,
+  // which follow the sync: a note made on this device and not sent yet has no attachments there (asking got 404).
+  const { data: noteRows = NO_ROWS } = useQuery({
+    queryKey: [...localKeys.table("item"), user],
+    queryFn: () => localRows(user, "item"),
+    enabled: Boolean(user) && note !== null,
+  });
+  const storedVersion = noteRows.find((row) => row.id === id)?.version;
+  const onServer = typeof storedVersion === "number" && storedVersion > 0;
   const existingReminders = useMemo(() => remindersOf(reminderRows, id), [reminderRows, id]);
   const stored = useMemo(() => {
     const groups = checklistOf(itemRows, id);
@@ -275,8 +284,10 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
               set({ priority });
             }}
           />
-          {note ? (
+          {note && onServer ? (
             <Attachments itemId={id} editable />
+          ) : note ? (
+            <p className="text-xs text-muted">{t("todo.editor.attachmentsSyncing")}</p>
           ) : (
             <p className="text-xs text-muted">{t("todo.editor.attachmentsLater")}</p>
           )}

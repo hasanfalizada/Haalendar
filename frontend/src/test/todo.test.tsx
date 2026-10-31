@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { comparePositions } from "@/lib/position";
+import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
 
 import { json, me, renderApp, stubApi } from "./fake-api";
@@ -138,6 +139,30 @@ describe("To-Do notes", { timeout: 20_000 }, () => {
       },
     ]);
     expect((await db.items.get(SHOPPING))?.title).toBe("Groceries");
+  });
+
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-141. A note made on this device that the server has not received yet
+  // (version 0) has no attachments there: the editor waits instead of asking (it got 404 before).
+  it("asks for the attachments only once the note is on the server", async () => {
+    const db = await localDb(USER);
+    await db.items.put(note(SHOPPING, "Fresh", { version: 0 }));
+    const calls = stubApi({
+      "GET /me": () => json(me()),
+      "POST /sync/push": () => new Promise<Response>(() => undefined),
+      [`GET /items/${SHOPPING}/attachments`]: () => json({ data: [] }),
+    });
+    renderApp("/todo");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Open Fresh" }));
+    const editor = await screen.findByRole("dialog", { name: "Edit note" });
+    expect(within(editor).getByText("Images can be added once the note has reached the server.")).toBeVisible();
+    expect(calls.some((c) => c.path.endsWith("/attachments"))).toBe(false);
+
+    await db.items.update(SHOPPING, { version: 1 });
+    localChanged(USER);
+    await waitFor(() => {
+      expect(calls.some((c) => c.path === `/items/${SHOPPING}/attachments`)).toBe(true);
+    });
   });
 
   it("pin, colour, archive and delete from the card, each with undo", async () => {

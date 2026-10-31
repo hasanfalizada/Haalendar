@@ -177,6 +177,10 @@ export function EventEditor({
   const splitAt = following ? at : null;
   // The record being edited: none for a new event, the copy of an occurrence or a split (all created on Save).
   const id = at ? null : eventId;
+  // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-141. Whether the server has the event (version > 0), read from the
+  // local rows, which follow the sync (the event passed in is the row as it was when the editor opened).
+  const stored = id ? rows.find((row) => row.id === id) : undefined;
+  const onServer = typeof stored?.version === "number" && stored.version > 0;
   const eventTz = typeof event?.tzid === "string" ? event.tzid : viewerTz;
   const today = todayIn(eventTz);
 
@@ -673,8 +677,12 @@ export function EventEditor({
             <p className="text-xs text-muted">
               {t("calendar.occurrence.copyNote", { date: dayLabel(copyOf.date, i18n.language) })}
             </p>
-          ) : id ? (
+          ) : id && onServer ? (
             <Attachments itemId={id} editable />
+          ) : id ? (
+            // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-141. An event made on this device that the server has not
+            // received yet (version 0) has no attachments there; asking got 404.
+            <p className="text-xs text-muted">{t("calendar.editor.attachmentsSyncing")}</p>
           ) : (
             <p className="text-xs text-muted">{t("calendar.editor.attachmentsLater")}</p>
           )}
