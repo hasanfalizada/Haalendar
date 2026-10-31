@@ -268,7 +268,7 @@ The environment is selected with `HAALENDAR_ENV`.
 | | development | test | production | demo |
 |---|---|---|---|---|
 | Purpose | Local work | Automated tests | Real installations | Public demo stand |
-| Status | Available | Available | Not deployable yet (HAAL-150) | Not available yet (HAAL-154) |
+| Status | Available | Available | Docker image ready; Compose file follows (HAAL-150) | Not available yet (HAAL-154) |
 | Interactive API docs (`/api/v1/docs`) | On | Off | Off | Off |
 | Default secret key | Allowed | Allowed | **Refused** — must be ≥ 32 random characters | Refused |
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | any | **Must be `https://`** (enables HSTS) | `https://` |
@@ -279,6 +279,27 @@ The environment is selected with `HAALENDAR_ENV`.
 - **test** — used by the test suites; tests build their own settings and never read your `.env`.
 - **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. The planned deployment is Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS) as described in the architecture decisions; it arrives with HAAL-150.
 - **demo** — production settings plus `HAALENDAR_DEMO_MODE=true`; data reset every 30 minutes (HAAL-154).
+
+### Docker image
+
+<!-- +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. -->
+One image for every role (ADR-0004), built from the repository root:
+
+```bash
+docker build -t haalendar .     # Node builds the web app, the runtime is Python 3.14-slim with the backend from uv.lock
+```
+
+- Roles (`docker/entrypoint.sh`): `api` (default — the API, the live stream and the web app on port 8080), `worker`,
+  `check-worker` (health check: a worker heartbeat in the last minute), `migrate` (the application database role, then
+  the migrations; exits when done).
+- Defaults in the image: `HAALENDAR_ENV=production`, the web app from `/app/static` (`HAALENDAR_STATIC_DIR`), files in
+  `/data/storage` (the `/data` volume), user `haalendar` (uid 10001). It runs with a read-only root filesystem
+  (`--read-only --tmpfs /tmp`), without capabilities and with `no-new-privileges`.
+- The API serves the built web app itself (`backend/src/haalendar/web.py`): hashed files under `/assets/` are cached
+  for a year, everything else (index.html, the service worker, the manifest) is revalidated; paths of the app get
+  index.html; `/api/` is never answered by it.
+- Base images are pinned by digest (at least 7 days old when chosen) and multi-arch; the arm64 build runs in CI
+  (HAAL-151).
 
 ### Trying accounts locally
 

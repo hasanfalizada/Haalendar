@@ -54,6 +54,7 @@ from haalendar.sharing.api import router as sharing_router
 from haalendar.storage import create_storage
 from haalendar.sync.api import router as sync_router
 from haalendar.trash.api import router as trash_router
+from haalendar.web import install_web_app
 
 log = get_logger(__name__)
 
@@ -152,6 +153,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(boards_router, prefix=API_PREFIX)  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119
     app.include_router(live_router, prefix=API_PREFIX)
     install_metrics_endpoint(app, settings, metrics)
+    # +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. The web app last: it answers every other path.
+    install_web_app(app, settings)
     return app
 
 

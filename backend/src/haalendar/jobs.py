@@ -12,9 +12,11 @@ reminders (haalendar.planning.reminders.check_reminders) on its own queue, one r
 from __future__ import annotations
 
 import asyncio
+import sys
 import uuid
 from typing import Any
 
+import psycopg
 from procrastinate import App, PsycopgConnector
 from sqlalchemy.engine import make_url
 
@@ -28,6 +30,8 @@ BUILD_EXPORT = "build_export"
 REMINDER_QUEUE = "reminders"
 CHECK_REMINDERS = "check_reminders"
 WORKER_QUEUES = [EXPORT_QUEUE, REMINDER_QUEUE]
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. A worker updates its heartbeat every 10 s (Procrastinate default).
+HEARTBEAT_MAX_AGE_SECONDS = 60
 
 
 def connector_for(settings: Settings, pool_size: int = 4) -> PsycopgConnector:
@@ -92,9 +96,23 @@ class JobQueue:
         return job_id
 
 
+def worker_alive(settings: Settings) -> bool:
+    """A worker has updated its heartbeat in the last minute (the compose health check of the worker service)."""
+    url = make_url(settings.database_url.get_secret_value()).set(drivername="postgresql")
+    with psycopg.connect(url.render_as_string(hide_password=False), connect_timeout=5) as conn:
+        row = conn.execute(
+            "SELECT count(*) FROM procrastinate_workers WHERE last_heartbeat > now() - make_interval(secs => %s)",
+            (HEARTBEAT_MAX_AGE_SECONDS,),
+        ).fetchone()
+    return bool(row and row[0])
+
+
 def run_worker() -> None:
-    """Entry point `haalendar-worker`: run queued jobs until stopped (SIGINT/SIGTERM finish the current job first)."""
+    """Entry point `haalendar-worker`: run queued jobs until stopped (SIGINT/SIGTERM finish the current job first).
+    `haalendar-worker check` exits 0 when a worker is alive (heartbeat), 1 otherwise (HAAL-150 health check)."""
     settings = load_settings()
+    if sys.argv[1:] == ["check"]:
+        sys.exit(0 if worker_alive(settings) else 1)
     configure_logging(settings)
     app = make_job_app(settings)
 

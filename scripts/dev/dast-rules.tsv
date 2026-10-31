@@ -1,0 +1,2 @@
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. Decisions on ZAP alerts for scripts/dev/dast.sh: rule id, action
+# (IGNORE, INFO, WARN, FAIL), rule name, reason. Every alert left without a decision is a WARN and fails the run.

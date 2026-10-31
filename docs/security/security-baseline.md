@@ -42,7 +42,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V10 OAuth and OIDC | ⏳ | HAAL-168 (Could): backend confidential client, PKCE, state/nonce |
 | V11 Cryptography | 🟡 | Standard libraries only (argon2-cffi, BLAKE3, TLS by proxy); key management with HAAL-160 |
 | V12 Secure Communication | 🟡 | HTTPS required in production, HSTS ✅; TLS termination via Caddy ⏳ HAAL-150 |
-| V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; container hardening ⏳ HAAL-150 |
+| V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; image: non-root user, runs with a read-only root filesystem, no capabilities, `no-new-privileges`, pinned base images ✅ HAAL-150; the same enforced by the Compose file ⏳ HAAL-150 |
 | V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) and for every role (no-delete triggers, ORM/SQL guards, source scan, contract `x-soft-delete` — HAAL-030) ✅; export ⏳ HAAL-043; GDPR erasure open (O-01) |
 | V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate, DAST of the API (ZAP) ✅ HAAL-144; full DAST on the demo ⏳ HAAL-154; SBOM ⏳ HAAL-151 |
 | V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections); tamper-proof audit log of all changes written by database triggers, append-only, readable under RLS, linked by request id (HAAL-032) |
