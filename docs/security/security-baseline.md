@@ -44,7 +44,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V12 Secure Communication | 🟡 | HTTPS required in production, HSTS ✅; TLS termination via Caddy ⏳ HAAL-150 |
 | V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; container hardening ⏳ HAAL-150 |
 | V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) and for every role (no-delete triggers, ORM/SQL guards, source scan, contract `x-soft-delete` — HAAL-030) ✅; export ⏳ HAAL-043; GDPR erasure open (O-01) |
-| V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate ✅ HAAL-144; SBOM ⏳ HAAL-151 |
+| V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate, DAST of the API (ZAP) ✅ HAAL-144; full DAST on the demo ⏳ HAAL-154; SBOM ⏳ HAAL-151 |
 | V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections); tamper-proof audit log of all changes written by database triggers, append-only, readable under RLS, linked by request id (HAAL-032) |
 | V17 WebRTC | — | Not used |
 
@@ -93,6 +93,14 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
     git history and the working tree; test data that looks like a secret is marked `gitleaks:allow` on its line or
     listed in `.gitleaksignore` with the reason;
   - licences: `pnpm security:licences` (`scripts/dev/licences.py`, policy in §7).
+- DAST of the API (`scripts/dev/dast.sh`, HAAL-144, not part of check-all: 10–30 minutes): OWASP ZAP 2.17.0
+  (Apache-2.0, Docker image pinned by digest, silent — no add-on updates, in its own container network) runs its API
+  scan with all passive and active rules over every operation of `api/openapi.yaml` on the throw-away stack, signed in
+  as the first administrator; operations that would end its session or lock its account, the push subscription
+  (development accepts any endpoint) and the live stream are left out with reasons in the script; alert decisions live
+  in `scripts/dev/dast-rules.tsv`. First run 2026-11-01: 113 rules passed, nothing to decide, about 7 000 requests on 39
+  routes without a server error. Run it before a release and after changes to the API's guards. The web pages and HTTPS
+  are scanned on the demo stand (HAAL-154): here `vite preview` serves them without the app's own headers.
 - In CI (HAAL-151): the same plus SBOM; scheduled weekly audit.
 
 ## 7. Licence policy

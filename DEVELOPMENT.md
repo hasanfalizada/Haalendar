@@ -171,6 +171,7 @@ pnpm backend:check   # backend: Ruff lint, Ruff format, mypy (strict), pytest wi
 pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnpm audit + pip-audit)
 pnpm security:licences  # every dependency under a licence the policy allows (backend/licence-policy.json)
 scripts/dev/secrets-scan.sh  # gitleaks over the git history and the working tree (Docker)
+scripts/dev/dast.sh          # OWASP ZAP scan of the API on its own throw-away stack (Docker, 10–30 min; reports in .dev/dast/)
 ```
 
 Or the whole set in one run, including the contract lint, the database tests on a throw-away PostgreSQL 18 (port 55433) and the production build — read-only, exit code 0 only when every step passes:
@@ -194,6 +195,7 @@ E2E_BASE_URL=http://localhost:5173 E2E_OFFLINE_URL=http://localhost:4173 pnpm e2
 ```bash
 scripts/dev/stack-up.sh     # PostgreSQL 18 (port 55434), API 8081, worker, Vite 5173 — prints the URL to open
 scripts/dev/stack-up.sh --preview   # the same plus the production build (service worker, works offline) on 4173
+scripts/dev/stack-up.sh --scan      # rate limits raised and the Docker bridge host accepted, for scripts/dev/dast.sh
 scripts/dev/stack-down.sh   # stops everything and drops the database and the uploads
 ```
 

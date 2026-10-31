@@ -36,13 +36,12 @@
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
-| HAAL-144 | E10 QA | Security testing: SAST, dependency/license scans, DAST on demo, multi-user isolation tests | Must | 020, 165 | — | In progress | — | owner backlog file |
 | HAAL-145 | E10 QA | UAT by owner on migrated real data; written sign-off | Must | 130 (closed; counts as met, owner 2026-11-01), 141 | — | To do | — | owner backlog file |
-| HAAL-150 | E11 Delivery | Docker images (x86_64 + arm64) + docker compose for on-prem, volumes, env config | Must | 011, 016 | — | To do | — | owner backlog file |
+| HAAL-150 | E11 Delivery | Docker images (x86_64 + arm64) + docker compose for on-prem, volumes, env config | Must | 011, 016 | — | In progress | — | owner backlog file |
 | HAAL-151 | E11 Delivery | CI/CD GitHub Actions: lint, tests, build, SBOM, license check, image publish on tag | Must | 006, 140 | — | To do | — | owner backlog file |
 | HAAL-152 | E11 Delivery | README in English: features, screenshots, quick start, config, backup, upgrade, legacy migration, demo link | Must | 150 | — | To do | — | owner backlog file |
 | HAAL-153 | E11 Delivery | Public user and admin guides in code repo; API docs from OpenAPI | Should | 015 | — | To do | — | owner backlog file |
-| HAAL-154 | E11 Delivery | Demo stand: demo mode, seeded demo accounts, full reset every 30 min, reset banner, strict upload limits | Must | 150 | — | To do | — | owner backlog file |
+| HAAL-154 | E11 Delivery | Demo stand: demo mode, seeded demo accounts, full reset every 30 min, reset banner, strict upload limits; then the full DAST of the app on the demo stand (web pages with their headers, HTTPS; `scripts/dev/dast.sh` scans the API only — owner, 2026-11-01, HAAL-144) | Must | 150 | — | To do | — | owner backlog file |
 | HAAL-155 | E11 Delivery | Backup and restore of DB + attachments (RPO 24 h, RTO 1 h) | Must | 150 | — | To do | — | owner backlog file |
 | HAAL-156 | E11 Delivery | Release v1.0.0: semver, changelog, release notes, tag, rollback notes | Must | 141, 145, 151, 152 | — | To do | — | owner backlog file |
 | HAAL-157 | E11 Delivery | S3-compatible attachment storage adapter (AWS S3, Garage, SeaweedFS, Ceph RGW) | v1.1 | 040 | — | To do | — | owner backlog file |
@@ -144,6 +143,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-140 | 2026-10-31 | e600db4, 32c0cc2 | test: test strategy with coverage gates (stage 1); contract conformance of every route and every tested response, Playwright end-to-end tests with a clean-console guard (stage 2) |
 | HAAL-141 | 2026-10-31 | 6fc4300, c8eb0ec | test(e2e): legacy regression suite — one Playwright scenario per F-01..F-34 (F-06/F-30 wait for HAAL-039, F-19 for HAAL-069, F-33's screen for HAAL-114) and a completeness check; attachments asked only once an event or note is on the server |
 | HAAL-142 | 2026-10-31 | 7d16989, 5b14676 | test(e2e): offline and sync on the production build — network cut, offline reload, server unreachable, a lost answer applied once, two tabs, sign-out with unsent changes, concurrent edits (merge, a choice per field, restore or discard what was deleted elsewhere, a delete of something changed elsewhere told); local reads offline, live session before sending, indicator fixes, every merged field named in a conflict |
+| HAAL-144 | 2026-11-01 | 22a6fa5, 2ed40cf, — | test(security): isolation over the whole API (every contract operation with another user's ids, as a stranger and as an administrator); ESLint security rules, gitleaks secret scan and a licence gate with the owner's licence policy in check-all; DAST of the API with OWASP ZAP (scripts/dev/dast.sh), the full DAST on the demo stand with HAAL-154 |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |

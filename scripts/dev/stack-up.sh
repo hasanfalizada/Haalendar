@@ -10,6 +10,9 @@
 # +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. --preview also builds the web app for production and serves it with
 # `vite preview` on http://localhost:4173 (same API): the build with the service worker, so the app opens offline
 # after a reload (D-55). The offline end-to-end tests use it.
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. --scan prepares the API for a scanner (scripts/dev/dast.sh): rate
+# limits raised (a scanner would otherwise get mostly 429) and the Docker bridge address ($SCAN_HOST, default
+# 172.17.0.1) accepted as Host, so the scanner in its container reaches the API through dast.sh's forwarder.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
@@ -18,7 +21,14 @@ export PATH="$HOME/.local/bin:$PATH"
 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" >/dev/null
 
 PREVIEW=0
-[ "${1:-}" = "--preview" ] && PREVIEW=1
+SCAN=0
+for arg in "$@"; do
+  case "$arg" in
+    --preview) PREVIEW=1 ;;
+    --scan) SCAN=1 ;;
+    *) echo "unknown option: $arg (--preview, --scan)"; exit 2 ;;
+  esac
+done
 DB=haalendar-dev-db
 DEV_DIR="$ROOT/.dev"
 URL="http://localhost:5173"
@@ -36,6 +46,11 @@ export HAALENDAR_STORAGE_DIR="$DEV_DIR/storage" HAALENDAR_MAIL_DIR="$DEV_DIR/mai
 export HAALENDAR_BIND_HOST=127.0.0.1 HAALENDAR_PORT=8081 HAALENDAR_PUBLIC_URL="$URL"
 # The production build on 4173 sends unsafe requests from its own origin (CSRF Origin check).
 export HAALENDAR_EXTRA_ALLOWED_ORIGINS=http://localhost:4173,http://127.0.0.1:4173
+if [ "$SCAN" = 1 ]; then
+  export HAALENDAR_RATE_LIMIT_PER_MINUTE=100000 HAALENDAR_RATE_LIMIT_BURST=10000
+  export HAALENDAR_AUTH_RATE_LIMIT_PER_MINUTE=1000 HAALENDAR_AUTH_RATE_LIMIT_BURST=500
+  export HAALENDAR_EXTRA_ALLOWED_HOSTS="${SCAN_HOST:-172.17.0.1}"
+fi
 cd backend
 uv run haalendar-db-bootstrap >"$DEV_DIR/bootstrap.log" 2>&1 || { echo "bootstrap failed, see $DEV_DIR/bootstrap.log"; exit 1; }
 uv run alembic upgrade head >"$DEV_DIR/migrate.log" 2>&1 || { echo "migrations failed, see $DEV_DIR/migrate.log"; exit 1; }
