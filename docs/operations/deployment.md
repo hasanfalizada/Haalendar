@@ -42,6 +42,35 @@ RAM, 10 GB disk.
 5. Check: `docker compose ps` shows `app` and `worker` as healthy; `curl -s http://127.0.0.1:8080/api/v1/health/ready`
    answers `"status":"ready"` with `"rls_enforced":true`.
 
+**Behind a proxy in another Compose project** (HAAL-145), e.g. a Caddy on an external network `proxy` that serves
+several apps: the installation directory may be a clone of the repository (`git clone --branch <release>`), so
+`compose.yaml` always matches the image; local changes go into `compose.override.yaml` next to it (ignored by git,
+read by `docker compose` automatically):
+
+```yaml
+services:
+  app:
+    networks: [db, web, proxy]
+    environment:
+      # X-Forwarded-* from the proxy's network only (the subnet of `docker network inspect proxy`).
+      HAALENDAR_FORWARDED_ALLOW_IPS: 172.18.0.0/16
+networks:
+  proxy:
+    external: true
+```
+
+The proxy then forwards to `http://<project>-app-1:8080`, for Caddy:
+
+```
+calendar.example.org {
+    reverse_proxy haalendar-app-1:8080
+}
+```
+
+(`tls internal` inside the block when the name is not reachable from the internet: Caddy's own certificate authority,
+whose root certificate — `data/caddy/pki/authorities/local/root.crt` of the Caddy container — is installed once on
+each device.)
+
 **Next to other services on the same Docker host** (HAAL-145): set `COMPOSE_PROJECT_NAME` in `.env` when anything else
 there is called `haalendar` — containers, volumes and networks carry the project name, and `docker compose down -v`
 in the wrong project deletes the wrong data. Pick a free `HAALENDAR_HTTP_PORT` and a `HAALENDAR_WEB_SUBNET` that no

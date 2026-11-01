@@ -16,6 +16,8 @@ desktop.ini
 .env.*
 !.env.example
 !.env.production.example
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-145. Local changes of an installation to compose.yaml.
+compose.override.yaml
 *.pem
 *.key
 
