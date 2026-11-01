@@ -83,6 +83,10 @@ healthy() {
 ready() { curl -fsS "$APP/api/v1/health/ready" | grep -q '"rls_enforced":true'; }
 setup_done() { curl -fsS "$APP/api/v1/setup/status" | grep -q '"setup_required":false'; }
 
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-145. Without the bundled proxy its domain is not needed.
+check "without the bundled proxy no HAALENDAR_DOMAIN is needed" sh -c \
+  "grep -v '^HAALENDAR_DOMAIN=' '$DIR/.env' >'$DIR/no-domain.env' && docker compose -p $PROJECT --project-directory '$DIR' --env-file '$DIR/no-domain.env' config -q"
+
 echo "== start"
 dc up -d --quiet-pull >/dev/null 2>&1 || { dc up -d; exit 1; }
 check "healthy" healthy

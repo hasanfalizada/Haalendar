@@ -30,7 +30,8 @@ step() {
   local start=$SECONDS
   if "$@"; then echo "-- $name: OK ($((SECONDS - start)) s)"; else echo "-- $name: FAILED"; FAILED+=("$name"); fi
 }
-cleanup() { docker rm -f "$DB" >/dev/null 2>&1; }
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-145. With its anonymous data volume (-v), which otherwise stays behind.
+cleanup() { docker rm -f -v "$DB" >/dev/null 2>&1; }
 trap cleanup EXIT
 
 start_db() {

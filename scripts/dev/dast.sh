@@ -14,7 +14,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT="$ROOT/.dev/dast"
 IMAGE="ghcr.io/zaproxy/zaproxy:20261016-stable@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6"
-API="http://127.0.0.1:8081/api/v1"
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-145. The API's port as in stack-up.sh (STACK_API_PORT).
+API_PORT="${STACK_API_PORT:-8081}"
+API="http://127.0.0.1:$API_PORT/api/v1"
 export SCAN_HOST
 SCAN_HOST="$(docker network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}')" || exit 1
 SCAN_PORT=18081
@@ -29,7 +31,7 @@ cleanup() {
 }
 trap cleanup EXIT
 # The bridge address (reachable from this host and its containers only) forwarded to the API on 127.0.0.1.
-python3 -I - "$SCAN_HOST" "$SCAN_PORT" <<'EOF' &
+python3 -I - "$SCAN_HOST" "$SCAN_PORT" "$API_PORT" <<'EOF' &
 import asyncio, sys
 
 async def pipe(reader, writer):
@@ -41,7 +43,7 @@ async def pipe(reader, writer):
         writer.close()
 
 async def handle(client_reader, client_writer):
-    api_reader, api_writer = await asyncio.open_connection("127.0.0.1", 8081)
+    api_reader, api_writer = await asyncio.open_connection("127.0.0.1", int(sys.argv[3]))
     await asyncio.gather(pipe(client_reader, api_writer), pipe(api_reader, client_writer), return_exceptions=True)
 
 async def main():

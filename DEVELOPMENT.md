@@ -195,6 +195,7 @@ E2E_BASE_URL=http://localhost:5173 E2E_OFFLINE_URL=http://localhost:4173 pnpm e2
 
 ```bash
 scripts/dev/stack-up.sh     # PostgreSQL 18 (port 55434), API 8081, worker, Vite 5173 — prints the URL to open
+STACK_API_PORT=8091 scripts/dev/stack-up.sh  # the API on another port when 8081 is taken (the stack refuses taken ports)
 scripts/dev/stack-up.sh --preview   # the same plus the production build (service worker, works offline) on 4173
 scripts/dev/stack-up.sh --scan      # rate limits raised and the Docker bridge host accepted, for scripts/dev/dast.sh
 scripts/dev/stack-down.sh   # stops everything and drops the database and the uploads

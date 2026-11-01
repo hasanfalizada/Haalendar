@@ -17,6 +17,20 @@ export default async function globalSetup(config: FullConfig): Promise<() => voi
   const own = !process.env.E2E_BASE_URL;
   // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. With the production build for the offline project.
   if (own) execFileSync(resolve(scripts, "stack-up.sh"), ["--preview"], { stdio: "inherit" });
+  const stop = () => {
+    if (own) execFileSync(resolve(scripts, "stack-down.sh"), { stdio: "inherit" });
+  };
+  // +++===+++ 2026-11-01 — Hasan Alizada — HAAL-145. Playwright runs no teardown when the setup fails: stop the stack here.
+  try {
+    await signIn(config);
+  } catch (error) {
+    stop();
+    throw error;
+  }
+  return stop;
+}
+
+async function signIn(config: FullConfig): Promise<void> {
   const baseURL = config.projects[0]?.use.baseURL ?? "http://localhost:5173";
   const browser = await chromium.launch();
   const page = await browser.newPage({ baseURL, locale: "en-US", timezoneId: "Europe/Berlin" });
@@ -47,7 +61,4 @@ export default async function globalSetup(config: FullConfig): Promise<() => voi
   mkdirSync(resolve(here, ".auth"), { recursive: true });
   await page.context().storageState({ path: resolve(here, ".auth/admin.json") });
   await browser.close();
-  return () => {
-    if (own) execFileSync(resolve(scripts, "stack-down.sh"), { stdio: "inherit" });
-  };
 }

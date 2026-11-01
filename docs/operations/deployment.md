@@ -35,11 +35,17 @@ RAM, 10 GB disk.
    - **behind your own reverse proxy**: `docker compose up -d` and forward `https://<your host>` to
      `http://127.0.0.1:8080` (keep the `Host` header, send `X-Forwarded-For` and `X-Forwarded-Proto`, do not buffer
      responses of `/api/v1/stream`, which is a live event stream). A proxy in another container joins the network
-     `haalendar_web` and forwards to `http://app:8080`.
+     `haalendar_web` and forwards to `http://haalendar-app-1:8080` (the container's name: other networks of the proxy
+     may have an `app` too); the port on the host is then not needed.
 4. Open the public URL: the first visit leads to `/setup`, where the first administrator is created with the setup
    token. The token is not needed afterwards and may be removed from `.env`.
 5. Check: `docker compose ps` shows `app` and `worker` as healthy; `curl -s http://127.0.0.1:8080/api/v1/health/ready`
    answers `"status":"ready"` with `"rls_enforced":true`.
+
+**Next to other services on the same Docker host** (HAAL-145): set `COMPOSE_PROJECT_NAME` in `.env` when anything else
+there is called `haalendar` — containers, volumes and networks carry the project name, and `docker compose down -v`
+in the wrong project deletes the wrong data. Pick a free `HAALENDAR_HTTP_PORT` and a `HAALENDAR_WEB_SUBNET` that no
+other network uses (`docker network inspect $(docker network ls -q) --format '{{.Name}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'`).
 
 Settings beyond the example (rate limits, session lifetimes, logging, metrics, the trusted proxy network) are the
 `HAALENDAR_*` variables of `.env.example`; add them to `.env`. Secrets can also be passed as files:
