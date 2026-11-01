@@ -37,6 +37,9 @@ log = get_logger(__name__)
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 ALLOWED_BODY_TYPES = ("application/json", "application/merge-patch+json", "multipart/form-data")
 RATE_LIMIT_EXEMPT_PREFIXES = ("/api/v1/health/",)
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. Only the API and the metrics are budgeted; the files of the web app
+# (static, cached by the browser) are not — a cold load fetches dozens of them.
+RATE_LIMITED_PREFIXES = ("/api/", "/metrics")
 AUTH_PREFIX = "/api/v1/auth/"
 
 
@@ -174,7 +177,11 @@ class RateLimitGuard:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         path: str = scope.get("path", "")
-        if scope["type"] != "http" or path.startswith(RATE_LIMIT_EXEMPT_PREFIXES):
+        if (
+            scope["type"] != "http"
+            or not path.startswith(RATE_LIMITED_PREFIXES)
+            or path.startswith(RATE_LIMIT_EXEMPT_PREFIXES)
+        ):
             await self.app(scope, receive, send)
             return
         client = scope.get("client")

@@ -4,7 +4,7 @@
 
 How to set up, run and test Haalendar locally, and how the environments differ.
 
-> **Status (rewrite in progress):** backend skeleton, API contract and frontend shell exist. Docker images, Compose files and the demo stand are not built yet (backlog HAAL-150, HAAL-154); production deployment is therefore not supported yet.
+> **Status (rewrite in progress):** backend, API contract and web app exist. Production runs on Docker Compose (`compose.yaml`, [installation guide](docs/operations/deployment.md)); release images in a registry and arm64 builds come with CI (HAAL-151), the demo stand with HAAL-154.
 
 ## Contents
 1. [Prerequisites](#1-prerequisites)
@@ -172,6 +172,7 @@ pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnp
 pnpm security:licences  # every dependency under a licence the policy allows (backend/licence-policy.json)
 scripts/dev/secrets-scan.sh  # gitleaks over the git history and the working tree (Docker)
 scripts/dev/dast.sh          # OWASP ZAP scan of the API on its own throw-away stack (Docker, 10–30 min; reports in .dev/dast/)
+scripts/dev/compose-check.sh # the production installation (compose.yaml, image built here) end to end: E2E, restart, HTTPS via Caddy (~5 min)
 ```
 
 Or the whole set in one run, including the contract lint, the database tests on a throw-away PostgreSQL 18 (port 55433) and the production build — read-only, exit code 0 only when every step passes:
@@ -268,7 +269,7 @@ The environment is selected with `HAALENDAR_ENV`.
 | | development | test | production | demo |
 |---|---|---|---|---|
 | Purpose | Local work | Automated tests | Real installations | Public demo stand |
-| Status | Available | Available | Docker image ready; Compose file follows (HAAL-150) | Not available yet (HAAL-154) |
+| Status | Available | Available | Available (Docker Compose, HAAL-150) | Not available yet (HAAL-154) |
 | Interactive API docs (`/api/v1/docs`) | On | Off | Off | Off |
 | Default secret key | Allowed | Allowed | **Refused** — must be ≥ 32 random characters | Refused |
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | any | **Must be `https://`** (enables HSTS) | `https://` |
@@ -277,7 +278,7 @@ The environment is selected with `HAALENDAR_ENV`.
 
 - **development** — the default. Use `HAALENDAR_LOG_FORMAT=console` for human-readable logs.
 - **test** — used by the test suites; tests build their own settings and never read your `.env`.
-- **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. The planned deployment is Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS) as described in the architecture decisions; it arrives with HAAL-150.
+- **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. It runs on Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS): `compose.yaml`, `Caddyfile` and `.env.production.example` in the repository root, installation and upgrades in [`docs/operations/deployment.md`](docs/operations/deployment.md).
 - **demo** — production settings plus `HAALENDAR_DEMO_MODE=true`; data reset every 30 minutes (HAAL-154).
 
 ### Docker image

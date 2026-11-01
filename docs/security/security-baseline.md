@@ -10,9 +10,9 @@ Legend: ✅ implemented and tested · 🟡 partially implemented · ⏳ planned 
 |---|---|---|
 | RFC 9457 errors, no internal details or stack traces to clients | `errors.py`, `middleware.py` | `test_errors_and_headers.py` |
 | Security headers: nosniff, Referrer-Policy no-referrer, COOP/CORP same-origin, Permissions-Policy, HSTS on https, no Server header, `Cache-Control: no-store` for API | `middleware.py` | `test_errors_and_headers.py` |
-| CSP: API `default-src 'none'; frame-ancestors 'none'`; SPA strict same-origin (no inline script, no eval, no framing, no plugins) | `middleware.py` (`API_CSP`, `SPA_CSP`) | `test_security.py` |
+| CSP: API `default-src 'none'; frame-ancestors 'none'`; SPA strict same-origin (no inline script, no eval, no framing, no plugins; inline styles allowed, D-39) | `middleware.py` (`API_CSP`, `SPA_CSP`) | `test_security.py` |
 | Host header allow-list (public host + loopback + configured extras) | `security/guards.py` `HostGuard` | `test_security.py` |
-| Rate limiting: token bucket per client IP, 600/min sustained, burst 120, 429 + Retry-After + IETF RateLimit headers; health probes exempt; bounded memory (LRU 10 000 clients) | `RateLimitGuard`, `TokenBucketLimiter` | `test_security.py` |
+| Rate limiting: token bucket per client IP, 600/min sustained, burst 120, 429 + Retry-After + IETF RateLimit headers; only `/api/` and `/metrics` are counted (the web app's files are not), health probes exempt; bounded memory (LRU 10 000 clients) | `RateLimitGuard`, `TokenBucketLimiter` | `test_security.py` |
 | Request body limit 1 MiB (declared and streamed) → 413; content-type allow-list for unsafe methods (`application/json`, `application/merge-patch+json`, `multipart/form-data`) → 415 | `BodyGuard` | `test_security.py` |
 | CSRF layer 1: Fetch Metadata (`Sec-Fetch-Site: cross-site`) and `Origin` allow-list for unsafe methods → 403 `csrf_failed` | `CsrfOriginGuard` | `test_security.py` |
 | Mass-assignment protection: API models reject unknown fields, immutable | `security/schemas.py` `ApiModel` | `test_security.py` |
@@ -32,7 +32,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 |---|---|---|
 | V1 Encoding and Sanitization | ✅ | ORM parameterised SQL only; React output encoding; Markdown rendered to React elements without innerHTML, raw HTML shown as text, only http(s)/mailto/tel links, no remote images, XSS payload tests (HAAL-047, D-51) |
 | V2 Validation and Business Logic | 🟡 | `ApiModel` strict schemas; per-endpoint validation with each feature |
-| V3 Web Frontend Security | 🟡 | CSP, headers, CSRF layer 1 ✅; SPA served with CSP ⏳ HAAL-150; per-session CSRF token ✅ (server HAAL-160, sent by the SPA from HAAL-163, memory only) |
+| V3 Web Frontend Security | 🟡 | CSP, headers, CSRF layer 1 ✅; SPA served with CSP ✅ (HAAL-150); per-session CSRF token ✅ (server HAAL-160, sent by the SPA from HAAL-163, memory only) |
 | V4 API and Web Service | 🟡 | Content-type/body limits, RFC 9457, merge-patch, If-Match ✅/contract; per-endpoint enforcement with features |
 | V5 File Handling | 🟡 | Signature check, limits, names ✅; storage port with local adapter outside the web root, content-addressed (BLAKE3), never deleted, served only through the API with auth, nosniff and immutable versioned URLs ✅ (HAAL-166); avatars re-encoded (metadata stripped, pixel-bomb limit) ✅; the same for attachments ⏳ HAAL-040 |
 | V6 Authentication | ✅ | Argon2id + rehash, 15-char policy atom with common-password list, invite-only registration, e-mail verification, generic responses, password reset (1 h single use), lockout 15 min doubling to 24 h, auth rate limit 20/min, optional TOTP with replay protection and recovery codes, admin 2FA policy (HAAL-160..162) |

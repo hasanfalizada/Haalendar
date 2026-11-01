@@ -92,6 +92,14 @@ def test_health_probes_are_never_rate_limited() -> None:
         assert all(client.get("/api/v1/health/live").status_code == 200 for _ in range(5))
 
 
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. Found by the end-to-end suite on the Compose stack: a cold load of
+# the web app fetches some 35 files, which used up the client's API budget (even the stylesheet got a 429).
+def test_the_web_app_files_do_not_use_up_the_api_budget() -> None:
+    with TestClient(_app(rate_limit_per_minute="60", rate_limit_burst="2")) as client:
+        assert {client.get(f"/assets/index-{i}.js").status_code for i in range(10)} == {404}
+        assert [client.get("/api/v1/unknown").status_code for _ in range(3)] == [404, 404, 429]
+
+
 def test_token_bucket_refills_over_time_and_bounds_memory() -> None:
     limiter = TokenBucketLimiter(per_minute=60, burst=2, max_clients=3)
     assert limiter.take("a", now=0.0) == (True, 0.0)
@@ -188,9 +196,13 @@ def test_spa_paths_get_strict_csp(client: TestClient) -> None:
     response = client.get("/some/spa/route")
     csp = response.headers["content-security-policy"]
     assert csp == SPA_CSP.decode()
-    assert "'unsafe-eval'" not in csp
-    assert "script-src 'self'" in csp
-    assert "frame-ancestors 'none'" in csp
+    directives = dict(part.strip().split(" ", 1) for part in csp.split(";"))
+    assert directives["script-src"] == "'self'"  # no inline scripts, no eval
+    assert directives["frame-ancestors"] == "'none'"
+    # +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. Found by the end-to-end suite on the Compose stack: the toasts
+    # (sonner) and the scroll lock of dialogs (react-style-singleton) insert <style> elements, some with values computed
+    # at run time (so no hashes); blocked, the app broke. Inline styles are allowed, scripts stay strict.
+    assert directives["style-src"] == "'self' 'unsafe-inline'"
 
 
 # ---------- Uploads ----------

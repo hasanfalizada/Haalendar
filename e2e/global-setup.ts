@@ -20,9 +20,18 @@ export default async function globalSetup(config: FullConfig): Promise<() => voi
   const baseURL = config.projects[0]?.use.baseURL ?? "http://localhost:5173";
   const browser = await chromium.launch();
   const page = await browser.newPage({ baseURL, locale: "en-US", timezoneId: "Europe/Berlin" });
-  const status = (await (await page.request.get("/api/v1/setup/status")).json()) as { setup_required: boolean };
+  const status = (await (await page.request.get("/api/v1/setup/status")).json()) as {
+    setup_required: boolean;
+    setup_token_required: boolean;
+  };
   if (status.setup_required) {
     await page.goto("/setup");
+    // +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. A production instance asks for its setup token (E2E_SETUP_TOKEN).
+    if (status.setup_token_required) {
+      const token = process.env.E2E_SETUP_TOKEN;
+      if (!token) throw new Error("The instance asks for a setup token: set E2E_SETUP_TOKEN");
+      await page.getByLabel("Setup token").fill(token);
+    }
     await page.getByLabel("Your name").fill(ADMIN.name);
     await page.getByLabel("E-mail").fill(ADMIN.email);
     await page.getByLabel("Password").fill(ADMIN.password);

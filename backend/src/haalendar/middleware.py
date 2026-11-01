@@ -25,11 +25,13 @@ log = get_logger(__name__)
 REQUEST_ID_HEADER = "x-request-id"
 
 # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-020. API responses never render; the SPA (served by this app from HAAL-150)
-# gets a strict same-origin policy: no inline scripts, no eval, no framing, no plugins. Radix UI sets style attributes,
-# hence style-src-attr 'unsafe-inline' only (not style elements or scripts). ASVS 5.0 V3.
+# gets a strict same-origin policy: no inline scripts, no eval, no framing, no plugins. ASVS 5.0 V3.
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. Inline styles are allowed (style-src 'unsafe-inline'): Radix UI sets
+# style attributes, the toasts (sonner) and the scroll lock of dialogs (react-style-singleton) insert <style> elements,
+# some with values computed at run time, so hashes cannot cover them. Scripts stay 'self' only. Owner decision: D-39 amended.
 API_CSP = b"default-src 'none'; frame-ancestors 'none'"
 SPA_CSP = (
-    b"default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; "
+    b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
     b"img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; "
     b"object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 )

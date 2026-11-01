@@ -1,0 +1,9 @@
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. The bundled reverse proxy (compose profile "proxy", ADR-0004):
+# automatic HTTPS for HAALENDAR_DOMAIN (Let's Encrypt / ZeroSSL; "localhost" gets a local certificate), HTTP to HTTPS
+# redirect, HTTP/2 and HTTP/3, compression. Security headers (HSTS, CSP, …) come from the app itself.
+{$HAALENDAR_DOMAIN} {
+	encode zstd gzip
+	header -Server
+	# The live stream (text/event-stream) is flushed as it comes; Caddy does that by itself for this content type.
+	reverse_proxy app:8080
+}

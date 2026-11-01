@@ -18,6 +18,7 @@
 | Due | What | Where it is enforced |
 |---|---|---|
 | 2026-11-04 | Upgrade glob 11.1.0 → 14.0.2 (GHSA-3g3m-2fjr-6pw4) and minimatch 10.2.6 / 5.1.9 → 11.0.1 (GHSA-g3hv-75wg-m249), build and lint time only (workbox-build, eslint); the fixes pass the 7-day minimum on 2026-11-03 ~22:30 UTC; minimatch 5 via filelist may need its parents to move on — otherwise review and extend | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
+| 2026-11-05 | Bump PostgreSQL in `compose.yaml` from 18.4 to 18.6 (pinned by digest): 18.6 images become 7 days old on 2026-11-04 | `compose.yaml` (service `db`) |
 | 2026-11-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 
 ## Open tasks
@@ -37,8 +38,7 @@
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
 | HAAL-145 | E10 QA | UAT by owner on migrated real data; written sign-off | Must | 130 (closed; counts as met, owner 2026-11-01), 141 | — | To do | — | owner backlog file |
-| HAAL-150 | E11 Delivery | Docker images (x86_64 + arm64) + docker compose for on-prem, volumes, env config | Must | 011, 016 | — | In progress | — | owner backlog file |
-| HAAL-151 | E11 Delivery | CI/CD GitHub Actions: lint, tests, build, SBOM, license check, image publish on tag | Must | 006, 140 | — | To do | — | owner backlog file |
+| HAAL-151 | E11 Delivery | CI/CD GitHub Actions: lint, tests, build, SBOM, license check, image publish on tag (x86_64 + arm64; the arm64 image is built and checked here, owner decision in HAAL-150) | Must | 006, 140 | — | To do | — | owner backlog file |
 | HAAL-152 | E11 Delivery | README in English: features, screenshots, quick start, config, backup, upgrade, legacy migration, demo link | Must | 150 | — | To do | — | owner backlog file |
 | HAAL-153 | E11 Delivery | Public user and admin guides in code repo; API docs from OpenAPI | Should | 015 | — | To do | — | owner backlog file |
 | HAAL-154 | E11 Delivery | Demo stand: demo mode, seeded demo accounts, full reset every 30 min, reset banner, strict upload limits; then the full DAST of the app on the demo stand (web pages with their headers, HTTPS; `scripts/dev/dast.sh` scans the API only — owner, 2026-11-01, HAAL-144) | Must | 150 | — | To do | — | owner backlog file |
@@ -144,6 +144,7 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-141 | 2026-10-31 | 6fc4300, c8eb0ec | test(e2e): legacy regression suite — one Playwright scenario per F-01..F-34 (F-06/F-30 wait for HAAL-039, F-19 for HAAL-069, F-33's screen for HAAL-114) and a completeness check; attachments asked only once an event or note is on the server |
 | HAAL-142 | 2026-10-31 | 7d16989, 5b14676 | test(e2e): offline and sync on the production build — network cut, offline reload, server unreachable, a lost answer applied once, two tabs, sign-out with unsent changes, concurrent edits (merge, a choice per field, restore or discard what was deleted elsewhere, a delete of something changed elsewhere told); local reads offline, live session before sending, indicator fixes, every merged field named in a conflict |
 | HAAL-144 | 2026-11-01 | 22a6fa5, 2ed40cf, 8f87b58 | test(security): isolation over the whole API (every contract operation with another user's ids, as a stranger and as an administrator); ESLint security rules, gitleaks secret scan and a licence gate with the owner's licence policy in check-all; DAST of the API with OWASP ZAP (scripts/dev/dast.sh), the full DAST on the demo stand with HAAL-154 |
+| HAAL-150 | 2026-11-01 | ae190e7, — | build(docker), feat(deploy): one image for the API with the web app, the worker and the migrations; compose.yaml (PostgreSQL 18, migrate, app, worker, optional Caddy), Caddyfile, .env.production.example and the installation guide; scripts/dev/compose-check.sh runs the whole E2E suite on it; arm64 with HAAL-151 |
 | HAAL-172 | 2026-10-29 | 1f5a541 | fix(calendar): an event reminder due in the minute of its first check fires at once (HAAL-172) |
 | HAAL-082 | 2026-10-28 | 72bdeda | feat(calendar): Day Number of the selected date after the ISO week in the header (HAAL-082) |
 | HAAL-081 | 2026-10-25 | 155e11a | feat(calendar): colour from the details card — saved at once with undo, one write per choice (HAAL-081) |
