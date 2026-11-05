@@ -17,8 +17,6 @@
 
 | Due | What | Where it is enforced |
 |---|---|---|
-| 2026-11-04 | Upgrade glob 11.1.0 → 14.0.2 (GHSA-3g3m-2fjr-6pw4) and minimatch 10.2.6 / 5.1.9 → 11.0.1 (GHSA-g3hv-75wg-m249), build and lint time only (workbox-build, eslint); the fixes pass the 7-day minimum on 2026-11-03 ~22:30 UTC; minimatch 5 via filelist may need its parents to move on — otherwise review and extend | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
-| 2026-11-05 | Bump PostgreSQL in `compose.yaml` from 18.4 to 18.6 (pinned by digest): 18.6 images become 7 days old on 2026-11-04 | `compose.yaml` (service `db`) |
 | 2026-11-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 
 ## Open tasks

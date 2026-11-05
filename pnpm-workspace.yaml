@@ -27,11 +27,16 @@ overrides:
   # +++===+++ 2026-10-30 — Hasan Alizada — Dependency deadline: serialize-javascript via vite-plugin-pwa > workbox-build >
   # @rollup/plugin-terser (GHSA-m5mm-p8h7-m29v, build time only); 7.1.3 is older than 7 days. Its audit exception is gone.
   "serialize-javascript@>=7.0.0 <7.1.3": "7.1.3"
+  # +++===+++ 2026-11-05 — Hasan Alizada — Dependency deadline: glob (GHSA-3g3m-2fjr-6pw4) via workbox-build and minimatch
+  # (GHSA-g3hv-75wg-m249) via glob, ESLint and typescript-eslint, build and lint time only; glob 14.0.3 and minimatch
+  # 11.0.3 are older than 7 days and keep the APIs these parents call (globSync, minimatch, Minimatch). ejs 7 has no
+  # dependencies: it drops jake > filelist > minimatch 5 of rollup-plugin-off-main-thread, which only calls ejs.render.
+  "glob@>=11.0.0 <14.0.2": "14.0.3"
+  "minimatch@>=10.0.0 <11.0.1": "11.0.3"
+  "ejs@>=3.0.0 <7.0.0": "7.0.2"
 
 # +++===+++ 2026-10-25 — Hasan Alizada — Temporary pnpm audit exceptions whose fixes are younger than 7 days. Listed with
 # reason and expiry in backend/audit-ignores.json (npm_ignores); backend/tests/test_audit_ignores.py keeps both in step.
 auditConfig:
   ignoreGhsas:
     - GHSA-gcqx-w48m-w2h4
-    - GHSA-3g3m-2fjr-6pw4
-    - GHSA-g3hv-75wg-m249
