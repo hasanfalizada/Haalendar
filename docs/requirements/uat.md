@@ -78,7 +78,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | UAT-19 | Day list icons for description and attachments | Shown only when present | FR-CAL-19 | ✅ | description, attachment and repeat markers only where present |
 | UAT-20 | Week, month and agenda views with real data; drag an event in week and month view, also an occurrence of a series | Overlaps side by side, current-time line, "+N more"; drag keeps the duration and asks this / following / all for a series; undo works | FR-CAL-25..28 | ❌ | week, month, agenda ✅; drag keeps durations and asks for series ✅. F4 (major): in the month view an event let go outside the grid landed on the nearest edge day; fixed and re-tested ✅ |
 | UAT-21 | Phone: swipe between days, weeks, months; drag by touch | Periods change by swipe; touch drag works | FR-CAL-36, FR-X-17 | ✅ | emulated (Android, touch): swipes and touch drag. Owner 2026-11-07 on a real iPhone ✅. F13 |
-| UAT-22 | Reminders: a reminder 5 minutes ahead on a timed event and one on an all-day event; allow notifications; close the app | In-app notification and a browser/phone notification also with the app closed | FR-CAL-29, FR-X-21 | ✅ | in the app: event, all-day, note and card reminders on time with Open. Push with the app closed: owner (headless browsers refuse notifications), running 2026-11-07. F23 |
+| UAT-22 | Reminders: a reminder 5 minutes ahead on a timed event and one on an all-day event; allow notifications; close the app | In-app notification and a browser/phone notification also with the app closed | FR-CAL-29, FR-X-21 | ✅ | in the app: event, all-day, note and card reminders on time with Open. Push with the app closed: owner 2026-11-07 on the installed iPhone app ✅. F23 |
 | UAT-23 | Several calendars: create, rename, color, hide, archive; move an event to another calendar | Hidden calendars' events disappear and come back | FR-CAL-32 | ✅ | calendars created, renamed, recolored, hidden, archived; event moved between calendars. F16 |
 | UAT-24 | ICS: import an .ics exported from another calendar (with repeats and exceptions); export a calendar and open it elsewhere | Report of imported and skipped items; dates match | FR-CAL-33 | ✅ | foreign .ics (zones, COUNT, EXDATE, RECURRENCE-ID, all-day, UTC; VTODO skipped) imported and exported |
 | UAT-25 | Duplicate an event to another date | A full copy on the new date | FR-CAL-34 | ✅ | copy with time, place, description, priority, color and attachments |
@@ -180,18 +180,18 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | F20 | UAT-56 | minor | Time text on event chips has about 3.4:1 contrast (4.5:1 needed) | HAAL-174 | open |
 | F21 | UAT-70 | minor | The share dialog list is not refreshed at once; a shared calendar shows as "My calendar (default)" to the grantee | HAAL-174 | open |
 | F22 | UAT-81 | minor | Notifications of offline create / delete have no Undo | HAAL-174 | open |
-| F23 | UAT-22 | major | Event times can be chosen only in 15-minute steps (FR-CAL-06 says so); a 20:50 meeting cannot be entered — the owner finds this bad (2026-11-07) | fix within HAAL-145 (FR-CAL-06 amended, SRS v1.86) | fixed; on the owner's stand after its next update |
+| F23 | UAT-22 | major | Event times can be chosen only in 15-minute steps (FR-CAL-06 says so); a 20:50 meeting cannot be entered — the owner finds this bad (2026-11-07) | fix within HAAL-145 (FR-CAL-06 amended, SRS v1.86) | fixed, re-tested ✅ (owner's stand updated to `ad68a7f`) |
 
 ## 7. Sign-off
 
 | | |
 |---|---|
-| Version accepted | commit `________` |
-| Period of the test | ____ – ____ |
-| Scenarios | ✅ __ · ❌ __ · — __ |
-| Open findings | blocker 0 · major __ · minor __ (listed in section 6 with their tasks) |
-| Decision | ☐ accepted · ☐ accepted with remarks · ☐ not accepted |
+| Version accepted | commit `ad68a7f` |
+| Period of the test | 2026-11-04 – 2026-11-07 |
+| Scenarios | ✅ 53 · ❌ 0 · — 0 (at `de145ec` 7 failed: UAT-05, 15, 20, 52, 55, 57, 70 — their findings F1–F7 fixed and re-tested) |
+| Open findings | blocker 0 · major 0 · minor 15 (F8–F22, HAAL-174) |
+| Decision | ☐ accepted · ☒ accepted with remarks · ☐ not accepted |
 | Owner | Hasan Alizada |
-| Date | ____ |
+| Date | 2026-11-07 |
 
 The sign-off is given by the owner's commit of this file with the table above filled in.
