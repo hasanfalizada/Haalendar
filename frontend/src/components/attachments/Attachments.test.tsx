@@ -3,6 +3,7 @@
 // files, delete with Undo, read-only view.
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Attachment } from "@/api/generated/types.gen";
@@ -120,6 +121,29 @@ describe("attachments", () => {
       "paste.png",
       "drop.png",
     ]);
+  });
+
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F3). In an editor the screenshot is pasted where the
+  // focus is, in the title or description; pasted text stays text there.
+  it("attaches a screenshot pasted into a field of the editor", async () => {
+    const calls = server([]);
+    function Editor() {
+      const form = useRef<HTMLFormElement>(null);
+      return (
+        <form ref={form}>
+          <input aria-label="Title" />
+          <Attachments itemId={ITEM} editable pasteTarget={form} />
+        </form>
+      );
+    }
+    renderWithProviders(<Editor />);
+    const title = await screen.findByLabelText("Title");
+    fireEvent.paste(title, { clipboardData: { items: [{ kind: "string", getAsFile: () => null }] } });
+    fireEvent.paste(title, { clipboardData: { items: [{ kind: "file", getAsFile: () => png("paste.png") }] } });
+    await waitFor(() => {
+      expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
+    });
+    expect(calls.find((c) => c.method === "POST")?.headers.get("X-File-Name")).toBe("paste.png");
   });
 
   it("deletes an image and offers Undo", async () => {

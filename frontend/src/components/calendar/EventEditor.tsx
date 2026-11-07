@@ -678,7 +678,7 @@ export function EventEditor({
               {t("calendar.occurrence.copyNote", { date: dayLabel(copyOf.date, i18n.language) })}
             </p>
           ) : id && onServer ? (
-            <Attachments itemId={id} editable />
+            <Attachments itemId={id} editable pasteTarget={formRef} />
           ) : id ? (
             // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-141. An event made on this device that the server has not
             // received yet (version 0) has no attachments there; asking got 404.

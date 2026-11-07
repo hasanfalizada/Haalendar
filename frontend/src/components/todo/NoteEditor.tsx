@@ -285,7 +285,7 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
             }}
           />
           {note && onServer ? (
-            <Attachments itemId={id} editable />
+            <Attachments itemId={id} editable pasteTarget={formRef} />
           ) : note ? (
             <p className="text-xs text-muted">{t("todo.editor.attachmentsSyncing")}</p>
           ) : (

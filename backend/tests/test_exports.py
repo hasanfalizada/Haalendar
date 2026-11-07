@@ -84,6 +84,47 @@ class World:
                 "VALUES (%s, 'event', %s, 'calendar', %s, 'Dentist')",
                 (self.items["Dentist"], self.ids["ada"], self.cal["Work"]),
             )
+            # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F2). Dentist is a weekly timed event with one
+            # cancelled occurrence and Ada's reminder; "Gone" an all-day event in the trash with a reminder at a time of day.
+            conn.execute(
+                "INSERT INTO event (id, container_kind, container_id, all_day, start_date, start_time, end_date, end_time, tzid, rrule) "
+                "VALUES (%s, 'calendar', %s, false, '2026-11-09', '09:00', '2026-11-09', '10:00', 'Europe/Berlin', "
+                "'FREQ=WEEKLY')",
+                (self.items["Dentist"], self.cal["Work"]),
+            )
+            conn.execute(
+                "UPDATE item SET color = 'red', priority = 'high', body = 'Bring the card' WHERE id = %s",
+                (self.items["Dentist"],),
+            )
+            self.items["cancelled"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO recurrence_exception (id, event_id, container_kind, container_id, occurrence_date, kind, created_by) "
+                "VALUES (%s, %s, 'calendar', %s, '2026-11-16', 'cancelled', %s)",
+                (self.items["cancelled"], self.items["Dentist"], self.cal["Work"], self.ids["ada"]),
+            )
+            self.items["Gone"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO item (id, kind, owner_id, container_kind, container_id, title, deleted_at, "
+                "delete_batch_id) VALUES (%s, 'event', %s, 'calendar', %s, 'Gone', now(), %s)",
+                (self.items["Gone"], self.ids["ada"], self.cal["Work"], uuid.uuid7()),
+            )
+            conn.execute(
+                "INSERT INTO event (id, container_kind, container_id, start_date, end_date, tzid) "
+                "VALUES (%s, 'calendar', %s, '2026-11-01', '2026-11-01', 'Europe/Berlin')",
+                (self.items["Gone"], self.cal["Work"]),
+            )
+            self.items["reminder"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO reminder (id, item_id, owner_id, offset_minutes) VALUES (%s, %s, %s, 30)",
+                (self.items["reminder"], self.items["Dentist"], self.ids["ada"]),
+            )
+            # An all-day reminder (a time of day, written as HH:MM) on the deleted event.
+            self.items["day reminder"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO reminder (id, item_id, owner_id, all_day_time, all_day_days_before) "
+                "VALUES (%s, %s, %s, '08:30', 1)",
+                (self.items["day reminder"], self.items["Gone"], self.ids["ada"]),
+            )
             # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. A note of Ada's (the To-Do section).
             self.items["Shopping"] = str(uuid.uuid7())
             conn.execute(
@@ -259,6 +300,8 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "boards": 1,
         "labels": 1,
         "links": 1,  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120.
+        "events": 2,  # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F2).
+        "reminders": 2,
     }
     response = world.api.get(listed[0]["download_url"])
     assert response.status_code == 200 and response.headers["content-type"] == "application/zip"
@@ -288,7 +331,48 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
     exported = document["attachments"][0]
     assert exported["archive_path"] == f"calendar/attachments/{attachment['id'][:8]}-plan.png"
     assert "storage_key" not in exported and "thumbnail_key" not in exported
-    assert document["events"] == []
+    # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F2). The events of Ada's calendars, the deleted one
+    # too, with their exceptions; not the event Ada made in Bob's calendar. Ada's reminder on Dentist.
+    events = {e["title"]: e for e in document["events"]}
+    assert set(events) == {"Dentist", "Gone"}
+    dentist = events["Dentist"]
+    assert {k: dentist[k] for k in ("id", "calendar_id", "body", "color", "priority", "all_day")} == {
+        "id": world.items["Dentist"],
+        "calendar_id": world.cal["Work"],
+        "body": "Bring the card",
+        "color": "red",
+        "priority": "high",
+        "all_day": False,
+    }
+    assert (
+        dentist["start_date"],
+        dentist["start_time"],
+        dentist["end_time"],
+        dentist["tzid"],
+        dentist["rrule"],
+    ) == (
+        "2026-11-09",
+        "09:00",
+        "10:00",
+        "Europe/Berlin",
+        "FREQ=WEEKLY",
+    )
+    [cancelled] = dentist["recurrence_exceptions"]
+    assert (cancelled["id"], cancelled["occurrence_date"], cancelled["kind"]) == (
+        world.items["cancelled"],
+        "2026-11-16",
+        "cancelled",
+    )
+    assert events["Gone"]["deleted_at"] and "deleted_at" not in dentist
+    reminders = {r["id"]: r for r in document["reminders"]}
+    assert set(reminders) == {world.items["reminder"], world.items["day reminder"]}
+    reminder, day_reminder = reminders[world.items["reminder"]], reminders[world.items["day reminder"]]
+    assert (reminder["item_id"], reminder["offset_minutes"]) == (world.items["Dentist"], 30)
+    assert (day_reminder["item_id"], day_reminder["all_day_time"], day_reminder["all_day_days_before"]) == (
+        world.items["Gone"],
+        "08:30",
+        1,
+    )
     [board] = document["boards"]
     assert (board["id"], board["name"], board["position"], board["permission"]) == (
         world.items["Revamp"],

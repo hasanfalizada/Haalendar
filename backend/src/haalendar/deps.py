@@ -59,7 +59,10 @@ def get_storage(request: Request) -> Storage:
     return storage
 
 
-DbSession = Annotated[AsyncSession, Depends(get_db)]
+# +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F1). scope="function": since FastAPI 0.143 a yield
+# dependency exits after the response is sent by default, so the client got 2xx before the commit (and for a commit
+# that then failed). Now the transaction is committed before the response, and a failed commit is a 500.
+DbSession = Annotated[AsyncSession, Depends(get_db, scope="function")]
 AppSettings = Annotated[Settings, Depends(get_settings_dep)]
 AppMailer = Annotated[Mailer, Depends(get_mailer)]
 AppStorage = Annotated[Storage, Depends(get_storage)]

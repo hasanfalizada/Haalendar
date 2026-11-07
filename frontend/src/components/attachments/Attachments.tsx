@@ -1,9 +1,12 @@
 // +++===+++ 2026-10-17 — Hasan Alizada — HAAL-040. Images on an item (FR-X-11): add by file picker, drag-and-drop or
 // pasting a screenshot; a tile shows while the upload runs; thumbnails open a full preview (←/→ between images, Esc,
 // download). Every upload and delete reports through runWrite and can be undone (uploads: useAttachmentUpload).
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F3). A screenshot pasted anywhere in the editor (title,
+// description, any field of `pasteTarget`) is attached, not only one pasted while focus is in this section; pasted text
+// stays text.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Download, ImagePlus, Loader2, Trash2 } from "lucide-react";
-import { type DragEvent, useRef, useState } from "react";
+import { type DragEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { attachmentKeys, attachmentsQuery } from "@/api/attachments";
@@ -32,9 +35,11 @@ function formatBytes(bytes: number, locale: string): string {
 interface AttachmentsProps {
   itemId: string;
   editable: boolean;
+  /** The editor element whose fields take pasted screenshots (the section itself when absent). */
+  pasteTarget?: RefObject<HTMLElement | null>;
 }
 
-export function Attachments({ itemId, editable }: AttachmentsProps) {
+export function Attachments({ itemId, editable, pasteTarget }: AttachmentsProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: attachments = [] } = useQuery(attachmentsQuery(itemId));
@@ -43,6 +48,15 @@ export function Attachments({ itemId, editable }: AttachmentsProps) {
   const [dragging, setDragging] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const full = attachments.length + pending.length >= MAX_ATTACHMENTS;
+
+  useEffect(() => {
+    const target = pasteTarget?.current;
+    if (!target || !editable) return;
+    target.addEventListener("paste", onPaste);
+    return () => {
+      target.removeEventListener("paste", onPaste);
+    };
+  }, [pasteTarget, editable, onPaste]);
 
   async function remove(attachment: Attachment) {
     await runWrite({
@@ -76,7 +90,7 @@ export function Attachments({ itemId, editable }: AttachmentsProps) {
         "flex flex-col gap-2 rounded-sm",
         dragging && "outline-2 outline-offset-2 outline-primary outline-dashed",
       )}
-      onPaste={editable ? onPaste : undefined}
+      onPaste={editable && !pasteTarget ? onPaste : undefined}
       onDragOver={(event) => {
         if (!editable) return;
         event.preventDefault();

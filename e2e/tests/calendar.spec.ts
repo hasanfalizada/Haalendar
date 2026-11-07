@@ -27,3 +27,41 @@ test("creates an event, deletes it and restores it from the trash", async ({ pag
   await page.goto("/calendar?date=2026-11-04");
   await expect(page.getByRole("button", { name: new RegExp(title) })).toBeVisible();
 });
+
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F5). On a 1280×720 laptop the details of an event low
+// in the day list stay inside the window, so Edit and Delete can be reached (they ended below the screen).
+test.describe("on a short screen", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test("the details of an event low in the day list stay inside the window", async ({ page }) => {
+    const day = "2027-03-17";
+    const titles = Array.from({ length: 7 }, (_, n) => unique(`Slot ${String(n)}`));
+    for (const [n, title] of titles.entries()) {
+      await page.goto(`/calendar?date=${day}`);
+      await page.getByRole("button", { name: "New event" }).first().click();
+      const editor = page.getByRole("dialog", { name: "New event" });
+      await editor.getByLabel("Title").fill(title);
+      if (n === titles.length - 1) {
+        await editor
+          .getByRole("textbox", { name: "Description" })
+          .fill(Array.from({ length: 30 }, (_, line) => `Line ${String(line)}`).join("\n\n"));
+      }
+      await editor.getByRole("button", { name: "Save" }).click();
+      const anyway = page.getByRole("button", { name: "Save anyway" });
+      if (await anyway.isVisible().catch(() => false)) await anyway.click();
+      await expect(editor).toBeHidden();
+    }
+    const last = titles.at(-1) ?? "";
+    await page.getByRole("button", { name: new RegExp(last) }).click();
+    const details = page.getByRole("dialog", { name: "Event details" });
+    await expect(details).toBeVisible();
+    const box = await details.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box?.y).toBeGreaterThanOrEqual(0);
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(720);
+    const remove = details.getByRole("button", { name: "Delete" });
+    await remove.scrollIntoViewIfNeeded();
+    const button = await remove.boundingBox();
+    expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThanOrEqual(720);
+  });
+});

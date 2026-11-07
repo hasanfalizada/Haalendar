@@ -343,8 +343,11 @@ function DayList({
                     side="bottom"
                     align="start"
                     sideOffset={6}
+                    collisionPadding={8}
                     aria-label={t("calendar.details.title")}
-                    className="max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
+                    // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F5). Kept inside the window: no
+                    // taller than the room on its side of the row (at 1280×720 Edit and Delete ended below the screen).
+                    className="max-h-[min(70vh,var(--radix-popover-content-available-height))] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
                   >
                     {openKey === entry.key ? details(entry) : null}
                   </PopoverContent>

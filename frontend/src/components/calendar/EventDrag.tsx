@@ -16,8 +16,6 @@ import {
   type DragStartEvent,
   MouseSensor,
   TouchSensor,
-  pointerWithin,
-  rectIntersection,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -26,6 +24,7 @@ import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { clockText } from "@/lib/dayView";
+import { dropZoneUnderPointer } from "@/lib/dropZone";
 import type { DropTarget } from "@/lib/eventDrag";
 import { itemColorClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
@@ -34,11 +33,6 @@ import type { DropData } from "./DropArea";
 import type { DragData } from "./EventButton";
 
 const STEP = 15;
-
-const collisions: CollisionDetection = (args) => {
-  const hits = pointerWithin(args);
-  return hits.length > 0 ? hits : rectIntersection(args);
-};
 
 type Row = Record<string, unknown>;
 
@@ -85,7 +79,8 @@ export function CalendarDnd({ minutePx = 1, onDrop, onSchedule, children }: Cale
   const pointer = useRef<{ x: number; y: number } | null>(null);
   const detect: CollisionDetection = (args) => {
     pointer.current = args.pointerCoordinates;
-    return collisions(args);
+    // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F4). Not onto a zone from off the grid.
+    return dropZoneUnderPointer(args);
   };
 
   const targetOf = (event: DragMoveEvent | DragEndEvent): DropTarget | null => {

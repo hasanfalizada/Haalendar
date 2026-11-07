@@ -45,7 +45,7 @@
 | HAAL-157 | E11 Delivery | S3-compatible attachment storage adapter (AWS S3, Garage, SeaweedFS, Ceph RGW) | v1.1 | 040 | — | To do | — | owner backlog file |
 | HAAL-158 | E11 Delivery | OpenTelemetry tracing (API, worker, DB) with optional OTLP exporter | v1.1+ | 019 | — | To do | — | owner backlog file |
 | HAAL-168 | E12 Accounts | Optional OIDC/SSO login | Could | 160 | — | To do | — | owner, 2026-10-19 (chat) |
-| HAAL-173 | E11 Delivery | The git server moved from git.qaqa.dev to git.home.hasanalizada.net: update everything on our side; admin@qaqa.dev → ha@hasanalizada.net; report any other qaqa.dev reference (the domain goes away soon) | Must | — | — | In progress | agent | owner, 2026-11-07 (chat) |
+| HAAL-174 | E10 QA | Minor findings of the v1.0 UAT (HAAL-145, F8–F22 in docs/requirements/uat.md §6): setup password hint twice; focus lost after adding a card with Enter; a password reset does not lift the lockout and the admin has no Unlock; a used reset link still shows the form; preferences reach other open devices only after a reload; the phone time-zone banner is cramped and shows the desktop selection hint; Ctrl+Z ignored while focus is on a colour swatch; "All occurrences" clipped in the repeat choice; the calendar show/hide box waits for the server; PDF and other file types ignored silently; checklist items not reorderable by keyboard; Alt+arrows missing from the board "?" overlay; time text on chips 3.4:1 contrast; the share dialog list not refreshed and a shared calendar shown as "My calendar (default)"; no Undo for offline create/delete notifications | Should | 145 | FR-X-11, FR-X-17, FR-ACC-10 | To do | — | owner, 2026-11-07 (chat, UAT option A) |
 
 ## Closed
 
@@ -159,3 +159,4 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-170 | 2026-10-21 | 19d959c | feat(mobile): touch-size rules in the base components and a 360 px audit of all screens (HAAL-170) |
 | HAAL-171 | 2026-10-15 | 8f970a1 | docs: record auth UI decision D-33 and session management status (HAAL-171) |
 
+| HAAL-173 | 2026-11-07 | a6005cb | docs: Code of Conduct contact is ha@hasanalizada.net (qaqa.dev goes away); HAAL-173 in the backlog (HAAL-173) |

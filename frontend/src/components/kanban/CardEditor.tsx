@@ -418,7 +418,7 @@ export function CardEditor({
           </fieldset>
           {/* A card made on this device that the server has not received yet (version 0) has no attachments there. */}
           {typeof card.version === "number" && card.version > 0 ? (
-            <Attachments itemId={id} editable={canWrite} />
+            <Attachments itemId={id} editable={canWrite} pasteTarget={formRef} />
           ) : (
             <p className="text-xs text-muted">{t("kanban.cards.attachmentsLater")}</p>
           )}

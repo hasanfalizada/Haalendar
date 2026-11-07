@@ -251,7 +251,7 @@
     },
     "events": {
       "type": "array",
-      "description": "Events in the user's calendars (filled once the events module ships; shape in api/modules/calendar.yaml Event).",
+      "description": "Events in the user's calendars, deleted ones included (shape in api/modules/calendar.yaml Event, with ics_uid and their recurrence_exceptions).",
       "items": {
         "type": "object",
         "required": [
@@ -594,7 +594,7 @@
     },
     "reminders": {
       "type": "array",
-      "description": "Reminders (shape in api/modules/items.yaml Reminder).",
+      "description": "The user's own reminders on the exported items, deleted ones included (shape in api/modules/items.yaml Reminder).",
       "items": {
         "type": "object",
         "required": [

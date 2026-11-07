@@ -95,7 +95,9 @@ export function EventButton({ entry, anchor, describedBy, className, children, d
         sideOffset={6}
         collisionPadding={8}
         aria-label={t("calendar.details.title")}
-        className="max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
+        // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F5). No taller than the room on its side of
+        // the trigger, so the actions at its end stay reachable inside the window.
+        className="max-h-[min(70vh,var(--radix-popover-content-available-height))] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
       >
         {open ? details(entry) : null}
       </PopoverContent>

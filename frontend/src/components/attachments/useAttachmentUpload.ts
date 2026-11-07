@@ -2,7 +2,7 @@
 // runWrite per file with Undo, a preview tile while the upload runs. Editors put `onPaste` on their text fields so a
 // pasted screenshot is attached while pasted text stays text.
 import { useQueryClient } from "@tanstack/react-query";
-import { type ClipboardEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { attachmentKeys, uploadAttachmentFile } from "@/api/attachments";
@@ -90,9 +90,11 @@ export function useAttachmentUpload(itemId: string, count: number) {
   );
 
   /** For text fields and the attachment area: a pasted image is attached, pasted text stays text. */
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F3). Takes React's and the DOM's paste event alike:
+  // the editors' forms listen natively (Attachments `pasteTarget`).
   const onPaste = useCallback(
-    (event: ClipboardEvent) => {
-      const files = imageFiles(event.clipboardData.items);
+    (event: { clipboardData: DataTransfer | null; preventDefault: () => void }) => {
+      const files = imageFiles(event.clipboardData?.items);
       if (files.length === 0) return;
       event.preventDefault();
       void upload(files);
