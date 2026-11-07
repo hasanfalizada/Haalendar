@@ -45,6 +45,7 @@
 | HAAL-157 | E11 Delivery | S3-compatible attachment storage adapter (AWS S3, Garage, SeaweedFS, Ceph RGW) | v1.1 | 040 | — | To do | — | owner backlog file |
 | HAAL-158 | E11 Delivery | OpenTelemetry tracing (API, worker, DB) with optional OTLP exporter | v1.1+ | 019 | — | To do | — | owner backlog file |
 | HAAL-168 | E12 Accounts | Optional OIDC/SSO login | Could | 160 | — | To do | — | owner, 2026-10-19 (chat) |
+| HAAL-173 | E11 Delivery | The git server moved from git.qaqa.dev to git.home.hasanalizada.net: update everything on our side; admin@qaqa.dev → ha@hasanalizada.net; report any other qaqa.dev reference (the domain goes away soon) | Must | — | — | In progress | agent | owner, 2026-11-07 (chat) |
 
 ## Closed
 
