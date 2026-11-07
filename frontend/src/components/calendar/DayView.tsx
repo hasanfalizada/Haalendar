@@ -53,11 +53,13 @@ import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus, 
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
 import { runWrite } from "@/api/write";
 import { Button } from "@/components/ui/button";
-import { BulkBar } from "@/components/ui/bulk-bar";
+import { runItemBulk } from "@/components/shared/itemBulk";
+import { type BarAction, BulkBar } from "@/components/ui/bulk-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -198,10 +200,11 @@ interface DayListProps {
   /** Delete key on a row. */
   onDelete: (entry: DayEntry) => void;
   selection: Selection;
-  /** Every selected event may be changed (the bar offers the move). */
-  canMoveSelected: boolean;
-  moving: boolean;
-  onMoveSelected: () => void;
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Every selected event may be changed: the bar offers
+  // delete, colour, priority and the move (FR-X-07); the Delete key deletes the selection, not only the focused row.
+  canChangeSelected: boolean;
+  busy: boolean;
+  onBulk: (action: BarAction, value?: Color | Priority) => void;
 }
 
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. A row opens the details card (click, tap, Enter / Space, right-click
@@ -219,9 +222,9 @@ function DayList({
   details,
   onDelete,
   selection,
-  canMoveSelected,
-  moving,
-  onMoveSelected,
+  canChangeSelected,
+  busy,
+  onBulk,
 }: DayListProps) {
   const { t, i18n } = useTranslation();
   // A long press on touch selects; the context menu it also raises must not open the card.
@@ -232,7 +235,7 @@ function DayList({
   const byKey = (key: string | undefined) => entries.find((entry) => entry.key === key);
   const navigation = useListNavigation(
     entries.map((entry) => entry.key),
-    null,
+    selection,
     {
       openLabel: "calendar.day.openDetails",
       deleteLabel: "shortcuts.listDeleteFocused",
@@ -240,8 +243,12 @@ function DayList({
         const entry = byKey(key);
         if (entry) onOpen(entry);
       },
-      onDelete: ([key]) => {
-        const entry = byKey(key);
+      onDelete: (keys) => {
+        if (keys.length > 1 || selection.count > 0) {
+          onBulk("delete");
+          return;
+        }
+        const entry = byKey(keys[0]);
         if (entry) onDelete(entry);
       },
     },
@@ -264,9 +271,9 @@ function DayList({
       <BulkBar
         selection={selection}
         total={entries.length}
-        actions={canMoveSelected ? ["move_next_day"] : []}
-        busy={moving}
-        onAction={onMoveSelected}
+        actions={canChangeSelected ? ["set_color", "set_priority", "move_next_day", "delete"] : []}
+        busy={busy}
+        onAction={onBulk}
         className="px-3 md:px-4"
       />
       <ol
@@ -639,8 +646,35 @@ export function DayView({
     clearSelection();
   }, [date, view, clearSelection]);
   const selectedEntries = entries.filter((entry) => selection.isSelected(entry.key));
-  const canMoveSelected = selectedEntries.every((entry) => calendars.canWrite(rowOf(entry)?.container_id));
+  const canChangeSelected = selectedEntries.every((entry) => calendars.canWrite(rowOf(entry)?.container_id));
   const [moving, setMoving] = useState(false);
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Delete, colour and priority of the selection
+  // (components/shared/itemBulk); a delete asks first.
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const selectedTargets = () =>
+    selectedEntries.flatMap((entry) => {
+      const row = rowOf(entry);
+      return row ? [{ row, occurrence: occurrenceOf(entry) }] : [];
+    });
+  async function bulk(action: BarAction, value?: Color | Priority) {
+    if (!user || moving) return;
+    if (action === "move_next_day") {
+      await moveSelected();
+      return;
+    }
+    if (action === "delete") {
+      if (!canChangeSelected) {
+        notify.info(t("calendar.delete.viewOnly"));
+        return;
+      }
+      setConfirmBulkDelete(true);
+      return;
+    }
+    if (action !== "set_color" && action !== "set_priority") return;
+    setMoving(true);
+    await runItemBulk(user, action, selectedTargets(), value);
+    setMoving(false);
+  }
   async function moveSelected() {
     if (!user || moving) return;
     const targets = selectedEntries.flatMap((entry) => {
@@ -846,10 +880,10 @@ export function DayView({
         if (row) requestDelete(row, occurrenceOf(entry));
       }}
       selection={selection}
-      canMoveSelected={canMoveSelected}
-      moving={moving}
-      onMoveSelected={() => {
-        void moveSelected();
+      canChangeSelected={canChangeSelected}
+      busy={moving}
+      onBulk={(action, value) => {
+        void bulk(action, value);
       }}
     />
   );
@@ -1153,6 +1187,25 @@ export function DayView({
           }}
         />
       ) : null}
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={t("bulk.confirm.title", { count: selection.count })}
+        body={t("bulk.confirm.body")}
+        confirmLabel={t("bulk.confirm.delete")}
+        danger
+        focusConfirm
+        onConfirm={async () => {
+          if (!user) return;
+          setMoving(true);
+          const ok = await runItemBulk(user, "delete", selectedTargets());
+          setMoving(false);
+          setConfirmBulkDelete(false);
+          if (ok) clearSelection();
+        }}
+        onClose={() => {
+          setConfirmBulkDelete(false);
+        }}
+      />
       <ConfirmDialog
         open={deleting !== null}
         title={t("calendar.delete.title")}

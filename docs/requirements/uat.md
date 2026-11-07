@@ -107,7 +107,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 |---|---|---|---|---|---|
 | UAT-50 | Delete an event, a note and a card; open Trash; restore two at once | Newest first, filter by module; restored items return to their date, column and position | FR-X-01, FR-X-04 | ✅ | delete with Undo; trash newest first with filters; restore |
 | UAT-51 | Undo and redo with keys and from the notification: create, edit, delete, color, move, a bulk action | Each step undone and redone; a bulk action is one step | FR-X-06 | ✅ | Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y and Undo in the notification |
-| UAT-52 | Multi-select with Ctrl+click, Shift+click, Ctrl+A, long-press on the phone; bulk delete, restore, color, priority, next day | Applied to all selected | FR-X-07 | ❌ | F6 (major): the calendar bulk bar offers only "Move to next day"; Delete deletes only the focused event; notes and cards cannot be multi-selected |
+| UAT-52 | Multi-select with Ctrl+click, Shift+click, Ctrl+A, long-press on the phone; bulk delete, restore, color, priority, next day | Applied to all selected | FR-X-07 | ❌ | F6 (major): the calendar bulk bar offers only "Move to next day"; Delete deletes only the focused event; notes and cards cannot be multi-selected. Fixed and re-tested ✅ (colour, priority, delete with one Undo in the day list, the notes and a board; Delete key deletes the selection) |
 | UAT-53 | Keyboard only for a few minutes; press `?` | Everything reachable; the overlay lists the shortcuts | FR-X-08 | ✅ | N, Ctrl+Enter, F6, Alt+1/2/3, list keys. F19 |
 | UAT-54 | Close an editor with unsaved changes by Esc, backdrop, button, another module, the browser tab | Asks first; no question without changes | FR-X-09 | ✅ | unsaved-changes guard on Esc, backdrop and close |
 | UAT-55 | Attachments: file picker, drag and drop, paste a screenshot; a file over 10 MB; a PDF | Thumbnail and preview; too large and wrong types refused with a reason | FR-X-11 | ❌ | picker, preview, 10 MB limit ✅. F3 (major): a pasted screenshot was attached only with focus in the attachment area; fixed and re-tested ✅ (title and description). F17 |
@@ -163,7 +163,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | F3 | UAT-55 | major | A pasted screenshot was attached only with the focus in the attachment area, not in the title or description (FR-X-11) | fix within HAAL-145 | fixed, re-tested ✅ |
 | F4 | UAT-20 | major | Month view: an event let go outside the grid landed on the nearest edge day | fix within HAAL-145 | fixed, re-tested ✅ |
 | F5 | UAT-15 | major | The event details popover was not kept inside a short window (1280×720, 1366×768): Edit and Delete ended below the screen | fix within HAAL-145 | fixed, re-tested ✅ |
-| F6 | UAT-52 | major | Bulk actions (FR-X-07): the calendar bar offers only "Move to next day", Delete deletes only the focused event, notes and cards have no multi-select | fix within HAAL-145 | open |
+| F6 | UAT-52 | major | Bulk actions (FR-X-07): the calendar bar offers only "Move to next day", Delete deletes only the focused event, notes and cards have no multi-select | fix within HAAL-145 | fixed, re-tested ✅ |
 | F7 | UAT-70 | major | Notes cannot be shared (FR-ACC-10, D-30) | fix within HAAL-145 | open |
 | F8 | UAT-01 | minor | The setup password hint "Use at least 15 characters" is shown twice | HAAL-174 | open |
 | F9 | UAT-40 | minor | After adding a card with Enter the focus drops to the page | HAAL-174 | open |

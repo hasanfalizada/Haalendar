@@ -63,6 +63,7 @@ import { checklistOf } from "@/lib/checklist";
 import { cardCount, newColumnPosition, overLimit, positionAt } from "@/lib/columns";
 import { cardReminderAhead } from "@/lib/reminders";
 import { useNow } from "@/lib/useNow";
+import type { Selection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 
 import { AddCard } from "./AddCard";
@@ -123,6 +124,8 @@ interface BoardColumnsProps {
   /** Whether a card passes the board filters; undefined without filters. */
   shown?: ((card: Row) => boolean) | undefined;
   onOpenCard: (card: Row) => void;
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). The board's multi-select (cards by id).
+  selection?: Selection;
 }
 
 type Dialog = { kind: "add" } | { kind: "rename" | "wip" | "delete"; row: Row } | null;
@@ -159,6 +162,7 @@ export function BoardColumns({
   shown,
   assignees,
   onOpenCard,
+  selection,
 }: BoardColumnsProps) {
   const { t } = useTranslation();
   const { default_color: defaultColor } = useSettings();
@@ -291,6 +295,19 @@ export function BoardColumns({
           onOpen={() => {
             onOpenCard(card);
           }}
+          select={
+            selection
+              ? {
+                  selected: selection.isSelected(cardId),
+                  toggle: (range) => {
+                    selection.toggle(cardId, { range });
+                  },
+                  onClick: selection.rowProps(cardId, () => {
+                    onOpenCard(card);
+                  }).onClick,
+                }
+              : undefined
+          }
           onStep={
             canWrite
               ? (direction) => {

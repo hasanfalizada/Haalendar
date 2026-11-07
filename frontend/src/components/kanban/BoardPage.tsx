@@ -15,7 +15,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArrowLeft, Columns3, MoreHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { boardMembersQuery } from "@/api/boards";
@@ -23,7 +23,10 @@ import { useSettings } from "@/api/settings";
 import { sharesQuery } from "@/api/sharing";
 import { ShareDialog } from "@/components/sharing/ShareDialog";
 import { useShareActions } from "@/components/sharing/useShareActions";
+import type { Color, Priority } from "@/api/generated/types.gen";
+import { runItemBulk } from "@/components/shared/itemBulk";
 import { Button } from "@/components/ui/button";
+import { type BarAction, BulkBar } from "@/components/ui/bulk-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   DropdownMenu,
@@ -34,10 +37,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { STANDALONE_LINK } from "@/components/ui/link-styles";
 import { type BoardFilter, cardMatches, filterCount, formatBoardFilter } from "@/lib/boardFilter";
+import { cardsOf } from "@/lib/cards";
 import { columnsOf } from "@/lib/columns";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { useAttachmentCounts } from "@/lib/eventRow";
 import { useNow } from "@/lib/useNow";
+import { useSelection } from "@/lib/useSelection";
 import { localKeys, localRows } from "@/sync";
 
 import { ArchivedColumnsDialog } from "./ArchivedColumnsDialog";
@@ -150,6 +155,38 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
       now,
       weekStart,
     });
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Multi-select of the shown cards, column by column
+  // top to bottom (FR-X-07): colour, priority and delete as one action (components/shared/itemBulk), for whoever may
+  // write; a change of the filters clears it.
+  const shownIds = useMemo(
+    () =>
+      columns.active.flatMap((column) =>
+        cardsOf(items, String(column.id))
+          .filter((card) => !filtering || shown(card))
+          .map((card) => String(card.id)),
+      ),
+    // `shown` is rebuilt every render from the filter; the filter and the rows decide the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columns.active, items, filtering, filter, itemLabelRows, checklistRows, assigneeRows],
+  );
+  const selection = useSelection(shownIds, { selectAllShortcut: canWrite });
+  const { clear: clearSelection } = selection;
+  useEffect(() => {
+    clearSelection();
+  }, [filter, boardId, clearSelection]);
+  const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const selectedTargets = () => items.filter((item) => selection.isSelected(String(item.id))).map((row) => ({ row }));
+  async function bulk(action: BarAction, value?: Color | Priority) {
+    if (action === "delete") {
+      setConfirmDelete(true);
+      return;
+    }
+    if (action !== "set_color" && action !== "set_priority") return;
+    setBusy(true);
+    await runItemBulk(user, action, selectedTargets(), value);
+    setBusy(false);
+  }
   // Typing in the search replaces the address entry instead of adding one per letter.
   const setFilter = (next: BoardFilter) => {
     void navigate({
@@ -298,6 +335,18 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
       ) : (
         <>
           <BoardFilters filter={filter} labels={boardLabels} members={members} me={user} onChange={setFilter} />
+          {canWrite && shownIds.length > 0 ? (
+            <BulkBar
+              selection={selection}
+              total={shownIds.length}
+              actions={["set_color", "set_priority", "delete"]}
+              busy={busy}
+              onAction={(action, value) => {
+                void bulk(action, value);
+              }}
+              className="px-3 md:px-4"
+            />
+          ) : null}
           <BoardColumns
             user={user}
             boardId={boardId}
@@ -316,10 +365,29 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
             onOpenCard={(card) => {
               setEditing(String(card.id));
             }}
+            selection={canWrite ? selection : undefined}
           />
         </>
       )}
 
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t("bulk.confirm.title", { count: selection.count })}
+        body={t("bulk.confirm.body")}
+        confirmLabel={t("bulk.confirm.delete")}
+        danger
+        focusConfirm
+        onConfirm={async () => {
+          setBusy(true);
+          const ok = await runItemBulk(user, "delete", selectedTargets());
+          setBusy(false);
+          setConfirmDelete(false);
+          if (ok) clearSelection();
+        }}
+        onClose={() => {
+          setConfirmDelete(false);
+        }}
+      />
       {dialog === "rename" ? (
         <NameDialog
           title={t("kanban.renameTitle")}

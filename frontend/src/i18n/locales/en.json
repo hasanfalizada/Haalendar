@@ -930,6 +930,20 @@
       "restore": "restoring {{count}} items",
       "color": "the color change of {{count}} items",
       "priority": "the priority change of {{count}} items"
+    },
+    "done": {
+      "delete_one": "Deleted {{count}} item.",
+      "delete_other": "Deleted {{count}} items.",
+      "color_one": "Changed the color of {{count}} item.",
+      "color_other": "Changed the color of {{count}} items.",
+      "priority_one": "Changed the priority of {{count}} item.",
+      "priority_other": "Changed the priority of {{count}} items."
+    },
+    "confirm": {
+      "title_one": "Delete {{count}} item?",
+      "title_other": "Delete {{count}} items?",
+      "body": "They go to the trash, where you can restore them. A repeating event loses only the selected occurrence.",
+      "delete": "Delete"
     }
   },
   "shortcuts": {
@@ -1365,7 +1379,8 @@
       "unarchiveShort": "Unarchive",
       "delete": "Delete {{title}}",
       "deleteShort": "Delete",
-      "reminder": "Reminder:"
+      "reminder": "Reminder:",
+      "select": "Select {{title}}"
     },
     "editor": {
       "newTitle": "New note",
@@ -1544,7 +1559,8 @@
       "dueSoonAt": "Due soon, {{when}}",
       "remindersNeedDue": "Reminders need a due date.",
       "reminder": "Reminder set",
-      "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}"
+      "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}",
+      "select": "Select {{title}}"
     },
     "assignees": {
       "title": "Assignees",

@@ -8,9 +8,12 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. The due date as a badge when overdue (red, a warning sign, "Overdue")
 // or due soon (amber, a clock, "Due soon") — never the colour alone (FR-KAN-08, D-95).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And its assignees' initials (D-97).
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Multi-select (FR-X-07): a checkbox in the corner,
+// Ctrl/Cmd+click and Shift+click on the card (`select`); a selected card is ringed. A held finger still picks the card
+// up (no long-press selection on the board).
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { AlertTriangle, Bell, CalendarClock, Clock, ListChecks, Paperclip } from "lucide-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
@@ -59,6 +62,8 @@ interface CardTileProps {
   onOpen: () => void;
   /** Alt+arrow on the card; without it (no right to write) the card is not dragged either. */
   onStep?: (step: CardStep) => void;
+  /** Multi-select of the board: whether the card is selected, its toggle and the card's click handler. */
+  select?: { selected: boolean; toggle: (range: boolean) => void; onClick: (event: MouseEvent) => void };
 }
 
 /** "Overdue" / "Due soon" with its sign, and what follows (the date on a card). */
@@ -89,6 +94,7 @@ export function CardTile({
   assignees = [],
   onOpen,
   onStep,
+  select,
 }: CardTileProps) {
   const { t, i18n } = useTranslation();
   const id = String(row.id);
@@ -110,12 +116,12 @@ export function CardTile({
 
   return (
     // The padding (not a gap between cards) keeps the drop targets edge to edge.
-    <li ref={dropRef} className="py-1">
+    <li ref={dropRef} className="relative py-1">
       <button
         ref={dragRef}
         type="button"
         data-card={id}
-        onClick={onOpen}
+        onClick={select ? select.onClick : onOpen}
         {...(movable ? listeners : {})}
         onKeyDown={(event) => {
           const step = event.altKey && !event.ctrlKey && !event.metaKey ? STEPS[event.key] : undefined;
@@ -133,6 +139,8 @@ export function CardTile({
           // A finger held on the card picks it up instead of selecting text or opening the system menu.
           movable && "touch-manipulation select-none [-webkit-touch-callout:none]",
           isDragging && "opacity-50",
+          select && "pr-9",
+          select?.selected && "ring-2 ring-primary",
           // The colour as a bar only, like the wireframe (D7); the tint stays for labels.
           `ev-${color} ev-bar`,
         )}
@@ -196,6 +204,19 @@ export function CardTile({
           </span>
         ) : null}
       </button>
+      {select ? (
+        <label className="absolute top-1 right-0 grid size-11 place-items-center pointer-fine:md:size-8">
+          <input
+            type="checkbox"
+            className="size-4"
+            aria-label={t("kanban.cards.select", { title })}
+            checked={select.selected}
+            onChange={(event) => {
+              select.toggle((event.nativeEvent as unknown as globalThis.MouseEvent).shiftKey);
+            }}
+          />
+        </label>
+      ) : null}
     </li>
   );
 }

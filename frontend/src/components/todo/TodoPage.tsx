@@ -7,15 +7,22 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The cards show the next reminder (D-89); `focusNote` (from a
 // reminder) opens that note once it is in the local database, whichever tab it is on.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. The minute clock moved to lib/useNow (the board's cards use it too).
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Multi-select of the shown notes (FR-X-07, D-41) with
+// the bulk bar: colour, priority and delete for all of them as one action (components/shared/itemBulk); Ctrl/Cmd+A
+// selects every shown note, Esc clears; changing the tab or the filter clears the selection.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Archive, ListChecks, ListPlus, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Priority } from "@/atoms/items/priority";
 import { meQuery } from "@/api/session";
+import type { Color, Priority as ItemPriority } from "@/api/generated/types.gen";
+import { runItemBulk } from "@/components/shared/itemBulk";
 import { Button } from "@/components/ui/button";
+import { type BarAction, BulkBar } from "@/components/ui/bulk-bar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PriorityFilter } from "@/components/ui/priority";
 import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
@@ -26,6 +33,7 @@ import { useDisplayTimeZone } from "@/lib/datetime";
 import { useSettings } from "@/api/settings";
 import { formatPriorityParam } from "@/lib/priority";
 import { TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
+import { useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 
@@ -74,6 +82,29 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
   };
   const groups = useMemo(() => noteGroups(rows, tab, priorities), [rows, tab, priorities]);
   const positions = useMemo(() => notePositions(rows), [rows]);
+  const shown = useMemo(() => [...groups.pinned, ...groups.others], [groups]);
+  const selection = useSelection(
+    shown.map((row) => String(row.id)),
+    { selectAllShortcut: true },
+  );
+  const { clear: clearSelection } = selection;
+  useEffect(() => {
+    clearSelection();
+  }, [tab, priorities, clearSelection]);
+  const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const selectedTargets = () => shown.filter((row) => selection.isSelected(String(row.id))).map((row) => ({ row }));
+  async function bulk(action: BarAction, value?: Color | ItemPriority) {
+    if (!user) return;
+    if (action === "delete") {
+      setConfirmDelete(true);
+      return;
+    }
+    if (action !== "set_color" && action !== "set_priority") return;
+    setBusy(true);
+    await runItemBulk(user, action, selectedTargets(), value);
+    setBusy(false);
+  }
   // The note in the editor: a row, "new" (a note), "list" (a note with a checklist), or none.
   const [editing, setEditing] = useState<Row | "new" | "list" | null>(null);
   const editingRow =
@@ -115,6 +146,15 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
             nextReminder={reminderText(String(row.id))}
             onOpen={() => {
               setEditing(row);
+            }}
+            select={{
+              selected: selection.isSelected(String(row.id)),
+              toggle: (range) => {
+                selection.toggle(String(row.id), { range });
+              },
+              rowProps: selection.rowProps(String(row.id), () => {
+                setEditing(row);
+              }),
             }}
           />
         </li>
@@ -181,6 +221,18 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
         </div>
       </div>
 
+      {nothing ? null : (
+        <BulkBar
+          selection={selection}
+          total={shown.length}
+          actions={["set_color", "set_priority", "delete"]}
+          busy={busy}
+          onAction={(action, value) => {
+            void bulk(action, value);
+          }}
+          className="px-3 md:px-4"
+        />
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
         {nothing ? (
           <div className="grid h-full place-items-center p-6 text-center">
@@ -240,6 +292,25 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
         </Button>
       ) : null}
 
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t("bulk.confirm.title", { count: selection.count })}
+        body={t("bulk.confirm.body")}
+        confirmLabel={t("bulk.confirm.delete")}
+        danger
+        focusConfirm
+        onConfirm={async () => {
+          if (!user) return;
+          setBusy(true);
+          const ok = await runItemBulk(user, "delete", selectedTargets());
+          setBusy(false);
+          setConfirmDelete(false);
+          if (ok) clearSelection();
+        }}
+        onClose={() => {
+          setConfirmDelete(false);
+        }}
+      />
       {editing && user ? (
         <NoteEditor
           user={user}

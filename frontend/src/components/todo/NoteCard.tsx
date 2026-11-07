@@ -5,8 +5,10 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. A checklist (D-88): up to 8 unchecked items with working checkboxes
 // (each a write with undo), "+ N more items" and "+ N checked items".
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. A bell with the next reminder still ahead (D-89).
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Multi-select (FR-X-07): a checkbox, Ctrl/Cmd+click,
+// Shift+click and a long press on the card (`select`); a selected card is ringed.
 import { Archive, ArchiveRestore, Bell, Paperclip, Palette, Pin, PinOff, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type MouseEvent, type PointerEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
@@ -35,9 +37,20 @@ interface NoteCardProps {
   /** The next reminder still ahead, as text ("Tomorrow, 09:00"), or null. */
   nextReminder: string | null;
   onOpen: () => void;
+  /** Multi-select of the page: whether the card is selected, its toggle and the open button's click handlers. */
+  select?: {
+    selected: boolean;
+    toggle: (range: boolean) => void;
+    rowProps: {
+      onClick: (event: MouseEvent) => void;
+      onPointerDown: (event: PointerEvent) => void;
+      onPointerUp: () => void;
+      onPointerLeave: () => void;
+    };
+  };
 }
 
-export function NoteCard({ user, row, attachments, checklist, nextReminder, onOpen }: NoteCardProps) {
+export function NoteCard({ user, row, attachments, checklist, nextReminder, onOpen, select }: NoteCardProps) {
   const { t } = useTranslation();
   const name = noteName(row);
   const title = text(row.title).trim();
@@ -49,16 +62,24 @@ export function NoteCard({ user, row, attachments, checklist, nextReminder, onOp
   const [color, setColor] = useState<Color | null>(null);
 
   return (
-    <article aria-label={name} className={cn("flex flex-col rounded-md border border-line", itemColorClasses(stored))}>
+    <article
+      aria-label={name}
+      className={cn(
+        "flex flex-col rounded-md border border-line",
+        itemColorClasses(stored),
+        select?.selected && "ring-2 ring-primary",
+      )}
+    >
       <button
         type="button"
+        {...select?.rowProps}
         aria-label={t("todo.card.open", { title: name })}
         className={cn(
           "flex flex-col gap-1.5 rounded-t-md p-3 text-left wrap-anywhere focus-visible:outline-2 focus-visible:outline-primary",
           // A card of a title only stays big enough to hit; a checklist below fills it anyway.
           !checklist && "min-h-16",
         )}
-        onClick={onOpen}
+        onClick={select ? select.rowProps.onClick : onOpen}
       >
         {title ? <h3 className="text-[15px] font-semibold">{title}</h3> : null}
         {preview ? <p className="line-clamp-8 text-[13px] whitespace-pre-line text-fg/90">{preview}</p> : null}
@@ -111,6 +132,19 @@ export function NoteCard({ user, row, attachments, checklist, nextReminder, onOp
         </div>
       ) : null}
       <div className="mt-auto flex items-center gap-0.5 px-1 pb-1">
+        {select ? (
+          <label className="grid size-11 place-items-center pointer-fine:md:size-8">
+            <input
+              type="checkbox"
+              className="size-4"
+              aria-label={t("todo.card.select", { title: name })}
+              checked={select.selected}
+              onChange={(event) => {
+                select.toggle((event.nativeEvent as unknown as globalThis.MouseEvent).shiftKey);
+              }}
+            />
+          </label>
+        ) : null}
         {archived ? null : (
           <Button
             variant="ghost"
