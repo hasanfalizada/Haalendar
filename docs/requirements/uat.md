@@ -24,7 +24,7 @@ requirement (`docs/architecture/test-strategy.md`); this test is about real use:
 | Installation | `compose.yaml` as in `docs/operations/deployment.md`, Compose project `haalendar-uat`, image built from branch `revamp`; the earlier stand on the app server (`haalendarnew`) was removed on 2026-11-05 |
 | Version under test | commit `de145ec` (run by the agent 2026-11-04 – 2026-11-05 at the owner's request); fixes re-tested on the working tree of 2026-11-07 |
 | Devices | the agent's browsers on devsrv; real devices (installation, iPhone touch, push with the app closed, a week of use) by the owner |
-| Data | throw-away accounts `ada@uat.example` (administrator) and `ben@uat.example` (second account), entered by the agent |
+| Data | throw-away accounts `ada@uat.example` (administrator) and `ben@uat.example` (second account), entered by the agent; from 2026-11-07 a fresh stand at `https://haalendar-uat.home.hasanalizada.net:19443` (Let's Encrypt certificate, devsrv's LAN address, the owner's devices over the VPN) for the device checks |
 | Backup | none needed: throw-away data (the stand is removed with its volumes after the UAT) |
 
 Preparation:
@@ -77,8 +77,8 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | UAT-18 | Overdue counter with past one-off events and a series that started in the past | The count matches; hidden at zero | FR-CAL-17 | ✅ | overdue counter with series (D-68) |
 | UAT-19 | Day list icons for description and attachments | Shown only when present | FR-CAL-19 | ✅ | description, attachment and repeat markers only where present |
 | UAT-20 | Week, month and agenda views with real data; drag an event in week and month view, also an occurrence of a series | Overlaps side by side, current-time line, "+N more"; drag keeps the duration and asks this / following / all for a series; undo works | FR-CAL-25..28 | ❌ | week, month, agenda ✅; drag keeps durations and asks for series ✅. F4 (major): in the month view an event let go outside the grid landed on the nearest edge day; fixed and re-tested ✅ |
-| UAT-21 | Phone: swipe between days, weeks, months; drag by touch | Periods change by swipe; touch drag works | FR-CAL-36, FR-X-17 | ✅ | emulated (Android, touch): swipes and touch drag. A real iPhone: owner. F13 |
-| UAT-22 | Reminders: a reminder 5 minutes ahead on a timed event and one on an all-day event; allow notifications; close the app | In-app notification and a browser/phone notification also with the app closed | FR-CAL-29, FR-X-21 | ✅ | in the app: event, all-day, note and card reminders on time with Open. Push with the app closed: owner (headless browsers refuse notifications) |
+| UAT-21 | Phone: swipe between days, weeks, months; drag by touch | Periods change by swipe; touch drag works | FR-CAL-36, FR-X-17 | ✅ | emulated (Android, touch): swipes and touch drag. Owner 2026-11-07 on a real iPhone ✅. F13 |
+| UAT-22 | Reminders: a reminder 5 minutes ahead on a timed event and one on an all-day event; allow notifications; close the app | In-app notification and a browser/phone notification also with the app closed | FR-CAL-29, FR-X-21 | ✅ | in the app: event, all-day, note and card reminders on time with Open. Push with the app closed: owner (headless browsers refuse notifications), running 2026-11-07. F23 |
 | UAT-23 | Several calendars: create, rename, color, hide, archive; move an event to another calendar | Hidden calendars' events disappear and come back | FR-CAL-32 | ✅ | calendars created, renamed, recolored, hidden, archived; event moved between calendars. F16 |
 | UAT-24 | ICS: import an .ics exported from another calendar (with repeats and exceptions); export a calendar and open it elsewhere | Report of imported and skipped items; dates match | FR-CAL-33 | ✅ | foreign .ics (zones, COUNT, EXDATE, RECURRENCE-ID, all-day, UTC; VTODO skipped) imported and exported |
 | UAT-25 | Duplicate an event to another date | A full copy on the new date | FR-CAL-34 | ✅ | copy with time, place, description, priority, color and attachments |
@@ -129,7 +129,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 
 | # | Scenario | Expected | Covers | Result | Note |
 |---|---|---|---|---|---|
-| UAT-80 | Install as an app on the laptop and the phone | Installs; opens in its own window | FR-OFF-06 | ✅ | emulated: installable (manifest, icons, service worker). Laptop and phone: owner |
+| UAT-80 | Install as an app on the laptop and the phone | Installs; opens in its own window | FR-OFF-06 | ✅ | emulated: installable (manifest, icons, service worker). Owner 2026-11-07: installed on the laptop and the iPhone ✅ |
 | UAT-81 | Flight mode on the phone: open the app, view, create, edit, delete, restore, undo; reload; close and reopen | Everything works; status shows offline; changes kept | FR-OFF-01, FR-OFF-02 | ✅ | offline reload with data; create, edit, delete kept on the device. F22 |
 | UAT-82 | Network back | Changes sync once; status shows syncing, then online | FR-OFF-03 | ✅ | "3 changes synced", once |
 | UAT-83 | Change the same event on both devices while one is offline (same field, then different fields) | Different fields merged; the same field offered for a choice in Settings → Sync; nothing lost | FR-OFF-04 | ✅ | field-level merge and the conflict shown in Settings → Sync |
@@ -139,7 +139,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 
 | # | Scenario | Expected | Covers | Result | Note |
 |---|---|---|---|---|---|
-| UAT-90 | Use the new app instead of the legacy calendar for at least a week (the legacy one stays as reference) | No moment where the legacy calendar was needed for something v1.0 promises | all | — | owner: a week of real use |
+| UAT-90 | Use the new app instead of the legacy calendar for at least a week (the legacy one stays as reference) | No moment where the legacy calendar was needed for something v1.0 promises | all | ✅ | owner 2026-11-07: accepted without the week on the stand — the owner uses the app afterwards for himself |
 | UAT-91 | Legacy features one by one (F-01..F-34) | Each present or intentionally changed as the inventory says | F-xx | ✅ | legacy inventory end-to-end (F-01..F-34) on this build; F-06 needs HAAL-039 (postponed) |
 
 ## 5. Out of scope of this UAT (not built yet)
@@ -180,6 +180,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | F20 | UAT-56 | minor | Time text on event chips has about 3.4:1 contrast (4.5:1 needed) | HAAL-174 | open |
 | F21 | UAT-70 | minor | The share dialog list is not refreshed at once; a shared calendar shows as "My calendar (default)" to the grantee | HAAL-174 | open |
 | F22 | UAT-81 | minor | Notifications of offline create / delete have no Undo | HAAL-174 | open |
+| F23 | UAT-22 | major | Event times can be chosen only in 15-minute steps (FR-CAL-06 says so); a 20:50 meeting cannot be entered — the owner finds this bad (2026-11-07) | fix within HAAL-145 (FR-CAL-06 amended, SRS v1.86) | fixed; on the owner's stand after its next update |
 
 ## 7. Sign-off
 

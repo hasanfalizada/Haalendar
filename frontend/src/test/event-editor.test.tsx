@@ -4,21 +4,11 @@
 // editing sending only what changed with its starting values, undo, the unsaved-changes question, offline saving.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. No calendar is created with the first event any more: it goes to the
 // default calendar, archived calendars are not offered (D-82).
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  QUARTERS,
-  changesOf,
-  defaultTimes,
-  eventData,
-  formFromRow,
-  newEventForm,
-  slotsFor,
-  validate,
-  withStart,
-} from "@/lib/eventForm";
+import { changesOf, defaultTimes, eventData, formFromRow, newEventForm, validate, withStart } from "@/lib/eventForm";
 import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
 
@@ -30,8 +20,7 @@ const CAL = "0199f000-0000-7000-8000-0000000000c1";
 const EVENT = "0199f000-0000-7000-8000-0000000000e1";
 
 describe("form model", () => {
-  it("defaults, quarter hours and slots", () => {
-    expect(QUARTERS).toHaveLength(96);
+  it("defaults start at the next quarter hour", () => {
     expect(defaultTimes("2026-11-10", "2026-11-10", "10:07")).toEqual({
       start_time: "10:15",
       end_time: "11:15",
@@ -44,7 +33,6 @@ describe("form model", () => {
       end_time: "00:30",
       end_date: "2026-11-11",
     });
-    expect(slotsFor("09:10")).toContain("09:10"); // a stored time off the grid stays selectable
   });
 
   it("a start after the end takes the end along; the end may not be before the start", () => {
@@ -192,23 +180,30 @@ describe("editor", { timeout: 15_000 }, () => {
     expect(item).toMatchObject({ op: "create", data: { container_id: DEFAULT_CAL, title: "Dentist" } });
   });
 
-  it("timed: 15-minute defaults, end before start blocks Save, the start takes the end along; repeat hides To", async () => {
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F23). Times to the minute (20:50), not quarter hours;
+  // a cleared field keeps the time.
+  it("timed: defaults at the quarter hour, any minute, end before start blocks Save, the start takes the end along; repeat hides To", async () => {
     const { user } = await openApp();
     await user.click(screen.getByRole("button", { name: "New event" }));
     const dialog = await screen.findByRole("dialog", { name: "New event" });
     await user.click(within(dialog).getByRole("checkbox", { name: "All day" }));
-    const start = within(dialog).getByRole("combobox", { name: "Start time" });
-    const end = within(dialog).getByRole("combobox", { name: "End time" });
+    const start = within(dialog).getByLabelText("Start time");
+    const end = within(dialog).getByLabelText("End time");
+    expect(start).toHaveAttribute("type", "time");
     expect(start).toHaveValue("09:00");
     expect(end).toHaveValue("10:00");
-    expect(within(start).getAllByRole("option")).toHaveLength(96);
 
-    await user.selectOptions(end, "08:00");
+    fireEvent.change(end, { target: { value: "08:00" } });
     expect(within(dialog).getByText("The end cannot be before the start.")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
-    await user.selectOptions(start, "11:00");
-    expect(end).toHaveValue("11:00");
+    fireEvent.change(start, { target: { value: "20:50" } });
+    expect(start).toHaveValue("20:50");
+    expect(end).toHaveValue("20:50");
     expect(within(dialog).queryByText("The end cannot be before the start.")).not.toBeInTheDocument();
+    fireEvent.change(end, { target: { value: "21:07" } });
+    expect(end).toHaveValue("21:07");
+    fireEvent.change(end, { target: { value: "" } });
+    expect(end).toHaveValue("21:07");
 
     expect(within(dialog).getByLabelText("To")).toBeInTheDocument();
     await user.selectOptions(within(dialog).getByRole("combobox", { name: "Repeat" }), "weekly");

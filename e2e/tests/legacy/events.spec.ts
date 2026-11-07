@@ -28,7 +28,8 @@ test("F-10 an event with every legacy field; an empty title saves as (No title)"
   await expect(details.getByRole("radio", { name: "Green" })).toBeChecked();
   await page.keyboard.press("Escape");
 
-  // Defaults: all day on, brown, titles up to 150 characters, times in quarter hours.
+  // Defaults: all day on, brown, titles up to 150 characters; times to the minute (+++===+++ 2026-11-07 — Hasan Alizada —
+  // HAAL-145, UAT finding F23: legacy and v1.0 had quarter hours, FR-CAL-06 amended by owner).
   await page.getByRole("button", { name: "New event" }).first().click();
   const editor = page.getByRole("dialog", { name: "New event" });
   await expect(editor.getByRole("checkbox", { name: "All day" })).toBeChecked();
@@ -39,9 +40,9 @@ test("F-10 an event with every legacy field; an empty title saves as (No title)"
   await expect(editor.getByText("150 / 150")).toBeVisible();
   await editor.getByLabel("Title").fill("");
   await editor.getByRole("checkbox", { name: "All day" }).uncheck();
-  const times = await editor.getByLabel("Start time").locator("option").allTextContents();
-  expect(times).toHaveLength(96);
-  expect(times.slice(0, 3)).toEqual(["00:00", "00:15", "00:30"]);
+  await expect(editor.getByLabel("Start time")).toHaveAttribute("type", "time");
+  await editor.getByLabel("Start time").fill("07:53");
+  await expect(editor.getByLabel("Start time")).toHaveValue("07:53");
   await editor.getByRole("checkbox", { name: "All day" }).check();
   await editor.getByRole("button", { name: "Save" }).click();
   await expect(editor).toBeHidden();
@@ -68,11 +69,11 @@ test("F-11 the end cannot be before the start; moving the start moves the end al
   // The same on one day with times.
   await to.fill("2026-12-08");
   await editor.getByRole("checkbox", { name: "All day" }).uncheck();
-  await editor.getByLabel("Start time").selectOption("11:00");
-  await editor.getByLabel("End time").selectOption("10:00");
+  await editor.getByLabel("Start time").fill("11:00");
+  await editor.getByLabel("End time").fill("10:00");
   await expect(editor.getByText("The end cannot be before the start.")).toBeVisible();
   await expect(editor.getByRole("button", { name: "Save" })).toBeDisabled();
-  await editor.getByLabel("End time").selectOption("12:00");
+  await editor.getByLabel("End time").fill("12:00");
   await editor.getByRole("button", { name: "Save" }).click();
   await expect(editor).toBeHidden();
 });
@@ -122,7 +123,7 @@ test("F-13 editing opens the same editor filled with the event", async ({ page }
   await expect(editor.getByLabel("End time")).toHaveValue("09:30");
   await expect(editor.getByLabel("Location")).toHaveValue("Desk");
   await editor.getByLabel("Location").fill("Meeting room");
-  await editor.getByLabel("End time").selectOption("10:00");
+  await editor.getByLabel("End time").fill("10:00");
   await editor.getByRole("button", { name: "Save" }).click();
   await expect(editor).toBeHidden();
   await page.reload();

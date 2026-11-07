@@ -2,7 +2,7 @@
 // (presets of the event's kind, custom, at most five, remove), written through the outbox in the same undo step as the
 // event, listed in the details card; a reminder notification reads "Reminder: … — Today, 11:00–12:00" in the
 // reader's zone, opens its day with the event's card, and one that arrives while the app is open also pops up.
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -168,9 +168,10 @@ describe("reminders in the editor and the card", { timeout: 15_000 }, () => {
     await user.selectOptions(add(), "Custom…");
     await user.clear(within(group).getByRole("spinbutton", { name: "Days before" }));
     await user.type(within(group).getByRole("spinbutton", { name: "Days before" }), "3");
-    await user.selectOptions(within(group).getByRole("combobox", { name: "Time" }), "18:30");
+    // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F23). Any minute.
+    fireEvent.change(within(group).getByLabelText("Time"), { target: { value: "18:37" } });
     await user.click(within(group).getByRole("button", { name: "Add" }));
-    expect(within(group).getByText("3 days before at 18:30")).toBeInTheDocument();
+    expect(within(group).getByText("3 days before at 18:37")).toBeInTheDocument();
     expect(within(group).getByText("At most 5 reminders.")).toBeInTheDocument();
     expect(within(group).queryByRole("combobox", { name: "Add reminder" })).not.toBeInTheDocument();
   });

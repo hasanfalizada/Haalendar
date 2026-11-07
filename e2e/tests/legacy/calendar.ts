@@ -31,8 +31,8 @@ export async function createEvent(page: Page, event: NewEvent): Promise<void> {
   if (event.title !== undefined) await editor.getByLabel("Title").fill(event.title);
   if (event.start) {
     await editor.getByRole("checkbox", { name: "All day" }).uncheck();
-    await editor.getByLabel("Start time").selectOption(event.start);
-    if (event.end) await editor.getByLabel("End time").selectOption(event.end);
+    await editor.getByLabel("Start time").fill(event.start);
+    if (event.end) await editor.getByLabel("End time").fill(event.end);
   }
   if (event.to) await editor.getByRole("textbox", { name: "To" }).fill(event.to);
   if (event.repeat) await editor.getByLabel("Repeat").selectOption({ label: event.repeat });

@@ -57,17 +57,6 @@ export interface FormErrors {
 type Row = Record<string, unknown>;
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
 
-/** "00:00" … "23:45". */
-export const QUARTERS: readonly string[] = Array.from(
-  { length: 96 },
-  (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`,
-);
-
-/** The slots offered for a field: the quarter hours, plus the stored time when it is off the grid. */
-export function slotsFor(value: string): string[] {
-  return value && !QUARTERS.includes(value) ? [...QUARTERS, value].sort() : [...QUARTERS];
-}
-
 function minutes(hhmm: string): number {
   const [h = 0, m = 0] = hhmm.split(":").map(Number);
   return h * 60 + m;

@@ -65,3 +65,18 @@ test.describe("on a short screen", () => {
     expect((button?.y ?? 0) + (button?.height ?? 0)).toBeLessThanOrEqual(720);
   });
 });
+
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F23). An event at any minute, e.g. a meeting at 20:50.
+test("an event can start and end at any minute", async ({ page }) => {
+  const title = unique("Call");
+  await page.goto("/calendar?date=2027-03-18");
+  await page.getByRole("button", { name: "New event" }).first().click();
+  const editor = page.getByRole("dialog", { name: "New event" });
+  await editor.getByLabel("Title").fill(title);
+  await editor.getByRole("checkbox", { name: "All day" }).uncheck();
+  await editor.getByLabel("Start time").fill("20:50");
+  await editor.getByLabel("End time").fill("21:07");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+  await expect(page.getByRole("button", { name: new RegExp(title) })).toContainText("20:50");
+});

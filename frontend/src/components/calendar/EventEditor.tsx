@@ -41,7 +41,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
-import { clockText, dayLabel } from "@/lib/dayView";
+import { dayLabel } from "@/lib/dayView";
 import { dayToShow, findDuplicates, titleKey } from "@/lib/duplicates";
 import {
   type EventForm,
@@ -52,7 +52,6 @@ import {
   followingForm,
   formFromRow,
   newEventForm,
-  slotsFor,
   validate,
   withAllDay,
   withStart,
@@ -427,24 +426,25 @@ export function EventEditor({
       return spec ? { ...moved, end_date: moved.start_date } : moved;
     });
   };
-  const timeLabel = (value: string) => clockText(value, i18n.language, settings.time_format);
+  // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F23, FR-CAL-06 amended by owner). A time to the
+  // minute (the device's time field: a wheel on iPhone, typing elsewhere), no longer a list of quarter hours; a cleared
+  // field keeps the previous time, since a timed event needs both.
   const timeSelect = (field: "start_time" | "end_time", label: string, error?: string) => (
     <Field id={`event-${field}`} label={label} error={error}>
       {(aria) => (
-        <Select
+        <Input
           {...aria}
+          type="time"
+          step={60}
+          required
           value={form[field]}
           onChange={(e) => {
-            if (field === "start_time") setForm((current) => withStart(current, { start_time: e.target.value }));
-            else set({ end_time: e.target.value });
+            const value = e.target.value;
+            if (!value) return;
+            if (field === "start_time") setForm((current) => withStart(current, { start_time: value }));
+            else set({ end_time: value });
           }}
-        >
-          {slotsFor(form[field]).map((slot) => (
-            <option key={slot} value={slot}>
-              {timeLabel(slot)}
-            </option>
-          ))}
-        </Select>
+        />
       )}
     </Field>
   );

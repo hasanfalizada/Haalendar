@@ -16,8 +16,6 @@ import { meQuery } from "@/api/session";
 import { useSettings } from "@/api/settings";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
-import { clockText } from "@/lib/dayView";
-import { QUARTERS } from "@/lib/eventForm";
 import {
   ALL_DAY_PRESETS,
   MAX_DAYS_BEFORE,
@@ -86,7 +84,7 @@ interface ReminderPickerProps {
 }
 
 export function ReminderPicker({ value, allDay, onChange, startLabel, noAdd }: ReminderPickerProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { time_format: timeFormat } = useSettings();
   const labelId = useId();
   const [custom, setCustom] = useState(false);
@@ -164,19 +162,17 @@ export function ReminderPicker({ value, allDay, onChange, startLabel, noAdd }: R
                   setDaysBefore(e.target.value);
                 }}
               />
-              <Select
+              {/* +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F23). A time of day to the minute, like the event's. */}
+              <Input
+                type="time"
+                step={60}
                 aria-label={t("reminders.timeField")}
+                className="w-32"
                 value={time}
                 onChange={(e) => {
-                  setTime(e.target.value);
+                  if (e.target.value) setTime(e.target.value);
                 }}
-              >
-                {QUARTERS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {clockText(slot, i18n.language, timeFormat)}
-                  </option>
-                ))}
-              </Select>
+              />
             </>
           ) : (
             <>
