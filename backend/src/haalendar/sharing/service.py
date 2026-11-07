@@ -8,6 +8,9 @@ security and asks the authz.check.v1 atom (authz.require) before acting:
 - revocation is soft (`revoked_at`); sharing again creates a new row;
 - events are logged with ids only (no e-mail addresses). Audit records follow with HAAL-032, sync tombstones with
   HAAL-053, in-app notifications with HAAL-048.
++++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). Notes are shared too (FR-ACC-10, D-30): a note is its
+own container (D-87), named by its title, owned by its owner; the rest (access, row-level security, audience) already
+knew the kind `note`.
 """
 
 from __future__ import annotations
@@ -22,10 +25,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from haalendar.accounts.models import UserAccount
-from haalendar.authz import CONTAINERS, require
+from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Share
+from haalendar.planning.models import Board, Calendar, Item, Share
 from haalendar.security.rls import ContainerKind
 from haalendar.sharing.schemas import ContainerKindIn, Permission, ShareOut
 
@@ -41,19 +44,27 @@ def _validation(pointer: str, code: str, detail: str) -> ProblemError:
     )
 
 
+# Container kind → (table, its name column, the condition that the row is that container): the kinds that can be shared.
+_SHARED: dict[ContainerKind, tuple[Any, Any, Any]] = {
+    "calendar": (Calendar, Calendar.name, Calendar.id.is_not(None)),
+    "board": (Board, Board.name, Board.id.is_not(None)),
+    "note": (Item, Item.title, Item.kind == "note"),
+}
+
+
 def _supported(kind: ContainerKindIn) -> ContainerKind:
-    if kind not in CONTAINERS:
+    if kind not in _SHARED:
         raise _validation("/container_kind", "unsupported", "Sharing is not available for this kind yet")
     return kind
 
 
 def _views_query(kind: ContainerKind) -> Select[Share, str, uuid.UUID, UserAccount, UserAccount]:
-    model = CONTAINERS[kind]
+    model, name, is_container = _SHARED[kind]
     grantee = aliased(UserAccount)
     owner = aliased(UserAccount)
     return (
-        select(Share, model.name, model.owner_id, grantee, owner)
-        .join(model, and_(Share.container_kind == kind, model.id == Share.container_id))
+        select(Share, name, model.owner_id, grantee, owner)
+        .join(model, and_(Share.container_kind == kind, model.id == Share.container_id, is_container))
         .join(grantee, grantee.id == Share.grantee_id)
         .join(owner, owner.id == model.owner_id)
         .where(Share.revoked_at.is_(None), model.deleted_at.is_(None))
@@ -82,7 +93,7 @@ def _view(row: Any) -> ShareOut:
 
 
 def _kind_of(share: Share) -> ContainerKind:
-    if share.container_kind not in CONTAINERS:
+    if share.container_kind not in _SHARED:
         raise ProblemError(404, ProblemCode.NOT_FOUND, "Not found")
     return share.container_kind
 
@@ -103,7 +114,7 @@ async def list_shares(
     container_id: uuid.UUID | None,
 ) -> list[ShareOut]:
     views: list[ShareOut] = []
-    for kind, model in CONTAINERS.items():
+    for kind, (model, _, _) in _SHARED.items():
         if container_kind is not None and container_kind != kind:
             continue
         query = _views_query(kind)

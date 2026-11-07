@@ -6,15 +6,21 @@
 // below the text (ChecklistEditor); Save writes the note and its item changes as one undo step. "New list" opens the
 // editor with a checklist ready.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The note's reminders (NoteReminders, D-89), saved with the note.
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). Sharing (FR-ACC-10, D-30): the owner shares the note
+// ("Share…", the shared dialog of calendars and boards); a note shared with the user says by whom and with which right,
+// can be left, and with "can view" its content is read-only (the user's own reminders stay theirs to set).
 import { useQuery } from "@tanstack/react-query";
-import { ListChecks, ListX } from "lucide-react";
+import { ListChecks, ListX, LogOut, Users } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
+import { sharesQuery } from "@/api/sharing";
 import { Attachments } from "@/components/attachments/Attachments";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
+import { ShareDialog } from "@/components/sharing/ShareDialog";
+import { useShareActions } from "@/components/sharing/useShareActions";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
@@ -24,7 +30,7 @@ import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { type ChecklistEntry, checklistChanges, checklistOf, entriesOf } from "@/lib/checklist";
 import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
-import { text } from "@/lib/notes";
+import { type NoteAccess, text } from "@/lib/notes";
 import { DEFAULT_COLOR } from "@/lib/palette";
 import { topPosition } from "@/lib/position";
 import { useDraft } from "@/lib/useDraft";
@@ -68,10 +74,12 @@ interface NoteEditorProps {
   positions: readonly string[];
   /** A new note starts with a checklist ("New list"). */
   asList?: boolean;
+  /** The user's right on the note (owner for a new one). */
+  access?: NoteAccess;
   onClose: () => void;
 }
 
-export function NoteEditor({ user, note, positions, asList = false, onClose }: NoteEditorProps) {
+export function NoteEditor({ user, note, positions, asList = false, access = "owner", onClose }: NoteEditorProps) {
   const { t } = useTranslation();
   const settings = useSettings();
   const [newId] = useState(uuidv7);
@@ -138,6 +146,14 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
   const [busy, setBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
+  const readOnly = access === "view";
+  const [sharing, setSharing] = useState(false);
+  const shareActions = useShareActions();
+  const received = useQuery({
+    ...sharesQuery({ direction: "received", containerKind: "note", containerId: id }),
+    enabled: note !== null && access !== "owner",
+  });
+  const share = received.data?.[0];
   const empty =
     form.title.trim() === "" &&
     form.body.trim() === "" &&
@@ -218,74 +234,86 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
           onDiscard={() => void draft.discard()}
         />
         <form ref={formRef} onSubmit={(e) => void onSubmit(e)} noValidate className="flex flex-col gap-4">
-          <Field id="note-title" label={t("todo.editor.title")}>
-            {(aria) => (
-              <Input
-                {...aria}
-                value={form.title}
-                maxLength={NOTE_TITLE_MAX}
-                autoFocus
-                onChange={(e) => {
-                  set({ title: e.target.value });
-                }}
-              />
-            )}
-          </Field>
-          <MarkdownEditor
-            id="note-body"
-            label={t("todo.editor.body")}
-            value={form.body}
-            rows={hasList ? 3 : 8}
-            onChange={(body) => {
-              set({ body });
-            }}
-          />
-          {hasList ? (
-            <ChecklistEditor
-              entries={entries}
-              positionOf={positionOf}
-              onChange={(next) => {
-                set({ checklist: JSON.stringify(next) });
+          {access === "owner" ? null : (
+            <p role="status" className="flex items-center gap-1.5 text-[13px] text-muted">
+              <Users className="size-4 shrink-0" aria-hidden />
+              {share
+                ? t(access === "edit" ? "todo.editor.sharedEdit" : "todo.editor.sharedView", { name: share.owner_name })
+                : t(access === "edit" ? "todo.card.sharedEdit" : "todo.card.sharedView")}
+            </p>
+          )}
+          <fieldset disabled={readOnly} className="contents">
+            <Field id="note-title" label={t("todo.editor.title")}>
+              {(aria) => (
+                <Input
+                  {...aria}
+                  value={form.title}
+                  maxLength={NOTE_TITLE_MAX}
+                  autoFocus
+                  onChange={(e) => {
+                    set({ title: e.target.value });
+                  }}
+                />
+              )}
+            </Field>
+            <MarkdownEditor
+              id="note-body"
+              label={t("todo.editor.body")}
+              value={form.body}
+              rows={hasList ? 3 : 8}
+              onChange={(body) => {
+                set({ body });
               }}
             />
-          ) : null}
-          <Button
-            className="w-fit"
-            onClick={() => {
-              set(
-                hasList
-                  ? { is_checklist: "false", checklist: "[]" }
-                  : { is_checklist: "true", checklist: JSON.stringify([{ id: uuidv7(), text: "", checked: false }]) },
-              );
-            }}
-          >
-            {hasList ? <ListX aria-hidden /> : <ListChecks aria-hidden />}
-            {t(hasList ? "todo.checklist.removeList" : "todo.checklist.addList")}
-          </Button>
+            {hasList ? (
+              <ChecklistEditor
+                entries={entries}
+                positionOf={positionOf}
+                onChange={(next) => {
+                  set({ checklist: JSON.stringify(next) });
+                }}
+              />
+            ) : null}
+            <Button
+              className="w-fit"
+              onClick={() => {
+                set(
+                  hasList
+                    ? { is_checklist: "false", checklist: "[]" }
+                    : { is_checklist: "true", checklist: JSON.stringify([{ id: uuidv7(), text: "", checked: false }]) },
+                );
+              }}
+            >
+              {hasList ? <ListX aria-hidden /> : <ListChecks aria-hidden />}
+              {t(hasList ? "todo.checklist.removeList" : "todo.checklist.addList")}
+            </Button>
+          </fieldset>
           <NoteReminders
             value={specsFromText(form.reminders)}
             onChange={(next) => {
               set({ reminders: specsText(next) });
             }}
           />
-          <ColorPicker
-            name="note-color"
-            legend={t("todo.editor.color")}
-            value={form.color as Color}
-            onChange={(color) => {
-              set({ color });
-            }}
-          />
-          {/* The priority picker brings its own legend. */}
-          <PrioritySelect
-            name="note-priority"
-            value={form.priority as Priority}
-            onChange={(priority) => {
-              set({ priority });
-            }}
-          />
+          <fieldset disabled={readOnly} className="contents">
+            <ColorPicker
+              name="note-color"
+              legend={t("todo.editor.color")}
+              value={form.color as Color}
+              onChange={(color) => {
+                set({ color });
+              }}
+            />
+            {/* The priority picker brings its own legend. */}
+            <PrioritySelect
+              name="note-priority"
+              value={form.priority as Priority}
+              onChange={(priority) => {
+                set({ priority });
+              }}
+            />
+          </fieldset>
           {note && onServer ? (
-            <Attachments itemId={id} editable pasteTarget={formRef} />
+            <Attachments itemId={id} editable={!readOnly} pasteTarget={formRef} />
           ) : note ? (
             <p className="text-xs text-muted">{t("todo.editor.attachmentsSyncing")}</p>
           ) : (
@@ -296,7 +324,7 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
             <ItemLinks
               user={user}
               item={note}
-              canWrite
+              canWrite={!readOnly}
               onLeave={() => {
                 void draft.flush();
                 onClose();
@@ -305,6 +333,35 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
           ) : null}
           {empty ? <p className="text-xs text-muted">{t("todo.editor.empty")}</p> : null}
           <DialogFooter>
+            {note && access === "owner" ? (
+              <Button
+                className="sm:mr-auto"
+                // Sharing needs the note on the server (a note made here may still be waiting to sync).
+                disabled={!onServer}
+                title={onServer ? undefined : t("todo.editor.shareSyncing")}
+                onClick={() => {
+                  setSharing(true);
+                }}
+              >
+                <Users aria-hidden />
+                {t("todo.editor.share")}
+              </Button>
+            ) : null}
+            {note && access !== "owner" ? (
+              <Button
+                className="sm:mr-auto"
+                disabled={!share}
+                onClick={() => {
+                  if (!share) return;
+                  void shareActions.revoke(share, "grantee").then((result) => {
+                    if (result.ok) onClose();
+                  });
+                }}
+              >
+                <LogOut aria-hidden />
+                {t("todo.editor.leave")}
+              </Button>
+            ) : null}
             <Button onClick={close}>{t("common.cancel")}</Button>
             <Button type="submit" variant="primary" disabled={busy || empty}>
               {t("todo.editor.save")}
@@ -313,6 +370,17 @@ export function NoteEditor({ user, note, positions, asList = false, onClose }: N
         </form>
       </DialogContent>
       <UnsavedChangesDialog prompt={guard.prompt} />
+      {sharing && note ? (
+        <ShareDialog
+          open
+          onClose={() => {
+            setSharing(false);
+          }}
+          containerKind="note"
+          containerId={id}
+          containerName={text(note.title) || t("todo.untitled")}
+        />
+      ) : null}
     </Dialog>
   );
 }

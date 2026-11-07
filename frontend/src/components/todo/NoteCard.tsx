@@ -7,7 +7,9 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. A bell with the next reminder still ahead (D-89).
 // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Multi-select (FR-X-07): a checkbox, Ctrl/Cmd+click,
 // Shift+click and a long press on the card (`select`); a selected card is ringed.
-import { Archive, ArchiveRestore, Bell, Paperclip, Palette, Pin, PinOff, Trash2 } from "lucide-react";
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). A note shared with the user says so ("Shared · can
+// edit / can view"); pin, archive and delete are its owner's, the colour needs an edit share.
+import { Archive, ArchiveRestore, Bell, Paperclip, Palette, Pin, PinOff, Trash2, Users } from "lucide-react";
 import { type MouseEvent, type PointerEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PriorityBadge } from "@/components/ui/priority";
 import { CARD_ITEMS, type ChecklistGroups } from "@/lib/checklist";
 import { toPlainText } from "@/lib/markdown-text";
-import { text } from "@/lib/notes";
+import { type NoteAccess, text } from "@/lib/notes";
 import { DEFAULT_COLOR, itemColorClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +39,8 @@ interface NoteCardProps {
   /** The next reminder still ahead, as text ("Tomorrow, 09:00"), or null. */
   nextReminder: string | null;
   onOpen: () => void;
+  /** The user's right on the note (owner when absent). */
+  access?: NoteAccess;
   /** Multi-select of the page: whether the card is selected, its toggle and the open button's click handlers. */
   select?: {
     selected: boolean;
@@ -50,7 +54,17 @@ interface NoteCardProps {
   };
 }
 
-export function NoteCard({ user, row, attachments, checklist, nextReminder, onOpen, select }: NoteCardProps) {
+export function NoteCard({
+  user,
+  row,
+  attachments,
+  checklist,
+  nextReminder,
+  onOpen,
+  access = "owner",
+  select,
+}: NoteCardProps) {
+  const owner = access === "owner";
   const { t } = useTranslation();
   const name = noteName(row);
   const title = text(row.title).trim();
@@ -83,8 +97,14 @@ export function NoteCard({ user, row, attachments, checklist, nextReminder, onOp
       >
         {title ? <h3 className="text-[15px] font-semibold">{title}</h3> : null}
         {preview ? <p className="line-clamp-8 text-[13px] whitespace-pre-line text-fg/90">{preview}</p> : null}
-        {attachments > 0 || text(row.priority) !== "medium" || nextReminder ? (
+        {attachments > 0 || text(row.priority) !== "medium" || nextReminder || !owner ? (
           <span className="flex flex-wrap items-center gap-1.5">
+            {owner ? null : (
+              <span className="inline-flex items-center gap-1 rounded-sm bg-bg/60 px-1.5 py-0.5 text-xs">
+                <Users className="size-3" aria-hidden />
+                {t(access === "edit" ? "todo.card.sharedEdit" : "todo.card.sharedView")}
+              </span>
+            )}
             {nextReminder ? (
               <span className="inline-flex items-center gap-1 rounded-sm bg-bg/60 px-1.5 py-0.5 text-xs">
                 <Bell className="size-3" aria-hidden />
@@ -145,7 +165,7 @@ export function NoteCard({ user, row, attachments, checklist, nextReminder, onOp
             />
           </label>
         ) : null}
-        {archived ? null : (
+        {archived || !owner ? null : (
           <Button
             variant="ghost"
             size="icon"
@@ -157,55 +177,61 @@ export function NoteCard({ user, row, attachments, checklist, nextReminder, onOp
             {pinned ? <PinOff aria-hidden /> : <Pin aria-hidden />}
           </Button>
         )}
-        <Popover
-          onOpenChange={(open) => {
-            if (open || color === null) return;
-            setColor(null);
-            if (color !== stored) void updateNote(user, row, "color", { color });
-          }}
-        >
-          <PopoverTrigger asChild>
+        {access === "view" ? null : (
+          <Popover
+            onOpenChange={(open) => {
+              if (open || color === null) return;
+              setColor(null);
+              if (color !== stored) void updateNote(user, row, "color", { color });
+            }}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("todo.card.color", { title: name })}
+                title={t("todo.card.colorShort")}
+              >
+                <Palette aria-hidden />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent sideOffset={4} className="w-[min(18rem,calc(100vw-2rem))] p-3">
+              <ColorPicker
+                name={`note-color-${String(row.id)}`}
+                legend={t("todo.editor.color")}
+                value={color ?? stored}
+                onChange={setColor}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+        {owner ? (
+          <>
             <Button
               variant="ghost"
               size="icon"
-              aria-label={t("todo.card.color", { title: name })}
-              title={t("todo.card.colorShort")}
+              aria-label={t(archived ? "todo.card.unarchive" : "todo.card.archive", { title: name })}
+              title={t(archived ? "todo.card.unarchiveShort" : "todo.card.archiveShort")}
+              onClick={() =>
+                void updateNote(user, row, archived ? "unarchive" : "archive", {
+                  archived_at: archived ? null : new Date().toISOString(),
+                })
+              }
             >
-              <Palette aria-hidden />
+              {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
             </Button>
-          </PopoverTrigger>
-          <PopoverContent sideOffset={4} className="w-[min(18rem,calc(100vw-2rem))] p-3">
-            <ColorPicker
-              name={`note-color-${String(row.id)}`}
-              legend={t("todo.editor.color")}
-              value={color ?? stored}
-              onChange={setColor}
-            />
-          </PopoverContent>
-        </Popover>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t(archived ? "todo.card.unarchive" : "todo.card.archive", { title: name })}
-          title={t(archived ? "todo.card.unarchiveShort" : "todo.card.archiveShort")}
-          onClick={() =>
-            void updateNote(user, row, archived ? "unarchive" : "archive", {
-              archived_at: archived ? null : new Date().toISOString(),
-            })
-          }
-        >
-          {archived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto"
-          aria-label={t("todo.card.delete", { title: name })}
-          title={t("todo.card.deleteShort")}
-          onClick={() => void deleteNote(user, row)}
-        >
-          <Trash2 aria-hidden />
-        </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto"
+              aria-label={t("todo.card.delete", { title: name })}
+              title={t("todo.card.deleteShort")}
+              onClick={() => void deleteNote(user, row)}
+            >
+              <Trash2 aria-hidden />
+            </Button>
+          </>
+        ) : null}
       </div>
     </article>
   );

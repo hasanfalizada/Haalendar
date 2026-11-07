@@ -41,7 +41,10 @@ function useText() {
     const text = (key: string) => (typeof p[key] === "string" ? p[key] : "");
     // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A shared board is named as a board (D-90).
     const kind = text("container_kind");
-    const container = t(`notifications.containers.${kind === "calendar" || kind === "board" ? kind : "other"}`);
+    // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). And a shared note as a note.
+    const container = t(
+      `notifications.containers.${kind === "calendar" || kind === "board" || kind === "note" ? kind : "other"}`,
+    );
     const name = text("container_name") || t("notifications.unnamed");
     const by = text("by_name") || t("notifications.someone");
     switch (item.kind) {

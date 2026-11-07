@@ -42,4 +42,5 @@ def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116: reminders on cards (0028).
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119: card assignees (0029).
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120: links (0030).
-    assert migration_head() == "0030"
+    # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F7): shared notes named in the notification (0031).
+    assert migration_head() == "0031"

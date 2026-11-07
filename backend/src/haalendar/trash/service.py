@@ -217,8 +217,10 @@ SOURCES: dict[str, TrashSource] = {
         kind="note",
         model=Item,
         title=lambda row: row.title or "",
-        may_restore=lambda user_id: _edit_access(Item),
-        refuse=lambda row, user_id: None,
+        # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). Like a board: only its owner restores a note
+        # (whether a shared note exists is the owner's, planning.service.NOTE_OWNER_FIELDS).
+        may_restore=lambda user_id: Item.owner_id == user_id,
+        refuse=lambda row, user_id: None if row.owner_id == user_id else "forbidden",
         # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. And its checklist items.
         children=(("attachment", Attachment), ("checklist_item", ChecklistItem)),
         scope=lambda: Item.kind == "note",

@@ -10,6 +10,9 @@
 // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Multi-select of the shown notes (FR-X-07, D-41) with
 // the bulk bar: colour, priority and delete for all of them as one action (components/shared/itemBulk); Ctrl/Cmd+A
 // selects every shown note, Esc clears; changing the tab or the filter clears the selection.
+// +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). Notes shared with the user (FR-ACC-10) in their own
+// section "Shared with me"; the bar offers only what every selected note allows (delete: own notes only; colour and
+// priority: own notes or an edit share).
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Archive, ListChecks, ListPlus, Plus } from "lucide-react";
@@ -26,7 +29,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PriorityFilter } from "@/components/ui/priority";
 import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
-import { type NotesTab, isNote, noteGroups, notePositions } from "@/lib/notes";
+import { type NoteAccess, type NotesTab, isNote, noteAccess, noteGroups, notePositions } from "@/lib/notes";
 import { atLabel, nextReminder } from "@/lib/reminders";
 import { useNow } from "@/lib/useNow";
 import { useDisplayTimeZone } from "@/lib/datetime";
@@ -72,6 +75,12 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
     queryFn: () => (user ? localRows(user, "reminder") : Promise.resolve([])),
     enabled: Boolean(user),
   });
+  const { data: shareRows = [] } = useQuery({
+    queryKey: [...localKeys.table("share"), user],
+    queryFn: () => (user ? localRows(user, "share") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
+  const accessOf = (row: Row): NoteAccess => noteAccess(row, user, shareRows);
   const attachments = useAttachmentCounts(user);
   const now = useNow();
   const viewerTz = useDisplayTimeZone();
@@ -80,9 +89,9 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
     const next = nextReminder(reminderRows, noteId, now);
     return next ? atLabel(next, viewerTz, timeFormat, now) : null;
   };
-  const groups = useMemo(() => noteGroups(rows, tab, priorities), [rows, tab, priorities]);
+  const groups = useMemo(() => noteGroups(rows, tab, priorities, user), [rows, tab, priorities, user]);
   const positions = useMemo(() => notePositions(rows), [rows]);
-  const shown = useMemo(() => [...groups.pinned, ...groups.others], [groups]);
+  const shown = useMemo(() => [...groups.pinned, ...groups.others, ...groups.shared], [groups]);
   const selection = useSelection(
     shown.map((row) => String(row.id)),
     { selectAllShortcut: true },
@@ -93,7 +102,12 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
   }, [tab, priorities, clearSelection]);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const selectedTargets = () => shown.filter((row) => selection.isSelected(String(row.id))).map((row) => ({ row }));
+  const selectedRows = shown.filter((row) => selection.isSelected(String(row.id)));
+  const selectedTargets = () => selectedRows.map((row) => ({ row }));
+  const bulkActions: BarAction[] = [
+    ...(selectedRows.every((row) => accessOf(row) !== "view") ? (["set_color", "set_priority"] as const) : []),
+    ...(selectedRows.every((row) => accessOf(row) === "owner") ? (["delete"] as const) : []),
+  ];
   async function bulk(action: BarAction, value?: Color | ItemPriority) {
     if (!user) return;
     if (action === "delete") {
@@ -131,7 +145,9 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
       replace: true,
     });
   };
-  const nothing = groups.pinned.length === 0 && groups.others.length === 0;
+  // "Others" gets its heading when another section is shown too.
+  const headed = groups.pinned.length > 0 || groups.shared.length > 0;
+  const nothing = groups.pinned.length === 0 && groups.others.length === 0 && groups.shared.length === 0;
   const filtered = priorities.length > 0;
 
   const grid = (notes: Row[]) => (
@@ -144,6 +160,7 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
             attachments={attachments.get(String(row.id)) ?? 0}
             checklist={row.is_checklist === true ? checklistOf(itemRows, String(row.id)) : null}
             nextReminder={reminderText(String(row.id))}
+            access={accessOf(row)}
             onOpen={() => {
               setEditing(row);
             }}
@@ -225,7 +242,7 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
         <BulkBar
           selection={selection}
           total={shown.length}
-          actions={["set_color", "set_priority", "delete"]}
+          actions={bulkActions}
           busy={busy}
           onAction={(action, value) => {
             void bulk(action, value);
@@ -262,16 +279,24 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
             ) : null}
             {groups.others.length > 0 ? (
               <section
-                aria-labelledby={groups.pinned.length > 0 ? "notes-others" : undefined}
-                aria-label={groups.pinned.length > 0 ? undefined : t(`todo.tabs.${tab}`)}
+                aria-labelledby={headed ? "notes-others" : undefined}
+                aria-label={headed ? undefined : t(`todo.tabs.${tab}`)}
                 className="flex flex-col gap-2"
               >
-                {groups.pinned.length > 0 ? (
+                {headed ? (
                   <h2 id="notes-others" className="text-xs font-semibold tracking-wide text-muted uppercase">
                     {t("todo.groups.others")}
                   </h2>
                 ) : null}
                 {grid(groups.others)}
+              </section>
+            ) : null}
+            {groups.shared.length > 0 ? (
+              <section aria-labelledby="notes-shared" className="flex flex-col gap-2">
+                <h2 id="notes-shared" className="text-xs font-semibold tracking-wide text-muted uppercase">
+                  {t("todo.groups.shared")}
+                </h2>
+                {grid(groups.shared)}
               </section>
             ) : null}
           </div>
@@ -317,6 +342,7 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
           note={editingRow}
           positions={positions}
           asList={editing === "list"}
+          access={editingRow ? accessOf(editingRow) : "owner"}
           onClose={() => {
             setEditing(null);
             if (focusNote) go({});

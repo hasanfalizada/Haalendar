@@ -1158,7 +1158,8 @@
     "containers": {
       "calendar": "calendar",
       "other": "item",
-      "board": "board"
+      "board": "board",
+      "note": "note"
     },
     "permissions": {
       "view": "can view",
@@ -1354,7 +1355,8 @@
     },
     "groups": {
       "pinned": "Pinned",
-      "others": "Others"
+      "others": "Others",
+      "shared": "Shared with me"
     },
     "empty": {
       "notesTitle": "Write your first note",
@@ -1380,7 +1382,9 @@
       "delete": "Delete {{title}}",
       "deleteShort": "Delete",
       "reminder": "Reminder:",
-      "select": "Select {{title}}"
+      "select": "Select {{title}}",
+      "sharedEdit": "Shared · can edit",
+      "sharedView": "Shared · can view"
     },
     "editor": {
       "newTitle": "New note",
@@ -1391,7 +1395,12 @@
       "save": "Save",
       "empty": "Write a title or some text to save the note.",
       "attachmentsLater": "Images can be added once the note is saved.",
-      "attachmentsSyncing": "Images can be added once the note has reached the server."
+      "attachmentsSyncing": "Images can be added once the note has reached the server.",
+      "share": "Share…",
+      "leave": "Leave",
+      "sharedEdit": "Shared by {{name}} · you can edit it",
+      "sharedView": "Shared by {{name}} · you can view it",
+      "shareSyncing": "Sharing is possible once the note has synced."
     },
     "done": {
       "created": "Created {{title}}",

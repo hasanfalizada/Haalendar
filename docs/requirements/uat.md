@@ -122,7 +122,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 
 | # | Scenario | Expected | Covers | Result | Note |
 |---|---|---|---|---|---|
-| UAT-70 | Share a calendar, a note and a board with the second account: view, then edit; revoke | The second account sees, edits only with edit right, loses access on revoke | FR-ACC-10, FR-ACC-07 | ❌ | calendar and board sharing (view / edit, revoke, leave, notification) ✅. F7 (major): notes cannot be shared (FR-ACC-10). F21 |
+| UAT-70 | Share a calendar, a note and a board with the second account: view, then edit; revoke | The second account sees, edits only with edit right, loses access on revoke | FR-ACC-10, FR-ACC-07 | ❌ | calendar and board sharing (view / edit, revoke, leave, notification) ✅. F7 (major): notes cannot be shared (FR-ACC-10); fixed and re-tested ✅ (shared to edit and to view, live edit, Leave). F21 |
 | UAT-71 | Laptop and phone open at the same time; change something on one | Appears on the other within seconds without reload | FR-X-18 | ✅ | live through Caddy in about 1 s, no reload |
 
 ### 4.7 Offline and installation
@@ -164,7 +164,7 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | F4 | UAT-20 | major | Month view: an event let go outside the grid landed on the nearest edge day | fix within HAAL-145 | fixed, re-tested ✅ |
 | F5 | UAT-15 | major | The event details popover was not kept inside a short window (1280×720, 1366×768): Edit and Delete ended below the screen | fix within HAAL-145 | fixed, re-tested ✅ |
 | F6 | UAT-52 | major | Bulk actions (FR-X-07): the calendar bar offers only "Move to next day", Delete deletes only the focused event, notes and cards have no multi-select | fix within HAAL-145 | fixed, re-tested ✅ |
-| F7 | UAT-70 | major | Notes cannot be shared (FR-ACC-10, D-30) | fix within HAAL-145 | open |
+| F7 | UAT-70 | major | Notes cannot be shared (FR-ACC-10, D-30) | fix within HAAL-145 | fixed, re-tested ✅ |
 | F8 | UAT-01 | minor | The setup password hint "Use at least 15 characters" is shown twice | HAAL-174 | open |
 | F9 | UAT-40 | minor | After adding a card with Enter the focus drops to the page | HAAL-174 | open |
 | F10 | UAT-06 | minor | A password reset does not lift the sign-in lockout; the admin has no Unlock | HAAL-174 | open |

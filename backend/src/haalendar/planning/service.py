@@ -264,6 +264,20 @@ async def _item(db: AsyncSession, item_id: uuid.UUID) -> Item:
     return item
 
 
+# +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). A shared note (FR-ACC-10): an edit share writes its
+# content (title, text, colour, priority, checklist, attachments), like the content of a shared board; where it lies in
+# the owner's notes (pinned, order, archive) and whether it exists (delete, restore) stay the owner's, like a board's
+# own fields.
+NOTE_OWNER_FIELDS = ("pinned", "position", "archived_at")
+
+
+def _note_owner_only(item: Item, user_id: uuid.UUID) -> None:
+    if item.kind == "note" and item.owner_id != user_id:
+        raise ProblemError(
+            403, ProblemCode.FORBIDDEN, "Only the owner can arrange, archive or delete this note"
+        )
+
+
 async def _writable(db: AsyncSession, user_id: uuid.UUID, kind: str, container_id: uuid.UUID) -> None:
     await require(db, user_id, "write_items", _container_kind(kind), container_id)
 
@@ -374,6 +388,8 @@ async def update_item(
 ) -> Outcome:
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
+    if any(name in NOTE_OWNER_FIELDS for name in new):
+        _note_owner_only(item, user_id)
     if item.deleted_at is not None:
         raise _deleted(current_state)
     event = await db.get(Event, item_id) if item.kind == "event" else None
@@ -504,6 +520,7 @@ async def delete_item(
 ) -> Outcome:
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
+    _note_owner_only(item, user_id)
     edited = item.deleted_at is None and base_version is not None and item.version != base_version
     if item.deleted_at is None:
         batch, now = new_batch(), datetime.now(UTC)
@@ -525,6 +542,7 @@ async def delete_item(
 async def restore_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> Outcome:
     item = await _item(db, item_id)
     await _writable(db, user_id, item.container_kind, item.container_id)
+    _note_owner_only(item, user_id)
     if item.deleted_at is not None and item.delete_batch_id is not None:
         await restore_batch(
             db, [Item, Attachment, ChecklistItem, ItemLabel, CardAssignee], item.delete_batch_id, user_id

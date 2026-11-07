@@ -64,6 +64,15 @@ NOTIFY_SHARE_FUNCTION_0025 = NOTIFY_SHARE_FUNCTION.replace(
     "    SELECT name INTO c_name FROM board WHERE id = NEW.container_id;\n  END IF;",
 )
 
+# +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7, migration 0031). A shared note is named by its title.
+NOTIFY_SHARE_FUNCTION_0031 = NOTIFY_SHARE_FUNCTION_0025.replace(
+    "    SELECT name INTO c_name FROM board WHERE id = NEW.container_id;\n  END IF;",
+    "    SELECT name INTO c_name FROM board WHERE id = NEW.container_id;\n"
+    "  ELSIF NEW.container_kind = 'note' THEN\n"
+    "    SELECT nullif(title, '') INTO c_name FROM item WHERE id = NEW.container_id AND kind = 'note';\n  END IF;",
+)
+assert NOTIFY_SHARE_FUNCTION_0031 != NOTIFY_SHARE_FUNCTION_0025
+
 ONLY_READ_STATE_FUNCTION = """
 CREATE OR REPLACE FUNCTION haalendar_notification_read_only() RETURNS trigger
 LANGUAGE plpgsql
