@@ -196,7 +196,7 @@ release tag. Its jobs call `scripts/dev/check-all.sh --only …`, so CI checks e
 | `workflow lint` | `workflows` |
 | `security (audit, secrets, licences)` | `audit`, `secrets` (the whole history), `licences` |
 | `backend (contract, lint, types, tests)` | `contract`, `backend` (with the atom registry, `backend/tests/test_manifest.py`) |
-| `frontend (lint, types, tests, build)` | `frontend`, `build`, `e2e-static` |
+| `frontend (lint, types, tests, build)` | `frontend`, `build`, `e2e-static` (log kept as an artifact for 7 days when it fails) |
 | `end-to-end` | `e2e` (report and logs kept as an artifact for 7 days when it fails) |
 | `image amd64`, `image arm64` | the image built on a native runner of each architecture, then `scripts/dev/compose-check.sh --no-build` |
 
@@ -244,6 +244,12 @@ scripts/dev/stack-down.sh   # stops everything and drops the database and the up
 ```
 
 The stack listens on `127.0.0.1` only; open it at `http://localhost:5173`. From another computer use an SSH tunnel (`ssh -N -L 5173:localhost:5173 <user>@<dev host>`, or the port forwarding of JetBrains Gateway) and open the same `localhost` address: plain `http` on a host name is not a secure context, and the app needs browser APIs that exist only there (`crypto.randomUUID`, service worker). Logs are in `.dev/` (git-ignored). The database starts empty: the app opens the first-administrator wizard.
+
+### Screenshots of the README
+
+<!-- +++===+++ 2026-11-08 — Hasan Alizada — HAAL-152. -->
+`scripts/dev/screenshots.sh` takes `docs/screenshots/*.png` again from the real app on the throw-away stack with made-up
+data (`e2e/screenshots`). Run it when a screen shown in the README changes, and look at the pictures before committing.
 
 ### Backend (from `backend/`)
 

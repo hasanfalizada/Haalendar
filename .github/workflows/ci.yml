@@ -104,7 +104,19 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
       - run: corepack enable && pnpm install --frozen-lockfile
-      - run: scripts/dev/check-all.sh --only frontend,build,e2e-static
+      # +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. The log stays readable without signing in to GitHub (the job's own
+      # log does not); shell: bash stops on a failure inside the pipe too (without it the step reports the exit code of tee).
+      - shell: bash
+        run: |
+          mkdir -p .dev
+          scripts/dev/check-all.sh --only frontend,build,e2e-static 2>&1 | tee .dev/frontend.log
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-log
+          include-hidden-files: true
+          path: .dev/frontend.log
+          retention-days: 7
 
   e2e:
     name: end-to-end
