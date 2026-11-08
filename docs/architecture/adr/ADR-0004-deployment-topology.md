@@ -69,7 +69,7 @@ Rules:
 - PostgreSQL 18 official image. **Volume mounted at `/var/lib/postgresql`** (changed in the 18 image; data lives in `/var/lib/postgresql/18/docker`, which also allows `pg_upgrade --link` to 19 later). Mounting the pre-18 path `/var/lib/postgresql/data` would not persist correctly.
 - External/managed PostgreSQL supported by setting `DATABASE_URL`; the bundled `db` service is then disabled.
 - Required extensions only from core PostgreSQL (e.g. `pg_trgm`, `unaccent` for search) — no third-party extensions, so any managed PostgreSQL works.
-- Backup: `pg_dump` custom format via documented command/script + attachments volume copy (HAAL-155); restore tested in CI.
+- Backup: `pg_dump` custom format + copy of the `data` volume + `.env`, by `scripts/backup.sh` and `scripts/restore.sh` (HAAL-155, D-102); restore tested in CI by `scripts/dev/compose-check.sh`.
 
 ## 5. Attachment storage
 | Option | Pros | Cons |

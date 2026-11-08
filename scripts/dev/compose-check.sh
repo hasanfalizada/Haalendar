@@ -4,6 +4,7 @@
 # only, random secrets, the setup token required), runs the whole end-to-end suite against the app (desktop and
 # offline), stops and starts the stack to see the data survive, checks HTTPS through Caddy, then removes the project
 # with its volumes. Throw-away data only.
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. Backup and restore too (scripts/backup.sh, scripts/restore.sh).
 # Usage: scripts/dev/compose-check.sh [--no-build]   (exit code 0 only when every step passes)
 set -uo pipefail
 BUILD=1
@@ -29,6 +30,8 @@ check() {
 }
 dc() { docker compose -p "$PROJECT" --project-directory "$DIR" --profile proxy "$@"; }
 cleanup() {
+  # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. The backup check removes .env; Compose needs it to find the project.
+  [ -f "$DIR/.env" ] || [ ! -f "$DIR/env.kept" ] || cp "$DIR/env.kept" "$DIR/.env"
   dc down -v --remove-orphans >/dev/null 2>&1
   # physical-delete-allowed: throw-away installation of this check (copied files, generated secrets) — no user content
   rm -rf "$DIR"
@@ -107,6 +110,104 @@ https_headers() {
 check "HTTPS through Caddy: HTTP/2, CSP, HSTS, no Server header" https_headers
 check "HTTPS through Caddy: API ready" sh -c "curl -ksSf $HTTPS/api/v1/health/ready | grep -q '\"status\":\"ready\"'"
 check "HTTP redirects to HTTPS" sh -c "curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' http://localhost:18088/ | grep -q '^30[18] https://localhost/'"
+
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. Backup and restore as the guide tells: the data the suite left, a backup
+# of the running installation, the volumes and .env gone as on a lost server, a restore, and everything back: rows,
+# files, the key that decrypts secrets in the database (2FA uses the same key), signing in. Plus what must be refused.
+echo "== backup and restore"
+cp "$ROOT/scripts/backup.sh" "$ROOT/scripts/restore.sh" "$DIR/"
+cp "$DIR/.env" "$DIR/env.kept"
+inst() { env -C "$DIR" COMPOSE_PROJECT_NAME="$PROJECT" "$@"; }
+rows() {
+  dc exec -T db psql -U haalendar -d haalendar -Atc "SELECT (SELECT count(*) FROM user_account), (SELECT count(*) FROM item), \
+    (SELECT count(*) FROM attachment), (SELECT count(*) FROM board), (SELECT max(id::text) FROM item), (SELECT version_num FROM alembic_version)"
+}
+files() { dc run --rm --no-deps -T app sh -c 'cd /data && find . -type f -exec sha256sum {} + | sort'; }
+push_key() {
+  dc run --rm --no-deps -T app python - <<'PY' | sed -n 's/^KEY=//p'
+import asyncio
+
+from haalendar.config import load_settings
+from haalendar.db import create_engine, create_session_factory
+from haalendar.push.service import keys
+
+
+async def main() -> None:
+    settings = load_settings()
+    async with create_session_factory(create_engine(settings))() as db:
+        public, _private = await keys(db, settings)
+        await db.commit()
+    print(f"KEY={public}")
+
+
+asyncio.run(main())
+PY
+}
+# The suite uploads nothing, so an attachment is added here. Through HTTPS: the session cookie is Secure.
+JAR="$DIR/cookies"
+ATTACHMENT=""
+upload() {
+  local csrf item answer
+  local login='{"email":"admin@example.com","password":"quiet-mountain-river-42"}' # gitleaks:allow — e2e/users.ts
+  csrf=$(curl -ksSf -c "$JAR" -H 'Content-Type: application/json' -H "Origin: $HTTPS" "$HTTPS/api/v1/auth/login" \
+    -d "$login" | python3 -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])') || return 1
+  item=$(dc exec -T db psql -U haalendar -d haalendar -Atc "SELECT id FROM item WHERE deleted_at IS NULL LIMIT 1")
+  answer=$(curl -ksSf -b "$JAR" -H "Origin: $HTTPS" -H "X-CSRF-Token: $csrf" -H 'Content-Type: image/png' -H 'X-File-Name: probe.png' \
+    --data-binary @"$ROOT/branding/icon-192.png" "$HTTPS/api/v1/items/$item/attachments") || return 1
+  ATTACHMENT=$(echo "$answer" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+}
+check "an attachment to back up" upload
+download() { curl -ksSf -b "$JAR" "$HTTPS/api/v1/attachments/$ATTACHMENT" | sha256sum; }
+ROWS=$(rows); FILES=$(files); KEY=$(push_key); PICTURE=$(download)
+has_data() {
+  local failed=0
+  [ -n "$KEY" ] || { echo "   no Web Push key"; failed=1; }
+  echo "$ROWS" | awk -F'|' '{exit !($1 > 0 && $2 > 0 && $3 > 0)}' || { echo "   rows: $ROWS"; failed=1; }
+  echo "$FILES" | grep -q '[0-9a-f]\{64\}' || { echo "   no files"; failed=1; }
+  # The hash of nothing: a failed download would otherwise equal a failed download after the restore.
+  case "$PICTURE" in "" | e3b0c44298fc*) echo "   the attachment did not download"; failed=1 ;; esac
+  return "$failed"
+}
+check "there is data to back up (users, items, attachments, files, the Web Push key)" has_data
+same() { [ "$1" = "$2" ] || { echo "   before: $1"; echo "   after:  $2"; return 1; }; }
+newest() { find "$DIR/backups" -mindepth 1 -maxdepth 1 -type d -name 'haalendar-*' | sort | tail -1; }
+check "backup of the running installation" inst ./backup.sh
+BACKUP=$(newest)
+check "the backup is private" sh -c "[ \"\$(stat -c %a '$BACKUP')\" = 700 ] && [ \"\$(stat -c %a '$BACKUP/env')\" = 600 ]"
+kept() {
+  sleep 1 && inst ./backup.sh >/dev/null && sleep 1 && inst env HAALENDAR_BACKUP_KEEP=2 ./backup.sh >/dev/null &&
+    [ "$(find "$DIR/backups" -mindepth 1 -maxdepth 1 -type d | wc -l)" = 2 ]
+}
+check "only the newest backups are kept" kept
+BACKUP=$(newest)
+refused() { if inst "$@" >/dev/null 2>&1 </dev/null; then echo "   not refused: $*"; return 1; fi; }
+check "restore asks first" refused ./restore.sh "$BACKUP"
+cp -r "$BACKUP" "$DIR/damaged"
+echo x >>"$DIR/damaged/files.tar"
+check "a damaged backup is refused" refused ./restore.sh "$DIR/damaged" --yes
+sed -i 's/^HAALENDAR_SECRET_KEY=.*/HAALENDAR_SECRET_KEY=another/' "$DIR/.env"
+check "another secret key is refused" refused ./restore.sh "$BACKUP" --yes
+cp "$DIR/env.kept" "$DIR/.env"
+sed -i 's|^HAALENDAR_PUBLIC_URL=.*|HAALENDAR_PUBLIC_URL=http://not-https|' "$DIR/.env"
+check "settings the app would refuse are refused first" refused ./restore.sh "$BACKUP" --yes
+cp "$DIR/env.kept" "$DIR/.env"
+check "what was refused changed nothing" ready
+check "what was refused changed no rows" same "$ROWS" "$(rows)"
+dc down -v --remove-orphans >/dev/null 2>&1
+rm -f "$DIR/.env" # physical-delete-allowed: throw-away installation, as if the server was lost
+check "restore on an empty installation, .env from the backup" inst ./restore.sh "$BACKUP" --yes
+check "healthy after the restore" healthy
+check "ready after the restore, row-level security enforced" ready
+check "the same rows" same "$ROWS" "$(rows)"
+check "the same files" same "$FILES" "$(files)"
+check "the secrets in the database still decrypt" same "$KEY" "$(push_key)"
+dc up -d >/dev/null 2>&1
+check "healthy with the proxy" healthy
+https_ready() { curl -ksSf "$HTTPS/api/v1/health/ready" 2>/dev/null | grep -q '"status":"ready"'; }
+for _ in $(seq 1 20); do https_ready && break; sleep 2; done
+check "the attachment downloads as before, the session still valid" same "$PICTURE" "$(download)"
+check "signing in after the restore" env -C "$ROOT/e2e" E2E_BASE_URL="$APP" E2E_OFFLINE_URL="$APP" \
+  npx playwright test tests/auth.spec.ts --project=desktop --reporter=dot
 
 if [ ${#FAILED[@]} -eq 0 ]; then echo "compose check: all passed"; exit 0; fi
 printf 'compose check FAILED: %s\n' "${FAILED[@]}"

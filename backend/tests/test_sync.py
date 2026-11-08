@@ -7,6 +7,8 @@ field-level conflicts and merges, rights, validation). Marker `db`.
 
 from __future__ import annotations
 
+import base64
+import json
 import uuid
 from typing import Any
 
@@ -174,6 +176,17 @@ def test_soft_deletes_travel_and_strangers_see_nothing(people: People, clean_db:
 def test_a_bad_cursor_starts_over(people: People) -> None:
     people.as_("ada")
     response = people.api.get("/api/v1/sync/pull", params={"since": "not-a-cursor"})
+    assert response.status_code == 410 and response.json()["code"] == "cursor_invalid"
+
+
+def test_a_cursor_of_another_database_starts_over(people: People) -> None:
+    """After a restore the numbers are lower than a device has seen: its old cursor must not be used (HAAL-155)."""
+    people.as_("ada")
+    raw = json.loads(base64.urlsafe_b64decode(_pull(people.api)["cursor"] + "=="))
+    assert raw["v"] == 2 and raw["e"]
+    other = {**raw, "e": "another-database"}
+    cursor = base64.urlsafe_b64encode(json.dumps(other).encode()).decode().rstrip("=")
+    response = people.api.get("/api/v1/sync/pull", params={"since": cursor})
     assert response.status_code == 410 and response.json()["code"] == "cursor_invalid"
 
 

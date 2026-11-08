@@ -49,3 +49,6 @@ frontend/src/api/generated/
 
 # Throw-away dev stack (scripts/dev/stack-up.sh): logs, uploads, mail
 .dev/
+
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. Backups of an installation in a clone: passwords and all user data.
+/backups/

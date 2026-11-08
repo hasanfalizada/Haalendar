@@ -188,8 +188,17 @@ def _upsert(entity: str, row_id: uuid.UUID, data: dict[str, Any]) -> Change:
     return Change(entity, row_id, "upsert", int(data.get("version", 0)), data)
 
 
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. Which database this is: its cluster and its own number. Any restore
+# (a dropped and created database, or a new cluster) changes it, whatever tool did the restore.
+DATABASE_EPOCH = text(
+    "SELECT (pg_control_system()).system_identifier::text || '-' || oid::text "
+    "FROM pg_database WHERE datname = current_database()"
+)
+
+
 async def pull(db: AsyncSession, user_id: uuid.UUID, since: str | None, limit: int) -> PullResult:
-    start = decode(since)
+    epoch = str((await db.execute(DATABASE_EPOCH)).scalar_one())
+    start = decode(since, epoch)
     limit = max(1, min(limit, MAX_LIMIT))
     rows = (
         await db.execute(
@@ -233,7 +242,7 @@ async def pull(db: AsyncSession, user_id: uuid.UUID, since: str | None, limit: i
                         sent.add((e, i))
                         changes.append(_upsert(e, i, d))
 
-    next_cursor = encode(Cursor(seq=last_seq, xip=snapshot_xip))
+    next_cursor = encode(Cursor(seq=last_seq, xip=snapshot_xip), epoch)
     log.info(
         "sync_pull",
         user_id=str(user_id),

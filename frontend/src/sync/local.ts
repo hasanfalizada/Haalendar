@@ -94,3 +94,19 @@ export async function applyServerChanges(db: LocalDb, changes: Change[]): Promis
     for (const entry of waiting) await applyLocal(db, entry);
   });
 }
+
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. After a full sync caused by a server restored from a backup: rows the
+// server no longer has leave the device, except what is still waiting to be sent. `seen` holds "<entity type>:<id>" of
+// every row of the full sync. Settings have one row per user, which a new full sync replaces anyway.
+export async function removeRowsNotOnServer(db: LocalDb, seen: ReadonlySet<string>): Promise<void> {
+  await db.transaction("rw", [...db.entityTables(), db.outbox], async () => {
+    const waiting = new Set((await db.outbox.toArray()).map((entry) => entry.entity_id));
+    for (const [entity, name] of Object.entries(ENTITY_TABLE)) {
+      if (name === "settings") continue;
+      const table = db[name];
+      const ids = await table.toCollection().primaryKeys();
+      const gone = ids.filter((id) => !seen.has(`${entity}:${id}`) && !waiting.has(id));
+      await table.bulkDelete(gone);
+    }
+  });
+}

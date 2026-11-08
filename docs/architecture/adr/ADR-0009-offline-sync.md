@@ -57,6 +57,7 @@
 - **No change may ever be skipped.** A bare "highest number seen" cursor is not enough: a slow transaction can take a lower number and commit after a row with a higher number has already been handed out. Every syncable row therefore also stores the id of the transaction that wrote it (`sync_xid`, `pg_current_xact_id()`, set by the same trigger). The cursor holds the highest `sync_seq` handed out plus the list of transactions still in progress at that moment (from `pg_current_snapshot()`). The next pull returns rows with `sync_seq` above the cursor **or** written by one of those listed transactions. A slow transaction is thus picked up once it commits, whatever its numbers. HAAL-053 tests this with deliberately interleaved transactions.
 - The cursor is opaque to the client: base64url-encoded, with a format version. An unknown or too-old cursor means 410: start over.
 - The first sync is the same call without a cursor, paged.
+- <!-- +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. --> The cursor names the database that issued it (cluster identifier and database number). A database restored from a backup has lower numbers than a device has seen, so its cursor is answered with 410. After such a full sync the client removes local rows the server did not send, except what still waits in the outbox; an interrupted one starts again and removes nothing.
 
 ### Server — push (queued mutations)
 - `POST /sync/push` takes up to 500 `Mutation`s in client order. Each carries:

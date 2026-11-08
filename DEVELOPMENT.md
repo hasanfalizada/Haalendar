@@ -172,7 +172,7 @@ pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnp
 pnpm security:licences  # every dependency under a licence the policy allows (backend/licence-policy.json)
 scripts/dev/secrets-scan.sh  # gitleaks over the git history and the working tree (Docker)
 scripts/dev/dast.sh          # OWASP ZAP scan of the API on its own throw-away stack (Docker, 10–30 min; reports in .dev/dast/)
-scripts/dev/compose-check.sh # the production installation (compose.yaml, image built here) end to end: E2E, restart, HTTPS via Caddy (~5 min)
+scripts/dev/compose-check.sh # the production installation (compose.yaml, image built here) end to end: E2E, restart, backup and restore, HTTPS via Caddy (~5 min)
 ```
 
 Or the whole set in one run, including the contract lint, the database tests on a throw-away PostgreSQL 18 (port 55433) and the production build — read-only, exit code 0 only when every step passes:

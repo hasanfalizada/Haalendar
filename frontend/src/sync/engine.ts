@@ -17,7 +17,7 @@ import { describeError, log } from "@/lib/log";
 import { notify } from "@/lib/notify";
 
 import { ENTITY_TABLE, type LocalDb, type OutboxEntry, localDb } from "./db";
-import { applyServerChanges } from "./local";
+import { applyServerChanges, removeRowsNotOnServer } from "./local";
 
 export type SyncState = "idle" | "syncing" | "offline" | "error" | "paused";
 
@@ -46,6 +46,7 @@ type Outcome<T> =
 const BATCH = 500;
 const PAGE = 500;
 const MAX_PAGES = 100;
+const FULL_SYNC_KEY = "fullSync";
 const TICK_MS = 60_000;
 const DEBOUNCE_MS = 400;
 const STREAM_URL = "/api/v1/stream";
@@ -423,26 +424,41 @@ export class SyncEngine {
   }
 
   private async pull(db: LocalDb): Promise<"ok" | "network" | "auth" | "error"> {
-    let cursor = (await db.meta.get("cursor"))?.value as string | undefined;
+    // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. 410 (for example the server was restored from a backup): a full
+    // sync, then the rows the server no longer has leave the device. Remembered until it completes: an interrupted one
+    // starts again, since `seen` has to cover the whole sync.
+    let fullSync = (await db.meta.get(FULL_SYNC_KEY))?.value === true;
+    let cursor = fullSync ? undefined : ((await db.meta.get("cursor"))?.value as string | undefined);
+    const seen = new Set<string>();
     let changed = false;
-    for (let page = 0; page < MAX_PAGES; page += 1) {
+    for (let page = 0; fullSync || page < MAX_PAGES; page += 1) {
       const outcome = await call(() => syncPull({ query: { limit: PAGE, ...(cursor ? { since: cursor } : {}) } }));
       if (outcome.kind === "gone") {
         log.warn("sync_cursor_reset");
+        await db.meta.put({ key: FULL_SYNC_KEY, value: true });
         await db.meta.delete("cursor");
+        fullSync = true;
         cursor = undefined;
         continue;
       }
       if (outcome.kind !== "ok") return outcome.kind;
       if (this.stopped) break;
       const body = outcome.value;
+      if (fullSync) for (const change of body.changes) seen.add(`${change.entity_type}:${change.entity_id}`);
       if (body.changes.length > 0) {
         await applyServerChanges(db, body.changes);
         changed = true;
       }
       cursor = body.cursor;
       await db.meta.put({ key: "cursor", value: cursor });
-      if (!body.has_more) break;
+      if (!body.has_more) {
+        if (fullSync) {
+          await removeRowsNotOnServer(db, seen);
+          await db.meta.delete(FULL_SYNC_KEY);
+          changed = true;
+        }
+        break;
+      }
     }
     if (changed && !this.stopped) {
       this.onChanged();

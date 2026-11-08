@@ -17,7 +17,7 @@ import { listLocalNotifications } from "@/lib/localNotifications";
 import { forgetProfile, rememberProfile } from "@/lib/profileCache";
 import { mutate, prepareSignOut, startSync, syncStatus } from "@/sync";
 import { dbName, localDb } from "@/sync/db";
-import { applyServerChanges } from "@/sync/local";
+import { applyServerChanges, removeRowsNotOnServer } from "@/sync/local";
 import { enqueue } from "@/sync/outbox";
 
 import { type Call, json, me, noContent, problem, renderApp, stubApi } from "./fake-api";
@@ -273,6 +273,87 @@ describe("sync engine", () => {
     await waitFor(() => {
       expect(syncStatus().state).toBe("paused");
     });
+  });
+
+  // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. The server was restored from a backup.
+  it("after 410 removes the rows the server no longer has", async () => {
+    setOnline(true);
+    const db = await localDb(USER);
+    await db.meta.put({ key: "cursor", value: "old" });
+    await db.items.bulkPut([{ id: "on-server" }, { id: "after-the-backup" }]);
+    stubApi({
+      "GET /sync/pull": (call) =>
+        call.path.includes("since=old")
+          ? problem(410, "cursor_invalid")
+          : json({
+              changes: [
+                { entity_type: "item", entity_id: "on-server", op: "upsert", version: 1, data: { id: "on-server" } },
+              ],
+              cursor: "fresh",
+              has_more: false,
+            }),
+    });
+    startSync(USER, engineClient());
+    await waitFor(async () => {
+      expect((await db.meta.get("cursor"))?.value).toBe("fresh");
+      expect((await db.items.toArray()).map((row) => row.id)).toEqual(["on-server"]);
+    });
+    expect(await db.meta.get("fullSync")).toBeUndefined();
+  });
+
+  it("a full sync cut short removes nothing and starts again", async () => {
+    setOnline(true);
+    const db = await localDb(USER);
+    await db.meta.put({ key: "cursor", value: "old" });
+    await db.items.bulkPut([{ id: "second-page" }]);
+    const pages = (call: Call) =>
+      call.path.includes("since=page")
+        ? problem(500, "internal_error")
+        : json({ changes: [], cursor: "page", has_more: true });
+    stubApi({
+      "GET /sync/pull": (call) => (call.path.includes("since=old") ? problem(410, "cursor_invalid") : pages(call)),
+    });
+    startSync(USER, engineClient());
+    await waitFor(async () => {
+      expect((await db.meta.get("cursor"))?.value).toBe("page");
+      expect(syncStatus().state).toBe("error");
+    });
+    expect(await db.items.count()).toBe(1);
+    expect((await db.meta.get("fullSync"))?.value).toBe(true);
+
+    const second = stubApi({
+      "GET /sync/pull": () =>
+        json({
+          changes: [
+            { entity_type: "item", entity_id: "second-page", op: "upsert", version: 1, data: { id: "second-page" } },
+          ],
+          cursor: "fresh",
+          has_more: false,
+        }),
+    });
+    startSync(USER, engineClient());
+    await waitFor(async () => {
+      expect((await db.meta.get("cursor"))?.value).toBe("fresh");
+    });
+    expect(second.find((c) => c.path.startsWith("/sync/pull"))?.path).toBe("/sync/pull?limit=500");
+    expect(await db.items.count()).toBe(1);
+  });
+
+  it("keeps a row still waiting to be sent when the server no longer has it", async () => {
+    const db = await localDb(USER);
+    await db.items.bulkPut([{ id: "waiting" }, { id: "gone" }]);
+    await db.outbox.add({
+      mutation_id: "m1",
+      entity_type: "item",
+      entity_id: "waiting",
+      op: "update",
+      base_version: 1,
+      base: {},
+      data: { title: "Mine" },
+      state: "pending",
+    } as never);
+    await removeRowsNotOnServer(db, new Set());
+    expect((await db.items.toArray()).map((row) => row.id)).toEqual(["waiting"]);
   });
 
   it("says a change made offline is kept on this device and announces it when it arrives", async () => {

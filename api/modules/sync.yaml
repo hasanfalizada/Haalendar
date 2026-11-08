@@ -29,7 +29,7 @@ paths:
                   cursor: { type: string }
                   has_more: { type: boolean }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
-        '410': { description: 'Cursor unknown or too old: start over with a full sync', content: { application/problem+json: { schema: { $ref: '../components/common.yaml#/components/schemas/Problem' } } } }
+        '410': { description: 'Cursor unknown, too old or of another database (restored from a backup): start over with a full sync', content: { application/problem+json: { schema: { $ref: '../components/common.yaml#/components/schemas/Problem' } } } }
   sync_push:
     post:
       tags: [sync]

@@ -70,8 +70,11 @@ mkdir haalendar && cd haalendar
 BASE=https://raw.githubusercontent.com/hasanfalizada/Haalendar/v1.0.0
 curl -fsSLO "$BASE/compose.yaml"
 curl -fsSLO "$BASE/Caddyfile"
+curl -fsSLO "$BASE/scripts/backup.sh"
+curl -fsSLO "$BASE/scripts/restore.sh"
 curl -fsSL "$BASE/.env.production.example" -o .env
 chmod 600 .env
+chmod +x backup.sh restore.sh
 
 sed -i \
   -e "s|^HAALENDAR_IMAGE=.*|HAALENDAR_IMAGE=ghcr.io/hasanfalizada/haalendar:1.0.0|" \
@@ -106,13 +109,25 @@ Everything is set in `.env`; [`.env.production.example`](.env.production.example
 
 ## Backup
 
-The commands for backing up and restoring the database and the attachments are being finished for version 1.0 and will be
-in the [installation guide](docs/operations/deployment.md). All data lives in two Docker volumes, `pgdata` (the database)
-and `data` (uploaded files and exports).
+`./backup.sh` copies the database, the uploaded files and `.env` into `backups/` while the app keeps running. To run it
+every night and keep the newest 14, add this line with `crontab -e`:
+
+```text
+0 3 * * * cd /opt/haalendar && ./backup.sh
+```
+
+To restore, also on a new server with just `compose.yaml`, `Caddyfile` and `restore.sh` in place:
+
+```bash
+./restore.sh backups/haalendar-20270101T030000Z
+```
+
+**Backups stay on this server until you copy them elsewhere**, and they hold passwords and all user data, so encrypt them
+there. Details are in the [installation guide](docs/operations/deployment.md#5-back-up-and-restore).
 
 ## Upgrade
 
-Back up first, set `HAALENDAR_IMAGE` in `.env` to the new version, then:
+Run `./backup.sh`, set `HAALENDAR_IMAGE` in `.env` to the new version, then:
 
 ```bash
 docker compose --profile proxy pull
