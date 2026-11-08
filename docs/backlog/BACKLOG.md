@@ -17,7 +17,7 @@
 
 | Due | What | Where it is enforced |
 |---|---|---|
-| 2026-11-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
+| 2026-12-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build; reviewed 2026-11-08, still no fix, extended): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 
 ## Open tasks
 
@@ -35,7 +35,7 @@
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
-| HAAL-151 | E11 Delivery | CI/CD GitHub Actions: lint, tests, build, SBOM, license check, image publish on tag (x86_64 + arm64; the arm64 image is built and checked here, owner decision in HAAL-150) | Must | 006, 140 | — | To do | — | owner backlog file |
+| HAAL-151 | E11 Delivery | CI/CD GitHub Actions: lint, tests, build, SBOM, license check, image publish on tag (x86_64 + arm64; the arm64 image is built and checked here, owner decision in HAAL-150) | Must | 006, 140 | — | In progress | — | owner backlog file |
 | HAAL-152 | E11 Delivery | README in English: features, screenshots, quick start, config, backup, upgrade, legacy migration, demo link | Must | 150 | — | To do | — | owner backlog file |
 | HAAL-153 | E11 Delivery | Public user and admin guides in code repo; API docs from OpenAPI | Should | 015 | — | To do | — | owner backlog file |
 | HAAL-154 | E11 Delivery | Demo stand: demo mode, seeded demo accounts, full reset every 30 min, reset banner, strict upload limits; then the full DAST of the app on the demo stand (web pages with their headers, HTTPS; `scripts/dev/dast.sh` scans the API only — owner, 2026-11-01, HAAL-144) | Must | 150 | — | To do | — | owner backlog file |

@@ -16,7 +16,7 @@ Instructions Section V require an LLM-native atomic architecture: atoms with JSO
 - **Atom id**: `<domain>.<name>.v<major>`.
 - **Atom folder** `atoms/<id>/`: `contract.json` (input/output JSON Schema, errors, events, invariants, requirements), `vectors.json` (language-neutral test cases), `examples.md`. Template in `atoms/_template/`.
 - **Implementations** live in the application packages (`backend/src/haalendar/atoms/...`, `frontend/src/atoms/...`), referenced from the manifest — keeps standard Python/TS packaging and tooling.
-- **Hash** = BLAKE3 over `contract.json` + `vectors.json` with LF line endings (`.gitattributes` guarantees LF in the repository). CI (HAAL-151) will verify hashes, schema validity, vectors against contract schemas, and the import ban between atom implementations.
+- **Hash** = BLAKE3 over `contract.json` + `vectors.json` with LF line endings (`.gitattributes` guarantees LF in the repository). CI (HAAL-151) verifies hashes, schema validity, vectors against contract schemas, and the import ban between atom implementations (`backend/tests/test_manifest.py`, in the backend job).
 
 ## Deviation from instructions
 - Instruction: `impl_ref` points to "the only implementation".

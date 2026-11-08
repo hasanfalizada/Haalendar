@@ -105,4 +105,4 @@ MIT):
 ## 8. Related tasks
 
 HAAL-141 legacy regression (E2E per F-xx), HAAL-142 offline and sync, HAAL-143 accessibility and performance, HAAL-144
-security testing, HAAL-151 CI (the same commands as `check-all.sh`).
+security testing, HAAL-151 CI (`.github/workflows/ci.yml` runs `check-all.sh --only …`, and `compose-check.sh` on x86_64 and arm64).

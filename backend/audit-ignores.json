@@ -6,11 +6,11 @@
       "package": "deepmerge",
       "version": "4.3.1",
       "fixed_in": "none published yet",
-      "expires": "2026-11-11",
+      "expires": "2026-12-11",
       "ids": [
         "GHSA-gcqx-w48m-w2h4"
       ],
-      "reason": "No fixed version exists (all of >=4.2.0 <=4.3.1 is affected; 4.3.1 of 2023-03-16 is the latest). Build time only: vite-plugin-pwa > workbox-build > @rollup/plugin-node-resolve merges our own build options with it; it never reaches the browser bundle or the server, and no untrusted input is merged. Added 2026-10-28 (owner decision, option A); on expiry upgrade or replace the parent if a fix exists, otherwise review and extend."
+      "reason": "No fixed version exists (all of >=4.2.0 <=4.3.1 is affected; 4.3.1 of 2023-03-16 is the latest). Build time only: vite-plugin-pwa > workbox-build > @rollup/plugin-node-resolve merges our own build options with it; it never reaches the browser bundle or the server, and no untrusted input is merged. Added 2026-10-28 (owner decision, option A); on expiry upgrade or replace the parent if a fix exists, otherwise review and extend. Reviewed 2026-11-08 on the deadline (owner, option A): still no fix (advisory updated 2026-10-27, deepmerge latest 4.3.1); @rollup/plugin-node-resolve 16.0.3 (the latest, required by workbox-build 7.4.1, the latest) still depends on it; no drop-in replacement with the same API, so the use is unchanged and the exception is extended by a month."
     }
   ]
 }

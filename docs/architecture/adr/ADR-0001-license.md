@@ -29,6 +29,6 @@ Monetisation through services around the product: paid support, installation, ho
 
 ## Consequences
 - Files in code repository root: LICENSE (verbatim official text, SHA-256 `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`), NOTICE, CONTRIBUTING.md, CODE_OF_CONDUCT.md (Contributor Covenant 3.0), SECURITY.md.
-- All dependencies must have licences compatible with Apache-2.0; CI licence check blocks incompatible (e.g. GPL/AGPL) runtime dependencies (HAAL-151).
+- All dependencies must have licences compatible with Apache-2.0; CI licence check blocks incompatible (e.g. GPL/AGPL) runtime dependencies (HAAL-151: `pnpm security:licences` in the CI job `security`).
 - Third-party attributions required by dependencies are appended to NOTICE.
 - Relicensing the whole project later is not possible for code contributed by others without their consent; the owner can still build proprietary add-ons on top.

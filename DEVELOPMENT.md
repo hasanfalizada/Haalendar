@@ -4,7 +4,7 @@
 
 How to set up, run and test Haalendar locally, and how the environments differ.
 
-> **Status (rewrite in progress):** backend, API contract and web app exist. Production runs on Docker Compose (`compose.yaml`, [installation guide](docs/operations/deployment.md)); release images in a registry and arm64 builds come with CI (HAAL-151), the demo stand with HAAL-154.
+> **Status (rewrite in progress):** backend, API contract and web app exist. Production runs on Docker Compose (`compose.yaml`, [installation guide](docs/operations/deployment.md)); CI on GitHub Actions checks every push and pull request and publishes the release images for x86_64 and arm64 (`ghcr.io/hasanfalizada/haalendar`, [CI](#ci-github-actions)); the demo stand comes with HAAL-154.
 
 ## Contents
 1. [Prerequisites](#1-prerequisites)
@@ -181,6 +181,46 @@ Or the whole set in one run, including the contract lint, the database tests on 
 scripts/dev/check-all.sh          # add --e2e to run the end-to-end tests too (starts and stops the throw-away stack)
 ```
 
+<!-- +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. Steps by name, the workflow lint, CI. -->
+Single steps with `--only <step>[,<step>…]` (steps: `contract`, `backend`, `audit`, `secrets`, `licences`, `workflows`,
+`frontend`, `build`, `e2e-static`, `e2e`), e.g. `scripts/dev/check-all.sh --only backend`. The step `workflows` checks
+the GitHub Actions files with actionlint and zizmor (Docker).
+
+### CI (GitHub Actions)
+
+`.github/workflows/ci.yml` runs on every push to `revamp`, `development` and `master`, on every pull request and on a
+release tag. Its jobs call `scripts/dev/check-all.sh --only …`, so CI checks exactly what the script checks here:
+
+| Job | Steps |
+|---|---|
+| `workflow lint` | `workflows` |
+| `security (audit, secrets, licences)` | `audit`, `secrets` (the whole history), `licences` |
+| `backend (contract, lint, types, tests)` | `contract`, `backend` (with the atom registry, `backend/tests/test_manifest.py`) |
+| `frontend (lint, types, tests, build)` | `frontend`, `build`, `e2e-static` |
+| `end-to-end` | `e2e` (report and logs kept as an artifact for 7 days when it fails) |
+| `image amd64`, `image arm64` | the image built on a native runner of each architecture, then `scripts/dev/compose-check.sh --no-build` |
+
+- **Release:** a tag `vX.Y.Z` publishes the image, once every job above passed, to `ghcr.io/hasanfalizada/haalendar`
+  as one multi-architecture image (linux/amd64, linux/arm64) tagged `X.Y.Z`, `X.Y`, `X` and `latest` (a pre-release
+  `vX.Y.Z-rc.1` only its own tag). The image carries its SBOM (SPDX) and its provenance as attestations; both are
+  also kept as the run's artifact `sbom`. A provenance signed through Sigstore (`actions/attest-build-provenance`)
+  lets anyone verify that this workflow built the image (`gh attestation verify`, see the installation guide). Nothing is deployed: each user installs the image
+  ([installation guide](docs/operations/deployment.md)).
+- **Weekly** (Monday) the security job runs again, for advisories published after the last push.
+- **By hand** (Actions → CI → Run workflow) with "Publish the image as …:ci-test" a test of the publishing; delete
+  that package version afterwards (the package's settings on GitHub).
+- GitHub takes the schedule and the Run workflow button only from the default branch (`master`), as it does the
+  Dependabot file: both start once `revamp` is merged there (v1.0). Until then a pre-release tag such as
+  `v0.0.0-ci.1` on `revamp` tests the publishing (it gets only its own image tag; delete the tag and the package
+  version afterwards).
+- **Supply chain:** actions pinned by commit SHA, at least 7 days old when chosen; Dependabot proposes their updates
+  weekly with a 7-day cooldown (`.github/dependabot.yml`, active once it is on the default branch). Jobs get read
+  access only, publishing also `packages: write` (and the signing `id-token: write`, `attestations: write`); no secrets besides the job's own token; no caches.
+- **Repository settings (maintainer, once):** after the first publishing make the package `haalendar` public
+  (Packages → haalendar → Package settings → Change visibility); in Settings → Rules → Rulesets require these checks
+  for `master` and `development` (ADR-0002): the seven checks of the table above (`image amd64` and `image arm64`
+  separately).
+
 End-to-end tests (Playwright, `e2e/`; see `docs/architecture/test-strategy.md`). The first run needs the browser
 once: `pnpm --filter haalendar-e2e exec playwright install chromium`.
 
@@ -300,8 +340,8 @@ docker build -t haalendar .     # Node builds the web app, the runtime is Python
 - The API serves the built web app itself (`backend/src/haalendar/web.py`): hashed files under `/assets/` are cached
   for a year, everything else (index.html, the service worker, the manifest) is revalidated; paths of the app get
   index.html; `/api/` is never answered by it.
-- Base images are pinned by digest (at least 7 days old when chosen) and multi-arch; the arm64 build runs in CI
-  (HAAL-151).
+- Base images are pinned by digest (at least 7 days old when chosen) and multi-arch; CI builds and checks the image on
+  an x86_64 and an arm64 runner and publishes both under one tag ([CI](#ci-github-actions)).
 
 ### Trying accounts locally
 

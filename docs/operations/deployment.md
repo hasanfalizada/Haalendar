@@ -28,6 +28,12 @@ RAM, 10 GB disk.
    - `POSTGRES_PASSWORD`, `HAALENDAR_APP_DB_PASSWORD` — `openssl rand -hex 24` each (letters and digits only);
    - SMTP, so that invitations, e-mail verification and password resets are sent;
    - `HAALENDAR_IMAGE` — a release tag, e.g. `ghcr.io/hasanfalizada/haalendar:1.0.0`.
+     <!-- +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. What a release image is and how to see what is in it. -->
+     One tag serves x86_64 and arm64 (Docker picks the host's). Each release image carries the list of everything in
+     it (SBOM, SPDX) and how it was built (provenance):
+     `docker buildx imagetools inspect ghcr.io/hasanfalizada/haalendar:1.0.0 --format '{{ json .SBOM }}'`
+     (`.Provenance` for the build). That the image was built by this project's CI from its sources, signed:
+     `gh attestation verify oci://ghcr.io/hasanfalizada/haalendar:1.0.0 --repo hasanfalizada/Haalendar` (GitHub CLI).
 3. Start it:
    - **with the bundled proxy** (the host is reachable from the internet on ports 80 and 443, DNS points to it): set
      `HAALENDAR_DOMAIN` to the host of the public URL and run `docker compose --profile proxy up -d`; Caddy gets the

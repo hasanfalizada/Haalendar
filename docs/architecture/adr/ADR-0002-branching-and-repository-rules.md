@@ -26,7 +26,7 @@
 The existing name `development` is kept (instead of `develop`) to avoid churn.
 
 ### Repository rules (GitHub Rulesets)
-- `master`: changes only via PR from `release/*` or `hotfix/*`; block force pushes and deletion; require status checks once CI exists (HAAL-151); require conversation resolution.
+- `master`: changes only via PR from `release/*` or `hotfix/*`; block force pushes and deletion; require status checks once CI exists (HAAL-151: the jobs of `.github/workflows/ci.yml`, DEVELOPMENT.md → CI); require conversation resolution.
 - `development`: changes via PR; block force pushes and deletion; required checks once CI exists.
 - Required approvals: 0 while there is a single maintainer (GitHub does not allow approving one's own PR); raise to 1 with code-owner review when a second maintainer joins.
 

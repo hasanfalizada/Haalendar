@@ -44,7 +44,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V12 Secure Communication | 🟡 | HTTPS required in production, HSTS ✅; TLS termination via Caddy ⏳ HAAL-150 |
 | V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; image: non-root user, runs with a read-only root filesystem, no capabilities, `no-new-privileges`, pinned base images ✅ HAAL-150; the same enforced by the Compose file ⏳ HAAL-150 |
 | V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) and for every role (no-delete triggers, ORM/SQL guards, source scan, contract `x-soft-delete` — HAAL-030) ✅; export ⏳ HAAL-043; GDPR erasure open (O-01) |
-| V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate, DAST of the API (ZAP) ✅ HAAL-144; full DAST on the demo ⏳ HAAL-154; SBOM ⏳ HAAL-151 |
+| V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate, DAST of the API (ZAP) ✅ HAAL-144; full DAST on the demo ⏳ HAAL-154; SBOM per release image ✅ HAAL-151 |
 | V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections); tamper-proof audit log of all changes written by database triggers, append-only, readable under RLS, linked by request id (HAAL-032) |
 | V17 WebRTC | — | Not used |
 
@@ -59,7 +59,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | A05 Injection | ✅ ORM parameters, no shell/eval; Markdown sanitising with XSS payload tests (HAAL-047) |
 | A06 Insecure Design | ✅ threat-driven requirements, ADRs, contract-first, soft delete |
 | A07 Authentication Failures | ✅ HAAL-160..162 (see V6/V7) |
-| A08 Software or Data Integrity Failures | 🟡 lockfile hashes; optimistic concurrency (If-Match) in contract; ⏳ image signing (HAAL-151) |
+| A08 Software or Data Integrity Failures | 🟡 lockfile hashes; optimistic concurrency (If-Match) in contract; release images with signed provenance (Sigstore, `gh attestation verify`) ✅ HAAL-151 |
 | A09 Security Logging & Alerting Failures | ✅ security events logged with correlation; metrics for alerting; audit log of every change (HAAL-032) |
 | A10 Mishandling of Exceptional Conditions | ✅ global handlers fail closed with generic 500, guards reject early, readiness reports not crashes |
 
@@ -101,7 +101,7 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
   in `scripts/dev/dast-rules.tsv`. First run 2026-11-01: 113 rules passed, nothing to decide, about 7 000 requests on 39
   routes without a server error. Run it before a release and after changes to the API's guards. The web pages and HTTPS
   are scanned on the demo stand (HAAL-154): here `vite preview` serves them without the app's own headers.
-- In CI (HAAL-151): the same plus SBOM; scheduled weekly audit.
+- In CI (HAAL-151, `.github/workflows/ci.yml`): the same through `check-all.sh --only …`, plus the workflow lint (actionlint, zizmor), the SBOM and signed provenance of each release image; the audit and the secret scan again every Monday.
 
 ## 7. Licence policy
 
