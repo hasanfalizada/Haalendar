@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { comparePositions } from "@/lib/position";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const BOARD = "0199f000-0000-7000-8000-0000000000b1";
@@ -61,7 +61,7 @@ async function open(board: Record<string, unknown> = {}, share: Record<string, u
   await db.items.bulkPut([card("c1", DOING), card("c2", DOING), card("c3", TODO)]);
   if (share) await db.shares.put(share);
   // Pushes never answer here, so the outbox keeps what the page wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp(`/kanban/${BOARD}`);
   await screen.findByRole("heading", { name: "Revamp", level: 1 });
   return { user: userEvent.setup(), db };

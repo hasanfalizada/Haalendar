@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const BEN = "0199f000-0000-7000-8000-0000000000be";
@@ -62,7 +62,7 @@ async function open(permission: "view" | "edit", mineVersion = 2) {
   await db.shares.put(row);
   const calls = stubApi({
     "GET /me": () => json(me()),
-    "POST /sync/push": () => new Promise<Response>(() => undefined),
+    "POST /sync/push": noPush,
     // The note's received share (the owner's own list is empty here).
     "GET /shares": () => json({ data: [share(permission)] }),
     "DELETE /shares/*": () => new Response(null, { status: 204 }),

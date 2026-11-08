@@ -72,6 +72,8 @@ export default defineConfig(({ mode }) => {
       // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. At most 4 parallel workers: on WSL /mnt drives starting one
       // fork per core made late workers miss Vitest's fixed 60 s start timeout.
       maxWorkers: 4,
+      // +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. The whole test on a slow CI runner (setup.ts: asyncUtilTimeout).
+      testTimeout: 30_000,
       // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Coverage of the web app's own code (test strategy); the
       // generated API client, the tests and type-only files do not count.
       coverage: {

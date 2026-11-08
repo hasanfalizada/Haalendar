@@ -10,7 +10,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { eventRange } from "@/lib/dayView";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 import { stubMatchMedia } from "./setup";
 
 // Intl puts thin / narrow no-break spaces around the range dash; compare with plain spaces.
@@ -121,7 +121,7 @@ async function seed(): Promise<void> {
 
 async function openDay() {
   await seed();
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp(`/calendar?date=${DAY}`);
   await screen.findByRole("button", { name: /Account menu/ });
   return userEvent.setup();

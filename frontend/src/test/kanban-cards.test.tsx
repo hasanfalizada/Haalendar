@@ -13,7 +13,7 @@ import { addDays, todayIn } from "@/lib/datetime";
 import { comparePositions } from "@/lib/position";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const BOARD = "0199f000-0000-7000-8000-0000000000b1";
@@ -121,8 +121,8 @@ async function open(
     },
   ]);
   if (share) await db.shares.put(share);
-  // Pushes never answer here, so the outbox keeps what the page wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  // No push starts here, so the outbox keeps what the page wrote.
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp(`/kanban/${BOARD}`);
   await screen.findByRole("heading", { name: "Revamp", level: 1 });
   return { user: userEvent.setup(), db };

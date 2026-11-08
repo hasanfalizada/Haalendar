@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const BOB = "0199f000-0000-7000-8000-0000000000a2";
@@ -81,7 +81,7 @@ async function open(
   await db.cardAssignees.bulkPut([assignee("as-bob", PLAN, BOB), assignee("as-gone", SHIP, GONE)]);
   stubApi({
     "GET /me": () => json(me()),
-    "POST /sync/push": () => new Promise<Response>(() => undefined),
+    "POST /sync/push": noPush,
     [`GET /boards/${BOARD}/members`]: () => json({ data: options.members ?? MEMBERS }),
     ...options.api,
   });
@@ -116,7 +116,7 @@ describe("card assignees", { timeout: 20_000 }, () => {
     });
     const calls = stubApi({
       "GET /me": () => json(me()),
-      "POST /sync/push": () => new Promise<Response>(() => undefined),
+      "POST /sync/push": noPush,
       [`GET /boards/${BOARD}/members`]: () => json({ data: MEMBERS }),
     });
     renderApp(`/kanban/${BOARD}`);

@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { addDays, todayIn } from "@/lib/datetime";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const ZONE = me().time_zone;
@@ -81,7 +81,7 @@ async function open(
   if (options.share) await db.shares.put(options.share);
   stubApi({
     "GET /me": () => json(me()),
-    "POST /sync/push": () => new Promise<Response>(() => undefined),
+    "POST /sync/push": noPush,
     ...options.api,
   });
   const { router } = renderApp(options.path ?? `/kanban/${BOARD}`);

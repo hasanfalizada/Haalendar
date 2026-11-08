@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const BOARD = "0199f000-0000-7000-8000-0000000000b1";
@@ -107,7 +107,7 @@ async function open(options: { owner?: string; share?: Record<string, unknown>; 
   ]);
   await db.links.bulkPut([link("l1", PLAN, SHOPPING), link("l2", OLD, PLAN), link("l3", PLAN, CLOSED)]);
   if (options.share) await db.shares.put(options.share);
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   const { router } = renderApp(options.path ?? `/kanban/${BOARD}`);
   await screen.findByRole("button", { name: /Account menu/ });
   return { user: userEvent.setup(), db, router };

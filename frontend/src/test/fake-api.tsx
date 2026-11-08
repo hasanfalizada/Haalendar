@@ -4,13 +4,14 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 
 import "@/i18n";
 import { App } from "@/App";
 import type { Me, Settings } from "@/api/generated/types.gen";
 import { Notifications } from "@/components/ui/notifications";
 import { createAppRouter, createQueryClient } from "@/router";
+import { SyncEngine } from "@/sync/engine";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 
 export interface Call {
@@ -102,8 +103,20 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
+// +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. The route for a test of what waits in the outbox: no sync run starts,
+// so nothing is sent. A change being sent is never merged into or cancelled, and a push starts 400 ms after a write: on
+// a slow machine (found on the CI runner) a test's next write came later than that, so a push that only never answered
+// did not keep the outbox as the test expected.
+export const noPush: Handler = () => new Promise<Response>(() => undefined);
+
 export function stubApi(routes: Record<string, Handler>): Call[] {
   const calls: Call[] = [];
+  if (routes["POST /sync/push"] === noPush) {
+    const hold = vi.spyOn(SyncEngine.prototype, "request").mockImplementation(() => undefined);
+    onTestFinished(() => {
+      hold.mockRestore();
+    });
+  }
   const table = Object.entries({ ...DEFAULTS, ...routes }).map(([key, handler]) => [matcher(key), handler] as const);
   vi.stubGlobal(
     "fetch",

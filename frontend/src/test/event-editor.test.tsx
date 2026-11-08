@@ -12,7 +12,7 @@ import { changesOf, defaultTimes, eventData, formFromRow, newEventForm, validate
 import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, settings, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, settings, stubApi } from "./fake-api";
 
 const USER = me().id;
 const DAY = "2026-11-10"; // not today, so timed defaults start at 09:00
@@ -99,7 +99,7 @@ async function openApp(extra: Parameters<typeof stubApi>[0] = {}) {
     },
   ]);
   // Pushes never answer here, so the outbox keeps what the editor wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined), ...extra });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush, ...extra });
   const { router } = renderApp(`/calendar?date=${DAY}`);
   await screen.findByRole("button", { name: /Account menu/ });
   return { router, user: userEvent.setup() };
@@ -151,7 +151,7 @@ describe("editor", { timeout: 15_000 }, () => {
   // may reach the device only after the user started typing; the touched form takes the default calendar then, so
   // Save does not stay disabled.
   it("takes the default calendar that arrives after the user started typing", async () => {
-    stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+    stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
     renderApp(`/calendar?date=${DAY}`);
     await screen.findByRole("button", { name: /Account menu/ });
     const user = userEvent.setup();
@@ -292,7 +292,7 @@ describe("editor", { timeout: 15_000 }, () => {
     });
     const calls = stubApi({
       "GET /me": () => json(me()),
-      "POST /sync/push": () => new Promise<Response>(() => undefined),
+      "POST /sync/push": noPush,
       [`GET /items/${EVENT}/attachments`]: () => json({ data: [] }),
     });
     renderApp(`/calendar?date=${DAY}`);

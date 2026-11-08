@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const DAY = "2026-11-10"; // a Tuesday, the second of the month
@@ -25,7 +25,7 @@ async function openApp(items: Record<string, unknown>[] = []) {
   await db.calendars.put({ id: CAL, name: "Family", owner_id: USER, deleted_at: null, version: 1 });
   await db.items.bulkPut(items);
   // Pushes never answer here, so the outbox keeps what the editor wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp(`/calendar?date=${DAY}`);
   await screen.findByRole("button", { name: /Account menu/ });
   return { db, user: userEvent.setup() };

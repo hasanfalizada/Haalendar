@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { comparePositions } from "@/lib/position";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const REVAMP = "0199f000-0000-7000-8000-0000000000b1";
@@ -56,10 +56,10 @@ async function open(path = "/kanban", extra: Parameters<typeof stubApi>[0] = {})
     board(BOBS, "Bob's plans", { owner_id: "someone-else" }),
     board(GONE, "Deleted one", { deleted_at: "2026-10-02T10:00:00Z" }),
   ]);
-  // Pushes never answer here, so the outbox keeps what the page wrote.
+  // No push starts here, so the outbox keeps what the page wrote.
   stubApi({
     "GET /me": () => json(me()),
-    "POST /sync/push": () => new Promise<Response>(() => undefined),
+    "POST /sync/push": noPush,
     "GET /shares": () => json({ data: [share] }),
     ...extra,
   });

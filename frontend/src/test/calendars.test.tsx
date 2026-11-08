@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, settings, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, settings, stubApi } from "./fake-api";
 import { stubMatchMedia } from "./setup";
 
 const USER = me().id;
@@ -94,10 +94,11 @@ async function open(extra: Parameters<typeof stubApi>[0] = {}, hidden: string[] 
     event("e3", "Forgotten", OLD),
     event("e4", "Birthday", BOBS),
   ]);
+  // No push starts here, so the outbox keeps what the page wrote.
   const calls = stubApi({
     "GET /me": () => json(me()),
+    "POST /sync/push": noPush,
     "GET /me/settings": () => json(settings({ hidden_calendars: hidden })),
-    "POST /sync/push": () => new Promise<Response>(() => undefined),
     ...extra,
   });
   renderApp(`/calendar?date=${DAY}`);

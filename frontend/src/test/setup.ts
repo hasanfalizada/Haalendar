@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. jsdom has no IndexedDB (local drafts): an in-memory implementation,
 // fresh for every test; open toasts are dismissed between tests.
 import "fake-indexeddb/auto";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import Dexie from "dexie";
 import { IDBFactory } from "fake-indexeddb";
 import { toast } from "sonner";
@@ -12,6 +12,10 @@ import { afterEach, vi } from "vitest";
 
 import { stopSync } from "@/sync";
 import { closeLocalDbs } from "@/sync/db";
+
+// +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. On a CI runner with coverage a screen can take over the default second
+// to appear. Only the wait for something that never comes gets longer; the test's own limit: vite.config.ts testTimeout.
+configure({ asyncUtilTimeout: 4000 });
 
 export function stubMatchMedia(prefersDark: boolean): void {
   vi.stubGlobal(

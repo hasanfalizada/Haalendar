@@ -10,7 +10,7 @@ import { addDays, todayIn } from "@/lib/datetime";
 import { atFromLocal } from "@/lib/reminders";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const ZONE = me().time_zone;
@@ -58,7 +58,7 @@ async function open(extra: Parameters<typeof stubApi>[0] = {}, path = "/todo") {
   ]);
   stubApi({
     "GET /me": () => json(me()),
-    "POST /sync/push": () => new Promise<Response>(() => undefined),
+    "POST /sync/push": noPush,
     ...extra,
   });
   const { router } = renderApp(path);

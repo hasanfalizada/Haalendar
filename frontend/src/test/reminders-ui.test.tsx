@@ -10,7 +10,7 @@ import { notificationKeys } from "@/api/notifications";
 import { addDays, todayIn } from "@/lib/datetime";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 import { stubMatchMedia } from "./setup";
 
 const USER = me().id;
@@ -84,7 +84,7 @@ describe("reminders in the editor and the card", { timeout: 15_000 }, () => {
         deleted_at: null,
       },
     ]);
-    stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+    stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
     renderApp(`/calendar?date=${TODAY}`);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Details of Dentist" }));
@@ -134,7 +134,7 @@ describe("reminders in the editor and the card", { timeout: 15_000 }, () => {
   it("all-day events offer the day forms; at most five", async () => {
     const db = await seed();
     await db.items.update(DENTIST, { all_day: true, start_time: null, end_time: null });
-    stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+    stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
     renderApp(`/calendar?date=${TODAY}`);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Details of Dentist" }));

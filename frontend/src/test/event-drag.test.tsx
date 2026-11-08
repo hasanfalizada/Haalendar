@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 import { stubMatchMedia } from "./setup";
 
 const USER = me().id;
@@ -142,7 +142,7 @@ async function open(path: string, standupRule = "FREQ=WEEKLY") {
     timed("e4", "Workshop", OWN, "2026-10-28", "10:00", "12:00"),
   ]);
   // Pushes never answer here, so the outbox keeps what the page wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp(path);
   await screen.findByRole("heading", { level: 1, name: /^Calendar:/ });
   return { user: userEvent.setup(), db };
@@ -209,9 +209,9 @@ describe("drag and drop", { timeout: 15_000 }, () => {
     await screen.findByText("Moved Standup to Wednesday, October 7, 2026");
     const series = await db.items.get("e2");
     expect(series).toMatchObject({ start_date: "2026-10-07", rrule: "FREQ=WEEKLY" });
-    // Its excluded 12 October moved along to the 14th.
-    expect((await outbox()).slice(2).map((entry) => [entry.op, entry.data])).toEqual([
-      ["include", { occurrence_date: "2026-10-12" }],
+    // Its excluded 12 October moved along to the 14th: nothing was sent yet, so the waiting exclusion of the 12th and
+    // its removal cancel each other.
+    expect((await outbox()).slice(1).map((entry) => [entry.op, entry.data])).toEqual([
       ["update", { start_date: "2026-10-07", end_date: "2026-10-07" }],
       ["exclude", { occurrence_date: "2026-10-14" }],
     ]);

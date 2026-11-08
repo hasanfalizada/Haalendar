@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { comparePositions } from "@/lib/position";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const SHOPPING = "0199f000-0000-7000-8000-0000000000b1";
@@ -56,7 +56,7 @@ async function open() {
   await db.items.put(note);
   await db.checklistItems.bulkPut(ITEMS);
   // Pushes never answer here, so the outbox keeps what the page wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp("/todo");
   await screen.findByRole("button", { name: /Account menu/ });
   return { user: userEvent.setup(), db };

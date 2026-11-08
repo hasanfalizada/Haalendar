@@ -10,7 +10,7 @@ import { addDays, todayIn } from "@/lib/datetime";
 import { comparePositions } from "@/lib/position";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const TODAY = todayIn(me().time_zone);
@@ -82,7 +82,7 @@ async function open(search = "") {
     container_id: BOARD,
     deleted_at: null,
   });
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   const { router } = renderApp(`/kanban/${BOARD}${search}`);
   await screen.findByRole("heading", { name: "Revamp", level: 1 });
   const todo = await screen.findByRole("region", { name: "To do" });

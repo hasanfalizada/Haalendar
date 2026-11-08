@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, settings, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, settings, stubApi } from "./fake-api";
 import { stubMatchMedia } from "./setup";
 
 const USER = me().id;
@@ -107,7 +107,7 @@ async function open(path = `/calendar?date=${DAY}&view=week`) {
   stubApi({
     "GET /me": () => json(me()),
     "GET /me/settings": () => json(settings()),
-    "POST /sync/push": () => new Promise<Response>(() => undefined),
+    "POST /sync/push": noPush,
   });
   const { router } = renderApp(path);
   await screen.findByRole("button", { name: /Account menu/ });

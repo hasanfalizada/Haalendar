@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const OWN = "0199f000-0000-7000-8000-0000000000c1";
@@ -79,7 +79,7 @@ async function openDay(permission: "own" | "view" = "own") {
     { id: "r2", item_id: EVENT, offset_minutes: 1440, deleted_at: "2026-10-01T00:00:00Z" },
   ]);
   // Pushes never answer here, so the outbox keeps what the page wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp(`/calendar?date=${DAY}&view=day`);
   await screen.findByRole("button", { name: /Account menu/ });
   return { user: userEvent.setup(), db };

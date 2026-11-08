@@ -10,7 +10,7 @@ import { comparePositions } from "@/lib/position";
 import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
 
-import { json, me, renderApp, stubApi } from "./fake-api";
+import { json, me, noPush, renderApp, stubApi } from "./fake-api";
 
 const USER = me().id;
 const SHOPPING = "0199f000-0000-7000-8000-0000000000a1";
@@ -46,7 +46,7 @@ async function open(path = "/todo") {
     note(GONE, "Deleted one", { deleted_at: "2026-10-02T10:00:00Z" }),
   ]);
   // Pushes never answer here, so the outbox keeps what the page wrote.
-  stubApi({ "GET /me": () => json(me()), "POST /sync/push": () => new Promise<Response>(() => undefined) });
+  stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   const { router } = renderApp(path);
   await screen.findByRole("button", { name: /Account menu/ });
   return { user: userEvent.setup(), db, router };
@@ -148,7 +148,7 @@ describe("To-Do notes", { timeout: 20_000 }, () => {
     await db.items.put(note(SHOPPING, "Fresh", { version: 0 }));
     const calls = stubApi({
       "GET /me": () => json(me()),
-      "POST /sync/push": () => new Promise<Response>(() => undefined),
+      "POST /sync/push": noPush,
       [`GET /items/${SHOPPING}/attachments`]: () => json({ data: [] }),
     });
     renderApp("/todo");
