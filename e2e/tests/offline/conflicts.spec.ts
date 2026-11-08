@@ -223,7 +223,8 @@ test("deleting an event that was changed on the other device tells so and points
       .getByText("Something you deleted had been changed on another device. It is in the trash if you need it back.")
       .click();
     await expect(page).toHaveURL(/\/trash/);
-    await expect(page.getByText(title)).toBeVisible();
+    // +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. Exact: on a slow machine "Event created: <title>" is still shown.
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
     await phone.reload();
     await expect(eventRow(phone, title)).toBeHidden();
   } finally {

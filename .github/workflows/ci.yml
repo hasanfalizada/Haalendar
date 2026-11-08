@@ -131,10 +131,13 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-report
+          # .dev (the stack's logs, what the browser saw if the setup failed) starts with a dot.
+          include-hidden-files: true
           path: |
             e2e/playwright-report/
             e2e/test-results/
             .dev/*.log
+            .dev/*.png
           retention-days: 7
 
   # The image on each architecture's own runner, checked as a user installs it (compose.yaml, the whole E2E suite).

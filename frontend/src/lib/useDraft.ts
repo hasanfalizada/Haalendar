@@ -38,6 +38,30 @@ export function useDraft<F extends DraftFields>({ scope, values, baseline, enabl
   // Autosave waits until the stored draft has been read and, if offered, restored or discarded.
   const [ready, setReady] = useState(false);
   const latest = useRef({ values, baseline, user, scope, ready });
+  // +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. A discarded draft stays discarded: its values are not written again
+  // (the autosave may still be waiting while the editor is open), and writes run one after another, so a save under way
+  // cannot land after the removal. What is typed afterwards differs, so it is kept again.
+  const removedValues = useRef<string | null>(null);
+  const writes = useRef<Promise<unknown>>(Promise.resolve());
+  const inOrder = useCallback(<R>(work: () => Promise<R>): Promise<R> => {
+    const next = writes.current.then(work, work);
+    writes.current = next.catch(() => undefined);
+    return next;
+  }, []);
+  const save = useCallback(
+    (user: string, scope: string, fields: F) => {
+      if (removedValues.current === JSON.stringify(fields)) return Promise.resolve(false);
+      return inOrder(() => saveDraft(user, scope, fields));
+    },
+    [inOrder],
+  );
+  const remove = useCallback(
+    (user: string, scope: string) => {
+      removedValues.current = JSON.stringify(latest.current.values);
+      return inOrder(() => discardDraft(user, scope));
+    },
+    [inOrder],
+  );
   useLayoutEffect(() => {
     latest.current = { values, baseline, user, scope, ready };
   });
@@ -63,19 +87,19 @@ export function useDraft<F extends DraftFields>({ scope, values, baseline, enabl
   useEffect(() => {
     if (!user || !ready) return;
     const timer = setTimeout(() => {
-      if (dirty) void saveDraft(user, scope, latest.current.values);
-      else void discardDraft(user, scope);
+      if (dirty) void save(user, scope, latest.current.values);
+      else void remove(user, scope);
     }, DRAFT_DELAY_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [user, scope, ready, dirty, serialized]);
+  }, [user, scope, ready, dirty, serialized, save, remove]);
 
   // Leaving the page (tab hidden, closed, reloaded) writes the latest values at once.
   useEffect(() => {
     const onHide = () => {
       const now = latest.current;
-      if (now.user && now.ready && !same(now.values, now.baseline)) void saveDraft(now.user, now.scope, now.values);
+      if (now.user && now.ready && !same(now.values, now.baseline)) void save(now.user, now.scope, now.values);
     };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") onHide();
@@ -86,13 +110,13 @@ export function useDraft<F extends DraftFields>({ scope, values, baseline, enabl
       window.removeEventListener("pagehide", onHide);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
+  }, [save]);
 
   /** Write the current values at once, e.g. right before sending them. */
   const flush = useCallback(async () => {
     const now = latest.current;
-    if (now.user && now.ready && !same(now.values, now.baseline)) await saveDraft(now.user, now.scope, now.values);
-  }, []);
+    if (now.user && now.ready && !same(now.values, now.baseline)) await save(now.user, now.scope, now.values);
+  }, [save]);
 
   /** Take the offered draft; the caller puts the returned values into the editor. */
   const restore = useCallback((): F | null => {
@@ -105,13 +129,13 @@ export function useDraft<F extends DraftFields>({ scope, values, baseline, enabl
   const discard = useCallback(async () => {
     setPending(null);
     setReady(true);
-    if (user) await discardDraft(user, scope);
-  }, [user, scope]);
+    if (user) await remove(user, scope);
+  }, [user, scope, remove]);
 
   /** The server confirmed the save: the draft is no longer needed. */
   const commit = useCallback(async () => {
-    if (user) await discardDraft(user, scope);
-  }, [user, scope]);
+    if (user) await remove(user, scope);
+  }, [user, scope, remove]);
 
   return { pending, restore, discard, commit, flush };
 }
