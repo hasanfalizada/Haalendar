@@ -35,7 +35,7 @@
 | HAAL-122 | E08 Integration | Convert note/card/event between types keeping content, attachments, links | Should | 120 | — | To do | — | owner backlog file |
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
-| HAAL-152 | E11 Delivery | README in English: features, screenshots, quick start, config, backup, upgrade, legacy migration, demo link | Must | 150 | — | To do | — | owner backlog file |
+| HAAL-152 | E11 Delivery | README in English: features, screenshots, quick start, config, backup, upgrade, legacy migration, demo link | Must | 150 | — | In progress | — | owner backlog file |
 | HAAL-153 | E11 Delivery | Public user and admin guides in code repo; API docs from OpenAPI | Should | 015 | — | To do | — | owner backlog file |
 | HAAL-154 | E11 Delivery | Demo stand: demo mode, seeded demo accounts, full reset every 30 min, reset banner, strict upload limits; then the full DAST of the app on the demo stand (web pages with their headers, HTTPS; `scripts/dev/dast.sh` scans the API only — owner, 2026-11-01, HAAL-144) | Must | 150 | — | To do | — | owner backlog file |
 | HAAL-155 | E11 Delivery | Backup and restore of DB + attachments (RPO 24 h, RTO 1 h) | Must | 150 | — | To do | — | owner backlog file |

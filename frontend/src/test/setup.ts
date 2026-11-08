@@ -8,10 +8,11 @@ import { cleanup, configure } from "@testing-library/react";
 import Dexie from "dexie";
 import { IDBFactory } from "fake-indexeddb";
 import { toast } from "sonner";
-import { afterEach, vi } from "vitest";
+import { afterAll, afterEach, vi } from "vitest";
 
 import { stopSync } from "@/sync";
 import { closeLocalDbs } from "@/sync/db";
+import { TOAST_REMOVAL_MS } from "@/test/timing";
 
 // +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. On a CI runner with coverage a screen can take over the default second
 // to appear. Only the wait for something that never comes gets longer; the test's own limit: vite.config.ts testTimeout.
@@ -68,4 +69,12 @@ afterEach(() => {
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. A dialog closed while the test ends can leave Radix's
   // "pointer-events: none" on the body, which would block clicks in the next test.
   document.body.style.pointerEvents = "";
+});
+
+// +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. A toast being removed keeps a timer of 200 ms that survives its
+// unmount (sonner). When it fired after the test file had closed jsdom, React failed with "window is not defined" and
+// Vitest failed the run although every test had passed (seen on a CI runner). The file waits for that timer.
+afterAll(async () => {
+  vi.useRealTimers();
+  await new Promise((resolve) => setTimeout(resolve, TOAST_REMOVAL_MS));
 });
