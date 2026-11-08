@@ -7,6 +7,10 @@
 
 # ---------- web app ----------
 FROM --platform=$BUILDPLATFORM node:24.22.0-slim@sha256:91acba91b842bec0bf7ea6f5e09c644c7ccad72c4996ed9616d861d1c7cd60d4 AS web
+# +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. The SBOM covers this stage too: by default BuildKit scans only the
+# final stage, where the web app is bundled files and React, Dexie and the rest cannot be seen. The price: the SBOM also
+# lists what is used only to build (Vite, ESLint, the Node image's packages), which is better than leaving code out.
+ARG BUILDKIT_SBOM_SCAN_STAGE=true
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 CI=true
 WORKDIR /src
 RUN corepack enable

@@ -203,7 +203,9 @@ release tag. Its jobs call `scripts/dev/check-all.sh --only …`, so CI checks e
 - **Release:** a tag `vX.Y.Z` publishes the image, once every job above passed, to `ghcr.io/hasanfalizada/haalendar`
   as one multi-architecture image (linux/amd64, linux/arm64) tagged `X.Y.Z`, `X.Y`, `X` and `latest` (a pre-release
   `vX.Y.Z-rc.1` only its own tag). The image carries its SBOM (SPDX) and its provenance as attestations; both are
-  also kept as the run's artifact `sbom`. A provenance signed through Sigstore (`actions/attest-build-provenance`)
+  also kept as the run's artifact `sbom`. The SBOM covers the final stage and the `web` stage of the `Dockerfile`
+  (`BUILDKIT_SBOM_SCAN_STAGE`), since the web app's libraries are only bundled files in the final stage; it therefore
+  also lists tools used only to build. A provenance signed through Sigstore (`actions/attest-build-provenance`)
   lets anyone verify that this workflow built the image (`gh attestation verify`, see the installation guide). Nothing is deployed: each user installs the image
   ([installation guide](docs/operations/deployment.md)).
 - **Weekly** (Monday) the security job runs again, for advisories published after the last push.

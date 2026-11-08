@@ -32,7 +32,10 @@ RAM, 10 GB disk.
      One tag serves x86_64 and arm64 (Docker picks the host's). Each release image carries the list of everything in
      it (SBOM, SPDX) and how it was built (provenance):
      `docker buildx imagetools inspect ghcr.io/hasanfalizada/haalendar:1.0.0 --format '{{ json .SBOM }}'`
-     (`.Provenance` for the build). That the image was built by this project's CI from its sources, signed:
+     (`.Provenance` for the build). The list has two documents for each architecture: `SPDX` is the image itself
+     (system and Python packages), `AdditionalSPDXs` is the stage that builds the web app (its JavaScript libraries,
+     together with the tools used only to build it, such as Vite and ESLint, and that stage's system packages, which
+     are not in the image). That the image was built by this project's CI from its sources, signed:
      `gh attestation verify oci://ghcr.io/hasanfalizada/haalendar:1.0.0 --repo hasanfalizada/Haalendar` (GitHub CLI).
 3. Start it:
    - **with the bundled proxy** (the host is reachable from the internet on ports 80 and 443, DNS points to it): set
