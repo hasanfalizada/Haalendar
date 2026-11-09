@@ -218,7 +218,8 @@ ROWS=$(rows)
 check "the demo refuses a real installation" demo_refuses
 check "and that changed no rows" same "$ROWS" "$(rows)"
 dc down -v >/dev/null 2>&1
-demo up -d >/dev/null 2>&1
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A failed start says why at once, instead of failing every check after it.
+demo up -d --quiet-pull || { demo ps -a; demo logs --tail 30 db migrate app demo; exit 1; }
 demo_api() { curl -ksS -b "$DIR/demo.cookies" -c "$DIR/demo.cookies" "$@"; }
 demo_login() {
   local status

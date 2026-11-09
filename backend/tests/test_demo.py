@@ -14,6 +14,7 @@ from pathlib import Path
 
 import psycopg
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import make_url
 
@@ -289,3 +290,12 @@ def test_an_account_of_a_demo_has_a_limit_of_files(
     full = demo_api.post(url, content=png((50, 50)), headers=headers)
     assert full.status_code == 413
     assert "no room" in full.json()["detail"]
+
+
+def test_the_first_reset_waits_for_the_migrations_and_the_app() -> None:
+    """+++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Started with migrate, both change the same database role at once
+    and one fails (seen on the CI runner): a failed migrate stops the start of the whole stand."""
+    overlay = Path(__file__).resolve().parents[2] / "compose.demo.yaml"
+    depends_on = yaml.safe_load(overlay.read_text())["services"]["demo"]["depends_on"]
+    assert depends_on["migrate"]["condition"] == "service_completed_successfully"
+    assert depends_on["app"]["condition"] == "service_healthy"

@@ -48,6 +48,13 @@ services:
     <<: *demo-host
     command: ["demo"]
     restart: unless-stopped
+    # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Its first reset waits for a running app. Started together with
+    # migrate, both change the same database role at once and one of them fails; a failed migrate stops the whole start.
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      app:
+        condition: service_healthy
     environment: *demo-environment
     mem_limit: 512m
     cpus: 1.0
