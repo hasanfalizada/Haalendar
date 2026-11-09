@@ -2,7 +2,7 @@
 // database, removed on discard and on sign-out (only that user's), never stores secret fields.
 import { describe, expect, it } from "vitest";
 
-import { countDrafts, discardDraft, loadDraft, saveDraft, wipeDrafts } from "./drafts";
+import { allowDrafts, countDrafts, discardDraft, loadDraft, saveDraft, wipeDrafts } from "./drafts";
 
 const ADA = "user-ada";
 const BOB = "user-bob";
@@ -32,6 +32,19 @@ describe("drafts", () => {
     await wipeDrafts(ADA);
     expect(await countDrafts(ADA)).toBe(0);
     expect(await countDrafts(BOB)).toBe(1);
+    allowDrafts(ADA);
+  });
+
+  // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Nothing is written back after a wipe, until a new session.
+  it("writes nothing for a wiped user until a new session", async () => {
+    await wipeDrafts(ADA);
+    expect(await saveDraft(ADA, "a", { title: "Too late" })).toBe(false);
+    expect(await saveDraft(BOB, "a", { title: "Another user" })).toBe(true);
+    expect(await countDrafts(ADA)).toBe(0);
+
+    allowDrafts(ADA);
+    expect(await saveDraft(ADA, "a", { title: "New session" })).toBe(true);
+    expect(await countDrafts(ADA)).toBe(1);
   });
 
   it("refuses fields that may hold secrets", async () => {

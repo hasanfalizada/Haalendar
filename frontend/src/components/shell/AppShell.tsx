@@ -32,6 +32,7 @@ import {
 import { useReminderToasts } from "@/components/notifications/useReminderToasts";
 import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { allowDrafts } from "@/lib/drafts";
 import { listenToWorker } from "@/lib/push";
 import { startSync } from "@/sync";
 
@@ -108,7 +109,10 @@ export function AppShell() {
   // cached on this device: offline it waits for the connection).
   const userId = me?.id;
   useEffect(() => {
-    if (userId) startSync(userId, queryClient);
+    if (!userId) return;
+    // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A new session in this tab may keep drafts again (signing out stopped them).
+    allowDrafts(userId);
+    startSync(userId, queryClient);
   }, [userId, queryClient]);
   useUndoShortcuts(me?.id ?? null);
   // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. Reminders that fire while the app is open.

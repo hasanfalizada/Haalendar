@@ -5,7 +5,8 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadDraft } from "@/lib/drafts";
+import { loadDraft, wipeDrafts } from "@/lib/drafts";
+import { DRAFT_DELAY_MS } from "@/lib/useDraft";
 
 import { json, me, noContent, problem, renderApp, stubApi } from "./fake-api";
 
@@ -115,8 +116,27 @@ describe("drafts on the profile form", { timeout: 15_000 }, () => {
     await waitFor(() => {
       expect(calls.some((c) => c.path === "/auth/logout")).toBe(true);
     });
-    await waitFor(async () => {
-      expect(await loadDraft(ADA.id, "profile")).toBeNull();
-    });
+    // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A CI runner under load needs more than the default second.
+    await waitFor(
+      async () => {
+        expect(await loadDraft(ADA.id, "profile")).toBeNull();
+      },
+      { timeout: 10_000 },
+    );
+  });
+
+  // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Wiped drafts stay wiped only until the next session in this tab.
+  it("keeps what is typed again after signing in again", async () => {
+    stubApi({ "GET /me": () => json(ADA) });
+    await wipeDrafts(ADA.id);
+    renderApp("/settings");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Display name"), "!");
+    await waitFor(
+      async () => {
+        expect((await loadDraft(ADA.id, "profile"))?.fields.display_name).toBe("Ada Admin!");
+      },
+      { timeout: DRAFT_DELAY_MS + 5_000 },
+    );
   });
 });

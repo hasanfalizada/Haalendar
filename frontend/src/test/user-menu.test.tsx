@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { APP_VERSION, AUTHOR_URL, DOCS_URL, ISSUES_URL, LICENSE_URL, REPOSITORY_URL } from "@/lib/about";
-import { saveDraft } from "@/lib/drafts";
+import { allowDrafts, saveDraft } from "@/lib/drafts";
 
 import { json, me, noContent, problem, renderApp, stubApi } from "./fake-api";
 
@@ -176,6 +176,8 @@ describe("user menu", () => {
 
   it("asks before signing out when drafts exist", async () => {
     const calls = stubApi({ "GET /me": () => json(me()), "POST /auth/logout": () => noContent() });
+    // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A new session: the test before this one signed the same user out.
+    allowDrafts(me().id);
     await saveDraft(me().id, "profile", { display_name: "Ada!" });
     renderApp("/calendar");
     const { user, menu } = await openMenu();

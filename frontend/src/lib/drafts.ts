@@ -57,6 +57,15 @@ function open() {
   });
 }
 
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Signing out takes a while and the editor stays open meanwhile: its
+// autosave must not write the text back after the wipe, or it stays on the device. From the wipe on nothing is written
+// for that user until a new session begins in this tab (allowDrafts, a reload begins anew).
+const wiped = new Set<string>();
+
+export function allowDrafts(user: string): void {
+  wiped.delete(user);
+}
+
 export async function saveDraft(user: string, scope: string, fields: DraftFields): Promise<boolean> {
   const secret = Object.keys(fields).find((name) => SECRET_FIELD.test(name));
   if (secret) {
@@ -65,6 +74,8 @@ export async function saveDraft(user: string, scope: string, fields: DraftFields
   }
   const draft: Draft = { key: draftKey(user, scope), user, scope, fields, saved_at: new Date().toISOString() };
   const done = await withDb(async (db) => {
+    // Checked here, just before the write: a wipe that began while the database was opening has its say first.
+    if (wiped.has(user)) return false;
     await db.put("drafts", draft);
     return true;
   });
@@ -87,6 +98,7 @@ export async function countDrafts(user: string): Promise<number> {
 
 /** Sign-out: every draft of this user leaves the device (ADR-0005 §8). */
 export async function wipeDrafts(user: string): Promise<void> {
+  wiped.add(user);
   const removed = await withDb(async (db) => {
     const tx = db.transaction("drafts", "readwrite");
     const keys = await tx.store.index("by_user").getAllKeys(user);
