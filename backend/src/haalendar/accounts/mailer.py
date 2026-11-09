@@ -94,6 +94,9 @@ class DisabledMailer:
 
 
 def create_mailer(settings: Settings) -> Mailer:
+    # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A public demo never sends mail, whatever .env says.
+    if settings.demo_mode:
+        return DisabledMailer()
     if settings.smtp_host:
         return SmtpMailer(settings)
     if settings.env in (Environment.DEVELOPMENT, Environment.TEST):

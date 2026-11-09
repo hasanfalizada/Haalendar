@@ -39,6 +39,8 @@ STREAM = (
 )
 EXEMPT: dict[tuple[str, str], str] = {
     ("get", "/setup/status"): PUBLIC,
+    # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Demo accounts only, on a demo.
+    ("get", "/demo/status"): PUBLIC,
     ("post", "/setup/admin"): PUBLIC,
     ("post", "/auth/login"): PUBLIC,
     ("post", "/auth/logout"): OWN,

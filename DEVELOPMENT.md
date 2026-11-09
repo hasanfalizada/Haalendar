@@ -172,6 +172,7 @@ pnpm security:audit  # known vulnerabilities in npm and Python dependencies (pnp
 pnpm security:licences  # every dependency under a licence the policy allows (backend/licence-policy.json)
 scripts/dev/secrets-scan.sh  # gitleaks over the git history and the working tree (Docker)
 scripts/dev/dast.sh          # OWASP ZAP scan of the API on its own throw-away stack (Docker, 10–30 min; reports in .dev/dast/)
+scripts/dev/dast-demo.sh URL # the full DAST of a demo stand of your own: HTTPS, web pages and API (up to 25 min; reports in .dev/dast-demo/)
 scripts/dev/compose-check.sh # the production installation (compose.yaml, image built here) end to end: E2E, restart, backup and restore, HTTPS via Caddy (~5 min)
 ```
 
@@ -328,7 +329,7 @@ The environment is selected with `HAALENDAR_ENV`.
 - **development** — the default. Use `HAALENDAR_LOG_FORMAT=console` for human-readable logs.
 - **test** — used by the test suites; tests build their own settings and never read your `.env`.
 - **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. It runs on Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS): `compose.yaml`, `Caddyfile` and `.env.production.example` in the repository root, installation and upgrades in [`docs/operations/deployment.md`](docs/operations/deployment.md).
-- **demo** — production settings plus `HAALENDAR_DEMO_MODE=true`; data reset every 30 minutes (HAAL-154).
+- **demo** — production settings plus `compose.demo.yaml`: demo mode, made-up accounts and data, a reset every 30 minutes ([`docs/operations/demo.md`](docs/operations/demo.md)).
 
 ### Docker image
 

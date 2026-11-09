@@ -1,0 +1,53 @@
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The public demo (FR-OPS-03, D-103): an overlay on compose.yaml.
+#   docker compose -f compose.yaml -f compose.demo.yaml up -d
+# Demo mode for every service and the service `demo`, which removes everything and fills in made-up data at every full and
+# half hour UTC. It refuses a database with other accounts, but do not start this on an installation with real data.
+# Limits keep a public stand from harming what else runs on the host. Guide: docs/operations/demo.md.
+x-demo-host: &demo-host
+  pids_limit: 256
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+x-demo-environment: &demo-environment
+  HAALENDAR_DEMO_MODE: "true"
+  # A visitor needs far less than a whole household behind one address.
+  HAALENDAR_RATE_LIMIT_PER_MINUTE: "300"
+  HAALENDAR_RATE_LIMIT_BURST: "100"
+
+services:
+  db:
+    <<: *demo-host
+    mem_limit: 1g
+    cpus: 1.0
+
+  migrate:
+    <<: *demo-host
+    environment: *demo-environment
+    mem_limit: 512m
+    cpus: 1.0
+
+  app:
+    <<: *demo-host
+    environment: *demo-environment
+    mem_limit: 768m
+    cpus: 1.0
+
+  worker:
+    <<: *demo-host
+    environment: *demo-environment
+    mem_limit: 384m
+    cpus: 0.5
+
+  demo:
+    extends:
+      file: compose.yaml
+      service: migrate
+    <<: *demo-host
+    command: ["demo"]
+    restart: unless-stopped
+    environment: *demo-environment
+    mem_limit: 512m
+    cpus: 1.0

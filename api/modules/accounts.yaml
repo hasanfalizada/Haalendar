@@ -108,6 +108,7 @@ paths:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/TokenInput' } } }
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
   # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. New verification link for an unverified account; always 202 (no
@@ -129,6 +130,7 @@ paths:
               properties:
                 email: { type: string, format: email, maxLength: 254 }
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '202': { description: Accepted (an e-mail is sent only to an existing unverified account) }
         '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
   auth_password_reset_request:
@@ -147,6 +149,7 @@ paths:
               properties:
                 email: { type: string, format: email, maxLength: 254 }
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '202': { description: Accepted }
         '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
   auth_password_reset_confirm:
@@ -166,6 +169,7 @@ paths:
                 token: { type: string, maxLength: 128 }
                 new_password: { $ref: '#/components/schemas/NewPassword' }
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
@@ -182,6 +186,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/TokenInput' }
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '200':
           description: Pending invitation
           content:
@@ -373,6 +378,7 @@ paths:
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
@@ -382,6 +388,7 @@ paths:
       operationId: revokeOtherSessions
       summary: Log out all other sessions
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
   me_totp_setup:
@@ -416,6 +423,7 @@ paths:
               properties:
                 totp_code: { type: string, pattern: '^\d{6}$' }
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '200':
           description: Enabled
           content:
@@ -479,6 +487,7 @@ paths:
                     auth: { type: string }
                 expirationTime: { oneOf: [{ type: integer }, { type: 'null' }], description: Sent by browsers; not used }
       responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
         '201': { description: Registered, content: { application/json: { schema: { type: object, properties: { id: { $ref: '../components/common.yaml#/components/schemas/Uuid' } } } } } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }

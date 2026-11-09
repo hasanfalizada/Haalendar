@@ -84,12 +84,13 @@
 +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. v1.85: D-39 amended by owner: inline styles allowed in the web app's CSP.
 +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145. v1.86: by owner after the UAT — FR-CAL-06 and D-64: event times to the
 +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. v1.87: decision D-102 (backup and restore) approved by owner.
++++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. v1.88: decision D-103 (the public demo) approved by owner.
 minute (finding F23); D-30: notes are shared, an edit share writes a note's content, its arrangement and existence stay
 the owner's (finding F7).
 
 | Field | Value |
 |---|---|
-| Version | 1.86 |
+| Version | 1.88 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -630,6 +631,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-100 | Legacy import (FR-OPS-01, FR-OPS-02) | No importer is built: HAAL-130 is closed without implementation and FR-OPS-01/02 are dropped. The owner moves his own legacy `db.db` by hand after testing the finished product; the mapping in the domain model (§8) stays as a reference for that. The unused column `item.legacy_id` stays (no migration for it) | FR-OPS-01, FR-OPS-02 |
 | D-101 | Test strategy (SRS 4.7, D-20) | `docs/architecture/test-strategy.md`, built in two stages: (1) the strategy, line coverage of the backend ≥ 80 % in `pnpm backend:check` (pytest-cov) and coverage floors for the web app just under the level measured (lines 90, statements 88, functions 85, branches 80 %; raised, never lowered without the owner) in `pnpm check`; (2) contract conformance and end-to-end tests. Contract: the backend tests compare the app's routes with `api/openapi.yaml` both ways and validate every response they receive against its schemas (JSON Schema 2020-12) — no Schemathesis, which needs Hypothesis (MPL-2.0), and no oasdiff; an operation the server does not serve carries `x-not-implemented` with the reason (served through /sync, computed in the web app, or planned with its task); the legacy import operations left the contract (D-100). End to end: Playwright in `e2e/` (`pnpm e2e`, `check-all.sh --e2e`) on the throw-away stack, Chromium, one worker; every test fails on a console error or warning, an uncaught exception or an unexpected API answer ≥ 400; first scenarios: sign-in/out, event → trash → restore, note, board with a card. CI runs the same commands (HAAL-151) | SRS 4.7 |
 | D-102 | Backup and restore (FR-OPS-04, SRS 4.5) | Two scripts beside `compose.yaml` (`scripts/backup.sh`, `scripts/restore.sh`) and one cron line: each installation backs itself up on its own host, nothing is sent anywhere, no extra service. A backup holds the database, the `data` volume and `.env` (its key decrypts secrets in the database); it is private to its owner, the guide tells to encrypt copies kept elsewhere. The newest 14 are kept (`HAALENDAR_BACKUP_KEEP`). A restore replaces all data after asking. Sync cursors name their database, so devices sync from the start after a restore and drop rows the server no longer has, keeping what is still waiting to be sent. | FR-OPS-04, HAAL-155 |
+| D-103 | Public demo (FR-OPS-03, D-08) | `compose.demo.yaml` over `compose.yaml` and a service `demo`, on the owner's staging server. At each full and half hour UTC a new database (built beside the current one, so a failed build changes nothing) takes the name of the old, which is removed with all uploaded files: a deliberate exception from "never physically delete", only in demo mode, and refused when the database has an account other than the demo accounts. Two regular accounts that share a calendar and a board, one-click sign-in, no administrator. Refused: registration, setup, password, e-mail verification, invitations, 2FA, ending sessions, Web Push, exports; no mail; wrong passwords do not lock. Limits: 1 MB per upload, 100 MB per account, 300 requests per minute. Banner with the time left and that everything is public. | FR-OPS-03, HAAL-154 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

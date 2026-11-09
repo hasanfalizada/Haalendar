@@ -15,7 +15,8 @@ from fastapi import APIRouter, Header, Request, Response, status
 
 from haalendar.attachments import service
 from haalendar.attachments.schemas import AttachmentListOut, AttachmentOut, DeleteResultOut
-from haalendar.deps import AppStorage, Auth, DbSession
+from haalendar.demo import MAX_ACCOUNT_FILES_BYTES
+from haalendar.deps import AppSettings, AppStorage, Auth, DbSession
 
 items_router = APIRouter(prefix="/items", tags=["items"])
 router = APIRouter(prefix="/attachments", tags=["items"])
@@ -41,13 +42,21 @@ async def upload_attachment(
     auth: Auth,
     db: DbSession,
     storage: AppStorage,
+    settings: AppSettings,
     x_file_name: Annotated[str, Header(min_length=1, max_length=1024)],
     x_attachment_id: Annotated[uuid.UUID | None, Header()] = None,
     idempotency_key: Annotated[uuid.UUID | None, Header()] = None,
 ) -> AttachmentOut:
     # Idempotency-Key is accepted per contract; a repeated upload with the same X-Attachment-Id returns the first one.
     row = await service.upload(
-        db, storage, auth.user.id, id, await request.body(), x_file_name, x_attachment_id
+        db,
+        storage,
+        auth.user.id,
+        id,
+        await request.body(),
+        x_file_name,
+        x_attachment_id,
+        max_account_bytes=MAX_ACCOUNT_FILES_BYTES if settings.demo_mode else None,
     )
     return service.to_out(row)
 

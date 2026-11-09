@@ -5,6 +5,8 @@
 # offline), stops and starts the stack to see the data survive, checks HTTPS through Caddy, then removes the project
 # with its volumes. Throw-away data only.
 # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. Backup and restore too (scripts/backup.sh, scripts/restore.sh).
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The demo too (compose.demo.yaml): it refuses a real installation, then on
+# an empty one it fills in its accounts and a reset removes what a visitor did.
 # Usage: scripts/dev/compose-check.sh [--no-build]   (exit code 0 only when every step passes)
 set -uo pipefail
 BUILD=1
@@ -45,7 +47,7 @@ fi
 
 cleanup
 mkdir -p "$DIR"
-cp "$ROOT/compose.yaml" "$ROOT/Caddyfile" "$DIR/"
+cp "$ROOT/compose.yaml" "$ROOT/compose.demo.yaml" "$ROOT/Caddyfile" "$DIR/"
 TOKEN=$(openssl rand -hex 32)
 cat >"$DIR/.env" <<EOF
 HAALENDAR_IMAGE=haalendar:dev
@@ -208,6 +210,48 @@ for _ in $(seq 1 20); do https_ready && break; sleep 2; done
 check "the attachment downloads as before, the session still valid" same "$PICTURE" "$(download)"
 check "signing in after the restore" env -C "$ROOT/e2e" E2E_BASE_URL="$APP" E2E_OFFLINE_URL="$APP" \
   npx playwright test tests/auth.spec.ts --project=desktop --reporter=dot
+
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The demo.
+demo() { dc -f "$DIR/compose.yaml" -f "$DIR/compose.demo.yaml" -f "$DIR/compose.override.yaml" "$@"; }
+demo_refuses() { ! demo run --rm --no-deps demo >/dev/null 2>&1; }
+ROWS=$(rows)
+check "the demo refuses a real installation" demo_refuses
+check "and that changed no rows" same "$ROWS" "$(rows)"
+dc down -v >/dev/null 2>&1
+demo up -d >/dev/null 2>&1
+demo_api() { curl -ksS -b "$DIR/demo.cookies" -c "$DIR/demo.cookies" "$@"; }
+demo_login() {
+  local status
+  status=$(demo_api -o /dev/null -w '%{http_code}' "$HTTPS/api/v1/auth/login" -H 'Content-Type: application/json' \
+    --data "$(curl -ksS "$HTTPS/api/v1/demo/status" | python3 -I -c 'import json,sys; a=json.load(sys.stdin)["accounts"][0]; print(json.dumps({"email":a["email"],"password":a["password"]}))')")
+  [ "$status" = 200 ]
+}
+for _ in $(seq 1 60); do demo_login && break; sleep 2; done
+check "the demo accounts sign in" demo_login
+check "the demo has its data" sh -c "curl -ksS -b '$DIR/demo.cookies' $HTTPS/api/v1/sync/pull | grep -q Groceries"
+csrf() { demo_api "$HTTPS/api/v1/me" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])'; }
+visitor_note() {
+  local id; id=$(python3 -I -c 'import uuid; print(uuid.uuid4())')
+  demo_api "$HTTPS/api/v1/sync/push" -H 'Content-Type: application/json' -H "X-CSRF-Token: $(csrf)" --data \
+    '{"mutations":[{"mutation_id":"'"$(python3 -I -c 'import uuid; print(uuid.uuid4())')"'","entity_type":"item","entity_id":"'"$id"'","op":"create","data":{"kind":"note","container_kind":"note","title":"Left by a visitor","body":"","color":"blue","position":"z000"}}]}' \
+    | grep -q '"applied"'
+}
+check "a visitor writes a note" visitor_note
+check "a password cannot be changed" sh -c "[ \"\$(curl -ksS -o /dev/null -w '%{http_code}' -X POST $HTTPS/api/v1/me/password -H 'Content-Type: application/json' -d '{}')\" = 403 ]"
+RESET_LINES=$(demo logs demo 2>/dev/null | grep -c demo_reset_done)
+demo restart demo >/dev/null 2>&1
+for _ in $(seq 1 60); do
+  [ "$(demo logs demo 2>/dev/null | grep -c demo_reset_done)" -gt "$RESET_LINES" ] && break
+  sleep 2
+done
+check "a reset signs the visitor out" sh -c "[ \"\$(curl -ksS -b '$DIR/demo.cookies' -o /dev/null -w '%{http_code}' $HTTPS/api/v1/me)\" = 401 ]"
+rm -f "$DIR/demo.cookies"  # physical-delete-allowed: the cookie of this check
+for _ in $(seq 1 20); do demo_login && break; sleep 2; done
+check "and removes the note" sh -c "! curl -ksS -b '$DIR/demo.cookies' $HTTPS/api/v1/sync/pull | grep -q 'Left by a visitor'"
+check "the data is back" sh -c "curl -ksS -b '$DIR/demo.cookies' $HTTPS/api/v1/sync/pull | grep -q Groceries"
+sleep 45
+check "the worker is back after the reset" sh -c "docker inspect \"\$(docker compose -p '$PROJECT' --project-directory '$DIR' ps -q worker)\" --format '{{.State.Health.Status}}' | grep -q healthy"
+demo down -v --remove-orphans >/dev/null 2>&1
 
 if [ ${#FAILED[@]} -eq 0 ]; then echo "compose check: all passed"; exit 0; fi
 printf 'compose check FAILED: %s\n' "${FAILED[@]}"

@@ -35,6 +35,8 @@ from haalendar.attachments.api import router as attachments_router
 from haalendar.bulk.api import router as bulk_router
 from haalendar.config import Environment, Settings, get_settings
 from haalendar.db import create_engine, create_session_factory, role_bypasses_rls
+from haalendar.demo import MAX_UPLOAD_BYTES
+from haalendar.demo.api import router as demo_router
 from haalendar.errors import install_error_handlers
 from haalendar.exports.api import router as exports_router
 from haalendar.jobs import JobQueue
@@ -49,7 +51,7 @@ from haalendar.planning.boards_api import router as boards_router
 from haalendar.planning.ics_api import router as ics_router
 from haalendar.preferences.api import router as settings_router
 from haalendar.push.api import router as push_router
-from haalendar.security.guards import BodyGuard, CsrfOriginGuard, HostGuard, RateLimitGuard
+from haalendar.security.guards import BodyGuard, CsrfOriginGuard, DemoGuard, HostGuard, RateLimitGuard
 from haalendar.sharing.api import router as sharing_router
 from haalendar.storage import create_storage
 from haalendar.sync.api import router as sync_router
@@ -123,7 +125,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Starlette runs the last added middleware first: request context (ids, headers, logging) wraps every guard,
     # so rejections still carry X-Request-ID, security headers and a log line.
     app.add_middleware(CsrfOriginGuard, allowed_origins=settings.allowed_origins)
-    app.add_middleware(BodyGuard, max_body_bytes=settings.max_request_body_bytes)
+    app.add_middleware(
+        BodyGuard,
+        max_body_bytes=settings.max_request_body_bytes,
+        # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Stricter upload limits on the demo (FR-OPS-03).
+        max_upload_bytes=MAX_UPLOAD_BYTES if settings.demo_mode else None,
+    )
+    if settings.demo_mode:
+        app.add_middleware(DemoGuard)
     app.add_middleware(
         RateLimitGuard,
         per_minute=settings.rate_limit_per_minute,
@@ -152,6 +161,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ics_router, prefix=API_PREFIX)  # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095
     app.include_router(boards_router, prefix=API_PREFIX)  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119
     app.include_router(live_router, prefix=API_PREFIX)
+    app.include_router(demo_router, prefix=API_PREFIX)  # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154
     install_metrics_endpoint(app, settings, metrics)
     # +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. The web app last: it answers every other path.
     install_web_app(app, settings)

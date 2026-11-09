@@ -1,6 +1,9 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (stage 2). The browser notifications of this device for the
 // signed-in user (lib/push) as React state: the current state, and turning them on (from a click) or off.
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The public demo sends nothing: no offer to turn them on.
 import { useCallback, useEffect, useState } from "react";
+
+import { useIsDemo } from "@/api/demo";
 
 import { type PushState, disablePush, enablePush, pushState } from "./push";
 
@@ -12,6 +15,7 @@ export function usePush(user: string | undefined): {
 } {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
+  const demo = useIsDemo();
 
   useEffect(() => {
     if (!user) return undefined;
@@ -39,5 +43,5 @@ export function usePush(user: string | undefined): {
     setBusy(false);
   }, [user]);
 
-  return { state, busy, enable, disable };
+  return { state: demo ? "unsupported" : state, busy, enable, disable };
 }

@@ -293,7 +293,10 @@ async def login(
         raise ProblemError(401, ProblemCode.INVALID_CREDENTIALS, "E-mail or password is incorrect")
     _raise_if_locked(user, password)
     if not crypto.verify_password(user.password_hash, password) or user.deactivated_at is not None:
-        await _register_failure(db, user, "password_or_deactivated")
+        # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The demo's password is public; wrong ones must not lock the
+        # shared accounts for everybody. The rate limit per client stays.
+        if not settings.demo_mode:
+            await _register_failure(db, user, "password_or_deactivated")
         raise ProblemError(401, ProblemCode.INVALID_CREDENTIALS, "E-mail or password is incorrect")
     if user.email_verified_at is None:
         log.info("login_blocked_unverified", user_id=str(user.id))

@@ -3,8 +3,9 @@
 +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every table except alembic_version carries statement-level
 BEFORE DELETE and BEFORE TRUNCATE triggers that raise. They stop deletes by any role, including the owner and a
 superuser typing in psql. The application role additionally has no DELETE/TRUNCATE privilege (HAAL-165).
-Deliberate maintenance (throw-away test databases; later the demo reset or an approved erasure procedure) runs as a
+Deliberate maintenance (throw-away test databases; later an approved erasure procedure) runs as a
 superuser with `SET session_replication_role = replica`, which skips these triggers for that session only.
+The demo's reset (HAAL-154, D-103) does not delete rows: it replaces its whole database.
 Every migration that creates a table calls forbid_delete_triggers(); the test suite fails for a table without them.
 Builders are frozen once used by an applied migration (same rule as haalendar.security.rls).
 +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (owner decision D-48). The ban protects user content and its

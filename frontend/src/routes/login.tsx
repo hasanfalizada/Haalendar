@@ -4,17 +4,21 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. Links to password reset and (open mode) sign-up; an unconfirmed
 // e-mail offers a new confirmation link.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. On the public demo: the banner, the demo accounts with one click, and no
+// password reset (there is no mail).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { login } from "@/api/generated/sdk.gen";
+import { demoStatusQuery } from "@/api/demo";
 import { problemCode } from "@/api/problem";
 import { meQuery, rememberSession, safeRedirect } from "@/api/session";
 import { setupStatusQuery } from "@/api/setup";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { ResendVerification } from "@/components/auth/ResendVerification";
+import { DemoBanner } from "@/components/shell/DemoBanner";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { describeError, log } from "@/lib/log";
@@ -50,17 +54,23 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [unverified, setUnverified] = useState<string | null>(null);
   const { data: status } = useQuery(setupStatusQuery);
+  const { data: demo } = useQuery(demoStatusQuery);
+  const demoAccounts = demo?.demo_mode ? (demo.accounts ?? []) : [];
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    await signIn(email.trim(), password);
+  }
+
+  async function signIn(address: string, secret: string) {
     setError(null);
     setUnverified(null);
     setBusy(true);
     try {
       const { data, error: problem } = await login({
         body: {
-          email: email.trim(),
-          password,
+          email: address,
+          password: secret,
           ...(step === "totp" ? { totp_code: code } : {}),
           ...(step === "recovery" ? { recovery_code: code.trim() } : {}),
         },
@@ -78,7 +88,7 @@ function LoginPage() {
           setError(t("auth.login.errors.locked"));
         } else if (code_ === "email_not_verified") {
           setError(t("auth.login.errors.unverified"));
-          setUnverified(email.trim());
+          setUnverified(address);
         } else {
           setError(t("auth.login.errors.generic"));
         }
@@ -103,6 +113,7 @@ function LoginPage() {
       error={error}
       onSubmit={(e) => void onSubmit(e)}
     >
+      <DemoBanner className="rounded-sm" />
       {!secondFactor ? (
         <>
           <Field id="login-email" label={t("auth.email")}>
@@ -169,11 +180,34 @@ function LoginPage() {
         {busy ? t("auth.login.submitting") : t("auth.login.submit")}
       </Button>
       {unverified ? <ResendVerification email={unverified} /> : null}
+      {demoAccounts.length > 0 ? (
+        <div className="flex flex-col gap-2 border-t border-line pt-4">
+          <p className="text-[13px] text-muted">{t("demo.tryIt")}</p>
+          {demoAccounts.map((account) => (
+            <Button
+              key={account.email}
+              size="touch"
+              disabled={busy}
+              onClick={() => void signIn(account.email, account.password)}
+            >
+              {t("demo.signInAs", { name: account.display_name })}
+            </Button>
+          ))}
+          <p className="text-[13px] break-words text-muted">
+            {t("demo.credentials", {
+              emails: demoAccounts.map((account) => account.email).join(", "),
+              password: demoAccounts[0]?.password,
+            })}
+          </p>
+        </div>
+      ) : null}
       {!secondFactor ? (
         <div className="flex flex-wrap justify-between gap-2 text-[13px]">
-          <Link to="/forgot-password" className={STANDALONE_LINK}>
-            {t("auth.login.forgot")}
-          </Link>
+          {demoAccounts.length === 0 ? (
+            <Link to="/forgot-password" className={STANDALONE_LINK}>
+              {t("auth.login.forgot")}
+            </Link>
+          ) : null}
           {status?.registration_mode === "open" ? (
             <Link to="/register" className={STANDALONE_LINK}>
               {t("auth.login.createAccount")}

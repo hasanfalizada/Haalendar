@@ -171,3 +171,71 @@ describe("invitation page", () => {
     expect(await screen.findByRole("heading", { name: "Invitation not valid" })).toBeInTheDocument();
   });
 });
+
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The public demo: its banner and one-click sign-in, and nothing of it
+// on any other instance.
+describe("the public demo", () => {
+  const DEMO = {
+    demo_mode: true,
+    next_reset_at: "2026-11-09T10:30:00Z",
+    accounts: [
+      { email: "mira@example.org", display_name: "Mira Novak", password: "shown-on-purpose" },
+      { email: "alex@example.org", display_name: "Alex Stone", password: "shown-on-purpose" },
+    ],
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("signs in with one click and tells the time until the reset", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-09T10:17:30Z") });
+    const calls = stubApi({
+      "GET /me": () => problem(401, "session_expired"),
+      "GET /demo/status": () => json(DEMO),
+      "POST /auth/login": () => json({ me: me({ role: "user" }), csrf_token: "csrf-login" }),
+    });
+    renderApp("/login");
+    const button = await screen.findByRole("button", { name: "Sign in as Alex Stone" });
+    expect(screen.getByText(/resets to the sample data in 12:30/)).toBeInTheDocument();
+    expect(screen.getByText(/do not enter anything personal/)).toBeInTheDocument();
+    expect(screen.getByText(/alex@example.org, password shown-on-purpose/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /forgot/i })).not.toBeInTheDocument();
+
+    await userEvent.setup().click(button);
+
+    await waitFor(() => {
+      expect(calls.find((c) => c.path === "/auth/login")?.body).toEqual({
+        email: "alex@example.org",
+        password: "shown-on-purpose",
+      });
+    });
+  });
+
+  it("asks for the next time when the reset is due, and goes to the sign-in page", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-09T10:30:00Z") });
+    let answers = 0;
+    stubApi({
+      "GET /me": () => (answers > 1 ? problem(401, "session_expired") : json(me({ role: "user" }))),
+      "GET /demo/status": () => {
+        answers += 1;
+        return json(answers === 1 ? DEMO : { ...DEMO, next_reset_at: "2026-11-09T11:00:00Z" });
+      },
+    });
+    const { router } = renderApp("/kanban");
+    expect(await screen.findByText(/It is being reset to the sample data/, {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Sign in as Mira Novak" }, { timeout: 8000 })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(screen.getByText(/in 30:00/)).toBeInTheDocument();
+  }, 15_000);
+
+  it("shows neither on another instance", async () => {
+    stubApi({ "GET /me": () => problem(401, "session_expired") });
+    renderApp("/login");
+    expect(await screen.findByRole("heading", { name: "Sign in to Haalendar" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /forgot/i })).toBeInTheDocument();
+    expect(screen.queryByText(/public demo/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Sign in as/ })).not.toBeInTheDocument();
+  });
+});

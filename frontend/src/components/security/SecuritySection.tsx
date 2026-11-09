@@ -5,6 +5,7 @@
 // field-level errors stay next to the fields.
 // +++===+++ 2026-10-16 — Hasan Alizada — HAAL-038. Leaving with a typed new password asks; Ctrl/Cmd+Enter saves.
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-045. Times follow the 12/24-hour setting (useInstantFormat).
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. On the public demo only why it is not available: the accounts are shared.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type SubmitEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +21,7 @@ import {
   startTotpSetup,
 } from "@/api/generated/sdk.gen";
 import type { Me } from "@/api/generated/types.gen";
+import { useIsDemo } from "@/api/demo";
 import { ApiError } from "@/api/problem";
 import { meQuery, meQueryKey } from "@/api/session";
 import { runWrite } from "@/api/write";
@@ -40,15 +42,22 @@ const sessionsQueryKey = ["session", "list"] as const;
 export function SecuritySection() {
   const { t } = useTranslation();
   const { data: me } = useQuery(meQuery);
+  const demo = useIsDemo();
   if (!me?.email) return null;
   return (
     <section aria-labelledby="security-title" className="flex flex-col gap-6 border-t border-line p-4">
       <h2 id="security-title" className="text-[11px] font-semibold tracking-wider text-muted uppercase">
         {t("security.title")}
       </h2>
-      <ChangePassword me={me} />
-      <TwoFactor me={me} />
-      <Sessions />
+      {demo ? (
+        <p className="max-w-2xl text-[13px] text-muted">{t("demo.security")}</p>
+      ) : (
+        <>
+          <ChangePassword me={me} />
+          <TwoFactor me={me} />
+          <Sessions />
+        </>
+      )}
     </section>
   );
 }

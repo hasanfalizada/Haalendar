@@ -199,8 +199,7 @@ paths:
     get:
       tags: [system]
       operationId: getDemoStatus
-      x-not-implemented: 'Planned: HAAL-154.'
-      summary: Demo mode and next reset time (FR-OPS-03)
+      summary: Demo mode, next reset time and the demo accounts (FR-OPS-03)
       security: []
       responses:
         '200':
@@ -213,6 +212,16 @@ paths:
                 properties:
                   demo_mode: { type: boolean }
                   next_reset_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+                  # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Public on purpose, shown on the sign-in page; empty outside a demo.
+                  accounts:
+                    type: array
+                    items:
+                      type: object
+                      required: [email, display_name, password]
+                      properties:
+                        email: { type: string }
+                        display_name: { type: string }
+                        password: { type: string }
   health_live:
     get:
       tags: [system]

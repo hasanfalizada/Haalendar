@@ -4,12 +4,14 @@
 #   worker       background jobs: reminders, data exports
 #   check-worker health check of the worker (a heartbeat in the last minute)
 #   migrate      the application database role (haalendar-db-bootstrap), then the migrations; exits when done
+#   demo         +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The resets of the public demo (compose.demo.yaml)
 # Anything else runs as a command (e.g. `docker compose run --rm app sh`).
 set -eu
 case "${1:-api}" in
   api) exec haalendar-api ;;
   worker) exec haalendar-worker ;;
   check-worker) exec haalendar-worker check ;;
+  demo) exec haalendar-demo ;;
   migrate)
     haalendar-db-bootstrap
     cd /app/backend

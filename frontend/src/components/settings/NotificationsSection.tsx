@@ -7,12 +7,14 @@ import { useTranslation } from "react-i18next";
 
 import { meQuery } from "@/api/session";
 import { Button } from "@/components/ui/button";
+import { useIsDemo } from "@/api/demo";
 import { usePush } from "@/lib/usePush";
 
 export function NotificationsSection() {
   const { t } = useTranslation();
   const { data: me } = useQuery(meQuery);
   const push = usePush(me?.id);
+  const demo = useIsDemo();
 
   return (
     <section
@@ -26,7 +28,7 @@ export function NotificationsSection() {
       </h2>
       <p className="max-w-2xl text-[13px] text-muted">{t("push.intro")}</p>
       {push.state === null ? null : push.state === "unsupported" ? (
-        <p className="text-[13px]">{t("push.unsupported")}</p>
+        <p className="text-[13px]">{t(demo ? "demo.push" : "push.unsupported")}</p>
       ) : push.state === "blocked" ? (
         <p className="text-[13px]">{t("push.blocked")}</p>
       ) : (

@@ -158,3 +158,8 @@ under Settings → Sync.
 How long it takes grows with the data and the disk. Measured once with a 3 GB database and 6 GB of files on a development server:
 about 2.5 minutes for the backup and 30 seconds for the restore, far below the target of one hour. Try a restore on a
 spare machine to know your own numbers. `scripts/dev/compose-check.sh` runs backup and restore on every CI run.
+
+## 6. A public demo
+
+<!-- +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. -->
+A stand with made-up data that resets itself every 30 minutes: [demo.md](demo.md). Never on an installation with real data.

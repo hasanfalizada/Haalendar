@@ -7,7 +7,7 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Overdue and due-soon badges on the cards and in the editor.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { addDays, todayIn } from "@/lib/datetime";
 import { comparePositions } from "@/lib/position";
@@ -139,7 +139,14 @@ const cardTitles = (region: HTMLElement) =>
     .map((button) => button.getAttribute("aria-label")?.replace(/^Open /, ""));
 
 describe("cards on the board", { timeout: 20_000 }, () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("lists the cards of each column with labels, due date, checklist progress and priority", async () => {
+    // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Before the card's due date, on any day this runs: on the real clock
+    // the test began to fail when that date came close (the card became "Due soon").
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-30T12:00:00Z") });
     await open();
     const todo = await screen.findByRole("region", { name: "To do" });
     await waitFor(() => {

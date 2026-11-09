@@ -38,7 +38,7 @@
             │ uvicorn + FastAPI   │        │ same image,         │
             │ /api, SSE, SPA      │        │ cmd: worker         │
             │ static, attachments │        │ reminders, e-mail,  │
-            └───┬────────────┬────┘        │ Web Push, demo reset│
+            └───┬────────────┬────┘        │ Web Push            │
                 │            │             └───┬────────────┬────┘
                 │  internal network only       │            │
         ┌───────▼────────┐  ┌▼────────────────▼┐           │
@@ -85,7 +85,7 @@ Decision: **storage port with adapters**, behind one interface (`put`, `get` str
 ## 6. Configuration and secrets
 - Twelve-factor: all settings via environment variables; `.env.example` documented in the code repo.
 - Secrets (`SECRET_KEY`, DB password, SMTP password, VAPID private key) also accepted as `<NAME>_FILE` pointing to Docker secrets.
-- Files shipped in the code repo: `compose.yaml` (production default), `compose.demo.yaml` (overlay: `DEMO_MODE=true`, seed data, reset job every 30 min, stricter upload limits), `.env.example`.
+- Files shipped in the code repo: `compose.yaml` (production default), `compose.demo.yaml` (overlay: demo mode and limits, plus the service `demo` that resets every 30 min; D-103), `.env.example`.
 - Upgrade procedure: backup → `docker compose pull` → `docker compose up -d` (migrate runs automatically) → smoke check. Rollback = restore backup + previous image tag (migrations are forward-only).
 - Kubernetes/Helm chart: Later (not in v1.0).
 

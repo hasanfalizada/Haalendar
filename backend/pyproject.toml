@@ -53,6 +53,7 @@ dev = [
 [project.scripts]
 haalendar-api = "haalendar.main:run"
 haalendar-db-bootstrap = "haalendar.dbroles:main"
+haalendar-demo = "haalendar.demo.reset:run"
 haalendar-worker = "haalendar.jobs:run_worker"
 
 [build-system]

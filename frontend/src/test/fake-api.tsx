@@ -53,6 +53,8 @@ export function me(overrides: Partial<Me> = {}): Me {
 const DEFAULTS: Record<string, Handler> = {
   "GET /setup/status": () =>
     json({ setup_required: false, setup_token_required: false, registration_mode: "invite", demo_mode: false }),
+  // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Not the public demo by default.
+  "GET /demo/status": () => json({ demo_mode: false, next_reset_at: null, accounts: [] }),
   "GET /health/live": () => json({ status: "ok", version: "0.1.0" }),
   "GET /health/ready": () => json({ status: "ok", version: "0.1.0" }),
   "GET /shares": () => json({ data: [] }),

@@ -18,6 +18,7 @@ from http import HTTPStatus
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from haalendar.demo import REFUSAL, is_refused
 from haalendar.errors import ProblemCode
 from haalendar.logging import get_logger
 from haalendar.security.uploads import (
@@ -211,12 +212,28 @@ class RateLimitGuard:
         await self.app(scope, receive, send)
 
 
+class DemoGuard:
+    """+++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Only with demo mode on: refuses what would let one visitor lock
+    the others out of the shared accounts or make the stand send something (haalendar.demo.REFUSED)."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and is_refused(scope.get("method", ""), scope.get("path", "")):
+            log.info("demo_refused", path=scope.get("path", ""))
+            await send_problem(scope, send, 403, ProblemCode.FORBIDDEN, REFUSAL)
+            return
+        await self.app(scope, receive, send)
+
+
 class BodyGuard:
     """Limits request body size (Content-Length and streamed) and accepted content types for unsafe methods."""
 
-    def __init__(self, app: ASGIApp, max_body_bytes: int) -> None:
+    def __init__(self, app: ASGIApp, max_body_bytes: int, max_upload_bytes: int | None = None) -> None:
         self.app = app
         self.max_body_bytes = max_body_bytes
+        self.max_upload_bytes = max_upload_bytes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or scope.get("method") not in UNSAFE_METHODS:
@@ -224,6 +241,8 @@ class BodyGuard:
             return
         rule = body_rule(scope.get("path", ""))
         limit = rule.max_bytes if rule else self.max_body_bytes
+        if rule and self.max_upload_bytes is not None:
+            limit = min(limit, self.max_upload_bytes)
         allowed_types = rule.content_types if rule else ALLOWED_BODY_TYPES
         length_header = _header(scope, b"content-length")
         if length_header.isdigit() and int(length_header) > limit:

@@ -14,10 +14,11 @@
 // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048. Notification bell in the rail; "Notifications" in the drawer.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Rail targets are 44 px on touch tablets, 40 px with a mouse.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. Offline banner above the content.
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The demo's banner above it.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { meQuery, meQueryKey } from "@/api/session";
@@ -35,6 +36,7 @@ import { listenToWorker } from "@/lib/push";
 import { startSync } from "@/sync";
 
 import { ConnectionStatus } from "./ConnectionStatus";
+import { DemoBanner } from "./DemoBanner";
 import { OfflineBanner } from "./OfflineBanner";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { TimeZoneMismatch } from "./TimeZoneMismatch";
@@ -87,16 +89,17 @@ export function AppShell() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const here = useRouterState({ select: (state) => state.location.href });
+  const goToSignIn = useCallback(() => {
+    // The cached profile still says "signed in"; forget it so the sign-in page does not bounce back.
+    queryClient.setQueryData(meQueryKey, null);
+    void navigate({ to: "/login", search: { redirect: here } });
+  }, [navigate, here, queryClient]);
   useEffect(() => {
-    setSessionExpiredHandler(() => {
-      // The cached profile still says "signed in"; forget it so the sign-in page does not bounce back.
-      queryClient.setQueryData(meQueryKey, null);
-      void navigate({ to: "/login", search: { redirect: here } });
-    });
+    setSessionExpiredHandler(goToSignIn);
     return () => {
       setSessionExpiredHandler(null);
     };
-  }, [navigate, here, queryClient]);
+  }, [goToSignIn]);
   const secondaryItems = SECONDARY_ITEMS.filter((item) => !item.adminOnly || me?.role === "admin");
   const userMenu = useUserMenu();
   useModuleShortcuts();
@@ -216,6 +219,7 @@ export function AppShell() {
       </header>
 
       <main id="main" data-region="content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
+        <DemoBanner onReset={goToSignIn} />
         <OfflineBanner />
         <TimeZoneMismatch />
         <Outlet />

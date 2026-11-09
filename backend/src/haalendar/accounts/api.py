@@ -181,7 +181,8 @@ async def totp_disable(auth: Auth, db: DbSession, mailer: AppMailer) -> None:
 async def setup_status(db: DbSession, settings: AppSettings) -> SetupStatusOut:
     mode = await service.get_registration_mode(db)
     return SetupStatusOut(
-        setup_required=not await service.admin_exists(db),
+        # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A demo has no administrator and no first-run setup.
+        setup_required=not settings.demo_mode and not await service.admin_exists(db),
         setup_token_required=service.setup_token_required(settings),
         registration_mode="open" if mode == "open" else "invite",
         demo_mode=settings.demo_mode,

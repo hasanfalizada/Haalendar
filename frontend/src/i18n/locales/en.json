@@ -1180,6 +1180,17 @@
     "updateReady": "A new version of Haalendar is available.",
     "reload": "Reload"
   },
+  "demo": {
+    "banner": "This is the public demo. Everything resets to the sample data in {{time}}.",
+    "resetting": "This is the public demo. It is being reset to the sample data.",
+    "public": "Other visitors see what you enter, so please do not enter anything personal.",
+    "tryIt": "Sign in with a sample account. The two share a calendar and a board, so try them in two windows.",
+    "signInAs": "Sign in as {{name}}",
+    "credentials": "Or type it yourself: {{emails}}, password {{password}}",
+    "security": "The demo accounts are shared, so their password, two-factor sign-in and sessions cannot be changed here.",
+    "export": "Data export is not available in the demo.",
+    "push": "The demo does not send browser notifications."
+  },
   "offlineBanner": {
     "offline": "You are offline. Changes to calendars and items are kept on this device and sync when the connection is back; settings and sharing need a connection.",
     "unreachable": "The server cannot be reached. Changes to calendars and items are kept on this device and sync later; settings and sharing need a connection."

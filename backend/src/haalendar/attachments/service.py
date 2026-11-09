@@ -86,6 +86,8 @@ async def upload(
     data: bytes,
     raw_file_name: str,
     attachment_id: uuid.UUID | None,
+    *,
+    max_account_bytes: int | None = None,
 ) -> Attachment:
     item = await _item(db, user_id, item_id, "write_items")
     if attachment_id is not None:
@@ -103,6 +105,17 @@ async def upload(
         raise ProblemError(
             409, ProblemCode.INVALID_STATE, f"An item can have at most {MAX_PER_ITEM} attachments"
         )
+
+    # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The demo also limits what one account may store in total.
+    if max_account_bytes is not None:
+        used = await db.scalar(
+            select(func.coalesce(func.sum(Attachment.size_bytes), 0)).where(Attachment.uploaded_by == user_id)
+        )
+        if (used or 0) + len(data) > max_account_bytes:
+            log.info("attachment_rejected_account_limit", used_bytes=used, limit=max_account_bytes)
+            raise ProblemError(
+                413, ProblemCode.PAYLOAD_TOO_LARGE, "This demo account has no room for more files"
+            )
 
     image = await asyncio.to_thread(process_attachment, data)
     if len(image.data) > MAX_IMAGE_BYTES:
