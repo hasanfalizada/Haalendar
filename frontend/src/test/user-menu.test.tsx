@@ -174,6 +174,40 @@ describe("user menu", () => {
     expect(calls.some((c) => c.path === "/auth/logout")).toBe(true);
   });
 
+  // +++===+++ 2026-11-10 — Hasan Alizada — HAAL-154. Found on the demo stand: signing out of Settings asked the server
+  // four more times for the user's data after the session had ended (401 in the console).
+  it("asks the server for nothing of the user once signed out of Settings", async () => {
+    let signedIn = true;
+    let endedAt = 0;
+    const calls = stubApi({
+      "GET /me": () => (signedIn ? json(me()) : problem(401, "session_expired")),
+      "POST /auth/logout": () => {
+        signedIn = false;
+        endedAt = Date.now();
+        return noContent();
+      },
+    });
+    const { router, queryClient } = renderApp("/settings");
+    const user = userEvent.setup();
+    await screen.findByLabelText("Display name");
+    await waitFor(() => {
+      expect(calls.some((c) => c.path === "/me/settings")).toBe(true);
+    });
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/login");
+    });
+    await screen.findByRole("button", { name: "Sign in" });
+    const after = calls.slice(calls.findIndex((c) => c.path === "/auth/logout") + 1).map((c) => c.path);
+    expect(after.filter((path) => /^\/(me\/|shares|exports|sync)/.test(path))).toEqual([]);
+    // And nothing read for that user stays in memory for whoever signs in next in this tab.
+    const kept = queryClient
+      .getQueryCache()
+      .getAll()
+      .filter((q) => q.state.data != null && q.state.dataUpdatedAt < endedAt);
+    expect(kept.map((q) => q.queryKey)).toEqual([]);
+  });
+
   it("asks before signing out when drafts exist", async () => {
     const calls = stubApi({ "GET /me": () => json(me()), "POST /auth/logout": () => noContent() });
     // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A new session: the test before this one signed the same user out.

@@ -5,6 +5,13 @@
 .vscode/
 *.swp
 *~
+# +++===+++ 2026-11-10 — Hasan Alizada — Files AI assistants keep in a clone (allowed commands as they were typed, chat
+# history, connections to services): they may carry a password from a command line. What agents should know about the
+# project is in CLAUDE.md.
+.claude/
+.cursor/
+.specstory/
+.mcp.json
 
 # OS
 .DS_Store

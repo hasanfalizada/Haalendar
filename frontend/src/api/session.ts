@@ -94,7 +94,12 @@ export async function signOut(queryClient: QueryClient): Promise<void> {
   }
   await forgetProfile();
   bindUndoUser(null);
-  queryClient.clear();
+  // +++===+++ 2026-11-10 — Hasan Alizada — HAAL-154. Everything read from the server is dropped here, as before. The page
+  // still on screen for a moment keeps its queries, emptied: with clear() it found them gone, made them again and asked
+  // the server once more, after the session had ended (four 401 in the console when signing out of Settings).
+  for (const query of queryClient.getQueryCache().getAll()) query.reset();
+  queryClient.removeQueries({ type: "inactive" });
+  queryClient.getMutationCache().clear();
   queryClient.setQueryData(meQueryKey, null);
   log.info("signed_out");
 }

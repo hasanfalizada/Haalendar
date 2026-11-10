@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from haalendar.planning.reminders import push_message
 
 from .test_notes import _create
-from .test_reminders import _event, _reminder, _reminder_notifications, _run, _schedule, utc
+from .test_reminders import _event, _reminder, _reminder_notifications, _run, _schedule
 from .test_sharing import People
 from .test_sync import _m, _pull, _push
 
@@ -73,24 +73,28 @@ def test_a_note_takes_a_date_and_time_only(people: People) -> None:
 
 @pytest.mark.db
 def test_fires_once_also_archived_and_after_an_edit_never_deleted(people: People) -> None:
+    # +++===+++ 2026-11-10 — Hasan Alizada — HAAL-154. The times are counted from today: "passed when set" is judged
+    # against the real moment the reminder is written, so with fixed dates the test failed from the day they arrived.
+    at = (datetime.now(UTC) + timedelta(days=30)).replace(hour=8, minute=0, second=0, microsecond=0)
+    hour, day = timedelta(hours=1), timedelta(days=1)
     ada = people.as_("ada")
     note, _ = _create(people, ada)
-    reminder = _reminder(people, ada, note, remind_at="2026-11-10T08:00:00Z")
-    assert _run(people, utc(2026, 11, 1)) == {"checked": 1}
-    assert _schedule(people, "ada", reminder["id"])[:2] == (False, utc(2026, 11, 10, 8))
+    reminder = _reminder(people, ada, note, remind_at=at.isoformat())
+    assert _run(people, at - 9 * day) == {"checked": 1}
+    assert _schedule(people, "ada", reminder["id"])[:2] == (False, at)
 
     # Archived, and its title edited just before the time (which asks for a check): it still fires, once.
     archive = _m(
-        "item", note, "update", base={"archived_at": None}, data={"archived_at": "2026-11-01T00:00:00Z"}
+        "item", note, "update", base={"archived_at": None}, data={"archived_at": (at - 9 * day).isoformat()}
     )
     rename = _m("item", note, "update", base={"title": "Shopping"}, data={"title": "Groceries"})
     assert [r["status"] for r in _push(people.api, ada, archive, rename)] == ["applied", "applied"]
     assert _schedule(people, "ada", reminder["id"])[0] is True
-    assert _run(people, utc(2026, 11, 10, 8, 0)) == {"fired": 1}
+    assert _run(people, at) == {"fired": 1}
     [fired] = _reminder_notifications(people, ada)
     assert fired["payload"]["kind"] == "note" and fired["payload"]["title"] == "Groceries"
     assert fired["payload"]["item_id"] == note and fired["payload"]["late"] is False
-    assert _run(people, utc(2026, 11, 10, 8, 5)) == {}
+    assert _run(people, at + timedelta(minutes=5)) == {}
 
     # Set again for later the same day: it fires again.
     again = _push(
@@ -100,22 +104,22 @@ def test_fires_once_also_archived_and_after_an_edit_never_deleted(people: People
             "reminder",
             reminder["id"],
             "update",
-            base={"remind_at": "2026-11-10T08:00:00Z"},
-            data={"remind_at": "2026-11-10T09:00:00Z"},
+            base={"remind_at": at.isoformat()},
+            data={"remind_at": (at + hour).isoformat()},
         ),
     )[0]
     assert again["status"] == "applied"
-    assert _run(people, utc(2026, 11, 10, 8, 20)) == {"checked": 1}
-    assert _schedule(people, "ada", reminder["id"])[1] == utc(2026, 11, 10, 9)
-    assert _run(people, utc(2026, 11, 10, 9, 0)) == {"fired": 1}
+    assert _run(people, at + timedelta(minutes=20)) == {"checked": 1}
+    assert _schedule(people, "ada", reminder["id"])[1] == at + hour
+    assert _run(people, at + hour) == {"fired": 1}
 
     # Missed while the server was down: fires once, late. A deleted note's reminder never fires.
-    late = _reminder(people, ada, note, remind_at="2026-11-12T08:00:00Z")
+    late = _reminder(people, ada, note, remind_at=(at + 2 * day).isoformat())
     gone_note, _ = _create(people, ada, title="Old")
-    gone = _reminder(people, ada, gone_note, remind_at="2026-11-12T08:00:00Z")
-    assert _run(people, utc(2026, 11, 11)) == {"checked": 2}
+    gone = _reminder(people, ada, gone_note, remind_at=(at + 2 * day).isoformat())
+    assert _run(people, at + day) == {"checked": 2}
     assert _push(people.api, ada, _m("item", gone_note, "delete"))[0]["status"] == "applied"
-    assert _run(people, utc(2026, 11, 12, 10)) == {"fired_late": 1, "idle": 1}
+    assert _run(people, at + 2 * day + 2 * hour) == {"fired_late": 1, "idle": 1}
     titles = [(n["payload"]["title"], n["payload"]["late"]) for n in _reminder_notifications(people, ada)]
     assert sorted(titles) == [("Groceries", False), ("Groceries", False), ("Groceries", True)]
     assert _schedule(people, "ada", late["id"])[1] is None and _schedule(people, "ada", gone["id"])[1] is None
