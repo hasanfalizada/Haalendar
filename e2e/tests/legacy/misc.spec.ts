@@ -72,7 +72,7 @@ test("F-34 About says the app is free and links the author and the repository; H
   await expect(about).toContainText("Haalendar is free and open-source software. It has no usage restrictions.");
   await expect(about.getByRole("link", { name: /Author's website/ })).toHaveAttribute(
     "href",
-    "https://hasanfalizada.github.io/",
+    "https://hasanalizada.net/",
   );
   await expect(about.getByRole("link", { name: /Source code on GitHub/ })).toHaveAttribute(
     "href",

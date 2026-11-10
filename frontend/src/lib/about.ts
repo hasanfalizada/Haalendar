@@ -4,7 +4,8 @@
 export const APP_VERSION: string = __APP_VERSION__;
 export const LICENSE_NAME = "Apache-2.0";
 
-export const AUTHOR_URL = "https://hasanfalizada.github.io/";
+// +++===+++ 2026-11-10 — Hasan Alizada — The author's website moved to its own domain (the old address redirects there).
+export const AUTHOR_URL = "https://hasanalizada.net/";
 export const REPOSITORY_URL = "https://github.com/hasanfalizada/Haalendar";
 export const LICENSE_URL = `${REPOSITORY_URL}/blob/master/LICENSE`;
 export const DOCS_URL = `${REPOSITORY_URL}/tree/master/docs`;

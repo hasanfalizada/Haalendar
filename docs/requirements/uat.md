@@ -2,7 +2,7 @@
 
 +++===+++ 2026-11-01 — Hasan Alizada — HAAL-145. Acceptance of the rewrite by the owner on his own data, with a written
 sign-off. Requirements: [`SRS.md`](SRS.md) §3; legacy features: [`legacy-feature-inventory.md`](legacy-feature-inventory.md).
-+++===+++ 2026-11-07 — Hasan Alizada — HAAL-145. Run by the agent on a fresh stand on devsrv at the owner's request
++++===+++ 2026-11-07 — Hasan Alizada — HAAL-145. Run by the agent on a fresh stand on a development server at the owner's request
 (2026-11-04); results in §4, findings with the owner's decisions (option A: F1–F7 fixed within HAAL-145, F8–F22 in
 HAAL-174) in §6; the checks only real devices can do stay with the owner.
 
@@ -20,11 +20,11 @@ requirement (`docs/architecture/test-strategy.md`); this test is about real use:
 
 | | |
 |---|---|
-| Address | `https://localhost:19443` on devsrv (bundled Caddy with its local certificate; the agent's browsers: Chromium, Firefox and WebKit through Playwright, desktop and emulated phones); e-mail caught by Mailpit |
+| Address | `https://localhost:19443` on the development server (bundled Caddy with its local certificate; the agent's browsers: Chromium, Firefox and WebKit through Playwright, desktop and emulated phones); e-mail caught by Mailpit |
 | Installation | `compose.yaml` as in `docs/operations/deployment.md`, Compose project `haalendar-uat`, image built from branch `revamp`; the earlier stand on the app server (`haalendarnew`) was removed on 2026-11-05 |
 | Version under test | commit `de145ec` (run by the agent 2026-11-04 – 2026-11-05 at the owner's request); fixes re-tested on the working tree of 2026-11-07 |
-| Devices | the agent's browsers on devsrv; real devices (installation, iPhone touch, push with the app closed, a week of use) by the owner |
-| Data | throw-away accounts `ada@uat.example` (administrator) and `ben@uat.example` (second account), entered by the agent; from 2026-11-07 a fresh stand at `https://haalendar-uat.home.hasanalizada.net:19443` (Let's Encrypt certificate, devsrv's LAN address, the owner's devices over the VPN) for the device checks |
+| Devices | the agent's browsers on the development server; real devices (installation, iPhone touch, push with the app closed, a week of use) by the owner |
+| Data | throw-away accounts `ada@uat.example` (administrator) and `ben@uat.example` (second account), entered by the agent; from 2026-11-07 a fresh stand under its own name with a Let's Encrypt certificate (reached from the owner's devices) for the device checks |
 | Backup | none needed: throw-away data (the stand is removed with its volumes after the UAT) |
 
 Preparation:

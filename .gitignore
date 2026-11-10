@@ -6,9 +6,12 @@
 *.swp
 *~
 # +++===+++ 2026-11-10 — Hasan Alizada — Files AI assistants keep in a clone (allowed commands as they were typed, chat
-# history, connections to services): they may carry a password from a command line. What agents should know about the
-# project is in CLAUDE.md.
+# history, connections to services, personal working rules): they may carry a password from a command line, and they
+# are personal.
 .claude/
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
 .cursor/
 .specstory/
 .mcp.json
