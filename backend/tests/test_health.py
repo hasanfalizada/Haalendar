@@ -5,8 +5,13 @@
 
 from __future__ import annotations
 
+import importlib
+from pathlib import Path
+
+import pytest
 from fastapi.testclient import TestClient
 
+import haalendar
 from haalendar import __version__
 from haalendar.db import migration_head
 
@@ -44,3 +49,13 @@ def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120: links (0030).
     # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F7): shared notes named in the notification (0031).
     assert migration_head() == "0031"
+
+
+def test_the_version_of_an_image_is_the_version_of_its_release(monkeypatch: pytest.MonkeyPatch) -> None:
+    """+++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Seen on the demo stand: the image 1.0.0-rc.3 answered 0.1.0."""
+    monkeypatch.setenv("HAALENDAR_VERSION", "9.8.7-rc.6")
+    assert importlib.reload(haalendar).__version__ == "9.8.7-rc.6"
+    monkeypatch.undo()
+    importlib.reload(haalendar)
+    dockerfile = (Path(__file__).resolve().parents[2] / "Dockerfile").read_text()
+    assert 'HAALENDAR_VERSION="${VERSION}"' in dockerfile

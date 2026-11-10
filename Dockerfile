@@ -38,7 +38,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_NO_CACHE=1 UV_PYTHON_DOWNLOADS=never \
     UV_PROJECT_ENVIRONMENT=/app/.venv PATH=/app/.venv/bin:$PATH \
     HAALENDAR_ENV=production HAALENDAR_STATIC_DIR=/app/static HAALENDAR_STORAGE_DIR=/data/storage \
-    HAALENDAR_BIND_HOST=0.0.0.0 HAALENDAR_PORT=8080
+    HAALENDAR_BIND_HOST=0.0.0.0 HAALENDAR_PORT=8080 HAALENDAR_VERSION="${VERSION}"
 WORKDIR /app
 COPY --from=uv /uv /usr/local/bin/uv
 # Dependencies first (their own layer), then the backend itself; uv.lock decides every version (--frozen).

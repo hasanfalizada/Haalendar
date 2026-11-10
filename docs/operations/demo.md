@@ -102,6 +102,6 @@ proxy's site. With `COMPOSE_PROJECT_NAME` set as above, nothing of another proje
 
 ## Scanning it
 
-`scripts/dev/dast-demo.sh https://demo.example.org` runs the full DAST against the stand: the web pages and the API,
-signed in, with their headers, and the HTTPS setup. It sends attacks to that address, so run it only against a demo of
+`scripts/dev/dast-demo.sh https://demo.example.org` runs the full DAST against the stand: the web pages, signed in,
+with their headers, what the app calls while going through them, and the HTTPS setup. Every operation of the API is scanned by `scripts/dev/dast.sh`. It sends attacks to that address, so run it only against a demo of
 your own. Start it right after a reset (it takes up to 25 minutes). Reports go to `.dev/dast-demo/`.

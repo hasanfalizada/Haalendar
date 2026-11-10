@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The full DAST of the app on the demo stand (the scan of the API alone is
 # scripts/dev/dast.sh): first HTTPS as a visitor gets it (old TLS refused, HTTP redirected, HSTS and the other headers on
-# a page), then OWASP ZAP's full scan (spider, passive and active rules; image pinned, no add-on updates) of the web pages and
-# the API, signed in as a demo account. The stand's rate limit stays on, so ZAP goes slowly enough for it; a reset ends
-# its session, so start right after one. Only against your own demo: it sends attacks. Rule decisions with reasons:
+# a page), then OWASP ZAP's full scan (spider, passive and active rules; image pinned, no add-on updates) of the web pages,
+# signed in as a demo account. +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The pages are made in the browser, so the
+# plain spider sees little of them (34 addresses in the first run): the AJAX spider goes through the app in a real browser
+# (two of them: ZAP's default for -j, the client spider, starts over twenty and ran out of memory), and the API calls it
+# makes are attacked too. Every operation of the API is the job of scripts/dev/dast.sh.
+# The stand's rate limit stays on, so ZAP goes slowly enough for it; a reset ends its session, so start right after one. Only against your own demo: it sends attacks. Rule decisions with reasons:
 # scripts/dev/dast-rules.tsv. Reports: .dev/dast-demo/report.{html,json,md}.
 # Usage: scripts/dev/dast-demo.sh https://demo.example.org   (exit code 0 only when nothing is left at WARN or FAIL)
 set -uo pipefail
@@ -17,6 +20,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT="$ROOT/.dev/dast-demo"
 IMAGE="$(sed -n 's/^IMAGE="\(.*\)"$/\1/p' "$ROOT/scripts/dev/dast.sh")"
 MINUTES=22
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A scan may not take the machine: left alone, ZAP took 7.8 GB and the host ran out of memory.
+ZAP_LIMITS=(--memory 4g --memory-swap 4g -e _JAVA_OPTIONS=-Xmx3g)
 mkdir -p "$OUT"
 chmod 777 "$OUT"  # ZAP's user in the container writes the reports here
 rm -f "$OUT"/report.* "$OUT"/rules.conf
@@ -67,11 +72,13 @@ replacer() {  # index, header, value
   printf -- '-config replacer.full_list(%s).matchtype=REQ_HEADER -config replacer.full_list(%s).matchstr=%s ' "$1" "$1" "$2"
   printf -- '-config replacer.full_list(%s).regex=false -config replacer.full_list(%s).replacement=%s ' "$1" "$1" "$3"
 }
-# About 240 requests a minute: under the stand's limit of 300.
-OPTIONS="-silent $(replacer 0 Cookie "$COOKIE")$(replacer 1 X-CSRF-Token "$CSRF")-config scanner.threadPerHost=1 -config scanner.delayInMs=250 -config spider.thread=1"
+# About 240 requests a minute: under the stand's limit of 300. +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The
+# attacks themselves stop after $MINUTES minutes (-T does not limit them: the first full run took two hours and went on
+# signed out after the reset at the next mark).
+OPTIONS="-silent $(replacer 0 Cookie "$COOKIE")$(replacer 1 X-CSRF-Token "$CSRF")-config scanner.threadPerHost=1 -config scanner.delayInMs=250 -config spider.thread=1 -config ajaxSpider.numberOfBrowsers=2 -config scanner.maxScanDurationInMins=$MINUTES"
 
 echo "== ZAP (up to $MINUTES minutes of attacks)"
-docker run --rm -v "$OUT:/zap/wrk:rw" "$IMAGE" zap-full-scan.py -t "$URL/" -m 3 -T "$MINUTES" \
+docker run --rm "${ZAP_LIMITS[@]}" -v "$OUT:/zap/wrk:rw" "$IMAGE" zap-full-scan.py -t "$URL/" -j --ajax-spider -m 3 -T "$MINUTES" \
   -c rules.conf -r report.html -J report.json -w report.md -z "$OPTIONS"
 status=$?  # 0: nothing above INFO; 1: FAIL; 2: WARN (an alert without a decision in dast-rules.tsv); 3: ZAP failed
 [ -s "$OUT/report.json" ] || { echo "ZAP wrote no report (exit $status)"; exit 3; }

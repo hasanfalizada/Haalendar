@@ -8,6 +8,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { addDays, todayIn } from "@/lib/datetime";
 import { changesOf, defaultTimes, eventData, formFromRow, newEventForm, validate, withStart } from "@/lib/eventForm";
 import { localChanged } from "@/sync";
 import { localDb } from "@/sync/db";
@@ -15,7 +16,9 @@ import { localDb } from "@/sync/db";
 import { json, me, noPush, renderApp, settings, stubApi } from "./fake-api";
 
 const USER = me().id;
-const DAY = "2026-11-10"; // not today, so timed defaults start at 09:00
+// +++===+++ 2026-11-10 — Hasan Alizada — HAAL-154. Two weeks from today, so never today in any time zone and timed
+// defaults start at 09:00 (a fixed 2026-11-10 failed on that day: the start was the next quarter hour).
+const DAY = addDays(todayIn("UTC"), 14);
 const CAL = "0199f000-0000-7000-8000-0000000000c1";
 const EVENT = "0199f000-0000-7000-8000-0000000000e1";
 

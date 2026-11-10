@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { meQuery, signOut } from "@/api/session";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { countDrafts } from "@/lib/drafts";
+import { dirtyEditorCount } from "@/lib/unsaved";
 import { prepareSignOut } from "@/sync";
 
 export function useSignOut(returnFocus?: () => void): { requestSignOut: () => void; signOutDialog: ReactNode } {
@@ -23,13 +24,17 @@ export function useSignOut(returnFocus?: () => void): { requestSignOut: () => vo
 
   async function finish() {
     await signOut(queryClient);
-    await navigate({ to: "/login", replace: true });
+    // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The person has answered and the session is over: the guard of an open
+    // form must not hold the way out (it would say the changes stay on this device, and they have just been deleted).
+    await navigate({ to: "/login", replace: true, ignoreBlocker: true });
   }
 
   function requestSignOut() {
     if (!me) return;
     void Promise.all([countDrafts(me.id), prepareSignOut(me.id)]).then(([drafts, unsent]) => {
-      if (drafts > 0 || unsent > 0) setConfirming({ drafts, unsent });
+      // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Text typed in the last second has no draft yet, and is lost too.
+      const unsaved = drafts + dirtyEditorCount();
+      if (unsaved > 0 || unsent > 0) setConfirming({ drafts: unsaved, unsent });
       else void finish();
     });
   }

@@ -20,6 +20,10 @@ API="http://127.0.0.1:$API_PORT/api/v1"
 export SCAN_HOST
 SCAN_HOST="$(docker network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}')" || exit 1
 SCAN_PORT=18081
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. A scan may not take the machine: left alone, ZAP took 7.8 GB and the host ran out of memory.
+ZAP_LIMITS=(--memory 4g --memory-swap 4g -e _JAVA_OPTIONS=-Xmx3g)
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Two attack threads: the DOM XSS rule opens a browser for each, and with
+# one thread per core of a 10-core host they did not fit in those 4 GB (ZAP stopped answering at that rule).
 mkdir -p "$OUT"
 rm -f "$OUT"/report.* "$OUT"/openapi*.json "$OUT"/rules.conf
 
@@ -122,9 +126,9 @@ replacer() {  # index, header, value
   printf -- '-config replacer.full_list(%s).matchtype=REQ_HEADER -config replacer.full_list(%s).matchstr=%s ' "$1" "$1" "$2"
   printf -- '-config replacer.full_list(%s).regex=false -config replacer.full_list(%s).replacement=%s ' "$1" "$1" "$3"
 }
-OPTIONS="-silent $(replacer 0 Cookie "$COOKIE")$(replacer 1 X-CSRF-Token "$CSRF")-config scanner.maxScanDurationInMins=40"
+OPTIONS="-silent $(replacer 0 Cookie "$COOKIE")$(replacer 1 X-CSRF-Token "$CSRF")-config scanner.maxScanDurationInMins=40 -config scanner.threadPerHost=2"
 
-docker run --rm -v "$OUT:/zap/wrk:rw" "$IMAGE" zap-api-scan.py \
+docker run --rm "${ZAP_LIMITS[@]}" -v "$OUT:/zap/wrk:rw" "$IMAGE" zap-api-scan.py \
   -t /zap/wrk/openapi.json -f openapi -c rules.conf -r report.html -J report.json -w report.md -z "$OPTIONS"
 status=$?  # 0: nothing above INFO; 1: FAIL; 2: WARN (an alert without a decision in dast-rules.tsv); 3: ZAP failed
 [ -s "$OUT/report.json" ] || { echo "ZAP wrote no report (exit $status)"; exit 3; }

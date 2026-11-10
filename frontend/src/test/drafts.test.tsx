@@ -104,7 +104,7 @@ describe("drafts on the profile form", { timeout: 15_000 }, () => {
       "PATCH /me": () => Promise.reject(new TypeError("Failed to fetch")),
       "POST /auth/logout": () => noContent(),
     });
-    renderApp("/settings");
+    const { router } = renderApp("/settings");
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Display name"), "!");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
@@ -123,6 +123,33 @@ describe("drafts on the profile form", { timeout: 15_000 }, () => {
       },
       { timeout: 10_000 },
     );
+    // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The person has answered and the session is over: the guard of the
+    // open form must not hold the way out, and its "they stay on this device" is no longer true.
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/login");
+    });
+    expect(screen.queryByRole("dialog", { name: "Unsaved changes" })).not.toBeInTheDocument();
+  });
+
+  // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Found on the demo stand: text typed less than a second ago has no draft
+  // yet, so signing out did not ask, ended the session and then got stuck on the guard of the form.
+  it("asks before signing out also when the text was typed just now", async () => {
+    const calls = stubApi({ "GET /me": () => json(ADA), "POST /auth/logout": () => noContent() });
+    const { router } = renderApp("/settings");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Display name"), "!");
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Sign out and delete unsaved changes?" });
+    expect(calls.some((c) => c.path === "/auth/logout")).toBe(false);
+    await user.click(within(dialog).getByRole("button", { name: "Sign out anyway" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/login");
+    });
+    expect(screen.queryByRole("dialog", { name: "Unsaved changes" })).not.toBeInTheDocument();
+    await waitFor(async () => {
+      expect(await loadDraft(ADA.id, "profile")).toBeNull();
+    });
   });
 
   // +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. Wiped drafts stay wiped only until the next session in this tab.

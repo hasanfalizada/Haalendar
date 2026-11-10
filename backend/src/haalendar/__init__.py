@@ -6,8 +6,11 @@ the host (/usr/share/zoneinfo may be missing in slim images or older than the pi
 computes the same instants. This runs before any ZoneInfo is created.
 """
 
+import os
 import zoneinfo
 
 zoneinfo.reset_tzpath(to=[])
 
-__version__ = "0.1.0"
+# +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. An image knows its release (Dockerfile, set by CI from the tag), so the
+# health endpoints and logs name what really runs; seen on the demo stand: 1.0.0-rc.3 answered 0.1.0.
+__version__ = os.environ.get("HAALENDAR_VERSION") or "0.1.0"

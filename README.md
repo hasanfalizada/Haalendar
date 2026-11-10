@@ -12,6 +12,11 @@
 > **Status:** version 1.0 is in its final preparation and has not been released yet, so the image tag `1.0.0` used below
 > does not exist yet. Until then you can run Haalendar from the sources: see the [development guide](DEVELOPMENT.md).
 
+<!-- +++===+++ 2026-11-10 — Hasan Alizada — HAAL-154. The link to the public demo. -->
+**Try it:** [demo.staging.hasanalizada.net](https://demo.staging.hasanalizada.net/) — sign in with one click as one of
+two demo users. Other visitors see what you do there, and everything goes back to the sample data every full and half
+hour (UTC). Uploads are kept small and no mail is sent. To run your own, see [the demo stand](docs/operations/demo.md).
+
 Your plans stay on your own server. Haalendar runs with Docker Compose on x86_64 or arm64, serves several users with
 their data kept apart, and opens and works on a phone or laptop without a connection, syncing when it comes back.
 
