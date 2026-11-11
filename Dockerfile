@@ -5,6 +5,11 @@
 # (supply-chain rule); they are multi-arch, so the same file builds linux/amd64 and linux/arm64 (buildx, HAAL-151).
 # Build: docker build -t haalendar .        Roles: see docker/entrypoint.sh
 
+# +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. The version of the release (CI: the tag), for both stages: the web app
+# shows it in About, the server answers it in /health. Empty in a build from the sources: both then use the version
+# of their package files.
+ARG VERSION=
+
 # ---------- web app ----------
 FROM --platform=$BUILDPLATFORM node:24.22.0-slim@sha256:91acba91b842bec0bf7ea6f5e09c644c7ccad72c4996ed9616d861d1c7cd60d4 AS web
 # +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. The SBOM covers this stage too: by default BuildKit scans only the
@@ -23,12 +28,14 @@ COPY atoms/ atoms/
 # The password policy shares its list of common passwords with the backend (atom accounts.password_policy).
 COPY backend/src/haalendar/accounts/data/ backend/src/haalendar/accounts/data/
 COPY frontend/ frontend/
+ARG VERSION
+ENV HAALENDAR_VERSION="${VERSION}"
 RUN pnpm --filter haalendar-frontend build
 
 # ---------- runtime ----------
 FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
 FROM python:3.14.9-slim@sha256:35caba83af2fe6da9a5d922f9b0156f21d1246a48278c58a08bd253303ba42e8 AS runtime
-ARG VERSION=0.1.0
+ARG VERSION
 LABEL org.opencontainers.image.title="Haalendar" \
       org.opencontainers.image.description="Self-hosted calendar, to-do and kanban that works offline" \
       org.opencontainers.image.source="https://github.com/hasanfalizada/haalendar" \

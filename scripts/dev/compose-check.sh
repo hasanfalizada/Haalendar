@@ -7,6 +7,10 @@
 # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. Backup and restore too (scripts/backup.sh, scripts/restore.sh).
 # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The demo too (compose.demo.yaml): it refuses a real installation, then on
 # an empty one it fills in its accounts and a reset removes what a visitor did.
+# +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. The image is built with a version of its own (0.0.0-check), and the
+# server and About must both show it: the image 1.0.0-rc.4 showed 0.1.0 in About. On GitHub a failed check is also an
+# annotation of the run, and the report of the whole suite is no longer erased by the later sign-in run: a red run
+# (b661077, image amd64) could not tell which check had failed without its log.
 # Usage: scripts/dev/compose-check.sh [--no-build]   (exit code 0 only when every step passes)
 set -uo pipefail
 BUILD=1
@@ -28,7 +32,13 @@ FAILED=()
 check() {
   local name=$1; shift
   echo "== $name"
-  if "$@"; then echo "   ok"; else echo "   FAILED"; FAILED+=("$name"); fi
+  if "$@"; then
+    echo "   ok"
+  else
+    echo "   FAILED"
+    FAILED+=("$name")
+    [ "${GITHUB_ACTIONS:-}" != true ] || echo "::error title=compose check::$name"
+  fi
 }
 dc() { docker compose -p "$PROJECT" --project-directory "$DIR" --profile proxy "$@"; }
 cleanup() {
@@ -42,7 +52,7 @@ trap cleanup EXIT
 
 if [ "$BUILD" = 1 ]; then
   echo "== build haalendar:dev"
-  docker build -q -t haalendar:dev "$ROOT" >/dev/null || { echo "   FAILED"; exit 1; }
+  docker build -q -t haalendar:dev --build-arg VERSION=0.0.0-check "$ROOT" >/dev/null || { echo "   FAILED"; exit 1; }
 fi
 
 cleanup
@@ -96,6 +106,13 @@ echo "== start"
 dc up -d --quiet-pull >/dev/null 2>&1 || { dc up -d; exit 1; }
 check "healthy" healthy
 check "ready, row-level security enforced" ready
+built_version() {
+  local built
+  built=$(docker inspect haalendar:dev --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')
+  [ -n "$built" ] || { echo "   the image was built without a version (--build-arg VERSION=0.0.0-check)"; return 1; }
+  curl -fsS "$APP/api/v1/health/ready" | grep -q "\"version\":\"$built\"" || { echo "   not $built"; return 1; }
+}
+check "the server answers the version the image was built with (About is checked by the suite, F-34)" built_version
 check "the setup token is required" sh -c "curl -fsS $APP/api/v1/setup/status | grep -q '\"setup_token_required\":true'"
 check "end-to-end suite" env -C "$ROOT/e2e" E2E_BASE_URL="$APP" E2E_OFFLINE_URL="$APP" E2E_SETUP_TOKEN="$TOKEN" \
   npx playwright test --reporter=dot
@@ -209,7 +226,7 @@ https_ready() { curl -ksSf "$HTTPS/api/v1/health/ready" 2>/dev/null | grep -q '"
 for _ in $(seq 1 20); do https_ready && break; sleep 2; done
 check "the attachment downloads as before, the session still valid" same "$PICTURE" "$(download)"
 check "signing in after the restore" env -C "$ROOT/e2e" E2E_BASE_URL="$APP" E2E_OFFLINE_URL="$APP" \
-  npx playwright test tests/auth.spec.ts --project=desktop --reporter=dot
+  npx playwright test tests/auth.spec.ts --project=desktop --reporter=dot --output test-results/after-restore
 
 # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. The demo.
 demo() { dc -f "$DIR/compose.yaml" -f "$DIR/compose.demo.yaml" -f "$DIR/compose.override.yaml" "$@"; }

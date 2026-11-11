@@ -2,7 +2,7 @@
 openapi: 3.1.1
 info:
   title: Haalendar API
-  version: 1.0.0-draft
+  version: 1.0.0
   summary: Calendar, To-Do and Kanban — self-hosted, multi-user, offline-first.
   description: |
     Conventions (see api/README.md):

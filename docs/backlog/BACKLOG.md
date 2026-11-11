@@ -30,7 +30,7 @@ Statuses: **To do**, **In progress**, **Blocked** (say by what), **Postponed** (
 | HAAL-123 | E08 Integration | Ctrl+K command palette: navigate, search, quick-create | Should | 037, 039 | — | To do | — | owner backlog file |
 | HAAL-143 | E10 QA | Accessibility (WCAG 2.2 AA, axe), Lighthouse, Core Web Vitals, mobile viewport checks | Should | 017, 170 | — | To do | — | owner backlog file |
 | HAAL-153 | E11 Delivery | Public user and admin guides in code repo; API docs from OpenAPI | Should | 015 | — | To do | — | owner backlog file |
-| HAAL-156 | E11 Delivery | Release v1.0.0: semver, changelog, release notes, tag, rollback notes | Must | 141, 145, 151, 152 | — | To do | — | owner backlog file |
+| HAAL-156 | E11 Delivery | Release v1.0.0: semver, changelog, release notes, tag, rollback notes | Must | 141, 145, 151, 152 | — | In progress | — | owner backlog file |
 | HAAL-157 | E11 Delivery | S3-compatible attachment storage adapter (AWS S3, Garage, SeaweedFS, Ceph RGW) | v1.1 | 040 | — | To do | — | owner backlog file |
 | HAAL-158 | E11 Delivery | OpenTelemetry tracing (API, worker, DB) with optional OTLP exporter | v1.1+ | 019 | — | To do | — | owner backlog file |
 | HAAL-168 | E12 Accounts | Optional OIDC/SSO login | Could | 160 | — | To do | — | owner, 2026-10-19 (chat) |
@@ -154,4 +154,4 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-171 | 2026-10-15 | 8f970a1 | docs: record auth UI decision D-33 and session management status (HAAL-171) |
 
 | HAAL-173 | 2026-11-07 | a6005cb | docs: Code of Conduct contact is ha@hasanalizada.net (qaqa.dev goes away); HAAL-173 in the backlog (HAAL-173) |
-| HAAL-175 | 2026-11-10 | (commit pending) | chore(repo): nothing personal in the repository — the notes for AI agents and the working rules leave the repository, the names of development machines give way to neutral words, and such files are git-ignored; the author's website in About is https://hasanalizada.net/; owner, 2026-11-10 (chat) (HAAL-175) |
+| HAAL-175 | 2026-11-10 | b661077 | chore(repo): nothing personal in the repository — the notes for AI agents and the working rules leave the repository, the names of development machines give way to neutral words, and such files are git-ignored; the author's website in About is https://hasanalizada.net/; owner, 2026-11-10 (chat) (HAAL-175) |

@@ -70,6 +70,10 @@ test("F-34 About says the app is free and links the author and the repository; H
   await page.getByRole("menuitem", { name: "About Haalendar" }).click();
   const about = page.getByRole("dialog", { name: "About Haalendar" });
   await expect(about).toContainText("Haalendar is free and open-source software. It has no usage restrictions.");
+  // +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. About shows the version that runs: the image 1.0.0-rc.4 showed
+  // "Version 0.1.0" while its server answered 1.0.0-rc.4 (scripts/dev/compose-check.sh builds with a version of its own).
+  const ready = (await (await page.request.get("/api/v1/health/ready")).json()) as { version: string };
+  await expect(about).toContainText(`Version ${ready.version}`);
   await expect(about.getByRole("link", { name: /Author's website/ })).toHaveAttribute(
     "href",
     "https://hasanalizada.net/",

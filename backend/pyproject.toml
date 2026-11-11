@@ -1,7 +1,7 @@
 # +++===+++ 2026-10-14 — Hasan Alizada — HAAL-016. Backend package: FastAPI + SQLAlchemy 2.1 (async, psycopg 3) + Alembic, structlog JSON logging. Versions pinned per ADR-0003 (verified 2026-10-14).
 [project]
 name = "haalendar-backend"
-version = "0.1.0"
+version = "1.0.0"
 description = "Haalendar backend: HTTP API, workers and migrations"
 license = "Apache-2.0"
 requires-python = ">=3.14"

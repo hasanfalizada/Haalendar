@@ -96,7 +96,30 @@ Settings beyond the example (rate limits, session lifetimes, logging, metrics, t
    if you use it). `migrate` runs the new migrations before the app and the worker start; they are forward-only.
 3. Check `docker compose ps` and the health endpoint as after the installation.
 
-Rollback: restore the backup and set the previous tag (a migration is never undone).
+Which versions exist and what each one changed: the [changelog](../../CHANGELOG.md). Name an exact version in
+`HAALENDAR_IMAGE` (`…/haalendar:1.0.0`) rather than `latest`, so that an upgrade happens only when you decide it. A
+major version (2.0.0) may need more than these steps; its release notes then say what.
+
+### Roll back an upgrade
+
+<!-- +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. Going back to the previous version, step by step. -->
+A migration is never undone, so going back means returning to the backup made in step 1, with the previous image.
+Whatever was saved after that backup is lost, as after any restore ([section 5](#5-back-up-and-restore)).
+
+1. Set `HAALENDAR_IMAGE` in `.env` back to the previous version. The backup names the image it was made with in its
+   `info.txt`.
+2. Restore the backup made before the upgrade: `./restore.sh backups/haalendar-<UTC time>`. It stops the app and the
+   worker, replaces the database and the files, and starts the previous version.
+3. With the bundled proxy, start it too: `docker compose --profile proxy up -d`.
+4. Check `docker compose ps` and the health endpoint: `/api/v1/health/ready` answers the version that runs.
+
+Setting the previous image alone, without the restore, is enough only when the newer version brought no migration.
+Otherwise `migrate` stops, because the database is newer than the image (`docker compose logs migrate` ends with
+`Can't locate revision identified by …`), and the app does not start; nothing is damaged by that, so go on with
+step 2.
+
+If a release turns out to be faulty, its image is not replaced: the fix comes as the next patch version, and the
+faulty one stays as it was published.
 
 ## 4. Operating
 

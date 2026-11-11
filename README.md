@@ -5,12 +5,9 @@
 <p align="center"><strong>A self-hosted calendar, to-do list and kanban board in one app that keeps working offline.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/hasanfalizada/Haalendar/actions/workflows/ci.yml"><img src="https://github.com/hasanfalizada/Haalendar/actions/workflows/ci.yml/badge.svg?branch=revamp" alt="CI"></a>
+  <a href="https://github.com/hasanfalizada/Haalendar/actions/workflows/ci.yml"><img src="https://github.com/hasanfalizada/Haalendar/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache 2.0"></a>
 </p>
-
-> **Status:** version 1.0 is in its final preparation and has not been released yet, so the image tag `1.0.0` used below
-> does not exist yet. Until then you can run Haalendar from the sources: see the [development guide](DEVELOPMENT.md).
 
 <!-- +++===+++ 2026-11-10 — Hasan Alizada — HAAL-154. The link to the public demo. -->
 **Try it:** [demo.staging.hasanalizada.net](https://demo.staging.hasanalizada.net/) — sign in with one click as one of
@@ -140,17 +137,19 @@ docker compose --profile proxy up -d
 ```
 
 The database migrates by itself before the app starts. Migrations only go forward: to go back, restore the backup and set
-the previous version. Details are in the [installation guide](docs/operations/deployment.md#3-upgrade).
+the previous version ([roll back an upgrade](docs/operations/deployment.md#roll-back-an-upgrade)). What each version
+changed is in the [changelog](CHANGELOG.md).
 
 ## Coming from the old Haalendar
 
 The previous version (a single-user calendar with Angular, PHP and SQLite) is a different application, and there is no
-automatic import: version 1.0 starts empty and events are moved by hand. Until 1.0 is released the old version stays on
-the `master` branch.
+automatic import: version 1.0 starts empty and events are moved by hand. The old version is kept under the tag
+[`legacy`](https://github.com/hasanfalizada/Haalendar/tree/legacy).
 
 ## Documentation
 
 - [Installation guide](docs/operations/deployment.md): install, reverse proxies, upgrade, operating
+- [Changelog](CHANGELOG.md): what each version changed
 - [Development guide](DEVELOPMENT.md): build, run and test from the sources
 - [Development documentation](docs/README.md): requirements, architecture decisions, design, security
 - [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)

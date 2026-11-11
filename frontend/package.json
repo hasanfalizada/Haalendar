@@ -1,7 +1,7 @@
 {
   "name": "haalendar-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Haalendar web app (React + Vite SPA, ADR-0003). The API client is generated from ../api/openapi.yaml before every dev/build/check run.",
   "license": "Apache-2.0",
   "type": "module",

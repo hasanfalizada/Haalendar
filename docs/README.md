@@ -18,7 +18,7 @@ How Haalendar is specified, designed and built — requirements and every owner 
 
 ## Where things live
 - **`docs/` (this folder):** development documentation — requirements, architecture, ADRs, design, security, later QA and handover notes.
-- **Repository root:** what users, administrators and contributors need first — [README](../README.md), [LICENSE](../LICENSE) / [NOTICE](../NOTICE), [DEVELOPMENT](../DEVELOPMENT.md), [CONTRIBUTING](../CONTRIBUTING.md), [SECURITY](../SECURITY.md). User and administrator guides (installation, configuration, backup/restore, upgrade, legacy migration) will be added under `docs/guide/`.
+- **Repository root:** what users, administrators and contributors need first — [README](../README.md), [CHANGELOG](../CHANGELOG.md), [LICENSE](../LICENSE) / [NOTICE](../NOTICE), [DEVELOPMENT](../DEVELOPMENT.md), [CONTRIBUTING](../CONTRIBUTING.md), [SECURITY](../SECURITY.md). User and administrator guides (installation, configuration, backup/restore, upgrade, legacy migration) will be added under `docs/guide/`.
 - **Code-level references:** the HTTP contract in [`api/`](../api/), atom contracts in [`atoms/`](../atoms/), the registry in [`project.manifest.json`](../project.manifest.json).
 
 ## Conventions

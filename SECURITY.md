@@ -4,12 +4,14 @@
 
 ## Supported versions
 
-Haalendar is being rewritten. Until the first stable release (v1.0.0), only the latest commit of the default branch receives security fixes.
+<!-- +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. Since the release of 1.0.0. -->
+Security fixes are made for the latest release and published as a new version ([changelog](CHANGELOG.md)).
 
 | Version | Supported |
 |---|---|
-| Latest release | Yes |
+| Latest release (1.0.x) | Yes |
 | Older releases | No |
+| The earlier application (tag `legacy`) | No |
 
 ## Reporting a vulnerability
 

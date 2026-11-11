@@ -12,6 +12,7 @@ import { fileURLToPath, URL } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+import { appVersion } from "./src/app-version";
 import { MANIFEST, NETWORK_ONLY_PATHS, PRECACHE_GLOBS } from "./src/pwa-config";
 
 export default defineConfig(({ mode }) => {
@@ -20,6 +21,8 @@ export default defineConfig(({ mode }) => {
   // Prism serves the contract without the /api/v1 prefix; the backend serves it with the prefix.
   const isMock = apiTarget.includes(":4010");
   // +++===+++ 2026-10-19 — Hasan Alizada — HAAL-044. The app version shown in About comes from package.json.
+  // +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. …unless the build names its version (HAALENDAR_VERSION, set in the
+  // Dockerfile from the release tag): src/app-version.ts.
   const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8")) as { version: string };
 
   return {
@@ -46,7 +49,7 @@ export default defineConfig(({ mode }) => {
         devOptions: { enabled: false },
       }),
     ],
-    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+    define: { __APP_VERSION__: JSON.stringify(appVersion(process.env.HAALENDAR_VERSION, pkg.version)) },
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
     server: {
       port: 5173,

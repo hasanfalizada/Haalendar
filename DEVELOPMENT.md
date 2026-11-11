@@ -213,11 +213,10 @@ release tag. Its jobs call `scripts/dev/check-all.sh --only …`, so CI checks e
 - **By hand** (Actions → CI → Run workflow) with "Publish the image as …:ci-test" a test of the publishing; delete
   that package version afterwards (the package's settings on GitHub).
 - GitHub takes the schedule and the Run workflow button only from the default branch (`master`), as it does the
-  Dependabot file: both start once `revamp` is merged there (v1.0). Until then a pre-release tag such as
-  `v0.0.0-ci.1` on `revamp` tests the publishing (it gets only its own image tag; delete the tag and the package
-  version afterwards).
+  Dependabot file; they are there since v1.0. A pre-release tag such as `v0.0.0-ci.1` on any branch also tests the
+  publishing (it gets only its own image tag; delete the tag and the package version afterwards).
 - **Supply chain:** actions pinned by commit SHA, at least 7 days old when chosen; Dependabot proposes their updates
-  weekly with a 7-day cooldown (`.github/dependabot.yml`, active once it is on the default branch). Jobs get read
+  weekly with a 7-day cooldown, as pull requests into `development` (`.github/dependabot.yml`). Jobs get read
   access only, publishing also `packages: write` (and the signing `id-token: write`, `attestations: write`); no secrets besides the job's own token; no caches.
 - **Repository settings (maintainer, once):** after the first publishing make the package `haalendar` public
   (Packages → haalendar → Package settings → Change visibility); in Settings → Rules → Rulesets require these checks
@@ -319,7 +318,7 @@ The environment is selected with `HAALENDAR_ENV`.
 | | development | test | production | demo |
 |---|---|---|---|---|
 | Purpose | Local work | Automated tests | Real installations | Public demo stand |
-| Status | Available | Available | Available (Docker Compose, HAAL-150) | Not available yet (HAAL-154) |
+| Status | Available | Available | Available (Docker Compose, HAAL-150) | Available (`compose.demo.yaml`, HAAL-154) |
 | Interactive API docs (`/api/v1/docs`) | On | Off | Off | Off |
 | Default secret key | Allowed | Allowed | **Refused** — must be ≥ 32 random characters | Refused |
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | any | **Must be `https://`** (enables HSTS) | `https://` |
@@ -351,6 +350,33 @@ docker build -t haalendar .     # Node builds the web app, the runtime is Python
   index.html; `/api/` is never answered by it.
 - Base images are pinned by digest (at least 7 days old when chosen) and multi-arch; CI builds and checks the image on
   an x86_64 and an arm64 runner and publishes both under one tag ([CI](#ci-github-actions)).
+- The version: CI builds a release with `--build-arg VERSION=<the tag without v>`; the server answers it in
+  `/api/v1/health/*` and the web app shows it in About. Without it (`docker build` as above) both use the version of
+  their package files.
+
+### Releases
+
+<!-- +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. How a release is made. -->
+A release is a tag `vX.Y.Z` on `master` ([ADR-0002](docs/architecture/adr/ADR-0002-branching-and-repository-rules.md));
+what the three numbers mean is at the top of the [changelog](CHANGELOG.md).
+
+1. Create `release/X.Y.Z` from `development` (1.0.0 was made from `revamp`, the trunk of the rewrite).
+2. On it, set the version in `backend/pyproject.toml` (then `uv lock`), `backend/src/haalendar/__init__.py`,
+   `frontend/package.json` and `api/openapi.yaml`; `backend/tests/test_health.py` fails while they differ. Add the
+   section of the release to `CHANGELOG.md`, and its number to the quick start of the `README.md` and to the
+   installation guide.
+3. Run `scripts/dev/check-all.sh --e2e` and `scripts/dev/compose-check.sh`.
+4. Open a pull request from `release/X.Y.Z` into `master`; when CI is green, merge it with a merge commit.
+5. Tag the merge commit and push the tag: `git tag -a vX.Y.Z -m "Haalendar X.Y.Z" && git push origin vX.Y.Z`. CI
+   publishes the image ([CI](#ci-github-actions)).
+6. Check the published image: `docker buildx imagetools inspect ghcr.io/hasanfalizada/haalendar:X.Y.Z` (both
+   architectures), then the quick start of the README on a clean host.
+7. Publish the GitHub release for the tag with the changelog's section as its text.
+8. Merge `master` back into `development`.
+
+A published version is never replaced: a fault is fixed in the next patch version, from a `hotfix/X.Y.Z` branch made
+from `master`. How an installation goes back to the previous version is in the
+[installation guide](docs/operations/deployment.md#roll-back-an-upgrade).
 
 ### Trying accounts locally
 

@@ -59,3 +59,11 @@ The existing name `development` is kept (instead of `develop`) to avoid churn.
 +++===+++ 2026-10-17 — Hasan Alizada — owner decision D-44.
 
 Until v1.0 every task is committed directly on `revamp`: no `feature/HAAL-xxx-*` branches and no pull request per task (amends decision 1 of section 5). The owner makes the commits and pushes. `revamp` is merged into `master` later as a whole; the exact release path (directly or through `development` / `release/1.0.0`) is decided at release time. Rules for `master` (section 3) are unchanged.
+
+## 8. Amendment (2026-11-11) — the release of v1.0.0
+
++++===+++ 2026-11-11 — Hasan Alizada — HAAL-156, owner decision D-104.
+
+The release path left open in section 7: `revamp` → branch `release/1.0.0` → pull request into `master`, merged with a merge commit and tagged `v1.0.0`. `development` held nothing of its own, so the release branch is made from `revamp` directly. The head of `master` before the merge (the earlier application) is tagged `legacy`: without `v`, so that CI does not take it for a release.
+
+After the release `development` is brought to `master`, `revamp` is no longer worked on (it stays on the remote like the other old branches) and the branches of section 2 apply: work goes into `development`, a release through `release/X.Y.Z`, an urgent fix through `hotfix/X.Y.Z`. Dependabot's pull requests go into `development`. The steps of a release are in `DEVELOPMENT.md` (Releases).

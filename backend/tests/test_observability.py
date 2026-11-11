@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+import haalendar
 from haalendar.config import load_settings
 from haalendar.logging import configure_logging, get_logger
 from haalendar.main import create_app
@@ -61,7 +62,7 @@ def test_metrics_expose_http_pool_and_build_info() -> None:
     )
     assert "haalendar_http_requests_in_progress" in body
     assert "haalendar_db_pool_size 5.0" in body
-    assert 'haalendar_build_info{env="test",version="0.1.0"} 1.0' in body
+    assert f'haalendar_build_info{{env="test",version="{haalendar.__version__}"}} 1.0' in body
 
 
 # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Calls routes outside the contract on purpose (test routes, unknown paths).

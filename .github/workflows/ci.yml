@@ -177,7 +177,8 @@ jobs:
           package-manager-cache: false
       - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm --filter haalendar-e2e exec playwright install --with-deps chromium
-      - run: docker build -t haalendar:dev .
+      # +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. A version of its own: the check looks for it in /health and in About.
+      - run: docker build -t haalendar:dev --build-arg VERSION=0.0.0-check .
       - run: scripts/dev/compose-check.sh --no-build
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
