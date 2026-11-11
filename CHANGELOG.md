@@ -16,6 +16,14 @@ on: the settings in `.env`, `compose.yaml`, the backup format and the REST API u
 At every level the database migrates forward by itself and is never migrated back: to return to an earlier version,
 restore the backup made before the upgrade ([roll back](docs/operations/deployment.md#roll-back-an-upgrade)).
 
+## [Unreleased]
+
+### Security
+
+- No installation is listed by search engines any more: the app answers every request with
+  `X-Robots-Tag: noindex, nofollow` and the page carries the same in a robots meta tag. Nothing to set; a reverse
+  proxy adds nothing.
+
 ## [1.0.0] - 2026-11-11
 
 The first release of the new Haalendar: a self-hosted calendar, to-do list and kanban board for several users that
@@ -67,4 +75,5 @@ which stays available under the tag [`legacy`](https://github.com/hasanfalizada/
 - The minor findings of the acceptance test are open; they are listed in
   [the acceptance record](docs/requirements/uat.md#6-findings).
 
+[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.0.0...development
 [1.0.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.0

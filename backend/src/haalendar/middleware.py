@@ -46,6 +46,11 @@ def security_headers(path: str, settings: Settings) -> list[tuple[bytes, bytes]]
         (b"cross-origin-opener-policy", b"same-origin"),
         (b"cross-origin-resource-policy", b"same-origin"),
         (b"permissions-policy", b"camera=(), microphone=(), geolocation=(), payment=(), usb=()"),
+        # +++===+++ 2026-11-11 16:35 +04 — Hasan Alizada — HAAL-176, decision D-105: no installation is offered to search
+        # engines (everything is behind the sign-in, and a demo would put sample data before the project in a search),
+        # so there is no setting for it. No "Disallow" in a robots.txt on purpose: a crawler that may not fetch a page
+        # never sees this rule and can still list the bare address.
+        (b"x-robots-tag", b"noindex, nofollow"),
     ]
     headers.append((b"content-security-policy", API_CSP if path.startswith("/api/") else SPA_CSP))
     if settings.https and settings.hsts_max_age_seconds > 0:

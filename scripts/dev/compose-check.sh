@@ -124,9 +124,11 @@ https_headers() {
   local h
   h=$(curl -ksS -D - -o /dev/null "$HTTPS/") || return 1
   echo "$h" | grep -q "^HTTP/2 200" && echo "$h" | grep -qi "^content-security-policy: default-src 'self'; script-src 'self';" &&
-    echo "$h" | grep -qi "^strict-transport-security:" && ! echo "$h" | grep -qi "^server:"
+    echo "$h" | grep -qi "^strict-transport-security:" && ! echo "$h" | grep -qi "^server:" &&
+    echo "$h" | grep -qi "^x-robots-tag: noindex, nofollow" &&
+    curl -ksS "$HTTPS/" | grep -q '<meta name="robots" content="noindex, nofollow"'
 }
-check "HTTPS through Caddy: HTTP/2, CSP, HSTS, no Server header" https_headers
+check "HTTPS through Caddy: HTTP/2, CSP, HSTS, no Server header, noindex in the header and in the page" https_headers
 check "HTTPS through Caddy: API ready" sh -c "curl -ksSf $HTTPS/api/v1/health/ready | grep -q '\"status\":\"ready\"'"
 check "HTTP redirects to HTTPS" sh -c "curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' http://localhost:18088/ | grep -q '^30[18] https://localhost/'"
 

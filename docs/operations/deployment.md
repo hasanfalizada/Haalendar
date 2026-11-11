@@ -129,6 +129,8 @@ faulty one stays as it was published.
 - A shell in the app's image: `docker compose run --rm app sh`.
 - Metrics (optional): `HAALENDAR_METRICS_ENABLED=true` and a `HAALENDAR_METRICS_TOKEN`; scrape `/metrics` with
   `Authorization: Bearer <token>`.
+- Search engines: the app asks them not to list your installation (`X-Robots-Tag: noindex, nofollow` on every
+  response and the same in the page). There is no setting for it and no `robots.txt` is needed.
 
 ## 5. Back up and restore
 
