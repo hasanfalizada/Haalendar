@@ -172,6 +172,12 @@ class InviteInfoOut(BaseModel):
     expires_at: datetime
 
 
+class PasswordResetInfoOut(BaseModel):
+    """A usable reset link (HAAL-174): only when it ends, nothing about the account."""
+
+    expires_at: datetime
+
+
 # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-166. Profile (FR-ACC-08): merge-patch of name, time zone and locale.
 
 

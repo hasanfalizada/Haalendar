@@ -40,6 +40,7 @@ from haalendar.accounts.schemas import (
     LoginOut,
     MeOut,
     PasswordResetConfirmIn,
+    PasswordResetInfoOut,
     PasswordResetRequestIn,
     ProfilePatchIn,
     ReauthIn,
@@ -146,6 +147,14 @@ async def request_password_reset(
 )
 async def confirm_password_reset(body: PasswordResetConfirmIn, db: DbSession, mailer: AppMailer) -> None:
     await service.confirm_password_reset(db, mailer, body.token, body.new_password)
+
+
+# +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (UAT finding F11). The reset page asks before it shows
+# the form; the token travels in the body, as on the invitation page.
+@auth_router.post("/password-reset/info", operation_id="getPasswordResetInfo")
+async def get_password_reset_info(body: TokenIn, db: DbSession) -> PasswordResetInfoOut:
+    record = await service.password_reset_info(db, body.token)
+    return PasswordResetInfoOut(expires_at=record.expires_at)
 
 
 @auth_router.post("/reauth", status_code=status.HTTP_204_NO_CONTENT, operation_id="reauthenticate")

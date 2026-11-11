@@ -165,10 +165,10 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | F5 | UAT-15 | major | The event details popover was not kept inside a short window (1280×720, 1366×768): Edit and Delete ended below the screen | fix within HAAL-145 | fixed, re-tested ✅ |
 | F6 | UAT-52 | major | Bulk actions (FR-X-07): the calendar bar offers only "Move to next day", Delete deletes only the focused event, notes and cards have no multi-select | fix within HAAL-145 | fixed, re-tested ✅ |
 | F7 | UAT-70 | major | Notes cannot be shared (FR-ACC-10, D-30) | fix within HAAL-145 | fixed, re-tested ✅ |
-| F8 | UAT-01 | minor | The setup password hint "Use at least 15 characters" is shown twice | HAAL-174 | open |
+| F8 | UAT-01 | minor | The setup password hint "Use at least 15 characters" is shown twice | HAAL-174 | fixed, re-tested ✅ (2026-11-11; all six forms that set a password) |
 | F9 | UAT-40 | minor | After adding a card with Enter the focus drops to the page | HAAL-174 | open |
-| F10 | UAT-06 | minor | A password reset does not lift the sign-in lockout; the admin has no Unlock | HAAL-174 | open |
-| F11 | UAT-06 | minor | A used reset link still shows the form; the error comes only on submit | HAAL-174 | open |
+| F10 | UAT-06 | minor | A password reset does not lift the sign-in lockout; the admin has no Unlock | HAAL-174 | fixed, re-tested ✅ (2026-11-11; a reset lifts the lock, D-106). "No Unlock" was not reproduced: the user list shows "Locked" and its menu offers Unlock while the lock lasts |
+| F11 | UAT-06 | minor | A used reset link still shows the form; the error comes only on submit | HAAL-174 | fixed, re-tested ✅ (2026-11-11) |
 | F12 | UAT-07 | minor | Preferences reach other open devices only after a reload | HAAL-174 | open |
 | F13 | UAT-21 | minor | Phone: the time-zone banner is cramped and the desktop selection hint is shown | HAAL-174 | open |
 | F14 | UAT-15 | minor | Ctrl+Z does nothing while the focus is on a colour swatch | HAAL-174 | open |

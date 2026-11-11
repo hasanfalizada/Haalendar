@@ -50,6 +50,7 @@ paths:
   /auth/verify-email/resend: { $ref: './modules/accounts.yaml#/paths/auth_verify_email_resend' }
   /auth/password-reset/request: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_request' }
   /auth/password-reset/confirm: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_confirm' }
+  /auth/password-reset/info: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_info' }
   /auth/reauth: { $ref: './modules/accounts.yaml#/paths/auth_reauth' }
   /auth/oidc/start: { $ref: './modules/accounts.yaml#/paths/auth_oidc_start' }
   /auth/oidc/callback: { $ref: './modules/accounts.yaml#/paths/auth_oidc_callback' }

@@ -18,6 +18,14 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 
 ## [Unreleased]
 
+### Fixed
+
+- A password reset lifts a temporary sign-in lock, both by the link from the e-mail and by the one-time password an
+  administrator gives. Before, the new password was refused until the lock ran out.
+- A reset link that was used or has expired says so at once and offers a new one, instead of showing the form and
+  failing on save (the page asks the new API operation `POST /api/v1/auth/password-reset/info`).
+- The forms that set a password show a refused rule once, not as a hint and as an error together.
+
 ### Security
 
 - No installation is listed by search engines any more: the app answers every request with

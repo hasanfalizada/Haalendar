@@ -50,6 +50,7 @@ EXEMPT: dict[tuple[str, str], str] = {
     ("post", "/auth/verify-email/resend"): PUBLIC,
     ("post", "/auth/password-reset/request"): PUBLIC,
     ("post", "/auth/password-reset/confirm"): PUBLIC,
+    ("post", "/auth/password-reset/info"): PUBLIC,
     ("post", "/auth/reauth"): OWN,
     ("get", "/health/live"): PUBLIC,
     ("get", "/health/ready"): PUBLIC,
