@@ -87,7 +87,9 @@ server {
 }
 ```
 
-The security headers (HSTS, CSP and the rest) come from the app; do not add them in the proxy.
+The security headers (HSTS, CSP and the rest) come from the app; do not add them in the proxy. Among them is
+`X-Robots-Tag: noindex, nofollow`: the demo is not listed by search engines, so a search finds the project and not
+its sample data.
 
 Check: `docker compose ps` shows everything up and healthy, `docker compose logs demo | grep demo_reset` shows
 `demo_reset_done` and no `demo_reset_failed`, and the public address shows the banner.

@@ -85,6 +85,7 @@ def test_unhandled_exception_is_generic_500_with_security_headers(test_client: T
     _assert_problem(response.json(), 500, "internal_error")
     assert "hunter2" not in response.text
     assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-robots-tag"] == "noindex, nofollow"
     assert response.headers["x-request-id"]
 
 
@@ -96,6 +97,7 @@ def test_security_headers_on_api_responses(test_client: TestClient) -> None:
     assert headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"
     assert headers["cross-origin-opener-policy"] == "same-origin"
     assert headers["cross-origin-resource-policy"] == "same-origin"
+    assert headers["x-robots-tag"] == "noindex, nofollow"
     assert headers["cache-control"] == "no-store"
     assert "server" not in headers
     assert "strict-transport-security" not in headers  # public_url is http in tests

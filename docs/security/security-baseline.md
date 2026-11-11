@@ -9,7 +9,7 @@ Legend: ✅ implemented and tested · 🟡 partially implemented · ⏳ planned 
 | Control | Where | Tests |
 |---|---|---|
 | RFC 9457 errors, no internal details or stack traces to clients | `errors.py`, `middleware.py` | `test_errors_and_headers.py` |
-| Security headers: nosniff, Referrer-Policy no-referrer, COOP/CORP same-origin, Permissions-Policy, HSTS on https, no Server header, `Cache-Control: no-store` for API | `middleware.py` | `test_errors_and_headers.py` |
+| Security headers: nosniff, Referrer-Policy no-referrer, COOP/CORP same-origin, Permissions-Policy, HSTS on https, no Server header, `Cache-Control: no-store` for API; `X-Robots-Tag: noindex, nofollow` on every response and the same in the page's robots meta tag, so no installation is listed by search engines (HAAL-176, D-105) | `middleware.py`, `frontend/index.html` | `test_errors_and_headers.py`, `test_web_app.py`, `index-html.test.ts`, `compose-check.sh` |
 | CSP: API `default-src 'none'; frame-ancestors 'none'`; SPA strict same-origin (no inline script, no eval, no framing, no plugins; inline styles allowed, D-39) | `middleware.py` (`API_CSP`, `SPA_CSP`) | `test_security.py` |
 | Host header allow-list (public host + loopback + configured extras) | `security/guards.py` `HostGuard` | `test_security.py` |
 | Rate limiting: token bucket per client IP, 600/min sustained, burst 120, 429 + Retry-After + IETF RateLimit headers; only `/api/` and `/metrics` are counted (the web app's files are not), health probes exempt; bounded memory (LRU 10 000 clients) | `RateLimitGuard`, `TokenBucketLimiter` | `test_security.py` |
