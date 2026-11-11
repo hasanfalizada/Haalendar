@@ -1,11 +1,15 @@
 // +++===+++ 2026-10-15 — Hasan Alizada — HAAL-171. New password from the reset link (single use, 1 hour). All sessions
 // of the account are signed out by the server; the user signs in again afterwards.
 // +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170. Standalone links are 44 px touch targets (link-styles).
+// +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (UAT finding F11). The page asks the server about the
+// link before it shows the form: a used or expired link is said at once, not after a new password was typed. When
+// the question gets no clear "no" (offline, too many requests) the form is shown as before and saving reports it.
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type SubmitEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { confirmPasswordReset } from "@/api/generated/sdk.gen";
+import { confirmPasswordReset, getPasswordResetInfo } from "@/api/generated/sdk.gen";
 import { fieldErrorsOf, isProblem, problemCode } from "@/api/problem";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { isViolation, passwordViolations, useViolationText } from "@/components/auth/password";
@@ -36,6 +40,20 @@ function ResetPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const violations = passwordViolations(password);
+  const link = useQuery({
+    queryKey: ["password-reset", token],
+    queryFn: async () => {
+      const { error: problem, response } = await getPasswordResetInfo({ body: { token } });
+      // 400: used or expired. 403: a demo sends no reset links at all.
+      const status = problem === undefined ? undefined : response?.status;
+      const refused = status === 400 || status === 403;
+      if (refused) log.info("password_reset_link_unusable", { status });
+      return !refused;
+    },
+    enabled: token.length > 0,
+    retry: false,
+    staleTime: Infinity,
+  });
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,7 +84,16 @@ function ResetPasswordPage() {
     }
   }
 
-  if (!token) {
+  if (done) {
+    return (
+      <AuthCard title={t("auth.reset.doneTitle")} intro={t("auth.reset.doneBody")}>
+        <Link to="/login" className={linkClass}>
+          {t("auth.toLogin")}
+        </Link>
+      </AuthCard>
+    );
+  }
+  if (!token || link.data === false) {
     return (
       <AuthCard title={t("auth.reset.title")} intro={t("auth.reset.invalid")}>
         <Link to="/forgot-password" className={linkClass}>
@@ -75,12 +102,12 @@ function ResetPasswordPage() {
       </AuthCard>
     );
   }
-  if (done) {
+  if (link.isPending) {
     return (
-      <AuthCard title={t("auth.reset.doneTitle")} intro={t("auth.reset.doneBody")}>
-        <Link to="/login" className={linkClass}>
-          {t("auth.toLogin")}
-        </Link>
+      <AuthCard title={t("auth.reset.title")}>
+        <p role="status" className="text-muted">
+          {t("auth.reset.checking")}
+        </p>
       </AuthCard>
     );
   }

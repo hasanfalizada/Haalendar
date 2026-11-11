@@ -470,7 +470,8 @@ async def _set_password(db: AsyncSession, user: UserAccount, new_password: str) 
     user.version += 1
 
 
-async def confirm_password_reset(db: AsyncSession, mailer: Mailer, token: str, new_password: str) -> None:
+async def _usable_reset(db: AsyncSession, token: str) -> tuple[AuthToken, UserAccount] | None:
+    """The unused, unexpired reset link of an active account, or None."""
     record = await db.scalar(
         select(AuthToken).where(
             AuthToken.token_hash == crypto.token_digest(token),
@@ -481,9 +482,30 @@ async def confirm_password_reset(db: AsyncSession, mailer: Mailer, token: str, n
     )
     user = await db.get(UserAccount, record.user_id) if record is not None and record.user_id else None
     if record is None or user is None or user.deactivated_at is not None:
+        return None
+    return record, user
+
+
+async def password_reset_info(db: AsyncSession, token: str) -> AuthToken:
+    """Reset page (HAAL-174, UAT finding F11): is the link still usable? 400 when not; the link is not used up."""
+    usable = await _usable_reset(db, token)
+    if usable is None:
+        log.info("password_reset_info_invalid")
+        raise ProblemError(400, ProblemCode.BAD_REQUEST, "The link is invalid or has expired")
+    return usable[0]
+
+
+async def confirm_password_reset(db: AsyncSession, mailer: Mailer, token: str, new_password: str) -> None:
+    usable = await _usable_reset(db, token)
+    if usable is None:
         log.warning("password_reset_invalid_token")
         raise ProblemError(400, ProblemCode.BAD_REQUEST, "The link is invalid or has expired")
+    record, user = usable
     await _set_password(db, user, new_password)
+    # +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (UAT finding F10, decision D-106). The link proved
+    # control of the mailbox, so the sign-in lock goes with the old password. Not in `_set_password`: a password
+    # changed in a signed-in session must not give someone guessing from elsewhere a fresh series of attempts.
+    user.locked_until = None
     now = utcnow()
     record.used_at = now
     if user.email_verified_at is None:
@@ -551,6 +573,9 @@ async def admin_reset_password(
     user.password_hash = crypto.hash_password(one_time)
     user.must_change_password = True
     user.failed_login_count = 0
+    # +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (decision D-106). The administrator may unlock anyway,
+    # and a one-time password that is refused until the lock runs out helps nobody.
+    user.locked_until = None
     user.version += 1
     log.info(
         "admin_password_reset", admin_id=str(admin.id), user_id=str(user.id), delivery="one_time_password"

@@ -391,6 +391,7 @@
     "reset": {
       "title": "Choose a new password",
       "intro": "After saving you are signed out on all devices and sign in again with the new password.",
+      "checking": "Checking the link…",
       "submit": "Save new password",
       "doneTitle": "Password changed",
       "doneBody": "Sign in with your new password.",

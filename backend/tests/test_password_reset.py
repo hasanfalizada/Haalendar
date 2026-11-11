@@ -74,6 +74,54 @@ def test_reset_link_is_single_use_and_expires(
     assert _confirm(api, expired) == 400
 
 
+# +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (UAT findings F10, F11).
+
+
+def test_reset_lifts_the_sign_in_lock(api: TestClient, clean_db: str, mail_dir: Path) -> None:
+    create_user(api, clean_db, "dan@example.org")
+    assert [login(api, "dan@example.org", "wrong-password-0000")[0] for _ in range(5)] == [401] * 5
+    assert login(api, "dan@example.org")[0] == 429
+
+    _request_reset(api, "dan@example.org")
+    assert _confirm(api, link_token(mails(mail_dir)[-1])) == 204
+
+    assert sql(clean_db, "SELECT failed_login_count, locked_until FROM user_account") == [(0, None)]
+    assert login(api, "dan@example.org", NEW_PASSWORD)[0] == 200
+
+
+def test_reset_page_learns_whether_the_link_can_still_be_used(
+    api: TestClient, clean_db: str, mail_dir: Path
+) -> None:
+    create_user(api, clean_db, "eve@example.org")
+    _request_reset(api, "eve@example.org")
+    token = link_token(mails(mail_dir)[-1])
+
+    info = api.post("/api/v1/auth/password-reset/info", json={"token": token})
+    assert info.status_code == 200
+    assert set(info.json()) == {"expires_at"}  # nothing about the account
+    # The question does not use the link up.
+    assert api.post("/api/v1/auth/password-reset/info", json={"token": token}).status_code == 200
+
+    assert _confirm(api, token) == 204
+    used = api.post("/api/v1/auth/password-reset/info", json={"token": token})
+    assert used.status_code == 400 and used.json()["code"] == "bad_request"
+    assert api.post("/api/v1/auth/password-reset/info", json={"token": "nope"}).status_code == 400
+
+
+def test_reset_page_refuses_an_expired_link_and_a_deactivated_account(
+    api: TestClient, clean_db: str, mail_dir: Path
+) -> None:
+    create_user(api, clean_db, "fay@example.org")
+    _request_reset(api, "fay@example.org")
+    token = link_token(mails(mail_dir)[-1])
+    sql(clean_db, "UPDATE user_account SET deactivated_at = now()")
+    assert api.post("/api/v1/auth/password-reset/info", json={"token": token}).status_code == 400
+    sql(clean_db, "UPDATE user_account SET deactivated_at = NULL")
+    assert api.post("/api/v1/auth/password-reset/info", json={"token": token}).status_code == 200
+    sql(clean_db, "UPDATE auth_token SET expires_at = now() - interval '1 second' WHERE used_at IS NULL")
+    assert api.post("/api/v1/auth/password-reset/info", json={"token": token}).status_code == 400
+
+
 def test_new_link_supersedes_old_one(
     api: TestClient, clean_db: str, owner_db_url: str, mail_dir: Path
 ) -> None:
@@ -188,6 +236,22 @@ def test_admin_reset_without_smtp_returns_one_time_password(api: TestClient, cle
         == 204
     )
     assert api.get("/api/v1/me").json()["must_change_password"] is False
+
+
+def test_admin_reset_without_smtp_lifts_the_sign_in_lock(api: TestClient, clean_db: str) -> None:
+    create_user(api, clean_db, "admin@example.org", role="admin")
+    create_user(api, clean_db, "joe@example.org")
+    user_id = sql(clean_db, "SELECT id FROM user_account WHERE email = 'joe@example.org'")[0][0]
+    sql(
+        clean_db,
+        "UPDATE user_account SET failed_login_count = 5, locked_until = now() + interval '15 minutes' "
+        "WHERE email = 'joe@example.org'",
+    )
+    _, admin = login(api, "admin@example.org")
+    response = api.post(
+        f"/api/v1/admin/users/{user_id}/reset-password", headers={"X-CSRF-Token": _csrf(admin)}
+    )
+    assert login(api, "joe@example.org", response.json()["one_time_password"])[0] == 200
 
 
 def test_admin_reset_requires_admin_and_recent_reauth(api: TestClient, clean_db: str) -> None:

@@ -173,6 +173,32 @@ paths:
         '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
         '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  # +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (UAT finding F11). Reset page: is the link still usable?
+  # Asked before the form is shown; the link is not used up by the question.
+  auth_password_reset_info:
+    post:
+      tags: [auth]
+      operationId: getPasswordResetInfo
+      summary: Expiry of a usable reset link (token in the body, never in the URL path); 400 when used or expired
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenInput' }
+      responses:
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '200':
+          description: The link can still be used
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [expires_at]
+                properties:
+                  expires_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
   # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-164. Invitation page: shows the invited address before registration.
   auth_invite_info:
     post:

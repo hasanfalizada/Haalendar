@@ -103,7 +103,11 @@ describe("public account pages", () => {
   });
 
   it("saves a new password from the reset link", async () => {
-    const calls = stubApi({ "GET /me": SIGNED_OUT, "POST /auth/password-reset/confirm": noContent });
+    const calls = stubApi({
+      "GET /me": SIGNED_OUT,
+      "POST /auth/password-reset/info": () => json({ expires_at: "2026-11-11T18:00:00Z" }),
+      "POST /auth/password-reset/confirm": noContent,
+    });
     renderApp("/reset-password?token=tok");
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("New password"), PASSPHRASE);
@@ -113,6 +117,26 @@ describe("public account pages", () => {
       token: "tok",
       new_password: PASSPHRASE,
     });
+    expect(calls.find((c) => c.path === "/auth/password-reset/info")?.body).toEqual({ token: "tok" });
+  });
+
+  // +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (UAT finding F11).
+  it("says at once that a reset link was used or has expired, without the form", async () => {
+    stubApi({ "GET /me": SIGNED_OUT, "POST /auth/password-reset/info": () => problem(400, "bad_request") });
+    renderApp("/reset-password?token=used");
+    expect(await screen.findByText("This reset link is invalid, was already used or has expired.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request a new link" })).toHaveAttribute("href", "/forgot-password");
+    expect(screen.queryByLabelText("New password")).not.toBeInTheDocument();
+  });
+
+  it("still shows the reset form when the question about the link gets no answer", async () => {
+    stubApi({
+      "GET /me": SIGNED_OUT,
+      "POST /auth/password-reset/info": () => problem(429, "rate_limited"),
+      "POST /auth/password-reset/confirm": noContent,
+    });
+    renderApp("/reset-password?token=tok");
+    expect(await screen.findByLabelText("New password")).toBeInTheDocument();
   });
 });
 

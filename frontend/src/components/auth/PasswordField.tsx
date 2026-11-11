@@ -19,20 +19,24 @@ interface PasswordFieldProps {
 export function PasswordField({ id, label, value, onChange, violations, error }: PasswordFieldProps) {
   const { t } = useTranslation();
   const violationText = useViolationText();
+  // +++===+++ 2026-11-11 23:25 +04 — Hasan Alizada — HAAL-174 (UAT finding F8). A rule the form has refused is said
+  // once, as the error: the hints leave it out instead of repeating it right above.
+  const hints = violations.map((v) => ({ key: v, text: violationText(v) })).filter((hint) => hint.text !== error);
+  const general = t("auth.passwordHint", { min: MIN_LENGTH });
   return (
     <Field
       id={id}
       label={label}
       error={error}
       hint={
-        violations.length > 0 ? (
+        hints.length > 0 ? (
           <ul className="list-inside list-disc" aria-live="polite">
-            {violations.map((v) => (
-              <li key={v}>{violationText(v)}</li>
+            {hints.map((hint) => (
+              <li key={hint.key}>{hint.text}</li>
             ))}
           </ul>
-        ) : (
-          t("auth.passwordHint", { min: MIN_LENGTH })
+        ) : violations.length > 0 || general === error ? undefined : (
+          general
         )
       }
     >

@@ -35,7 +35,7 @@
 - Password rules (NIST SP 800-63B / ASVS): minimum length 15 characters (passphrases encouraged); maximum ≥ 128; any Unicode, no composition rules, no periodic rotation; rejected if in a bundled list of common/breached passwords (offline, no external call; optional Have I Been Pwned k-anonymity check only if the operator enables it).
 - Registration: invite-only by default (admin sends invite link); open registration as instance setting. E-mail verification required before first login (token single-use, 24 h).
 - Password reset: single-use token, 1 h, stored hashed; generic responses ("if the account exists, an e-mail was sent") — no account enumeration on login, reset or registration.
-- Brute force: after 5 failed attempts the account is temporarily locked with progressive delay (15 min, doubling, max 24 h) plus per-IP rate limiting — no permanent lockout (prevents lockout-as-DoS). Admin can unlock.
+- Brute force: after 5 failed attempts the account is temporarily locked with progressive delay (15 min, doubling, max 24 h) plus per-IP rate limiting — no permanent lockout (prevents lockout-as-DoS). Admin can unlock; a password reset lifts the lock too (SRS D-106).
 - Without SMTP: admin creates users and sets one-time passwords that must be changed on first login.
 
 ## 4. Second factor and federated login
