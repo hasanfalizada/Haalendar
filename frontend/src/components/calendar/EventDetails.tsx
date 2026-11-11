@@ -22,7 +22,7 @@ import {
   Repeat,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Attachment, Priority } from "@/api/generated/types.gen";
@@ -39,9 +39,11 @@ import { toPlainText } from "@/lib/markdown-text";
 import { ItemLinks } from "@/components/links/ItemLinks";
 import { reminderLabel, remindersOf } from "@/lib/reminders";
 import { useShortcut } from "@/lib/shortcuts";
+import { undo } from "@/lib/undo";
 import { localKeys, localRows } from "@/sync";
 
 import { EventColor } from "./EventColor";
+import { flushEventColor } from "./eventColorFlush";
 
 type Row = Record<string, unknown>;
 
@@ -139,8 +141,26 @@ export function EventDetails({
     handler: onDuplicate,
   });
 
+  // +++===+++ 2026-11-12 00:00 +04 — Hasan Alizada — HAAL-174 (UAT finding F14, decision A). The card is a dialog (a popover or, on
+  // a phone, a sheet), and Ctrl+Z is off in dialogs so that nothing behind a question is undone. The card is no
+  // question: here Ctrl+Z writes a colour still waiting, then undoes. Another dialog over the card keeps the rule.
+  const root = useRef<HTMLDivElement>(null);
+  useShortcut({
+    id: "undo",
+    keys: ["Mod+Z"],
+    group: "editing",
+    label: "shortcuts.undo",
+    allowInDialog: true,
+    handler: () => {
+      const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]');
+      if ([...dialogs].some((dialog) => !dialog.contains(root.current))) return false;
+      void flushEventColor().then(() => undo());
+      return true;
+    },
+  });
+
   return (
-    <div className="flex max-w-full flex-col gap-3 text-[13px] wrap-anywhere">
+    <div ref={root} className="flex max-w-full flex-col gap-3 text-[13px] wrap-anywhere">
       <div className="flex flex-col gap-1.5">
         <h3 className="text-[15px] font-semibold">{text(row.title) || t("calendar.day.noTitle")}</h3>
         <div className="flex flex-wrap gap-1.5">

@@ -101,6 +101,10 @@ describe("one occurrence or all", { timeout: 20_000 }, () => {
     const ask = await screen.findByRole("dialog", { name: "Delete repeating event?" });
     expect(ask).toHaveTextContent(DAY_LABEL);
     expect(within(ask).getByRole("button", { name: "Only this occurrence" })).toHaveFocus();
+    // UAT finding F15: four buttons do not fit in one row of the dialog; they stand one under another at any width.
+    const footer = within(ask).getByRole("button", { name: "All occurrences" }).parentElement;
+    expect(footer?.className.split(/\s+/)).toContain("flex-col-reverse");
+    expect(footer?.className).not.toMatch(/md:flex-row/);
     await user.keyboard("{Enter}");
 
     const toast = await screen.findByText(`Deleted Standup on ${DAY_LABEL}`);

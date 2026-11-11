@@ -65,7 +65,7 @@ export function OccurrenceChoice({
         }}
         {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
       >
-        <DialogFooter>
+        <DialogFooter stacked>
           <Button onClick={onClose} disabled={busy}>
             {t("common.cancel")}
           </Button>

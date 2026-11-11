@@ -916,6 +916,7 @@
     "selected_one": "{{count}} of {{total}} selected",
     "selected_other": "{{count}} of {{total}} selected",
     "hint": "Select with the checkboxes, Ctrl+click, Shift+click or Ctrl+A",
+    "touchHint": "Press and hold an item to select it",
     "restore": "Restore selected",
     "delete": "Delete selected",
     "color": "Color",
@@ -1444,7 +1445,9 @@
       "more_other": "+ {{count}} more items",
       "moreChecked_one": "+ {{count}} checked item",
       "moreChecked_other": "+ {{count}} checked items",
-      "progress": "{{checked}} of {{total}} done"
+      "progress": "{{checked}} of {{total}} done",
+      "moveKeys": "Move the checklist item in the focused field",
+      "moved": "“{{item}}” moved to place {{position}} of {{total}}"
     },
     "reminders": {
       "title": "Reminders",
@@ -1573,6 +1576,7 @@
       },
       "attachmentsLater": "Images can be added once the card has reached the server.",
       "moveHint": "Alt with the arrow keys moves the card",
+      "moveKeys": "Move the focused card",
       "atDue": "At the due time",
       "overdue": "Overdue",
       "dueSoon": "Due soon",

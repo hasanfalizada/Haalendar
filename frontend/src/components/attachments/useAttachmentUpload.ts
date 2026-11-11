@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { attachmentKeys, uploadAttachmentFile } from "@/api/attachments";
 import { runWrite } from "@/api/write";
-import { checkImage, imageFiles } from "@/lib/images";
+import { checkImage, imageFiles, sortFiles } from "@/lib/images";
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notify";
 import { newStep } from "@/lib/undo";
@@ -102,5 +102,18 @@ export function useAttachmentUpload(itemId: string, count: number) {
     [upload],
   );
 
-  return { pending, upload, onPaste };
+  /** Dropped or picked files: one message when some are not images (UAT finding F17), the images are uploaded. */
+  const uploadFiles = useCallback(
+    (list: FileList | null | undefined) => {
+      const { images, others } = sortFiles(list);
+      if (others > 0) {
+        log.info("attachment_rejected_locally", { problem: "type", files: others });
+        notify.failure(t("attachments.badType"));
+      }
+      if (images.length > 0) void upload(images);
+    },
+    [upload, t],
+  );
+
+  return { pending, upload, uploadFiles, onPaste };
 }

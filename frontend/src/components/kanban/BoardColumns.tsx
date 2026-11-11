@@ -65,6 +65,7 @@ import { cardReminderAhead } from "@/lib/reminders";
 import { useNow } from "@/lib/useNow";
 import type { Selection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
+import { useShortcut } from "@/lib/shortcuts";
 
 import { AddCard } from "./AddCard";
 import { createCard, moveCard } from "./cardWrites";
@@ -170,6 +171,15 @@ export function BoardColumns({
   const [dragging, setDragging] = useState<DragData | null>(null);
   const [dropAt, setDropAt] = useState<CardPlace | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  // +++===+++ 2026-11-12 00:03 +04 — Hasan Alizada — HAAL-174 (UAT finding F19, decision A). Listed in the "?" overlay; the focused
+  // card handles the keys itself (CardTile).
+  useShortcut({
+    id: "kanban:card-move",
+    keys: ["Alt+Up", "Alt+Down", "Alt+Left", "Alt+Right"],
+    group: "items",
+    label: "kanban.cards.moveKeys",
+    enabled: canWrite,
+  });
   const now = useNow();
   const [current, setCurrent] = useState(0);
   const strip = useRef<HTMLDivElement>(null);
