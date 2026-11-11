@@ -1,0 +1,269 @@
+{
+  "$comment": "+++===+++ 2026-10-17 — Hasan Alizada — HAAL-041. Shared cases for items.priority.v1 (Python and TypeScript implementations must pass all).",
+  "atom": "items.priority.v1",
+  "cases": [
+    {
+      "name": "normalize keeps high",
+      "input": {
+        "op": "normalize",
+        "value": "high"
+      },
+      "output": "high"
+    },
+    {
+      "name": "normalize keeps low",
+      "input": {
+        "op": "normalize",
+        "value": "low"
+      },
+      "output": "low"
+    },
+    {
+      "name": "missing priority is medium",
+      "input": {
+        "op": "normalize",
+        "value": null
+      },
+      "output": "medium"
+    },
+    {
+      "name": "sort: high first, tie-break inside a priority, missing counts as medium",
+      "input": {
+        "op": "sort",
+        "items": [
+          {
+            "id": "a",
+            "priority": "low",
+            "tiebreak": 1
+          },
+          {
+            "id": "b",
+            "priority": "high",
+            "tiebreak": 3
+          },
+          {
+            "id": "c",
+            "priority": null,
+            "tiebreak": 2
+          },
+          {
+            "id": "d",
+            "priority": "high",
+            "tiebreak": 1
+          },
+          {
+            "id": "e",
+            "priority": "medium",
+            "tiebreak": 2
+          }
+        ]
+      },
+      "output": [
+        "d",
+        "b",
+        "c",
+        "e",
+        "a"
+      ]
+    },
+    {
+      "name": "sort: equal priority and tie-break fall back to id",
+      "input": {
+        "op": "sort",
+        "items": [
+          {
+            "id": "z",
+            "priority": "medium",
+            "tiebreak": "2026-10-17T10:00:00Z"
+          },
+          {
+            "id": "y",
+            "priority": "medium",
+            "tiebreak": "2026-10-17T10:00:00Z"
+          },
+          {
+            "id": "x",
+            "priority": "medium",
+            "tiebreak": "2026-10-17T09:00:00Z"
+          }
+        ]
+      },
+      "output": [
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    {
+      "name": "sort: empty list",
+      "input": {
+        "op": "sort",
+        "items": []
+      },
+      "output": []
+    },
+    {
+      "name": "filter: high only keeps order",
+      "input": {
+        "op": "filter",
+        "items": [
+          {
+            "id": "a",
+            "priority": "low",
+            "tiebreak": 1
+          },
+          {
+            "id": "b",
+            "priority": "high",
+            "tiebreak": 3
+          },
+          {
+            "id": "c",
+            "priority": null,
+            "tiebreak": 2
+          },
+          {
+            "id": "d",
+            "priority": "high",
+            "tiebreak": 1
+          },
+          {
+            "id": "e",
+            "priority": "medium",
+            "tiebreak": 2
+          }
+        ],
+        "allowed": [
+          "high"
+        ]
+      },
+      "output": [
+        "b",
+        "d"
+      ]
+    },
+    {
+      "name": "filter: medium includes missing priority",
+      "input": {
+        "op": "filter",
+        "items": [
+          {
+            "id": "a",
+            "priority": "low",
+            "tiebreak": 1
+          },
+          {
+            "id": "b",
+            "priority": "high",
+            "tiebreak": 3
+          },
+          {
+            "id": "c",
+            "priority": null,
+            "tiebreak": 2
+          },
+          {
+            "id": "d",
+            "priority": "high",
+            "tiebreak": 1
+          },
+          {
+            "id": "e",
+            "priority": "medium",
+            "tiebreak": 2
+          }
+        ],
+        "allowed": [
+          "medium"
+        ]
+      },
+      "output": [
+        "c",
+        "e"
+      ]
+    },
+    {
+      "name": "filter: several priorities",
+      "input": {
+        "op": "filter",
+        "items": [
+          {
+            "id": "a",
+            "priority": "low",
+            "tiebreak": 1
+          },
+          {
+            "id": "b",
+            "priority": "high",
+            "tiebreak": 3
+          },
+          {
+            "id": "c",
+            "priority": null,
+            "tiebreak": 2
+          },
+          {
+            "id": "d",
+            "priority": "high",
+            "tiebreak": 1
+          },
+          {
+            "id": "e",
+            "priority": "medium",
+            "tiebreak": 2
+          }
+        ],
+        "allowed": [
+          "low",
+          "high"
+        ]
+      },
+      "output": [
+        "a",
+        "b",
+        "d"
+      ]
+    },
+    {
+      "name": "filter: empty set keeps everything",
+      "input": {
+        "op": "filter",
+        "items": [
+          {
+            "id": "a",
+            "priority": "low",
+            "tiebreak": 1
+          },
+          {
+            "id": "b",
+            "priority": "high",
+            "tiebreak": 3
+          },
+          {
+            "id": "c",
+            "priority": null,
+            "tiebreak": 2
+          },
+          {
+            "id": "d",
+            "priority": "high",
+            "tiebreak": 1
+          },
+          {
+            "id": "e",
+            "priority": "medium",
+            "tiebreak": 2
+          }
+        ],
+        "allowed": []
+      },
+      "output": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e"
+      ]
+    }
+  ]
+}

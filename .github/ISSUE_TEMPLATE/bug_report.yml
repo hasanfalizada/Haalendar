@@ -1,0 +1,87 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-006. GitHub issue form for bug reports.
+name: Bug report
+description: Report something that does not work as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+        **Security vulnerabilities must not be reported here** — see the [security policy](https://github.com/hasanfalizada/Haalendar/security/policy).
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Calendar
+        2. Create a recurring event
+        3. Delete this occurrence
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - Calendar
+        - To-Do
+        - Kanban
+        - Search / trash / export / other cross-cutting
+        - Accounts / admin
+        - Offline / sync
+        - Installation / deployment
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v1.0.0 or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Docker Compose (self-hosted)
+        - Public demo
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 130 on Windows 11, Safari on iOS 18
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Remove passwords, tokens and personal data before posting.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I agree to follow the Code of Conduct.
+          required: true

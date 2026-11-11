@@ -1,0 +1,52 @@
+{
+  "$comment": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. First atom: Week A/B label (FR-CAL-23). Needed on the client (offline header) and on the server (exports, reminders), hence two implementations against one contract.",
+  "id": "calendar.week_ab_label.v1",
+  "version": "1.0.0",
+  "purpose": "Returns the Week A/B label of a date: weeks are counted from a user-chosen anchor week, so the result stays correct across year boundaries and 53-week years.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["date", "anchor", "week_start", "labels"],
+    "additionalProperties": false,
+    "properties": {
+      "date": { "type": "string", "format": "date", "description": "Date to label (local calendar date)." },
+      "anchor": { "type": "string", "format": "date", "description": "Any date inside the week the user marked as the first label (A)." },
+      "week_start": { "type": "integer", "minimum": 0, "maximum": 6, "description": "First day of week: 0 = Sunday, 1 = Monday … 6 = Saturday (user setting)." },
+      "labels": {
+        "type": "array",
+        "prefixItems": [
+          { "type": "string", "minLength": 1, "maxLength": 10 },
+          { "type": "string", "minLength": 1, "maxLength": 10 }
+        ],
+        "minItems": 2,
+        "maxItems": 2,
+        "description": "Two labels, default [\"A\", \"B\"]."
+      }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["label", "index", "weeks_from_anchor"],
+    "additionalProperties": false,
+    "properties": {
+      "label": { "type": "string", "description": "labels[index]." },
+      "index": { "enum": [0, 1] },
+      "weeks_from_anchor": { "type": "integer", "description": "Whole weeks between the start of the anchor week and the start of the date's week; negative before the anchor." }
+    }
+  },
+  "errors": [
+    { "code": "LABELS_NOT_DISTINCT", "when": "labels[0] equals labels[1] (case-insensitive)" }
+  ],
+  "events": [],
+  "invariants": [
+    "week start of a date = the latest day on or before the date whose weekday equals week_start",
+    "weeks_from_anchor = (weekStart(date) - weekStart(anchor)) in days / 7, always an integer",
+    "index = weeks_from_anchor mod 2 using the mathematical (non-negative) modulo",
+    "all dates of one week (by week_start) get the same label",
+    "ISO week numbers are never used for parity"
+  ],
+  "requirements": ["FR-CAL-23", "FR-CAL-05", "U#12"]
+}

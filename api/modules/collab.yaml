@@ -1,0 +1,500 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Cross-module endpoints: sharing, search, trash, export, notifications, bulk operations (FR-ACC-10, FR-X-04/07/10/14/19/21).
+# +++===+++ 2026-10-16 — Hasan Alizada — HAAL-030. Every DELETE operation is soft and says how (x-soft-delete).
+paths:
+  # +++===+++ 2026-10-15 — Hasan Alizada — HAAL-167. Sharing (FR-ACC-10, ADR-0005): only the owner shares, changes and
+  # revokes; a grantee may leave (DELETE on the own share). Revocation is soft; at most one active share per grantee.
+  shares:
+    get:
+      tags: [sharing]
+      operationId: listShares
+      summary: Active shares granted by me (as container owner) or received by me
+      parameters:
+        - { name: direction, in: query, schema: { type: string, enum: [granted, received], default: granted } }
+        - { name: container_kind, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' } }
+        - { name: container_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+      responses:
+        '200': { description: 'Shares, oldest first', content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/Share' } } } } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [sharing]
+      operationId: createShare
+      summary: Share a container with another user of the instance (owner only)
+      description: >-
+        422 with an error on /grantee_email when no active user has that address (code user_not_found) or it is the
+        owner's own address (code self); on /container_kind when the kind is not available yet (code unsupported).
+        404 when the container is not visible, 403 when it is visible but not owned. 409 duplicate when the user
+        already has access (change the permission instead). The Idempotency-Key header is accepted; generic replay
+        handling arrives with offline sync.
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [container_kind, container_id, grantee_email, permission]
+              properties:
+                container_kind: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' }
+                container_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                grantee_email: { type: string, format: email, maxLength: 254 }
+                permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
+      responses:
+        '201': { description: Shared, content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  share:
+    patch:
+      tags: [sharing]
+      operationId: updateShare
+      summary: Change the permission (owner only)
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+        - $ref: '../components/common.yaml#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [permission]
+              properties:
+                permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
+      responses:
+        '200':
+          description: Updated
+          headers:
+            ETag: { $ref: '../components/common.yaml#/components/headers/ETag' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Share' } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+        '428': { $ref: '../components/common.yaml#/components/responses/PreconditionRequired' }
+    delete:
+      tags: [sharing]
+      operationId: revokeShare
+      x-soft-delete: 'Sets revoked_at; the share is kept.'
+      summary: Revoke (owner) or leave (grantee); soft via `revoked_at`, the grantee's local copies are removed on next sync
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+  search:
+    get:
+      tags: [search]
+      operationId: search
+      x-not-implemented: 'Planned: HAAL-039 (postponed).'
+      summary: Full-text search over all readable items with filters and highlights (FR-X-10, FR-X-19)
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+        - { name: module, in: query, schema: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/ItemKind' } }, style: form, explode: true }
+        - { name: from, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Date' } }
+        - { name: to, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Date' } }
+        - { name: calendar_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+        - { name: color, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Color' } }
+        - { name: priority, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Priority' } }
+        - { name: label_id, in: query, schema: { $ref: '../components/common.yaml#/components/schemas/Uuid' } }
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Ranked results grouped client-side by `kind`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/SearchHit' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+
+  # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-033. One entry per delete batch (things deleted together appear once,
+  # with counts of what they contain); everything the user may restore (own content, containers shared with edit
+  # permission; containers themselves only for their owner). Nothing is ever purged.
+  trash:
+    get:
+      tags: [trash]
+      operationId: listTrash
+      summary: Soft-deleted items and containers the user may restore, newest deletion first; kept forever (FR-X-04)
+      parameters:
+        - { name: module, in: query, schema: { type: string, enum: [event, note, card, calendar, board, column, attachment] } }
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Trash entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/TrashEntry' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+  trash_restore:
+    post:
+      tags: [trash]
+      operationId: restoreFromTrash
+      summary: Restore entries (with children of the same delete batch) to their original place
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entries]
+              properties:
+                entries:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [type, id]
+                    properties:
+                      type: { type: string, enum: [event, note, card, calendar, board, column, attachment, checklist_item, comment, label, link, reminder] }
+                      id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+      description: >-
+        Each entry brings back its whole delete batch. Entries that cannot be restored are reported in `failed`
+        (codes: not_found — unknown, already restored or not visible; forbidden — visible but not yours to restore;
+        unsupported — type not available yet; parent_in_trash — its container is in the trash too: restore `parent`
+        first or together).
+      responses:
+        '200':
+          description: Restored entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [restored, rows, failed]
+                properties:
+                  restored: { type: integer, description: Entries restored }
+                  rows: { type: integer, description: 'Records brought back, children of the batches included' }
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      required: [type, id, code]
+                      properties:
+                        type: { type: string }
+                        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                        code: { type: string, enum: [not_found, forbidden, unsupported, parent_in_trash] }
+                        parent:
+                          oneOf:
+                            - type: object
+                              required: [type, id, title]
+                              properties:
+                                type: { type: string }
+                                id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                                title: { type: string }
+                            - type: 'null'
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+
+  # +++===+++ 2026-10-18 — Hasan Alizada — HAAL-043 (D-48). Google-Takeout style: request an export (chosen modules,
+  # images optional), a background job builds a ZIP (archive.json per ExportFile + schema, iCalendar files, images,
+  # README.html), the archive can be downloaded for 7 days; the request history stays.
+  exports:
+    get:
+      tags: [export]
+      operationId: listExports
+      summary: The user's export requests, newest first (at most 20); expired archives show status expired
+      responses:
+        '200':
+          description: Export requests
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ExportRequest' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+    post:
+      tags: [export]
+      operationId: requestExport
+      summary: Request a data export of the chosen modules (FR-X-14); needs a recent password confirmation
+      description: >-
+        Exports what the user owns: the containers they own and everything in them, soft-deleted records included
+        with deleted_at. One export at a time (409 invalid_state while one is queued or running). The archive is built
+        in the background; poll listExports (an e-mail is sent when mail is configured).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modules]
+              properties:
+                modules: { type: array, minItems: 1, maxItems: 3, uniqueItems: true, items: { type: string, enum: [calendar, todo, kanban] } }
+                include_images: { type: boolean, default: false, description: Put the image files of attachments into the archive. }
+      responses:
+        '202': { description: Queued, content: { application/json: { schema: { $ref: '#/components/schemas/ExportRequest' } } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  export_download:
+    get:
+      tags: [export]
+      operationId: downloadExport
+      summary: Download a ready export archive (ZIP) while it has not expired
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/Id'
+      responses:
+        '200':
+          description: ZIP archive (Content-Disposition attachment; haalendar-export-YYYY-MM-DD.zip)
+          content: { application/zip: { schema: { type: string, contentMediaType: application/zip } } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
+
+  notifications:
+    get:
+      tags: [notifications]
+      operationId: listNotifications
+      summary: List notifications
+      parameters:
+        - { name: unread, in: query, schema: { type: boolean } }
+        - $ref: '../components/common.yaml#/components/parameters/Cursor'
+        - $ref: '../components/common.yaml#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Notifications, newest first; `unread_count` for the badge
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '../components/common.yaml#/components/schemas/PageInfo'
+                  - type: object
+                    required: [data, unread_count]
+                    properties:
+                      unread_count: { type: integer }
+                      data: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '400': { $ref: '../components/common.yaml#/components/responses/BadRequest' }
+  notifications_read:
+    post:
+      tags: [notifications]
+      operationId: markNotificationsRead
+      summary: Mark notifications read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids: { type: array, items: { $ref: '../components/common.yaml#/components/schemas/Uuid' }, maxItems: 500 }
+                all: { type: boolean }
+      responses:
+        '204': { $ref: '../components/common.yaml#/components/responses/NoContent' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+
+  bulk:
+    # +++===+++ 2026-10-16 — Hasan Alizada — HAAL-036 (D-41). Typed targets (containers too), per-target values (one
+    # request can undo a bulk change of mixed colors), new versions in the answer (If-Match of the undo step).
+    # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084 (D-73). move_next_day and the target's occurrence_date are gone:
+    # moving events goes through the local store and sync like every event change (offline too).
+    post:
+      tags: [bulk]
+      operationId: bulkOperation
+      summary: Apply one action to many items atomically — one undo step (FR-X-07)
+      description: >-
+        All-or-nothing: when any target cannot be changed nothing is changed, and the problem lists the offending
+        targets as errors with pointer /targets/{index} and a code (not_found, forbidden, version_conflict,
+        unsupported, invalid_state). Only version conflicts → 412 version_conflict; otherwise 422 validation_failed.
+        delete removes all targets in one delete batch; restore brings back the delete batch of each target. A
+        repeated request after success fails with version_conflict (versions have moved on), so retrying with the
+        same Idempotency-Key never applies twice.
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, targets]
+              properties:
+                action: { type: string, enum: [delete, restore, set_color, set_priority] }
+                targets:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items: { $ref: '#/components/schemas/BulkTarget' }
+                color:
+                  $ref: '../components/common.yaml#/components/schemas/Color'
+                  description: set_color — value for targets without their own color.
+                priority:
+                  $ref: '../components/common.yaml#/components/schemas/Priority'
+                  description: set_priority — value for targets without their own priority.
+      responses:
+        '200':
+          description: All applied (all-or-nothing)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applied, delete_batch_id, items]
+                properties:
+                  applied: { type: integer }
+                  delete_batch_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+                  items:
+                    type: array
+                    description: Every changed row with its new version (rows restored together with a target are not listed).
+                    items: { $ref: '#/components/schemas/BulkItemResult' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '412': { $ref: '../components/common.yaml#/components/responses/PreconditionFailed' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+
+components:
+  schemas:
+    BulkType:
+      type: string
+      description: Kind of a bulk target; a kind accepts only the actions its module supports.
+      enum: [event, note, card, calendar]
+    BulkTarget:
+      type: object
+      required: [type, id, version]
+      properties:
+        type: { $ref: '#/components/schemas/BulkType' }
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        version: { type: integer, description: Version the client saw; a different current version is a conflict. }
+        color:
+          $ref: '../components/common.yaml#/components/schemas/Color'
+          description: set_color — value for this target (overrides the request's color).
+        priority:
+          $ref: '../components/common.yaml#/components/schemas/Priority'
+          description: set_priority — value for this target (overrides the request's priority).
+    BulkItemResult:
+      type: object
+      required: [type, id, version]
+      properties:
+        type: { $ref: '#/components/schemas/BulkType' }
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        version: { type: integer }
+    Share:
+      type: object
+      required: [id, container_kind, container_id, container_name, grantee_id, grantee_name, grantee_email, owner_id, owner_name, permission, granted_by, created_at, revoked_at, version]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        container_kind: { $ref: '../components/common.yaml#/components/schemas/ContainerKind' }
+        container_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        container_name: { type: string }
+        grantee_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        grantee_name: { type: string }
+        grantee_email: { type: string, format: email }
+        owner_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        owner_name: { type: string }
+        permission: { $ref: '../components/common.yaml#/components/schemas/Permission' }
+        granted_by: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        revoked_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+        version: { type: integer }
+    SearchHit:
+      type: object
+      required: [item_id, kind, title, score]
+      properties:
+        item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        kind: { $ref: '../components/common.yaml#/components/schemas/ItemKind' }
+        title: { type: string }
+        snippet: { type: string, description: Excerpt with matches wrapped in <mark>; HTML-escaped otherwise }
+        container_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        date: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Date' }, { type: 'null' }], description: Event start date or due date }
+        color: { $ref: '../components/common.yaml#/components/schemas/Color' }
+        score: { type: number }
+    TrashEntry:
+      type: object
+      required: [type, id, title, deleted_at, delete_batch_id, deleted_by, deleted_by_name, created_at, updated_at, contents]
+      properties:
+        type: { type: string, enum: [event, note, card, calendar, board, column, attachment] }
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        title: { type: string }
+        # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. Null as the server sends it (found by the contract check).
+        container_name: { oneOf: [{ type: string }, { type: 'null' }], description: 'Calendar or board the entry was in; the server does not fill it yet (null).' }
+        deleted_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        deleted_by: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }], description: 'Who deleted it (the updated_by of the deleted row).' }
+        delete_batch_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        deleted_by_name: { oneOf: [{ type: string }, { type: 'null' }] }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        updated_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        contents:
+          type: object
+          additionalProperties: { type: integer }
+          description: 'What was deleted together with it, per type (e.g. {"event": 37}); empty when nothing.'
+    Notification:
+      # +++===+++ 2026-10-19 — Hasan Alizada — HAAL-048 (D-52). export_ready added; payload holds display data only —
+      # share_*: share_id, container_kind, container_id, container_name, by_name, permission; export_ready: export_id,
+      # size_bytes, expires_at. The client builds the text from kind + payload.
+      # +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091 (D-79). reminder: reminder_id, item_id, title, location, all_day,
+      # occurrence_date, end_date, start_time, end_time (HH:MM in tzid), length_minutes, tzid, fire_at, late.
+      # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116 (D-94). reminder of a card (payload kind card): reminder_id, item_id,
+      # kind, title, board_id, board_name, due_date, due_time (HH:MM in tzid, the board owner's zone, or null), tzid, fire_at,
+      # late.
+      # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119 (D-97). assigned: card_assignee_id, item_id, title, board_id,
+      # board_name, by_name.
+      type: object
+      required: [id, kind, created_at, payload]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        kind: { type: string, enum: [reminder, share_received, share_revoked, sync_error, assigned, comment, export_ready] }
+        item_id: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Uuid' }, { type: 'null' }] }
+        payload: { type: object }
+        created_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        read_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+    ExportRequest:
+      type: object
+      required: [id, status, modules, include_images, requested_at]
+      properties:
+        id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        status: { type: string, enum: [queued, running, ready, failed, expired] }
+        modules: { type: array, items: { type: string, enum: [calendar, todo, kanban] } }
+        include_images: { type: boolean }
+        requested_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        finished_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        expires_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        size_bytes: { type: integer }
+        counts: { type: object, additionalProperties: { type: integer }, description: Records per archive.json section }
+        error: { type: string, description: Error code when status is failed }
+        download_url: { type: string, format: uri-reference, description: Present while status is ready }
+    ExportFile:
+      description: >-
+        archive.json inside the export ZIP (D-48). The standalone JSON Schema (backend/src/haalendar/exports/
+        haalendar-export-1.0.schema.json, also inside every archive) is the authoritative description.
+      type: object
+      required: [format, schema_version, exported_at, user, modules, calendars, events, notes, boards, labels, checklist_items, comments, links, reminders, attachments]
+      properties:
+        format: { const: haalendar-export }
+        schema_version: { type: string, example: '1.0' }
+        exported_at: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }
+        user: { type: object, properties: { id: { type: string }, email: { type: string }, display_name: { type: string }, time_zone: { type: string } } }
+        modules: { type: array, items: { type: string, enum: [calendar, todo, kanban] } }
+        include_images: { type: boolean }
+        calendars: { type: array, items: { $ref: './calendar.yaml#/components/schemas/Calendar' } }
+        events: { type: array, items: { $ref: './calendar.yaml#/components/schemas/Event' } }
+        notes: { type: array, items: { $ref: './notes.yaml#/components/schemas/Note' } }
+        boards:
+          type: array
+          items: { $ref: './kanban.yaml#/components/schemas/BoardDetail' }
+        labels: { type: array, items: { $ref: './items.yaml#/components/schemas/Label' } }
+        checklist_items: { type: array, items: { $ref: './items.yaml#/components/schemas/ChecklistItem' } }
+        comments: { type: array, items: { $ref: './items.yaml#/components/schemas/Comment' } }
+        links: { type: array, items: { $ref: './items.yaml#/components/schemas/Link' } }
+        reminders: { type: array, items: { $ref: './items.yaml#/components/schemas/Reminder' } }
+        attachments: { type: array, items: { $ref: './items.yaml#/components/schemas/Attachment' }, description: 'Metadata only, no binaries' }

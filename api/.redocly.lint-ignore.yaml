@@ -1,0 +1,13 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+modules/accounts.yaml:
+  operation-4xx-response:
+    - '#/paths/setup_status/get/responses'
+  operation-2xx-response:
+    - '#/paths/auth_oidc_start/get/responses'
+    - '#/paths/auth_oidc_callback/get/responses'
+modules/admin.yaml:
+  operation-4xx-response:
+    - '#/paths/demo_status/get/responses'
+    - '#/paths/health_live/get/responses'
+    - '#/paths/health_ready/get/responses'

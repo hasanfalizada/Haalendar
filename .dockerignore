@@ -1,0 +1,25 @@
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. Build context of the image: only what the build needs (allow-list).
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!e2e/package.json
+!api/
+!atoms/
+!frontend/
+!pyproject.toml
+!uv.lock
+!.python-version
+!backend/pyproject.toml
+!backend/alembic.ini
+!backend/migrations/
+!backend/src/
+!docker/
+**/node_modules
+**/__pycache__
+**/*.py[cod]
+frontend/dist
+frontend/dev-dist
+frontend/coverage
+frontend/src/api/generated
+frontend/.vite

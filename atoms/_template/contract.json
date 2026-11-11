@@ -1,0 +1,30 @@
+{
+  "$comment": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Contract template. Copy the folder to atoms/<domain>.<name>.v<N>/ and replace every TODO. The contract is the single source of truth; implementations and tests follow it.",
+  "id": "TODO.domain.name.v1",
+  "version": "1.0.0",
+  "purpose": "TODO: one or two sentences — why this atom exists, in terms an LLM and a human understand.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [],
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [],
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "errors": [
+    { "code": "TODO_ERROR_CODE", "when": "TODO: condition that produces this error" }
+  ],
+  "events": [],
+  "invariants": [
+    "TODO: rule that must always hold for every valid input"
+  ],
+  "requirements": ["TODO: FR-xx-nn"]
+}

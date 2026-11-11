@@ -1,0 +1,47 @@
+{
+  "$comment": "+++===+++ 2026-10-15 — Hasan Alizada — HAAL-160. Password policy (ADR-0005, NIST SP 800-63B / ASVS 5.0 V6): length 15..128 Unicode characters after NFKC, no composition rules, rejected if common, context-specific or trivially repetitive. Server is authoritative; the web app reuses the contract for live hints.",
+  "id": "accounts.password_policy.v1",
+  "version": "1.0.0",
+  "purpose": "Checks a new password against the Haalendar password policy and returns every violated rule, so the UI can explain all problems at once.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["password"],
+    "additionalProperties": false,
+    "properties": {
+      "password": { "type": "string", "description": "Candidate password, any Unicode." },
+      "email": { "type": ["string", "null"], "description": "Account e-mail; its local part must not appear in the password." },
+      "display_name": { "type": ["string", "null"], "description": "Name words of 4+ characters must not appear in the password." }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["valid", "violations"],
+    "additionalProperties": false,
+    "properties": {
+      "valid": { "type": "boolean" },
+      "violations": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": { "enum": ["too_short", "too_long", "common", "contains_email", "contains_name", "low_variety"] },
+        "description": "Violated rules in this fixed order: too_short, too_long, common, contains_email, contains_name, low_variety."
+      }
+    }
+  },
+  "errors": [],
+  "events": [],
+  "invariants": [
+    "length is counted in Unicode code points after NFKC normalization",
+    "too_short when length < 15; too_long when length > 128",
+    "common when the lower-cased normalized password is in the bundled common-password list",
+    "contains_email when the e-mail local part has 4+ characters and occurs in the lower-cased password",
+    "contains_name when any display-name word of 4+ characters occurs in the lower-cased password",
+    "low_variety when the password has fewer than 5 distinct characters",
+    "valid is true exactly when violations is empty",
+    "no rule demands character classes (no composition rules)"
+  ],
+  "requirements": ["FR-ACC-02", "FR-ACC-01", "ADR-0005"]
+}

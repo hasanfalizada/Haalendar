@@ -1,0 +1,6 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Redocly CLI configuration for linting and bundling the API contract (used locally and in CI, HAAL-151).
+extends:
+  - recommended
+apis:
+  haalendar@v1:
+    root: ./openapi.yaml

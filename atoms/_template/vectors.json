@@ -1,0 +1,8 @@
+{
+  "$comment": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Language-neutral test vectors. Every implementation (Python, TypeScript) must pass all cases; each case is validated against the contract input/output schemas.",
+  "atom": "TODO.domain.name.v1",
+  "cases": [
+    { "name": "TODO: happy path", "input": {}, "output": {} },
+    { "name": "TODO: error case", "input": {}, "error": "TODO_ERROR_CODE" }
+  ]
+}

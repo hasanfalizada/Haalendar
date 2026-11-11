@@ -1,0 +1,7 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Generated or third-party files are not formatted.
+dist
+src/api/generated
+src/routeTree.gen.ts
+public
+# +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The coverage report is generated.
+coverage

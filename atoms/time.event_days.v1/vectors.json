@@ -1,0 +1,186 @@
+{
+  "$comment": "+++===+++ 2026-10-15 — Hasan Alizada — HAAL-169. Test vectors for time.event_days.v1 (Python and TypeScript implementations must pass all).",
+  "atom": "time.event_days.v1",
+  "cases": [
+    {
+      "name": "all-day event keeps its date everywhere",
+      "input": {
+        "event": {
+          "all_day": true,
+          "start_time": null,
+          "end_time": null,
+          "start_date": "2026-05-09",
+          "end_date": "2026-05-09",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "Pacific/Kiritimati"
+      },
+      "output": {
+        "first_day": "2026-05-09",
+        "last_day": "2026-05-09"
+      }
+    },
+    {
+      "name": "multi-day all-day event",
+      "input": {
+        "event": {
+          "all_day": true,
+          "start_time": null,
+          "end_time": null,
+          "start_date": "2026-12-24",
+          "end_date": "2026-12-26",
+          "tzid": "Asia/Baku"
+        },
+        "viewer_tzid": "America/Los_Angeles"
+      },
+      "output": {
+        "first_day": "2026-12-24",
+        "last_day": "2026-12-26"
+      }
+    },
+    {
+      "name": "timed event in the same zone",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "09:00",
+          "end_time": "10:00",
+          "start_date": "2026-06-10",
+          "end_date": "2026-06-10",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "Europe/Berlin"
+      },
+      "output": {
+        "first_day": "2026-06-10",
+        "last_day": "2026-06-10"
+      }
+    },
+    {
+      "name": "23:00 in Berlin is the next day in Baku",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "23:00",
+          "end_time": "23:30",
+          "start_date": "2026-06-10",
+          "end_date": "2026-06-10",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "Asia/Baku"
+      },
+      "output": {
+        "first_day": "2026-06-11",
+        "last_day": "2026-06-11"
+      }
+    },
+    {
+      "name": "morning in Berlin is the previous evening in Los Angeles",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "08:00",
+          "end_time": "09:00",
+          "start_date": "2026-06-10",
+          "end_date": "2026-06-10",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "America/Los_Angeles"
+      },
+      "output": {
+        "first_day": "2026-06-09",
+        "last_day": "2026-06-09"
+      }
+    },
+    {
+      "name": "crossing viewer midnight spans two days",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "21:00",
+          "end_time": "23:00",
+          "start_date": "2026-06-10",
+          "end_date": "2026-06-10",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "Asia/Baku"
+      },
+      "output": {
+        "first_day": "2026-06-10",
+        "last_day": "2026-06-11"
+      }
+    },
+    {
+      "name": "ending exactly at midnight stays on one day",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "22:00",
+          "end_time": "00:00",
+          "start_date": "2026-06-10",
+          "end_date": "2026-06-11",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "Europe/Berlin"
+      },
+      "output": {
+        "first_day": "2026-06-10",
+        "last_day": "2026-06-10"
+      }
+    },
+    {
+      "name": "zero-length event at midnight keeps its day",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "00:00",
+          "end_time": "00:00",
+          "start_date": "2026-06-11",
+          "end_date": "2026-06-11",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "Europe/Berlin"
+      },
+      "output": {
+        "first_day": "2026-06-11",
+        "last_day": "2026-06-11"
+      }
+    },
+    {
+      "name": "overnight timed event",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "22:00",
+          "end_time": "06:00",
+          "start_date": "2026-06-10",
+          "end_date": "2026-06-11",
+          "tzid": "Asia/Tokyo"
+        },
+        "viewer_tzid": "Asia/Tokyo"
+      },
+      "output": {
+        "first_day": "2026-06-10",
+        "last_day": "2026-06-11"
+      }
+    },
+    {
+      "name": "event during the spring-forward gap",
+      "input": {
+        "event": {
+          "all_day": false,
+          "start_time": "02:30",
+          "end_time": "03:30",
+          "start_date": "2026-03-29",
+          "end_date": "2026-03-29",
+          "tzid": "Europe/Berlin"
+        },
+        "viewer_tzid": "UTC"
+      },
+      "output": {
+        "first_day": "2026-03-29",
+        "last_day": "2026-03-29"
+      }
+    }
+  ]
+}

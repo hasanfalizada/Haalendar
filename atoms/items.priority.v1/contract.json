@@ -1,0 +1,72 @@
+{
+  "$comment": "+++===+++ 2026-10-17 — Hasan Alizada — HAAL-041. Priority of events, notes and cards (FR-X-12, decision D-04, D-46): the default, the order and the filter. Used by the server (list endpoints sort and filter in SQL with the same order) and by the web app (local sorting and filtering, also offline).",
+  "id": "items.priority.v1",
+  "version": "1.0.0",
+  "purpose": "Normalizes a priority (missing means medium), sorts items by priority (high first) with a module-specific tie-break, and filters items by a set of priorities (empty set = all).",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": ["op", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "op": { "const": "normalize" },
+          "value": { "enum": ["low", "medium", "high", null] }
+        }
+      },
+      {
+        "type": "object",
+        "required": ["op", "items"],
+        "additionalProperties": false,
+        "properties": {
+          "op": { "const": "sort" },
+          "items": { "$ref": "#/$defs/items" }
+        }
+      },
+      {
+        "type": "object",
+        "required": ["op", "items", "allowed"],
+        "additionalProperties": false,
+        "properties": {
+          "op": { "const": "filter" },
+          "items": { "$ref": "#/$defs/items" },
+          "allowed": { "type": "array", "uniqueItems": true, "items": { "enum": ["low", "medium", "high"] } }
+        }
+      }
+    ],
+    "$defs": {
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "priority", "tiebreak"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string" },
+            "priority": { "enum": ["low", "medium", "high", null] },
+            "tiebreak": { "type": ["string", "number"], "description": "Module key inside one priority (event start, card position, note change time): ascending." }
+          }
+        }
+      }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      { "enum": ["low", "medium", "high"], "description": "normalize" },
+      { "type": "array", "items": { "type": "string" }, "description": "sort / filter: item ids in result order" }
+    ]
+  },
+  "errors": [],
+  "events": [],
+  "invariants": [
+    "a missing priority (null) is medium",
+    "sort: high before medium before low; inside one priority by tiebreak ascending, then by id ascending; the sort is total and stable",
+    "filter: keeps the items whose (normalized) priority is in allowed, in their original order; an empty allowed set keeps every item",
+    "rank(high) = 3, rank(medium) = 2, rank(low) = 1 (the same order the server uses in SQL)"
+  ],
+  "requirements": ["FR-X-12", "D-04", "D-46"]
+}

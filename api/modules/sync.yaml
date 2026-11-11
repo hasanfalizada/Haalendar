@@ -1,0 +1,122 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-015. Offline sync and live updates (FR-OFF-03/04, FR-X-18). PROVISIONAL: payload semantics are finalised by the offline/sync ADR (HAAL-050) and implemented in HAAL-053/055.
+# +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. Semantics fixed by ADR-0009 (D-54): server-authoritative pull/push through the regular services (RLS, audit,
+# validation), cursor that never skips a slow transaction, exactly-once mutations by id, field-level conflict policy.
+# `x-status: planned` until HAAL-053 (pull/push) and HAAL-055 (stream) implement them.
+# +++===+++ 2026-10-21 — Hasan Alizada — HAAL-053. pull and push implemented (x-status removed); stream stays planned (HAAL-055). Entities today: calendar,
+# share, item, attachment (metadata), settings in pull; calendar and item in push (items: no create yet).
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Boards in pull and push (D-90).
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns in pull and push (D-91).
+# +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards (items), board labels and labels on items in pull and push (D-92).
+paths:
+  sync_pull:
+    get:
+      tags: [sync]
+      operationId: syncPull
+      summary: Changes visible to the user since a cursor (including soft deletes and revoked-share tombstones)
+      parameters:
+        - { name: since, in: query, schema: { type: string, maxLength: 4096 }, description: 'Opaque cursor (last sync_seq handed out plus the transactions still in progress then, ADR-0009); omit for the initial sync' }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
+      responses:
+        '200':
+          description: Change batch
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [changes, cursor, has_more]
+                properties:
+                  changes: { type: array, items: { $ref: '#/components/schemas/Change' } }
+                  cursor: { type: string }
+                  has_more: { type: boolean }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '410': { description: 'Cursor unknown, too old or of another database (restored from a backup): start over with a full sync', content: { application/problem+json: { schema: { $ref: '../components/common.yaml#/components/schemas/Problem' } } } }
+  sync_push:
+    post:
+      tags: [sync]
+      operationId: syncPush
+      summary: Apply queued offline mutations in order; each mutation is idempotent by its id
+      description: 'Each mutation runs through the same service code as the regular endpoints (authorisation, validation, audit, soft delete) in its own transaction; a failure does not stop the batch. A repeated mutation_id answers duplicate with the stored result. Conflicts follow ADR-0009: disjoint fields merge, the same field changed elsewhere answers conflict with the server state.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mutations]
+              properties:
+                mutations:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items: { $ref: '#/components/schemas/Mutation' }
+      responses:
+        '200':
+          description: Per-mutation results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [mutation_id, status]
+                      properties:
+                        mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+                        status: { type: string, enum: [applied, duplicate, conflict, rejected], description: 'rejected = validation, permission or not found; never retried' }
+                        version: { type: integer, description: New version when applied }
+                        fields: { type: array, items: { type: string }, description: Conflicting fields }
+                        problem: { $ref: '../components/common.yaml#/components/schemas/Problem' }
+                        current: { type: object, description: 'Server state on conflict, and on rejected when the record was deleted on another device' }
+                        # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-054. ADR-0009 rule 4: the user is told.
+                        edited_elsewhere: { type: boolean, description: 'delete: applied, but the record had been changed since base_version (it can be restored from the trash)' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
+  stream:
+    get:
+      tags: [sync]
+      operationId: openEventStream
+      summary: Server-Sent Events with change notifications for open sessions (no per-second polling)
+      # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. Ready (D-59): events carry no data — the client pulls with its
+      # cursor; the first event is `changes`, so Last-Event-ID is not needed.
+      description: 'Session cookie. The first event is `changes`. Events: `changes` (run a sync pull), `notification` (a new notification), `ping` (every 25 s; the session is checked then — a revoked or expired session ends the stream, the reconnect gets 401). Data is always `{}`. `retry: 5000`. At most 10 streams per user.'
+      x-status: ready
+      responses:
+        '200':
+          description: 'text/event-stream; events: `changes`, `notification`, `ping` (data `{}`); `demo_reset` is reserved for the demo mode'
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '429': { $ref: '../components/common.yaml#/components/responses/TooManyRequests' }
+
+components:
+  schemas:
+    Change:
+      type: object
+      required: [entity_type, entity_id, op, version]
+      properties:
+        entity_type: { type: string, enum: [calendar, share, item, attachment, settings, reminder, checklist_item, board, board_column, label, item_label, card_assignee, link, note], description: 'Resource; for a tombstone the container kind. reminder: the user''s own reminders (HAAL-091, D-79); checklist_item: the items of the notes the user reads (HAAL-101, D-88); board: the boards the user owns or that are shared with them (HAAL-110, D-90); board_column: the columns of the boards the user reads (HAAL-111, D-91); label, item_label: the labels of those boards and the labels on their cards (HAAL-112, D-92); card_assignee: the assignees of their cards (HAAL-119, D-97); link: links with an end the user reads — `container_kind`/`container_id` of the first end, `to_container_kind`/`to_container_id` of the second (HAAL-120, D-98); an item of kind card carries column_id, position, due_date, due_time' }
+        entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        op: { type: string, enum: [upsert, delete, tombstone], description: 'upsert carries the full resource (deleted_at included); tombstone = a container no longer readable (share revoked or left): remove it and everything in it' }
+        version: { type: integer }
+        data: { type: object, description: 'Full resource for upsert/delete; an item of kind event carries its event fields, a series also `exceptions` (excluded dates, YYYY-MM-DD, ascending); an item of kind note (HAAL-100 / D-87) carries pinned, archived_at, position, due_at, is_checklist — a note is its own container (container_kind note, container_id = its id)' }
+    Mutation:
+      type: object
+      required: [mutation_id, entity_type, entity_id, op]
+      properties:
+        mutation_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        entity_type: { type: string, enum: [calendar, item, reminder, checklist_item, board, board_column, label, item_label, card_assignee, link], description: 'link (HAAL-120, D-98): create `{from_item_id, to_item_id, origin? (manual)}` — two different live events, notes or cards the user reads, at least one writable (owner or edit share, not archived): 403 otherwise; the same pair in either order: 409; itself: 422; at most 50 per item — delete / restore by whoever may write either end; an item’s delete leaves its links. card_assignee (HAAL-119, D-97): create `{item_id (a card), user_id (a member of its board: owner or an active share)}` (the same person twice: 409; not a member: 422; at most 20 per card), delete / restore — by the board owner or an edit share, not on an archived board; assigning someone else tells them (notification `assigned`). item of kind card (HAAL-112, D-92): create with `{kind: card, container_kind: board, container_id, column_id (a live, not archived column of the board), title (1-200 after trimming), position, body?, color?, priority?, due_date? (YYYY-MM-DD), due_time? (HH:MM, needs due_date)}`; update those fields (another column: column_id + position — the two merge as a pair, a conflict on one makes both a conflict, HAAL-113, D-93; clearing due_date clears due_time); a card cannot move to another board. label: create `{board_id, name (1-40, unique on the board, case ignored), color}`, update name and color, delete (takes it off every card in the same batch) / restore. item_label: create `{item_id (a card), label_id (a label of its board)}` (the same pair twice: 409), delete / restore. Board owner or edit share, not on an archived board. board_column (HAAL-111, D-91): create with `{board_id (a live board), name (1-60 after trimming), position (fractional index), wip_limit? (1-999 or null), archived_at?}`; update name, position, wip_limit, archived_at (any timestamp archives, the server keeps its own time; null unarchives) — the board''s owner or an edit share, not on an archived board (409); delete / restore (soft; a board''s delete takes its columns along). board (HAAL-110, D-90): create with `{name (1-100 after trimming), position (fractional index, 1-64 letters or digits), archived_at?}`; update name, position, archived_at (any timestamp archives, the server keeps its own time; null unarchives) — the owner only; delete / restore (soft, the board with its content in one batch). An archived board is read-only: writes to its content are refused (409 invalid_state). reminder (HAAL-091): create with `{item_id, offset_minutes}` or `{item_id, all_day_time, all_day_days_before}` (events), or `{item_id, remind_at}` (notes: a date and time with its zone, fired once — HAAL-105, D-89), or one of the two event forms on a card with a due date (counted from its due date and time — HAAL-116, D-94); update the form fields; delete / restore (soft). checklist_item (HAAL-101, D-88): create with `{item_id (a live note), text (1-500 after trimming), position, checked?}` (at most 200 live items per note, else 409); update text, checked (the server stamps checked_at), position; delete / restore (soft, one item; the note''s delete takes its items along)' }
+        entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include one occurrence of a series (D-67).
+        op: { type: string, enum: [create, update, delete, restore, move, exclude, include], description: 'exclude / include (item, a repeating event): data `{occurrence_date, override_event_id?}` — the date leaves the series (or is replaced by that one-off event in the same calendar) or comes back; the series version rises and its pulled data lists the excluded dates in `exceptions`' }
+        base: { type: object, description: 'update / move: the values the client started from for each changed field (field-level merge, ADR-0009)' }
+        base_version: { type: integer, description: Version the client edited (conflict detection); absent on create }
+        # +++===+++ 2026-10-22 — Hasan Alizada — HAAL-066. Item create (kind event) and event fields (D-60).
+        # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Item create of kind note and the note fields (D-87).
+        # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. is_checklist on notes; checklist items (D-88).
+        data: { type: object, description: 'create: the resource (calendar create: name, color — never the default, not archived; item create: kind `event`, container_kind `calendar`, container_id, title, body, color, priority and the event fields all_day, start_date, start_time, end_date, end_time (HH:MM), tzid (default: profile zone), location, rrule; copy_attachments_from — a duplicate (HAAL-096 / D-84) takes the live attachments of that event along when the user can read it, else none; or kind `note` (HAAL-100 / D-87): title (may be empty), body, color, priority, pinned, archived_at, is_checklist, position (required; fractional index, 1-64 letters or digits) — its own container, so container_kind / container_id are left out (or note / its own id); only its owner creates, reads and changes it until sharing of notes; a note cannot move); update: changed fields only — note: pinned, is_checklist, archived_at (any timestamp archives, the server keeps its own time; null unarchives; an archived note stays editable), position — calendar (owner, HAAL-094 / D-82): name, color, archived_at (any timestamp archives, the server keeps its own time; null unarchives; not the default calendar), is_default (only true: the default moves there; 409 for an archived calendar), and delete of the default calendar is refused (409); writes to items of an archived calendar are refused (409 invalid_state); event time fields conflict as a group; sets (labels, exceptions, assignees) as add/remove operations' }
+        client_time: { $ref: '../components/common.yaml#/components/schemas/Timestamp' }

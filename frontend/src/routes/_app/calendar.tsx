@@ -1,0 +1,43 @@
+// +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Calendar module placeholder; day view arrives in HAAL-060.
+// +++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. The day view of `?date=YYYY-MM-DD` (default: today in the profile
+// time zone); a malformed date falls back to today.
+// +++===+++ 2026-10-28 — Hasan Alizada — HAAL-087. `?view=day|week` (HAAL-088: |month, HAAL-089: |agenda); without it the view last chosen on this device.
+import { createFileRoute } from "@tanstack/react-router";
+
+import { DayView } from "@/components/calendar/DayView";
+import { type CalendarViewKind, asView, storedView } from "@/lib/calendarView";
+import { todayIn, useDisplayTimeZone } from "@/lib/datetime";
+
+interface CalendarSearch {
+  date?: string;
+  view?: CalendarViewKind;
+  // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. An event whose card opens (from a reminder notification).
+  event?: string;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** "YYYY-MM-DD" naming a real day (2026-02-30 is not one). */
+function isRealDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false;
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  return !Number.isNaN(ms) && new Date(ms).toISOString().startsWith(value);
+}
+
+function CalendarPage() {
+  const { date, view, event } = Route.useSearch();
+  const viewerTz = useDisplayTimeZone();
+  return (
+    <DayView date={date ?? todayIn(viewerTz)} view={view ?? storedView()} {...(event ? { focusEvent: event } : {})} />
+  );
+}
+
+export const Route = createFileRoute("/_app/calendar")({
+  // An explicit undefined: the router merges the parent's raw search params, so a dropped key would come back.
+  validateSearch: (search: Record<string, unknown>): CalendarSearch => ({
+    date: typeof search.date === "string" && isRealDate(search.date) ? search.date : undefined,
+    view: asView(search.view),
+    event: typeof search.event === "string" && /^[0-9a-f-]{36}$/i.test(search.event) ? search.event : undefined,
+  }),
+  component: CalendarPage,
+});

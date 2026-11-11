@@ -1,0 +1,4 @@
+# +++===+++ 2026-11-01 — Hasan Alizada — HAAL-144. Decisions on ZAP alerts for scripts/dev/dast.sh: rule id, action
+# (IGNORE, INFO, WARN, FAIL), rule name, reason. Every alert left without a decision is a WARN and fails the run.
+10055	INFO	CSP: style-src unsafe-inline	Accepted by the owner (SRS D-39, amended in HAAL-150): Sonner and the scroll lock of dialogs insert their styles at run time. script-src stays 'self'. Note: this rule covers every CSP finding; backend tests pin the policy itself.
+10027	INFO	Information Disclosure - Suspicious Comments	Accepted by the owner (2026-11-10, HAAL-154): the words it matches (ADMIN, TODO, WHERE) are in source map links and in our own comments of push-sw.js; the source maps are served on purpose (frontend/vite.config.ts), as the code is open and they make errors in the browser readable.

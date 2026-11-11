@@ -1,0 +1,112 @@
+// +++===+++ 2026-10-21 — Hasan Alizada — HAAL-052. How changes look on this device (ADR-0009, D-57):
+// - applyLocal: the immediate effect of the user's own change on the local rows (so the UI shows it at once);
+// - applyServerChanges: rows from a pull (upsert) and tombstones (a container no longer readable: it and everything in
+//   it leave the device); afterwards the changes still waiting in the outbox are laid over again, so a pull never
+//   hides an edit the server has not received yet.
+// +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include change the excluded dates of a series at once.
+import type { Change } from "@/api/generated/types.gen";
+
+import { ENTITY_TABLE, type EntityType, type LocalDb, type OutboxEntry } from "./db";
+
+// +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. Rows the user creates are theirs: the owner is known here before the
+// server's copy arrives (a board or calendar made offline is listed among the user's own at once). Sent data unchanged.
+const OWNED: ReadonlySet<string> = new Set(["calendar", "board", "item", "reminder"]);
+
+function now(): string {
+  return new Date().toISOString();
+}
+
+/** The local effect of one change of the user (inside the caller's transaction). */
+export async function applyLocal(db: LocalDb, entry: OutboxEntry): Promise<void> {
+  const table = db[ENTITY_TABLE[entry.entity_type]];
+  const row = await table.get(entry.entity_id);
+  switch (entry.op) {
+    case "create":
+      await table.put({
+        ...(OWNED.has(entry.entity_type) ? { owner_id: db.user } : {}),
+        ...(entry.data ?? {}),
+        id: entry.entity_id,
+        version: 0,
+        deleted_at: null,
+      });
+      return;
+    case "update":
+    case "move":
+      if (row) await table.put({ ...row, ...(entry.data ?? {}) });
+      return;
+    case "delete":
+      if (row && !row.deleted_at) await table.put({ ...row, deleted_at: now() });
+      return;
+    case "restore":
+      if (row) await table.put({ ...row, deleted_at: null });
+      return;
+    case "exclude":
+    case "include": {
+      const day = entry.data?.occurrence_date;
+      if (!row || typeof day !== "string") return;
+      const others = (Array.isArray(row.exceptions) ? (row.exceptions as unknown[]) : []).filter((d) => d !== day);
+      const exceptions = entry.op === "exclude" ? [...others, day].map(String).sort() : others;
+      await table.put({ ...row, exceptions });
+      return;
+    }
+  }
+}
+
+async function removeContainer(db: LocalDb, kind: string, id: string): Promise<void> {
+  const inside = [kind, id] as [string, string];
+  await db.items.where("[container_kind+container_id]").equals(inside).delete();
+  await db.attachments.where("[container_kind+container_id]").equals(inside).delete();
+  await db.checklistItems.where("[container_kind+container_id]").equals(inside).delete();
+  await db.boardColumns.where("[container_kind+container_id]").equals(inside).delete();
+  await db.labels.where("[container_kind+container_id]").equals(inside).delete();
+  await db.itemLabels.where("[container_kind+container_id]").equals(inside).delete();
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the assignees of its cards.
+  await db.cardAssignees.where("[container_kind+container_id]").equals(inside).delete();
+  // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. A link with an end there stays while its other end is still on the
+  // device (the user reads that one); otherwise it goes too.
+  const touching = [
+    ...(await db.links.where("[container_kind+container_id]").equals(inside).toArray()),
+    ...(await db.links.where("[to_container_kind+to_container_id]").equals(inside).toArray()),
+  ];
+  for (const link of touching) {
+    const other = link.container_kind === kind && link.container_id === id ? link.to_item_id : link.from_item_id;
+    if (!(await db.items.get(String(other)))) await db.links.delete(String(link.id));
+  }
+  await db.shares.where("[container_kind+container_id]").equals(inside).delete();
+  if (kind === "calendar") await db.calendars.delete(id);
+  // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. A board no longer shared leaves the device too.
+  if (kind === "board") await db.boards.delete(id);
+}
+
+/** Applies a page of server changes, then lays the waiting local changes over them again. */
+export async function applyServerChanges(db: LocalDb, changes: Change[]): Promise<void> {
+  await db.transaction("rw", [...db.entityTables(), db.outbox], async () => {
+    for (const change of changes) {
+      if (change.op === "tombstone") {
+        await removeContainer(db, change.entity_type, change.entity_id);
+        continue;
+      }
+      // +++===+++ 2026-10-21 — Hasan Alizada — kinds this client does not keep yet (boards, notes) are skipped.
+      const name = ENTITY_TABLE[change.entity_type as EntityType] as (typeof ENTITY_TABLE)[EntityType] | undefined;
+      if (name && change.data) await db[name].put(change.data);
+    }
+    const waiting = await db.outbox.orderBy("seq").toArray();
+    for (const entry of waiting) await applyLocal(db, entry);
+  });
+}
+
+// +++===+++ 2026-11-09 — Hasan Alizada — HAAL-155. After a full sync caused by a server restored from a backup: rows the
+// server no longer has leave the device, except what is still waiting to be sent. `seen` holds "<entity type>:<id>" of
+// every row of the full sync. Settings have one row per user, which a new full sync replaces anyway.
+export async function removeRowsNotOnServer(db: LocalDb, seen: ReadonlySet<string>): Promise<void> {
+  await db.transaction("rw", [...db.entityTables(), db.outbox], async () => {
+    const waiting = new Set((await db.outbox.toArray()).map((entry) => entry.entity_id));
+    for (const [entity, name] of Object.entries(ENTITY_TABLE)) {
+      if (name === "settings") continue;
+      const table = db[name];
+      const ids = await table.toCollection().primaryKeys();
+      const gone = ids.filter((id) => !seen.has(`${entity}:${id}`) && !waiting.has(id));
+      await table.bulkDelete(gone);
+    }
+  });
+}

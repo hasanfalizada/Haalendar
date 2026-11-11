@@ -1,0 +1,56 @@
+{
+  "$comment": "+++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. Order of the events of one day (FR-CAL-01, F-14; the legacy app sorted by colour name — intentionally changed). Needed on the client (day view, offline) and on the server (agenda, export, reminders later), hence two implementations against one contract.",
+  "id": "calendar.day_order.v1",
+  "version": "1.0.0",
+  "purpose": "Orders the entries shown on one day: all-day first, then by start time (an event continuing from an earlier day counts as 00:00 and comes first), then by title, then by creation time and key.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["entries"],
+    "additionalProperties": false,
+    "properties": {
+      "entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["key", "all_day", "continues", "start", "title", "created_at"],
+          "additionalProperties": false,
+          "properties": {
+            "key": { "type": "string", "description": "Unique per entry (event id + occurrence date)." },
+            "all_day": { "type": "boolean" },
+            "continues": { "type": "boolean", "description": "A timed entry that started on an earlier day of the viewer." },
+            "start": {
+              "type": ["string", "null"],
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+              "description": "Start on this day in the viewer's zone (HH:MM); null for all-day entries; ignored when continues."
+            },
+            "title": { "type": "string" },
+            "created_at": { "type": "string", "format": "date-time", "description": "RFC 3339 UTC (…Z), compared as text." }
+          }
+        }
+      }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["keys"],
+    "additionalProperties": false,
+    "properties": {
+      "keys": { "type": "array", "items": { "type": "string" }, "description": "All keys, in display order." }
+    }
+  },
+  "errors": [],
+  "events": [],
+  "invariants": [
+    "every all-day entry comes before every timed entry",
+    "all-day entries among themselves: by title (start is not used)",
+    "timed entries: effective start = 00:00 when continues, else start; earlier first; at the same effective start a continuing entry comes first",
+    "title comparison: first by the title key — Unicode NFKD, combining marks (category M) removed, lower-cased — so case and accents do not count (\"apple\" < \"Banana\", \"Eagle\" < \"Éclair\"); then by the title itself (code points)",
+    "then by created_at (earlier first), then by key — the order is total and stable",
+    "colour never takes part (the legacy colour-name order is gone)"
+  ],
+  "requirements": ["FR-CAL-01", "F-14", "D-61"]
+}

@@ -1,0 +1,61 @@
+{
+  "$comment": "+++===+++ 2026-10-15 — Hasan Alizada — HAAL-165. Authorization policy for planning data (ADR-0005 sections 6–7): access is resolved per container from ownership and an active share; default deny; the admin role grants nothing on content. Used by every content endpoint and the sync API (server) and to hide unavailable actions (web app). PostgreSQL row-level security enforces the same rules as a second layer.",
+  "id": "authz.check.v1",
+  "version": "1.0.0",
+  "purpose": "Decides whether a user may perform an action on a container (calendar, board, note) or its items, and which HTTP status a refusal maps to.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["actor", "action", "resource"],
+    "additionalProperties": false,
+    "properties": {
+      "actor": {
+        "type": "object",
+        "required": ["id", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "role": { "enum": ["admin", "user"] }
+        }
+      },
+      "action": {
+        "enum": ["read", "write_items", "manage_container", "share"],
+        "description": "read: see the container and its items; write_items: create, update, move, soft-delete, restore items; manage_container: rename, archive, soft-delete the container; share: grant or revoke shares."
+      },
+      "resource": {
+        "type": "object",
+        "required": ["owner_id", "share_permission"],
+        "additionalProperties": false,
+        "properties": {
+          "owner_id": { "type": "string", "format": "uuid", "description": "Owner of the container." },
+          "share_permission": { "enum": ["view", "edit", null], "description": "Active (non-revoked) share of the container for the actor, if any." }
+        }
+      }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["allowed", "deny_status", "reason"],
+    "additionalProperties": false,
+    "properties": {
+      "allowed": { "type": "boolean" },
+      "deny_status": { "enum": [null, 403, 404], "description": "null when allowed; 404 when the actor may not even read (no existence leak); 403 when the actor can read but not perform the action." },
+      "reason": { "enum": ["owner", "shared_edit", "shared_view", "not_shared", "view_only", "owner_only"] }
+    }
+  },
+  "errors": [],
+  "events": [],
+  "invariants": [
+    "the owner may perform every action (reason owner)",
+    "an edit share allows read and write_items (reason shared_edit); manage_container and share are refused with 403 (reason owner_only)",
+    "a view share allows read (reason shared_view); write_items is refused with 403 (reason view_only); manage_container and share with 403 (reason owner_only)",
+    "without ownership or an active share every action is refused with 404 (reason not_shared)",
+    "ownership wins over a share of the same actor",
+    "the actor role never changes the decision: administrators have no access to other users' content",
+    "allowed is true exactly when deny_status is null"
+  ],
+  "requirements": ["FR-ACC-07", "FR-ACC-10", "ADR-0005"]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "haalendar",
+  "private": true,
+  "description": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Root task entry point (ADR-0003): one place to run frontend and backend checks.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24.18"
+  },
+  "scripts": {
+    "dev": "pnpm --filter haalendar-frontend dev",
+    "build": "pnpm --filter haalendar-frontend build",
+    "check": "pnpm --filter haalendar-frontend check",
+    "test": "pnpm --filter haalendar-frontend test",
+    "gen:api": "pnpm --filter haalendar-frontend gen:api",
+    "mock:api": "pnpm --filter haalendar-frontend mock:api",
+    "e2e": "pnpm --filter haalendar-e2e test",
+    "backend:check": "cd backend && uv run ruff check . ../scripts/dev && uv run ruff format --check . ../scripts/dev && uv run mypy src tests ../scripts/dev && uv run pytest --cov",
+    "security:audit": "pnpm audit --audit-level low && cd backend && uv export --no-emit-project --format requirements-txt -q | uv run pip-audit -r /dev/stdin --require-hashes --disable-pip --strict --progress-spinner off",
+    "security:licences": "cd backend && uv run python -I ../scripts/dev/licences.py"
+  }
+}

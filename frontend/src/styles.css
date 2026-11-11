@@ -1,11 +1,268 @@
-@import '@angular/material/prebuilt-themes/deeppurple-amber.css';
+/* +++===+++ 2026-10-14 — Hasan Alizada — HAAL-017. Design tokens from docs: design/design-system.md v1.0 (light/dark),
+   exposed to Tailwind v4 via @theme. Dark mode follows the resolved data-theme attribute set by src/theme/theme.ts. */
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+/* +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. Toast styles bundled with the app: the CSP (style-src 'self') blocks
+   the <style> element Sonner tries to insert at runtime, so its stylesheet is served from our own origin instead. */
+@import "sonner/dist/styles.css";
 
-html,
-body {
-    height: 100%;
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #ffffff;
+  --surface: #f5f8f8;
+  --surface-2: #eaf0f0;
+  --line: #d9e2e2;
+  --fg: #111827;
+  --muted: #56636f;
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-ink: #ffffff;
+  --primary-tint: #e6f6f3;
+  --accent: #f59e0b;
+  --danger: #b42318;
+  /* +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Behind danger text (the overdue badge, D-95); ≥ 4.5:1 in both themes,
+     checked by palette-contrast.test.ts. */
+  --danger-bg: #fee4e2;
+  --ok: #15803d;
+  --warn-bg: #fef3c7;
+  --warn-fg: #78350f;
+  --ev-red: #dc2626;
+  --ev-orange: #ea580c;
+  /* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (D-47). Light-theme yellow darkened from #eab308 (1.92:1 against
+     white) to keep the colour bar and swatch at ≥ 3:1 (WCAG 1.4.11); checked by palette-contrast.test.ts. */
+  --ev-yellow: #b88a00;
+  --ev-green: #16a34a;
+  --ev-blue: #2563eb;
+  --ev-purple: #9333ea;
+  --ev-brown: #92400e;
+  --ev-black: #1f2937;
+  color-scheme: light;
 }
 
-body {
-    margin: 0;
-    font-family: Roboto, "Helvetica Neue", sans-serif;
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --surface: #111a27;
+  --surface-2: #18232f;
+  --line: #253243;
+  --fg: #eef2f6;
+  --muted: #9aa7b4;
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-ink: #0b1220;
+  --primary-tint: #0f2e2b;
+  --accent: #fbbf24;
+  --danger: #f97066;
+  --danger-bg: #3b1210;
+  --ok: #4ade80;
+  --warn-bg: #3a2a08;
+  --warn-fg: #fde68a;
+  --ev-black: #9ca3af;
+  /* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (D-47). Dark-theme brown lightened from #92400e (2.64:1); yellow
+     keeps its original bright value here (the darker light-theme variant is only needed on white). */
+  --ev-yellow: #eab308;
+  --ev-brown: #a8622a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-tint: var(--primary-tint);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-ok: var(--ok);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-fg: var(--warn-fg);
+  --color-ev-red: var(--ev-red);
+  --color-ev-orange: var(--ev-orange);
+  --color-ev-yellow: var(--ev-yellow);
+  --color-ev-green: var(--ev-green);
+  --color-ev-blue: var(--ev-blue);
+  --color-ev-purple: var(--ev-purple);
+  --color-ev-brown: var(--ev-brown);
+  --color-ev-black: var(--ev-black);
+  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* +++===+++ 2026-10-16 — Hasan Alizada — HAAL-034. A modal dialog disables pointer events outside itself; result
+   toasts (Retry, Close) must stay usable on top of it. */
+[data-sonner-toast] {
+  pointer-events: auto;
+}
+
+/* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (FR-X-13, D-47). User colours on items: `ev-<colour>` picks the colour,
+   `ev-tint` mixes 16 % of it into the background (text keeps the normal foreground colour, so text contrast does not
+   depend on the colour), `ev-bar` draws the 4 px colour bar, `ev-swatch` fills a colour sample. */
+.ev-red {
+  --ev: var(--ev-red);
+}
+.ev-orange {
+  --ev: var(--ev-orange);
+}
+.ev-yellow {
+  --ev: var(--ev-yellow);
+}
+.ev-green {
+  --ev: var(--ev-green);
+}
+.ev-blue {
+  --ev: var(--ev-blue);
+}
+.ev-purple {
+  --ev: var(--ev-purple);
+}
+.ev-brown {
+  --ev: var(--ev-brown);
+}
+.ev-black {
+  --ev: var(--ev-black);
+}
+.ev-tint {
+  background-color: color-mix(in srgb, var(--ev) 16%, var(--bg));
+}
+.ev-bar {
+  border-left: 4px solid var(--ev);
+}
+.ev-swatch {
+  background-color: var(--ev);
+}
+
+/* +++===+++ 2026-10-19 — Hasan Alizada — HAAL-047 (FR-X-20, D-51). Rendered Markdown: compact text styles for details,
+   cards and comments; colours from the theme tokens, so both themes keep their contrast. */
+.markdown {
+  overflow-wrap: anywhere;
+}
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+.markdown :where(p, ul, ol, blockquote, pre, table) {
+  margin: 0.5em 0;
+}
+.markdown :where(h4, h5, h6) {
+  margin: 0.75em 0 0.25em;
+  font-weight: 600;
+}
+.markdown h4 {
+  font-size: 1.07em;
+}
+.markdown :where(ul, ol) {
+  padding-left: 1.4em;
+}
+.markdown ul {
+  list-style: disc;
+}
+.markdown ol {
+  list-style: decimal;
+}
+.markdown li.task-list-item {
+  list-style: none;
+  margin-left: -1.2em;
+}
+.markdown li.task-list-item input {
+  margin-right: 0.4em;
+  vertical-align: -1px;
+}
+.markdown a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown code {
+  border-radius: 4px;
+  background: var(--color-surface-2);
+  padding: 0.1em 0.3em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+.markdown pre {
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--color-surface-2);
+  padding: 0.6em 0.8em;
+}
+.markdown pre code {
+  background: none;
+  padding: 0;
+}
+.markdown blockquote {
+  border-left: 3px solid var(--color-line);
+  padding-left: 0.8em;
+  color: var(--color-muted);
+}
+.markdown hr {
+  margin: 0.75em 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+}
+.markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+.markdown :where(th, td) {
+  border: 1px solid var(--color-line);
+  padding: 0.25em 0.6em;
+  text-align: left;
+}
+.markdown th {
+  background: var(--color-surface);
+  font-weight: 600;
+}
+
+/* +++===+++ 2026-10-21 — Hasan Alizada — HAAL-170 (FR-X-17, D-53). Touch devices: check boxes and radio buttons are
+   larger and the label around them is a 44 px target (the whole label toggles the control). */
+@media (pointer: coarse) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    min-height: 44px;
+  }
 }

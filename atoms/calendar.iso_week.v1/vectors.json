@@ -1,0 +1,25 @@
+{
+  "$comment": "+++===+++ 2026-10-23 — Hasan Alizada — HAAL-062. Test vectors for calendar.iso_week.v1 (from date.isocalendar(), checked against the Thursday rule): year boundaries, 52/53-week years, leap day.",
+  "atom": "calendar.iso_week.v1",
+  "cases": [
+    {"name": "an ordinary day", "input": {"date": "2026-10-23"}, "output": {"week": 43, "week_year": 2026}},
+    {"name": "a Monday starts its week", "input": {"date": "2026-10-19"}, "output": {"week": 43, "week_year": 2026}},
+    {"name": "a Sunday ends its week", "input": {"date": "2026-10-25"}, "output": {"week": 43, "week_year": 2026}},
+    {"name": "31 December 2026 is in week 53", "input": {"date": "2026-12-31"}, "output": {"week": 53, "week_year": 2026}},
+    {"name": "1 January 2027 still belongs to week 53 of 2026", "input": {"date": "2027-01-01"}, "output": {"week": 53, "week_year": 2026}},
+    {"name": "3 January 2027 (Sunday) closes week 53 of 2026", "input": {"date": "2027-01-03"}, "output": {"week": 53, "week_year": 2026}},
+    {"name": "4 January 2027 is always in week 1", "input": {"date": "2027-01-04"}, "output": {"week": 1, "week_year": 2027}},
+    {"name": "30 December 2024 is in week 1 of 2025", "input": {"date": "2024-12-30"}, "output": {"week": 1, "week_year": 2025}},
+    {"name": "1 January 2025 is in week 1", "input": {"date": "2025-01-01"}, "output": {"week": 1, "week_year": 2025}},
+    {"name": "3 January 2021 belongs to week 53 of 2020", "input": {"date": "2021-01-03"}, "output": {"week": 53, "week_year": 2020}},
+    {"name": "4 January 2021 starts week 1", "input": {"date": "2021-01-04"}, "output": {"week": 1, "week_year": 2021}},
+    {"name": "leap day", "input": {"date": "2028-02-29"}, "output": {"week": 9, "week_year": 2028}},
+    {"name": "year starting on Thursday has 53 weeks", "input": {"date": "2015-12-31"}, "output": {"week": 53, "week_year": 2015}},
+    {"name": "leap year starting on Wednesday has 53 weeks", "input": {"date": "2020-12-31"}, "output": {"week": 53, "week_year": 2020}},
+    {"name": "year with 52 weeks ends in week 52", "input": {"date": "2023-12-31"}, "output": {"week": 52, "week_year": 2023}},
+    {"name": "1 January 2023 (Sunday) is week 52 of 2022", "input": {"date": "2023-01-01"}, "output": {"week": 52, "week_year": 2022}},
+    {"name": "29 December 2025 starts week 1 of 2026", "input": {"date": "2025-12-29"}, "output": {"week": 1, "week_year": 2026}},
+    {"name": "far past", "input": {"date": "1900-01-01"}, "output": {"week": 1, "week_year": 1900}},
+    {"name": "far future", "input": {"date": "2100-12-31"}, "output": {"week": 52, "week_year": 2100}}
+  ]
+}

@@ -1,0 +1,312 @@
+# +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. CI/CD (ADR-0002, ADR-0004, SRS §security): every push to the long-lived
+# branches and every pull request runs the checks of scripts/dev/check-all.sh, each job its own steps (--only), and
+# builds the image for linux/amd64 and linux/arm64 on a native runner of each, checked end to end by
+# scripts/dev/compose-check.sh. A tag vX.Y.Z publishes that image to ghcr.io/hasanfalizada/haalendar with its SBOM
+# and a signed provenance once every check passed; nothing is ever deployed (each user installs it, docs/operations/deployment.md).
+# Weekly the dependency audit and the secret scan run again, for advisories published later.
+# Supply chain: every action pinned by its commit SHA, at least 7 days old when chosen (Dependabot proposes updates with a
+# 7-day cooldown, .github/dependabot.yml); no secrets but the job's own GITHUB_TOKEN, read-only except for publishing;
+# no caches (a workflow that publishes must not restore what another run could have written).
+name: CI
+
+on:
+  push:
+    branches: [revamp, development, master]
+    tags: ["v*.*.*"]
+  pull_request:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      publish_test_image:
+        description: "Publish the image as ghcr.io/hasanfalizada/haalendar:ci-test (a test of the publishing; delete it afterwards)"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  IMAGE: ghcr.io/hasanfalizada/haalendar
+  NODE_VERSION: "24.22.0"
+  UV_VERSION: "0.13.5"
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+jobs:
+  workflows:
+    name: workflow lint
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: scripts/dev/check-all.sh --only workflows
+
+  security:
+    name: security (audit, secrets, licences)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the secret scan reads the whole history
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: scripts/dev/check-all.sh --only audit,secrets,licences
+
+  backend:
+    name: backend (contract, lint, types, tests)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: scripts/dev/check-all.sh --only contract,backend
+
+  frontend:
+    name: frontend (lint, types, tests, build)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - run: corepack enable && pnpm install --frozen-lockfile
+      # +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. The log stays readable without signing in to GitHub (the job's own
+      # log does not); shell: bash stops on a failure inside the pipe too (without it the step reports the exit code of tee).
+      - shell: bash
+        run: |
+          mkdir -p .dev
+          scripts/dev/check-all.sh --only frontend,build,e2e-static 2>&1 | tee .dev/frontend.log
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-log
+          include-hidden-files: true
+          path: .dev/frontend.log
+          retention-days: 7
+
+  e2e:
+    name: end-to-end
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm --filter haalendar-e2e exec playwright install --with-deps chromium
+      - run: scripts/dev/check-all.sh --only e2e
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-report
+          # .dev (the stack's logs, what the browser saw if the setup failed) starts with a dot.
+          include-hidden-files: true
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+            .dev/*.log
+            .dev/*.png
+          retention-days: 7
+
+  # The image on each architecture's own runner, checked as a user installs it (compose.yaml, the whole E2E suite).
+  image:
+    name: image ${{ matrix.arch }}
+    if: github.event_name != 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm --filter haalendar-e2e exec playwright install --with-deps chromium
+      # +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. A version of its own: the check looks for it in /health and in About.
+      - run: docker build -t haalendar:dev --build-arg VERSION=0.0.0-check .
+      - run: scripts/dev/compose-check.sh --no-build
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compose-check-report-${{ matrix.arch }}
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
+
+  # Publishing, only after every check passed: a release tag, or a test of the publishing started by hand.
+  publish:
+    name: publish ${{ matrix.arch }}
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_test_image)
+    needs: [workflows, security, backend, frontend, e2e, image]
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write # push the image to ghcr.io
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=ci-test,enable=${{ github.event_name == 'workflow_dispatch' }}
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Pushed by digest only; the publish-merge job gives the two digests their tags. No build cache: a release is built
+      # from its own sources only.
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: VERSION=${{ steps.meta.outputs.version }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          sbom: true
+          provenance: mode=max
+          no-cache: true
+      - name: Keep the digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: mkdir -p digests && touch "digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: digest-${{ matrix.arch }}
+          path: digests/*
+          retention-days: 1
+
+  publish-merge:
+    name: publish (tags, SBOM, signed provenance)
+    needs: [publish]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write # push the image and its attestation to ghcr.io
+      id-token: write # sign the provenance with the run's identity (Sigstore)
+      attestations: write # store the signed provenance with the repository
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: digests
+          pattern: digest-*
+          merge-multiple: true
+      # X.Y.Z, X.Y and X for a release, latest for a release that is not a pre-release (vX.Y.Z-rc.1 gets only its own
+      # tag); ci-test for the test of the publishing.
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            type=raw,value=ci-test,enable=${{ github.event_name == 'workflow_dispatch' }}
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag the multi-architecture image
+        working-directory: digests
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          args=()
+          while read -r tag; do [ -n "$tag" ] && args+=(-t "$tag"); done <<<"$TAGS"
+          for digest in *; do args+=("$IMAGE@sha256:$digest"); done
+          docker buildx imagetools create "${args[@]}"
+      - name: SBOM and provenance of the published image
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        id: published
+        run: |
+          mkdir -p sbom
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+          echo "digest=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{ json .Manifest }}' | jq -r .digest)" >>"$GITHUB_OUTPUT"
+          docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{ json .SBOM }}' >"sbom/haalendar-$VERSION.sbom.spdx.json"
+          docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{ json .Provenance }}' >"sbom/haalendar-$VERSION.provenance.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: sbom/
+      # A signed statement that this repository's workflow built this image (verify: docs/operations/deployment.md).
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.published.outputs.digest }}
+          push-to-registry: true

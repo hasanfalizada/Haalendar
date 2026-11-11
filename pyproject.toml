@@ -1,0 +1,3 @@
+# +++===+++ 2026-10-14 — Hasan Alizada — HAAL-016. uv workspace root (ADR-0003: uv + pnpm workspaces, no Pants). Python packages are workspace members.
+[tool.uv.workspace]
+members = ["backend"]

@@ -1,0 +1,20 @@
+# +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. Updates of the GitHub Actions pinned by commit SHA in
+# .github/workflows/: a pull request at most weekly, for a version at least 7 days old (supply-chain rule). npm and uv
+# dependencies are updated by hand (pnpm refuses versions younger than 7 days: pnpm-workspace.yaml minimumReleaseAge).
+# Dependabot reads this file from the default branch (master): it starts once revamp is merged there (v1.0).
+# +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. From v1.0 on its pull requests go into development (ADR-0002).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: development
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+      include: scope
