@@ -86,7 +86,8 @@ async function open(extra: Parameters<typeof stubApi>[0] = {}, hidden: string[] 
     calendar(MINE, "My calendar", { is_default: true }),
     calendar(WORK, "Work", { color: "red" }),
     calendar(OLD, "Old", { archived_at: "2026-01-01T00:00:00Z" }),
-    calendar(BOBS, "Family", { owner_id: "someone-else" }),
+    // Bob's own default calendar, shared with the user (UAT finding F21).
+    calendar(BOBS, "Family", { owner_id: "someone-else", is_default: true }),
   ]);
   await db.items.bulkPut([
     event("e1", "Dentist", MINE),
@@ -234,6 +235,10 @@ describe("calendar list", { timeout: 15_000 }, () => {
     await waitFor(() => {
       expect(within(shared).getByTitle("Shared by Bob")).toBeInTheDocument();
     });
+    // UAT finding F21: another user's default calendar is not "(default)" here; the owner's name tells it apart.
+    expect(within(shared).queryByText("(default)")).not.toBeInTheDocument();
+    expect(within(shared).getByText("· Bob")).toBeInTheDocument();
+    expect(within(sidebar).getByRole("region", { name: "My calendars" })).toHaveTextContent("(default)");
     await user.click(within(await menuOf(user, sidebar, "Family")).getByRole("menuitem", { name: "Leave" }));
     await screen.findByText("You left “Family”.");
     expect(left).toBe(true);

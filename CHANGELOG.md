@@ -25,6 +25,16 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 - A reset link that was used or has expired says so at once and offers a new one, instead of showing the form and
   failing on save (the page asks the new API operation `POST /api/v1/auth/password-reset/info`).
 - The forms that set a password show a refused rule once, not as a hint and as an error together.
+- After a card is added with Enter, the focus stays in the field, so the next title can be typed at once.
+- On a phone the time-zone notice puts its buttons under the text at full width, and the selection hint names the long
+  press instead of Ctrl+click (the board, where a long press does not select, shows no hint there).
+- Ctrl+Z works in the event details card, also right after a colour was picked; other dialogs still undo nothing
+  behind them.
+- The repeat choice ("Only this occurrence", "This and following", "All occurrences") no longer cuts off a button.
+- Dropping or picking a file that is not an image says so once, instead of ignoring it.
+- The "?" overlay lists Alt with the arrow keys for moving a card and a checklist item; the checklist fields name these
+  keys to screen readers and a move is announced.
+- A calendar shared by another user is no longer marked "(default)"; its owner's name is shown next to it.
 
 ### Security
 

@@ -5,6 +5,8 @@
 // +++===+++ 2026-10-17 — Hasan Alizada — HAAL-041. The priority menu shows the priority badges (atom order).
 // +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042. Colours come from the shared palette.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084 (D-73). "Move to next day" is a bar action, not a POST /bulk one.
+// +++===+++ 2026-11-11 23:58 +04 — Hasan Alizada — HAAL-174 (UAT finding F13). On a touch screen the hint names the long press
+// instead of Ctrl+click; a list without long press (the board) shows no hint there.
 import { CalendarArrowUp, Palette, RotateCcw, Signal, Trash2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +15,7 @@ import { PRIORITIES, type Priority } from "@/atoms/items/priority";
 import type { BulkAction } from "@/lib/bulk";
 import type { Color } from "@/api/generated/types.gen";
 import { COLORS } from "@/lib/palette";
+import { useCoarsePointer } from "@/lib/useCoarsePointer";
 import type { Selection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +34,8 @@ interface BulkBarProps {
   busy?: boolean;
   onAction: (action: BarAction, value?: Color | Priority) => void;
   className?: string;
+  /** Whether a long press on a row selects it (false on the board). */
+  longPress?: boolean;
 }
 
 function SelectAllBox({ selection, label }: { selection: Selection; label: string }) {
@@ -54,8 +59,18 @@ function SelectAllBox({ selection, label }: { selection: Selection; label: strin
   );
 }
 
-export function BulkBar({ selection, total, actions, busy = false, onAction, className }: BulkBarProps) {
+export function BulkBar({
+  selection,
+  total,
+  actions,
+  busy = false,
+  onAction,
+  className,
+  longPress = true,
+}: BulkBarProps) {
   const { t } = useTranslation();
+  const touch = useCoarsePointer();
+  const hint = touch ? (longPress ? t("bulk.touchHint") : null) : t("bulk.hint");
   const some = selection.count > 0;
   const has = (action: BarAction) => actions.includes(action);
   return (
@@ -159,9 +174,9 @@ export function BulkBar({ selection, total, actions, busy = false, onAction, cla
             <span className="max-md:sr-only">{t("bulk.clear")}</span>
           </Button>
         </>
-      ) : (
-        <span className="text-[13px] text-muted">{t("bulk.hint")}</span>
-      )}
+      ) : hint ? (
+        <span className="text-[13px] text-muted">{hint}</span>
+      ) : null}
     </div>
   );
 }

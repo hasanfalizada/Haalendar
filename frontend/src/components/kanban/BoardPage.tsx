@@ -341,6 +341,7 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
               total={shownIds.length}
               actions={["set_color", "set_priority", "delete"]}
               busy={busy}
+              longPress={false}
               onAction={(action, value) => {
                 void bulk(action, value);
               }}

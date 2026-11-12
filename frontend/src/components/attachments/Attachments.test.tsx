@@ -123,6 +123,27 @@ describe("attachments", () => {
     ]);
   });
 
+  // UAT finding F17: other files were dropped or picked without a word.
+  it("says once per drop or pick that other files are not taken, and attaches the images among them", async () => {
+    const calls = server([]);
+    renderWithProviders(<Attachments itemId={ITEM} editable />);
+    const area = await screen.findByRole("region", { name: "Images" });
+    const pdf = (name: string) => new File(["%PDF-1.7"], name, { type: "application/pdf" });
+    fireEvent.drop(area, { dataTransfer: { files: [pdf("a.pdf"), pdf("b.pdf"), png("drop.png")] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Use a PNG, JPEG, WebP or GIF image.");
+    await waitFor(() => {
+      expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
+    });
+    expect(screen.getAllByText("Use a PNG, JPEG, WebP or GIF image.")).toHaveLength(1);
+    expect(calls.find((c) => c.method === "POST")?.headers.get("X-File-Name")).toBe("drop.png");
+
+    await userEvent.setup({ applyAccept: false }).upload(screen.getByLabelText("Add image"), pdf("c.pdf"));
+    await waitFor(() => {
+      expect(screen.getAllByText("Use a PNG, JPEG, WebP or GIF image.")).toHaveLength(2);
+    });
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(1);
+  });
+
   // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F3). In an editor the screenshot is pasted where the
   // focus is, in the title or description; pasted text stays text there.
   it("attaches a screenshot pasted into a field of the editor", async () => {

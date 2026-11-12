@@ -13,6 +13,8 @@ import { DEFAULT_COLOR } from "@/lib/palette";
 import { newStep } from "@/lib/undo";
 import { mutate } from "@/sync";
 
+import { waitingColor } from "./eventColorFlush";
+
 type Row = Record<string, unknown>;
 
 export const COLOR_SAVE_DELAY_MS = 600;
@@ -35,7 +37,7 @@ export function EventColor({ user, row, writable }: EventColorProps) {
     latest.current = { user, row, stored, t };
   });
 
-  const write = useCallback(() => {
+  const write = useCallback(async () => {
     clearTimeout(timer.current);
     const color = pending.current;
     pending.current = null;
@@ -45,7 +47,7 @@ export function EventColor({ user, row, writable }: EventColorProps) {
     const title =
       typeof event.title === "string" && event.title !== "" ? event.title : translate("calendar.day.noTitle");
     const version = typeof event.version === "number" ? { base_version: event.version } : {};
-    void runWrite({
+    await runWrite({
       name: "event_color",
       run: () =>
         mutate(owner, {
@@ -66,8 +68,20 @@ export function EventColor({ user, row, writable }: EventColorProps) {
     });
   }, []);
 
+  // The stored colour changed (the choice was written, or undone with Ctrl+Z or the toast): show it again, unless a
+  // newer choice is still waiting.
+  useEffect(() => {
+    if (pending.current === null) setChosen(null);
+  }, [stored]);
+
   // The card closes: a choice still waiting is written now.
-  useEffect(() => write, [write]);
+  useEffect(() => {
+    const forget = waitingColor(write);
+    return () => {
+      forget();
+      void write();
+    };
+  }, [write]);
 
   if (!writable) {
     return (
@@ -87,7 +101,7 @@ export function EventColor({ user, row, writable }: EventColorProps) {
           setChosen(color);
           pending.current = color;
           clearTimeout(timer.current);
-          timer.current = setTimeout(write, COLOR_SAVE_DELAY_MS);
+          timer.current = setTimeout(() => void write(), COLOR_SAVE_DELAY_MS);
         }}
       />
       {row.rrule ? <p className="text-xs text-muted">{t("calendar.details.colorSeries")}</p> : null}

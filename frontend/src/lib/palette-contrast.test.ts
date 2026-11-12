@@ -100,6 +100,9 @@ describe.each([
     expect(value, `--ev-${color} defined`).toMatch(/^#[0-9a-fA-F]{6}$/);
     const tint = mix(value ?? "", bg, TINT);
     expect(contrast(fg, tint), "text on the tint").toBeGreaterThanOrEqual(4.5);
+    // +++===+++ 2026-11-12 00:15 +04 — Hasan Alizada — HAAL-174 (UAT finding F20). The time on an event chip is muted text on the
+    // tint; measured live at 4.78:1 (brown, light) and 6.62:1 (dark), the reported 3.4:1 was not reproduced. Guards it.
+    expect(contrast(tokens.muted ?? "", tint), "muted text (the time) on the tint").toBeGreaterThanOrEqual(4.5);
     expect(contrast(value ?? "", bg), "colour bar against the page").toBeGreaterThanOrEqual(3);
   });
 });

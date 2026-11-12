@@ -100,6 +100,39 @@ describe("colour from the details card", { timeout: 20_000 }, () => {
     });
   });
 
+  it("Ctrl+Z on a swatch saves the waiting colour and undoes it, with the card still open", async () => {
+    // UAT finding F14: Ctrl+Z did nothing while the focus was on a colour swatch.
+    const { user, db } = await openDay();
+    const details = await card(user, "Dentist");
+    await user.click(within(details).getByRole("radio", { name: "Purple" }));
+    expect(within(details).getByRole("radio", { name: "Purple" })).toHaveFocus();
+    await user.keyboard("{Control>}z{/Control}"); // well within the 0.6 s wait
+    // The colour was written (with its toast) and undone; the outbox folds both into one update back to blue.
+    await screen.findByText("Color changed: Dentist");
+    await waitFor(async () => {
+      expect((await db.items.get(DENTIST))?.color).toBe("blue");
+    });
+    expect(await outbox()).toMatchObject([{ entity_id: DENTIST, base: { color: "blue" }, data: { color: "blue" } }]);
+    // The card shows the colour that is stored again.
+    await waitFor(() => {
+      expect(within(details).getByRole("radio", { name: "Blue" })).toBeChecked();
+    });
+    expect(screen.getByRole("dialog", { name: "Event details" })).toBeInTheDocument();
+  });
+
+  it("Ctrl+Z undoes nothing while a dialog over the card asks something", async () => {
+    const { user, db } = await openDay();
+    const details = await card(user, "Dentist");
+    await user.click(within(details).getByRole("radio", { name: "Purple" }));
+    await screen.findByText("Color changed: Dentist");
+    await user.click(within(details).getByRole("button", { name: "Delete" }));
+    await screen.findByRole("dialog", { name: "Delete event?" });
+    await user.keyboard("{Control>}z{/Control}");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect((await db.items.get(DENTIST))?.color).toBe("purple");
+    expect(await outbox()).toHaveLength(1);
+  });
+
   it("running through the palette with the arrow keys writes once", async () => {
     const { user } = await openDay();
     const details = await card(user, "Dentist");

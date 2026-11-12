@@ -66,6 +66,8 @@ export function DialogContent({
   );
 }
 
-export function DialogFooter({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">{children}</div>;
+// +++===+++ 2026-11-12 00:01 +04 — Hasan Alizada — HAAL-174 (UAT finding F15). `stacked`: the buttons stand one under another at any
+// width, for a dialog whose choices do not fit in one row (the repeat choice: "All occurrences" was cut off).
+export function DialogFooter({ children, stacked = false }: { children: ReactNode; stacked?: boolean }) {
+  return <div className={cn("flex flex-col-reverse gap-2", !stacked && "md:flex-row md:justify-end")}>{children}</div>;
 }

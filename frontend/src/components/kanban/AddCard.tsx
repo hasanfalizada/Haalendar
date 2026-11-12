@@ -65,7 +65,11 @@ export function AddCard({ columnName, onAdd }: AddCardProps) {
         value={title}
         maxLength={TITLE_MAX}
         autoFocus
-        disabled={busy}
+        // +++===+++ 2026-11-11 23:57 +04 — Hasan Alizada — HAAL-174 (UAT finding F9). Read-only, not disabled, while
+        // the card is written: a browser moves the focus to the page when the focused field is disabled, and the next
+        // title could not be typed straight away. `add()` ignores Enter meanwhile.
+        readOnly={busy}
+        aria-busy={busy}
         onChange={(e) => {
           setTitle(e.target.value);
         }}

@@ -110,6 +110,9 @@ describe("checklists", { timeout: 20_000 }, () => {
     await waitFor(() => {
       expect(within(editor).getByLabelText("Item 2")).toHaveValue("Socks");
     });
+    // UAT finding F18: the keys are named to assistive technology, and the move is told.
+    expect(within(editor).getByLabelText("Item 2")).toHaveAttribute("aria-keyshortcuts", "Alt+ArrowUp Alt+ArrowDown");
+    expect(within(editor).getByText("“Socks” moved to place 2 of 3")).toBeInTheDocument();
     await user.click(within(editor).getByRole("button", { name: "Save" }));
     await screen.findByText("Created Packing");
 
