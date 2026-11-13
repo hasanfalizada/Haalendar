@@ -35,12 +35,19 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 - The "?" overlay lists Alt with the arrow keys for moving a card and a checklist item; the checklist fields name these
   keys to screen readers and a move is announced.
 - A calendar shared by another user is no longer marked "(default)"; its owner's name is shown next to it.
+- Preferences changed on another device reach an open page without a reload; a Preferences form being edited keeps
+  the edits and takes the other values.
+- The box that shows or hides a calendar changes at once instead of waiting for the server, and goes back with a
+  message if the change cannot be saved.
+- A change made offline says what was done and that it is kept on this device, and offers Undo like an online one.
 
 ### Security
 
 - No installation is listed by search engines any more: the app answers every request with
   `X-Robots-Tag: noindex, nofollow` and the page carries the same in a robots meta tag. Nothing to set; a reverse
   proxy adds nothing.
+- The image carries `opentelemetry-api` 1.45.2, a dependency of the web framework, which fixes CVE-2026-126360 (a
+  denial of service through slow parsing of a `traceparent` header).
 
 ## [1.0.0] - 2026-11-11
 

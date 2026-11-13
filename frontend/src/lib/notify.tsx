@@ -60,8 +60,16 @@ export const notify = {
   },
 
   /** A change was stored on this device and waits for the connection (offline outbox, HAAL-052). */
-  queued(count = 1): string | number {
-    return toast.info(i18n.t("notify.queued", { count }), { duration: SUCCESS_MS });
+  // +++===+++ 2026-11-12 15:44 +04 — Hasan Alizada — HAAL-174 (UAT finding F22). With `text` the message names what was
+  // done ("Calendar created: Work"), the line under it says it is kept on this device, and Undo is offered as online.
+  queued(count = 1, options: { text?: string; action?: NotifyAction; hint?: string } = {}): string | number {
+    const kept = i18n.t("notify.queued", { count });
+    if (!options.text) return toast.info(kept, { duration: SUCCESS_MS });
+    return toast.info(options.text, {
+      duration: SUCCESS_MS,
+      action: button(options.action),
+      description: options.hint ? `${kept} ${options.hint}` : kept,
+    });
   },
 
   /** Queued changes reached the server (HAAL-053). */

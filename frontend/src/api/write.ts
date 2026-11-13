@@ -219,18 +219,16 @@ export async function runWrite<T>(options: WriteOptions<T>): Promise<WriteResult
   const message = typeof options.success === "function" ? options.success(result) : options.success;
   const step = options.undo?.(result) ?? null;
   if (step) record(step);
+  const undoOffer = step
+    ? {
+        action: { label: i18n.t("undo.action"), run: () => void undo(step.id) },
+        hint: i18n.t("undo.hint", { keys: UNDO_KEYS }),
+      }
+    : {};
   if (typeof message === "string" && isQueuedWrite(result)) {
-    notify.queued();
+    notify.queued(1, { text: message, ...undoOffer });
   } else if (typeof message === "string") {
-    notify.success(
-      message,
-      step
-        ? {
-            action: { label: i18n.t("undo.action"), run: () => void undo(step.id) },
-            hint: i18n.t("undo.hint", { keys: UNDO_KEYS }),
-          }
-        : {},
-    );
+    notify.success(message, undoOffer);
   } else if (message) notify.failure(message.failure);
   return { ok: true, data: result };
 }

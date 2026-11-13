@@ -54,7 +54,6 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
   const [sharing, setSharing] = useState<CalendarRow | null>(null);
   const [importing, setImporting] = useState<CalendarRow | null>(null);
   const [deleting, setDeleting] = useState<CalendarRow | null>(null);
-  const [toggling, setToggling] = useState<string | null>(null);
   const shareActions = useShareActions();
   const received = useQuery({
     ...sharesQuery({ direction: "received", containerKind: "calendar" }),
@@ -65,11 +64,10 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
   const eventsIn = (row: CalendarRow) =>
     items.filter((item) => item.container_id === row.id && !item.deleted_at).length;
 
+  // +++===+++ 2026-11-12 15:27 +04 — Hasan Alizada — HAAL-174 (UAT finding F16). The box is not disabled while the
+  // setting is saved: setHidden shows the change at once and puts it back if the save is refused.
   async function toggle(row: CalendarRow, show: boolean) {
-    const id = String(row.id);
-    setToggling(id);
-    await setHidden(client, user, id, !show);
-    setToggling(null);
+    await setHidden(client, user, String(row.id), !show);
   }
 
   const checkbox = (row: CalendarRow) => {
@@ -79,7 +77,6 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
         type="checkbox"
         className="size-4 shrink-0"
         checked={!calendars.hidden.has(id)}
-        disabled={toggling === id}
         aria-label={t("calendars.show", { name: name(row) })}
         onChange={(e) => {
           void toggle(row, e.target.checked);

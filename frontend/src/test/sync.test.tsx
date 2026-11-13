@@ -4,23 +4,26 @@
 // conflicts and rejections are kept with both versions and a notification, 410 starts over, 401 pauses, offline writes
 // say "saved on this device" and are announced when they arrive, sign-out names the unsent changes and deletes the
 // local database.
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Dexie from "dexie";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setCsrfToken } from "@/api/client";
+import type { Settings } from "@/api/generated/types.gen";
+import { settingsQuery, settingsQueryKey } from "@/api/settings";
 import { isDeviceProfile, meQuery } from "@/api/session";
 import { runWrite } from "@/api/write";
+import { createCalendar, deleteCalendar } from "@/components/calendar/calendarWrites";
 import { listLocalNotifications } from "@/lib/localNotifications";
 import { forgetProfile, rememberProfile } from "@/lib/profileCache";
-import { mutate, prepareSignOut, startSync, syncStatus } from "@/sync";
+import { localChanged, mutate, prepareSignOut, startSync, syncStatus } from "@/sync";
 import { dbName, localDb } from "@/sync/db";
 import { applyServerChanges, removeRowsNotOnServer } from "@/sync/local";
 import { enqueue } from "@/sync/outbox";
 
-import { type Call, json, me, noContent, problem, renderApp, stubApi } from "./fake-api";
+import { type Call, json, me, noContent, problem, renderApp, settings, stubApi } from "./fake-api";
 
 const USER = me().id;
 const CAL = "0199f000-0000-7000-8000-0000000000c1";
@@ -167,6 +170,47 @@ describe("sync engine", () => {
     await waitFor(() => {
       expect(syncStatus()).toMatchObject({ state: "idle", pending: 0 });
     });
+  });
+
+  // +++===+++ 2026-11-12 15:31 +04 — Hasan Alizada — HAAL-174 (UAT finding F12). Preferences changed on another device
+  // arrive as the synced settings row; a newer version than the one on screen refreshes the settings at once, the same
+  // version (this device's own save) asks nothing more of the server.
+  it("refreshes the preferences when a newer settings row arrives", async () => {
+    setOnline(true);
+    const client = engineClient();
+    client.setQueryData(settingsQueryKey, settings({ version: 3 }));
+    const watching = new QueryObserver(client, settingsQuery).subscribe(() => undefined);
+    let served = settings({ version: 3 });
+    let pulled = 0;
+    const row = (version: number, theme: string) => ({
+      entity_type: "settings",
+      entity_id: USER,
+      op: "upsert",
+      version,
+      data: { ...settings({ version, theme: theme as "dark" }), owner_id: USER },
+    });
+    const calls = stubApi({
+      "GET /me/settings": () => json(served),
+      "GET /sync/pull": () => {
+        pulled += 1;
+        return json({ changes: pulled === 1 ? [row(3, "system")] : [], cursor: `c${String(pulled)}`, has_more: false });
+      },
+    });
+    startSync(USER, client);
+    const db = await localDb(USER);
+    await waitFor(async () => {
+      expect((await db.meta.get("cursor"))?.value).toBe("c1");
+    });
+    // The same version as on screen: nothing is asked.
+    expect(calls.filter((c) => c.path === "/me/settings")).toHaveLength(0);
+
+    served = settings({ version: 4, theme: "dark" });
+    await applyServerChanges(db, [row(4, "dark")] as never);
+    localChanged(USER);
+    await waitFor(() => {
+      expect(client.getQueryData<Settings>(settingsQueryKey)).toMatchObject({ version: 4, theme: "dark" });
+    });
+    watching();
   });
 
   // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. Started while the server could not be reached, the app holds the
@@ -381,7 +425,8 @@ describe("sync engine", () => {
     expect(
       await screen.findByText("Saved on this device. It will sync when the connection is back."),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Calendar created.")).not.toBeInTheDocument();
+    // +++===+++ 2026-11-12 15:45 +04 — Hasan Alizada — HAAL-174 (F22): the message names what was done as well.
+    expect(screen.getByText("Calendar created.")).toBeInTheDocument();
     expect((await screen.findAllByText("Offline — 1 change waits on this device")).length).toBeGreaterThan(0);
     expect(pushed(calls)).toEqual([]);
 
@@ -391,6 +436,72 @@ describe("sync engine", () => {
     expect(pushed(calls)).toHaveLength(1);
     const db = await localDb(USER);
     expect(await db.outbox.count()).toBe(0);
+  });
+});
+
+// +++===+++ 2026-11-12 15:41 +04 — Hasan Alizada — HAAL-174 (UAT finding F22). An offline create or delete says what
+// was done, that it is kept on this device, and offers Undo like an online one. Undoing a create still waiting in the
+// outbox sends the create and the delete together once the connection is back (the record goes to the trash, as
+// online); undoing a delete still waiting cancels both, nothing is sent.
+describe("offline undo", () => {
+  async function offlineApp() {
+    setOnline(false);
+    const calls = stubApi({
+      "GET /me": () => json(me()),
+      "POST /sync/push": (call) =>
+        json({
+          results: (call.body as { mutations: { mutation_id: string }[] }).mutations.map((m) => ({
+            mutation_id: m.mutation_id,
+            status: "applied",
+            version: 1,
+          })),
+        }),
+    });
+    renderApp("/calendar");
+    await waitFor(() => {
+      expect(syncStatus().state).toBe("offline");
+    });
+    return { calls, user: userEvent.setup(), db: await localDb(USER) };
+  }
+
+  it("offers Undo for a create made offline; both changes are sent when the connection is back", async () => {
+    const { calls, user, db } = await offlineApp();
+    await createCalendar(USER, "Work", "red");
+    const toast = (await screen.findByText("Calendar created: Work")).closest("li") as HTMLElement;
+    expect(toast).toHaveTextContent("Saved on this device. It will sync when the connection is back.");
+    await user.click(within(toast).getByRole("button", { name: "Undo" }));
+
+    await waitFor(async () => {
+      expect((await db.outbox.toArray()).map((e) => e.op)).toEqual(["create", "delete"]);
+    });
+    const [created] = await db.outbox.toArray();
+    expect((await db.calendars.get(created?.entity_id ?? ""))?.deleted_at).toBeTruthy();
+
+    setOnline(true);
+    window.dispatchEvent(new Event("online"));
+    await waitFor(() => {
+      expect(pushed(calls).map((m) => m.op)).toEqual(["create", "delete"]);
+    });
+  });
+
+  it("offers Undo for a delete made offline; undone, nothing is sent", async () => {
+    const { calls, user, db } = await offlineApp();
+    await db.calendars.put({ id: CAL, name: "Work", color: "red", owner_id: USER, version: 2, deleted_at: null });
+    await deleteCalendar(USER, { id: CAL, name: "Work", version: 2 });
+    const toast = (await screen.findByText(/Work.*deleted|Deleted.*Work/)).closest("li") as HTMLElement;
+    expect(toast).toHaveTextContent("Saved on this device. It will sync when the connection is back.");
+    await user.click(within(toast).getByRole("button", { name: "Undo" }));
+
+    await waitFor(async () => {
+      expect(await db.outbox.count()).toBe(0);
+    });
+    expect((await db.calendars.get(CAL))?.deleted_at ?? null).toBeNull();
+    setOnline(true);
+    window.dispatchEvent(new Event("online"));
+    await waitFor(() => {
+      expect(syncStatus().state).not.toBe("offline");
+    });
+    expect(pushed(calls)).toEqual([]);
   });
 });
 

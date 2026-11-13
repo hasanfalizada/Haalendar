@@ -169,17 +169,17 @@ finding is decided by the owner: a backlog task, a fix within HAAL-145, or no ch
 | F9 | UAT-40 | minor | After adding a card with Enter the focus drops to the page | HAAL-174 | fixed, re-tested ✅ (2026-11-12) |
 | F10 | UAT-06 | minor | A password reset does not lift the sign-in lockout; the admin has no Unlock | HAAL-174 | fixed, re-tested ✅ (2026-11-11; a reset lifts the lock, D-106). "No Unlock" was not reproduced: the user list shows "Locked" and its menu offers Unlock while the lock lasts |
 | F11 | UAT-06 | minor | A used reset link still shows the form; the error comes only on submit | HAAL-174 | fixed, re-tested ✅ (2026-11-11) |
-| F12 | UAT-07 | minor | Preferences reach other open devices only after a reload | HAAL-174 | open |
+| F12 | UAT-07 | minor | Preferences reach other open devices only after a reload | HAAL-174 | fixed, re-tested ✅ (2026-11-12; a newer settings row brought by sync refreshes the settings on the open page: theme and the rest follow, an open Preferences form keeps the user's edits) |
 | F13 | UAT-21 | minor | Phone: the time-zone banner is cramped and the desktop selection hint is shown | HAAL-174 | fixed, re-tested ✅ (2026-11-12; phone 390 px: buttons under the text at full width; on touch the hint names the long press, none on the board) |
 | F14 | UAT-15 | minor | Ctrl+Z does nothing while the focus is on a colour swatch | HAAL-174 | fixed, re-tested ✅ (2026-11-12; in the event details card Ctrl+Z writes the colour still waiting and undoes it; other dialogs keep the rule) |
 | F15 | UAT-17 | minor | "All occurrences" is clipped in the repeat choice dialog | HAAL-174 | fixed, re-tested ✅ (2026-11-12; the buttons stand one under another, 1280 px and 390 px, none cut off) |
-| F16 | UAT-23 | minor | The calendar show / hide box waits for the server | HAAL-174 | open |
+| F16 | UAT-23 | minor | The calendar show / hide box waits for the server | HAAL-174 | fixed, re-tested ✅ (2026-11-12; the box and the views change at once, a refused save puts them back with a message) |
 | F17 | UAT-55 | minor | PDF and other file types are ignored silently on drop | HAAL-174 | fixed, re-tested ✅ (2026-11-12; one message per drop or pick, the images among the files are attached) |
 | F18 | UAT-31 | minor | Checklist items cannot be reordered with the keyboard | HAAL-174 | fixed, re-tested ✅ (2026-11-12; Alt+↑ / Alt+↓ were there: now named in the "?" overlay and to screen readers, a move is announced) |
 | F19 | UAT-53 | minor | The "?" overlay on a board does not list Alt+arrows | HAAL-174 | fixed, re-tested ✅ (2026-11-12) |
 | F20 | UAT-56 | minor | Time text on event chips has about 3.4:1 contrast (4.5:1 needed) | HAAL-174 | not reproduced (2026-11-12; measured live: 4.78:1 light, 6.62:1 dark, at full opacity; a test now guards ≥ 4.5:1 for every colour in both themes) |
 | F21 | UAT-70 | minor | The share dialog list is not refreshed at once; a shared calendar shows as "My calendar (default)" to the grantee | HAAL-174 | fixed, re-tested ✅ (2026-11-12; the list in the share dialog was refreshed at once — not reproduced; another user's default calendar is no longer marked "(default)" and shows its owner's name) |
-| F22 | UAT-81 | minor | Notifications of offline create / delete have no Undo | HAAL-174 | open |
+| F22 | UAT-81 | minor | Notifications of offline create / delete have no Undo | HAAL-174 | fixed, re-tested ✅ (2026-11-12; the message names what was done, says it is kept on this device and offers Undo; an undone create still waiting is sent with its delete, an undone delete cancels both) |
 | F23 | UAT-22 | major | Event times can be chosen only in 15-minute steps (FR-CAL-06 says so); a 20:50 meeting cannot be entered — the owner finds this bad (2026-11-07) | fix within HAAL-145 (FR-CAL-06 amended, SRS v1.86) | fixed, re-tested ✅ (owner's stand updated to `ad68a7f`) |
 
 ## 7. Sign-off
