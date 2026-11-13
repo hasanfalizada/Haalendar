@@ -327,7 +327,10 @@ describe("editor", { timeout: 15_000 }, () => {
       const dialog = await screen.findByRole("dialog", { name: "New event" });
       await user.type(within(dialog).getByLabelText("Title"), "Written offline");
       await user.click(within(dialog).getByRole("button", { name: "Save" }));
-      await screen.findByText("Saved on this device. It will sync when the connection is back.");
+      // +++===+++ 2026-11-12 15:49 +04 — Hasan Alizada — HAAL-174 (F22): what was done, kept on this device, Undo.
+      const toast = (await screen.findByText("Event created: Written offline")).closest("li") as HTMLElement;
+      expect(toast).toHaveTextContent(/Saved on this device\. It will sync when the connection is back\./);
+      expect(within(toast).getByRole("button", { name: "Undo" })).toBeInTheDocument();
       expect(await screen.findByRole("button", { name: "Details of Written offline" })).toBeInTheDocument();
     } finally {
       vi.restoreAllMocks();
@@ -348,7 +351,7 @@ describe("editor", { timeout: 15_000 }, () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(
-      await screen.findByText("Saved on this device. It will sync when the connection is back."),
+      await screen.findByText(/^Saved on this device\. It will sync when the connection is back\./),
     ).toBeInTheDocument();
     vi.restoreAllMocks();
   });

@@ -128,6 +128,36 @@ describe("preferences", () => {
     });
   });
 
+  // +++===+++ 2026-11-12 15:36 +04 — Hasan Alizada — HAAL-174 (UAT finding F12). Settings changed on another device
+  // reach an open page without a reload (sync asks for them again): untouched fields take the new values, the theme
+  // follows, and what the user is editing stays and is saved on the new version.
+  it("takes a newer version from another device into the open form and keeps the user's edits", async () => {
+    const { calls, current } = stubSettings();
+    const { queryClient } = renderApp("/settings");
+    const user = userEvent.setup();
+    const section = await preferences();
+    const agenda = within(section).getByLabelText("Agenda shows (days)");
+    await user.clear(agenda);
+    await user.type(agenda, "14");
+
+    // Another device: week starts on Sunday, dark theme.
+    const served = current();
+    Object.assign(served, settings({ week_start: 0, theme: "dark", version: 2 }));
+    await queryClient.invalidateQueries({ queryKey: ["session", "settings"] });
+
+    await waitFor(() => {
+      expect(within(section).getByLabelText("Week starts on")).toHaveValue("0");
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    });
+    expect(within(section).getByLabelText("Agenda shows (days)")).toHaveValue(14);
+
+    await user.click(within(section).getByRole("button", { name: "Save preferences" }));
+    expect(await screen.findByText("Preferences saved.")).toBeInTheDocument();
+    const patch = calls.find((c) => c.method === "PATCH" && c.path === "/me/settings");
+    expect(patch?.body).toEqual({ agenda_days: 14 });
+    expect(patch?.headers.get("If-Match")).toBe('"2"');
+  });
+
   it("shows times in the chosen 12/24-hour format", async () => {
     const at = "2026-10-18T14:30:00Z";
     expect(formatInstant(at, "UTC", "en", "datetime", "24h")).toContain("14:30");

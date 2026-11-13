@@ -43,6 +43,7 @@ export function startSync(user: string, queryClient: QueryClient): void {
       // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. The trash is read from the server: a delete pushed after the
       // trash was opened shows up there too (found by the end-to-end tests).
       void queryClient.invalidateQueries({ queryKey: trashKeys.all });
+      void refreshSettings(user, queryClient);
     },
     // +++===+++ 2026-10-22 — Hasan Alizada — HAAL-055. A notification arrived live (or the stream dropped).
     () => {
@@ -64,6 +65,22 @@ export function startSync(user: string, queryClient: QueryClient): void {
   engine.subscribe(notifyStatus);
   engine.start();
   notifyStatus();
+}
+
+// +++===+++ 2026-11-12 15:33 +04 — Hasan Alizada — HAAL-174 (UAT finding F12). Preferences changed on another device
+// arrive here as the synced settings row, but the screens read the settings answer (["session", "settings"] is
+// settingsQueryKey of api/settings, which imports this module through api/session): a row newer than that answer asks
+// for it again, so the theme, week start and the rest follow without a reload. This device's own save puts the same
+// version into the answer first, so it asks nothing. An open Preferences form with unsaved edits keeps them.
+const SETTINGS_KEY = ["session", "settings"] as const;
+
+async function refreshSettings(user: string, queryClient: QueryClient): Promise<void> {
+  const shown = queryClient.getQueryData<{ version?: number }>(SETTINGS_KEY);
+  if (!shown) return;
+  const row = await (await localDb(user)).settings.get(user);
+  if (typeof row?.version === "number" && row.version > (shown.version ?? 0)) {
+    await queryClient.invalidateQueries({ queryKey: SETTINGS_KEY, exact: true });
+  }
 }
 
 export function stopSync(): void {
