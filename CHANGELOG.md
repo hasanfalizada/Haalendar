@@ -46,6 +46,8 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 - No installation is listed by search engines any more: the app answers every request with
   `X-Robots-Tag: noindex, nofollow` and the page carries the same in a robots meta tag. Nothing to set; a reverse
   proxy adds nothing.
+- The image carries `opentelemetry-api` 1.45.2, a dependency of the web framework, which fixes CVE-2026-126360 (a
+  denial of service through slow parsing of a `traceparent` header).
 
 ## [1.0.0] - 2026-11-11
 
