@@ -27,6 +27,8 @@ RAM, 10 GB disk.
    - `HAALENDAR_SECRET_KEY`, `HAALENDAR_SETUP_TOKEN` — `openssl rand -hex 32` each;
    - `POSTGRES_PASSWORD`, `HAALENDAR_APP_DB_PASSWORD` — `openssl rand -hex 24` each (letters and digits only);
    - SMTP, so that invitations, e-mail verification and password resets are sent;
+   - optionally `HAALENDAR_SECURITY_CONTACT` — where security problems with your installation are reported, a
+     `mailto:` or `https:` address; the app then serves it as `/.well-known/security.txt` (RFC 9116);
    - `HAALENDAR_IMAGE` — a release tag, e.g. `ghcr.io/hasanfalizada/haalendar:1.0.0`.
      <!-- +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. What a release image is and how to see what is in it. -->
      One tag serves x86_64 and arm64 (Docker picks the host's). Each release image carries the list of everything in
