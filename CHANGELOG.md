@@ -18,6 +18,12 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-13
+
+Fixes found in the acceptance test of 1.0.0 and a security update. The database and the data kept on devices do not
+change: upgrade with the [usual steps](docs/operations/deployment.md#3-upgrade); going back to 1.0.0 needs only the
+previous image, no restore.
+
 ### Fixed
 
 - A password reset lifts a temporary sign-in lock, both by the link from the e-mail and by the one-time password an
@@ -102,5 +108,6 @@ which stays available under the tag [`legacy`](https://github.com/hasanfalizada/
 - The minor findings of the acceptance test are open; they are listed in
   [the acceptance record](docs/requirements/uat.md#6-findings).
 
-[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.0.0...development
+[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.0.1...development
+[1.0.1]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.0
