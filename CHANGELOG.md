@@ -56,6 +56,8 @@ previous image, no restore.
   or `https:` address the app serves `/.well-known/security.txt` (RFC 9116). Without it nothing changes.
 - The image carries `opentelemetry-api` 1.45.2, a dependency of the web framework, which fixes CVE-2026-126360 (a
   denial of service through slow parsing of a `traceparent` header).
+- The image carries `dnspython` 2.9.2, a dependency of the e-mail address check, which fixes CVE-2026-128089
+  (excessive memory and CPU use). The app checks the form of an address only and makes no DNS queries for it.
 
 ## [1.0.0] - 2026-11-11
 
