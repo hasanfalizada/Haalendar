@@ -55,6 +55,15 @@ def test_files_are_served_with_caching_for_their_kind(web: TestClient) -> None:
 
 
 @pytest.mark.no_contract
+def test_no_page_or_file_is_offered_to_search_engines(web: TestClient) -> None:
+    """HAAL-176, D-105: every answer of the web app says noindex, and no robots.txt hides that from a crawler."""
+    for path in ("/", "/index.html", "/calendar/week", "/assets/index-abc123.js", "/sw.js", "/missing.png"):
+        assert web.get(path).headers["x-robots-tag"] == "noindex, nofollow", path
+    robots = web.get("/robots.txt")
+    assert robots.status_code == 404 and "disallow" not in robots.text.lower()
+
+
+@pytest.mark.no_contract
 def test_routes_of_the_app_get_index_html_and_missing_files_a_404(web: TestClient) -> None:
     for route in ("/calendar", "/kanban/0199f000-0000-7000-8000-000000000001", "/settings", "/todo"):
         response = web.get(route, params={"date": "2026-11-04"})

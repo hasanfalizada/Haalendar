@@ -16,6 +16,7 @@ way of working.
 | Banner | The time until the next reset and that everything is public, in the app and on the sign-in page. |
 | Refused (403) | Registration, first-run setup, password change and reset, e-mail verification, invitations, two-factor sign-in, ending sessions, Web Push subscriptions, data exports: each would let one visitor lock out the others, or make the stand send something or fill its disk. Wrong passwords do not lock a demo account. |
 | Limits | 1 MB per upload, 100 MB of attachments per account, 300 requests per minute per client. No mail, whatever `.env` says. |
+| security.txt | `/.well-known/security.txt` names the project's private vulnerability report form on GitHub (set in `compose.demo.yaml`). |
 | On the host | Memory, CPU and process limits per container, logs limited to 30 MB per container. No port is open beyond the one for the reverse proxy. |
 
 ## Install behind a reverse proxy on the host
@@ -87,7 +88,9 @@ server {
 }
 ```
 
-The security headers (HSTS, CSP and the rest) come from the app; do not add them in the proxy.
+The security headers (HSTS, CSP and the rest) come from the app; do not add them in the proxy. Among them is
+`X-Robots-Tag: noindex, nofollow`: the demo is not listed by search engines, so a search finds the project and not
+its sample data.
 
 Check: `docker compose ps` shows everything up and healthy, `docker compose logs demo | grep demo_reset` shows
 `demo_reset_done` and no `demo_reset_failed`, and the public address shows the banner.

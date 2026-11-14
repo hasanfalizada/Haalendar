@@ -52,6 +52,7 @@ from haalendar.planning.ics_api import router as ics_router
 from haalendar.preferences.api import router as settings_router
 from haalendar.push.api import router as push_router
 from haalendar.security.guards import BodyGuard, CsrfOriginGuard, DemoGuard, HostGuard, RateLimitGuard
+from haalendar.security_txt import install_security_txt
 from haalendar.sharing.api import router as sharing_router
 from haalendar.storage import create_storage
 from haalendar.sync.api import router as sync_router
@@ -163,6 +164,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(live_router, prefix=API_PREFIX)
     app.include_router(demo_router, prefix=API_PREFIX)  # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154
     install_metrics_endpoint(app, settings, metrics)
+    install_security_txt(app, settings)  # +++===+++ 2026-11-13 — Hasan Alizada — HAAL-177
     # +++===+++ 2026-11-01 — Hasan Alizada — HAAL-150. The web app last: it answers every other path.
     install_web_app(app, settings)
     return app

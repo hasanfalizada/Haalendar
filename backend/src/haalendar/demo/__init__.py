@@ -44,6 +44,7 @@ REFUSED: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
         ("POST", "/auth/verify-email/resend"),
         ("POST", "/auth/password-reset/request"),
         ("POST", "/auth/password-reset/confirm"),
+        ("POST", "/auth/password-reset/info"),
         ("POST", "/auth/invite-info"),
         ("POST", "/me/password"),
         ("POST", "/me/totp/setup"),

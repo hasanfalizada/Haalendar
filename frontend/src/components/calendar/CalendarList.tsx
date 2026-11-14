@@ -54,7 +54,6 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
   const [sharing, setSharing] = useState<CalendarRow | null>(null);
   const [importing, setImporting] = useState<CalendarRow | null>(null);
   const [deleting, setDeleting] = useState<CalendarRow | null>(null);
-  const [toggling, setToggling] = useState<string | null>(null);
   const shareActions = useShareActions();
   const received = useQuery({
     ...sharesQuery({ direction: "received", containerKind: "calendar" }),
@@ -65,11 +64,10 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
   const eventsIn = (row: CalendarRow) =>
     items.filter((item) => item.container_id === row.id && !item.deleted_at).length;
 
+  // +++===+++ 2026-11-12 15:27 +04 — Hasan Alizada — HAAL-174 (UAT finding F16). The box is not disabled while the
+  // setting is saved: setHidden shows the change at once and puts it back if the save is refused.
   async function toggle(row: CalendarRow, show: boolean) {
-    const id = String(row.id);
-    setToggling(id);
-    await setHidden(client, user, id, !show);
-    setToggling(null);
+    await setHidden(client, user, String(row.id), !show);
   }
 
   const checkbox = (row: CalendarRow) => {
@@ -79,7 +77,6 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
         type="checkbox"
         className="size-4 shrink-0"
         checked={!calendars.hidden.has(id)}
-        disabled={toggling === id}
         aria-label={t("calendars.show", { name: name(row) })}
         onChange={(e) => {
           void toggle(row, e.target.checked);
@@ -104,13 +101,22 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
     </DropdownMenu>
   );
 
-  const line = (row: CalendarRow, toggleable: boolean, extra?: ReactNode, title?: string) => (
+  // +++===+++ 2026-11-12 00:04 +04 — Hasan Alizada — HAAL-174 (UAT finding F21). A calendar shared with the user (`owner` given) is
+  // never marked "(default)" — that is the owner's default, not the user's — and shows the owner's name instead, so
+  // Bob's "My calendar" is not taken for the user's own.
+  const line = (row: CalendarRow, toggleable: boolean, extra?: ReactNode, title?: string, owner?: string | null) => (
     <li key={String(row.id)} className="flex min-h-9 items-center gap-2" title={title}>
       {toggleable ? checkbox(row) : null}
       <ColorSwatch color={row.color as Color} className="size-3 shrink-0" />
       <span className="min-w-0 flex-1 truncate text-[13px]">
         {name(row)}
-        {row.is_default === true ? <span className="ml-1 text-xs text-muted">{t("calendars.defaultMark")}</span> : null}
+        {owner !== undefined ? (
+          owner ? (
+            <span className="ml-1 text-xs text-muted">· {owner}</span>
+          ) : null
+        ) : row.is_default === true ? (
+          <span className="ml-1 text-xs text-muted">{t("calendars.defaultMark")}</span>
+        ) : null}
       </span>
       {extra}
     </li>
@@ -251,6 +257,7 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
                   </>,
                 ),
                 share ? t("calendars.sharedBy", { name: share.owner_name }) : undefined,
+                share?.owner_name ?? null,
               );
             })}
           </ul>

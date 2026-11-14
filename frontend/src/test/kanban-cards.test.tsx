@@ -5,7 +5,7 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-113. Alt+arrows move a card within and between columns (one write of
 // column and position each, the focus stays on the card, the move is told and undone); a view share moves nothing.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-117. Overdue and due-soon badges on the cards and in the editor.
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -168,8 +168,15 @@ describe("cards on the board", { timeout: 20_000 }, () => {
     const field = within(done).getByLabelText("Title of the new card in Done");
     await user.type(field, "  First  {Enter}");
     await screen.findByText("Card added: First");
-    await user.type(field, "Second{Enter}");
+    // UAT finding F9: the focus stays in the field, so the next title is typed straight away.
+    await waitFor(() => {
+      expect(field).toHaveFocus();
+    });
+    await user.keyboard("Second{Enter}");
     await screen.findByText("Card added: Second");
+    await waitFor(() => {
+      expect(field).toHaveFocus();
+    });
     await waitFor(() => {
       expect(cardTitles(done)).toEqual(["First", "Second"]);
     });
@@ -245,6 +252,14 @@ describe("cards on the board", { timeout: 20_000 }, () => {
     });
     const plan = within(todo).getByRole("button", { name: "Open Plan" });
     expect(plan).toHaveAccessibleDescription("Alt with the arrow keys moves the card");
+    // UAT finding F19: the "?" overlay lists the move too.
+    fireEvent.keyDown(document.body, { code: "Slash", key: "?", shiftKey: true });
+    const overlay = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    expect(within(overlay).getByText("Move the focused card")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Keyboard shortcuts" })).not.toBeInTheDocument();
+    });
     plan.focus();
     // At the top and in the first column there is nowhere to go.
     await user.keyboard("{Alt>}{ArrowUp}{ArrowLeft}{/Alt}");

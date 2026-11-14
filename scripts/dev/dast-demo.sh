@@ -42,7 +42,7 @@ expect "TLS 1.0 is refused" tls_refused -tls1
 redirect="$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' "http://$HOST/")"
 expect "HTTP redirects to HTTPS ($redirect)" grep -Eq "^30[18] https://$HOST/" <<<"$redirect"
 headers="$(curl -fsSI "$URL/login")"
-for header in strict-transport-security content-security-policy x-content-type-options referrer-policy; do
+for header in strict-transport-security content-security-policy x-content-type-options referrer-policy x-robots-tag; do
   expect "a page has $header" grep -iq "^$header:" <<<"$headers"
 done
 expect "a page does not say which server runs it" sh -c '! grep -iE "^(server: .*[0-9]|x-powered-by:)" <<EOT

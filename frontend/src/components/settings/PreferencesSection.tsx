@@ -144,8 +144,7 @@ export function PreferencesSection() {
         {t("preferences.title")}
       </h2>
       {settings ? (
-        // The form is re-created for every new settings version (fresh field values).
-        <PreferencesForm key={settings.version} settings={settings} />
+        <PreferencesForm settings={settings} />
       ) : isError ? (
         <p className="text-[13px] text-muted">{t("preferences.unavailable")}</p>
       ) : null}
@@ -161,6 +160,22 @@ function PreferencesForm({ settings }: { settings: Settings }) {
   const form = useRef<HTMLFormElement>(null);
   const saved = useMemo(() => valuesOf(settings), [settings]);
   const [values, setValues] = useState<Values>(saved);
+  // +++===+++ 2026-11-12 15:37 +04 — Hasan Alizada — HAAL-174 (UAT finding F12). A newer version (saved here, or on
+  // another device and brought by sync) is taken into the open form instead of re-creating it: a field the user has
+  // not changed takes the new value, an edited one keeps the edit, and Save sends it on the new version.
+  const previous = useRef(saved);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = saved;
+    if (before === saved) return;
+    setValues((current) => {
+      const next: Values = { ...current };
+      for (const key of Object.keys(saved) as (keyof Values)[]) {
+        if (current[key] === before[key]) Object.assign(next, { [key]: saved[key] });
+      }
+      return next;
+    });
+  }, [saved]);
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const dirty = Object.keys(patchOf(values, saved)).length > 0;
@@ -273,7 +288,7 @@ function PreferencesForm({ settings }: { settings: Settings }) {
       },
     });
     setBusy(false);
-    // The newer version replaces the form; the draft brings the edits back (DraftNotice).
+    // The newer version comes into the form; the user's edits stay.
     if (!result.ok && result.code === "version_conflict") {
       await queryClient.invalidateQueries({ queryKey: settingsQueryKey });
     }

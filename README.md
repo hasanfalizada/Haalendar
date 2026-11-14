@@ -69,7 +69,7 @@ points to it with ports 80 and 443 open. The bundled Caddy then obtains the HTTP
 DOMAIN=calendar.example.org   # your domain
 
 mkdir haalendar && cd haalendar
-BASE=https://raw.githubusercontent.com/hasanfalizada/Haalendar/v1.0.0
+BASE=https://raw.githubusercontent.com/hasanfalizada/Haalendar/v1.0.1
 curl -fsSLO "$BASE/compose.yaml"
 curl -fsSLO "$BASE/Caddyfile"
 curl -fsSLO "$BASE/scripts/backup.sh"
@@ -79,7 +79,7 @@ chmod 600 .env
 chmod +x backup.sh restore.sh
 
 sed -i \
-  -e "s|^HAALENDAR_IMAGE=.*|HAALENDAR_IMAGE=ghcr.io/hasanfalizada/haalendar:1.0.0|" \
+  -e "s|^HAALENDAR_IMAGE=.*|HAALENDAR_IMAGE=ghcr.io/hasanfalizada/haalendar:1.0.1|" \
   -e "s|^HAALENDAR_PUBLIC_URL=.*|HAALENDAR_PUBLIC_URL=https://$DOMAIN|" \
   -e "s|^HAALENDAR_DOMAIN=.*|HAALENDAR_DOMAIN=$DOMAIN|" \
   -e "s|^HAALENDAR_SECRET_KEY=.*|HAALENDAR_SECRET_KEY=$(openssl rand -hex 32)|" \
@@ -153,6 +153,18 @@ automatic import: version 1.0 starts empty and events are moved by hand. The old
 - [Development guide](DEVELOPMENT.md): build, run and test from the sources
 - [Development documentation](docs/README.md): requirements, architecture decisions, design, security
 - [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)
+
+<!-- +++===+++ 2026-11-13 22:20 +04 — Hasan Alizada — HAAL-178. Where to turn for help; the same in SUPPORT.md. -->
+## Getting help
+
+- **Something does not work:** open a [bug report](https://github.com/hasanfalizada/Haalendar/issues/new?template=bug_report.yml)
+  with the version (shown under **About Haalendar** in the app), how you run it and the steps that lead to the problem.
+- **An idea:** open a [feature request](https://github.com/hasanfalizada/Haalendar/issues/new?template=feature_request.yml).
+- **A security problem:** never in a public issue — report it privately as the [security policy](SECURITY.md) says.
+- **Installing and running it:** the [installation guide](docs/operations/deployment.md) covers reverse proxies,
+  backups and upgrades.
+
+Haalendar is a personal project: questions are answered as time allows, without guaranteed response times.
 
 ## License
 

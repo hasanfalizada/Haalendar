@@ -26,6 +26,9 @@ Please include:
 - steps to reproduce or a proof of concept;
 - any known mitigation.
 
+An installation run by someone else may name its own contact for problems with that installation in
+`/.well-known/security.txt` (setting `HAALENDAR_SECURITY_CONTACT`); problems with the code itself still come here.
+
 ## What to expect
 
 - Acknowledgement of your report within 7 days.

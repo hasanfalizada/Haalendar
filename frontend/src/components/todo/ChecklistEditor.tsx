@@ -3,6 +3,8 @@
 // removes it (and goes to the one before), Alt+↑ / Alt+↓ move an item; a handle drags it with the mouse or, after a
 // short hold, a finger. Checked items wait at the bottom in a collapsible "Checked (N)" group, crossed out; unchecking
 // puts an item back in its old place. At most 200 items. Nothing is written here — the editor's Save does.
+// +++===+++ 2026-11-12 00:03 +04 — Hasan Alizada — HAAL-174 (UAT finding F18). Alt+↑ / Alt+↓ were there but hard to find: the
+// fields name the keys (aria-keyshortcuts), a move is told to screen readers, and the "?" overlay lists it.
 import {
   DndContext,
   type DragEndEvent,
@@ -19,6 +21,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { type ChecklistEntry, MAX_ITEMS, TEXT_MAX, uncheckedIndex } from "@/lib/checklist";
+import { useShortcut } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { uuidv7 } from "@/lib/uuid";
 
@@ -33,6 +36,8 @@ interface RowProps {
   entry: ChecklistEntry;
   index: number;
   draggable: boolean;
+  /** Alt+↑ / Alt+↓ move this item (unchecked, with others around it). */
+  movable: boolean;
   onText: (text: string) => void;
   onCheck: (checked: boolean) => void;
   onRemove: () => void;
@@ -40,7 +45,7 @@ interface RowProps {
   inputRef: (element: HTMLInputElement | null) => void;
 }
 
-function ItemRow({ entry, index, draggable, onText, onCheck, onRemove, onKeyDown, inputRef }: RowProps) {
+function ItemRow({ entry, index, draggable, movable, onText, onCheck, onRemove, onKeyDown, inputRef }: RowProps) {
   const { t } = useTranslation();
   const name = entry.text.trim() || t("todo.checklist.emptyItem", { number: index + 1 });
   const { setNodeRef: dragRef, listeners, isDragging } = useDraggable({ id: entry.id, disabled: !draggable });
@@ -83,6 +88,7 @@ function ItemRow({ entry, index, draggable, onText, onCheck, onRemove, onKeyDown
         value={entry.text}
         maxLength={TEXT_MAX}
         aria-label={t("todo.checklist.item", { number: index + 1 })}
+        aria-keyshortcuts={movable ? "Alt+ArrowUp Alt+ArrowDown" : undefined}
         className={cn(
           "h-11 min-w-0 flex-1 rounded-sm bg-transparent px-2 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:text-base pointer-fine:md:h-8",
           entry.checked && "text-muted line-through",
@@ -102,6 +108,13 @@ function ItemRow({ entry, index, draggable, onText, onCheck, onRemove, onKeyDown
 export function ChecklistEditor({ entries, onChange, positionOf }: ChecklistEditorProps) {
   const { t } = useTranslation();
   const [showChecked, setShowChecked] = useState(true);
+  const [announcement, setAnnouncement] = useState("");
+  useShortcut({
+    id: "todo:checklist-move",
+    keys: ["Alt+Up", "Alt+Down"],
+    group: "editing",
+    label: "todo.checklist.moveKeys",
+  });
   const inputs = useRef(new Map<string, HTMLInputElement>());
   const unchecked = entries.filter((entry) => !entry.checked);
   const checked = entries.filter((entry) => entry.checked);
@@ -145,6 +158,10 @@ export function ChecklistEditor({ entries, onChange, positionOf }: ChecklistEdit
     if (moving) list.splice(to, 0, moving);
     onChange(withUnchecked(list));
     focus(id);
+    if (moving) {
+      const item = moving.text.trim() || t("todo.checklist.emptyItem", { number: to + 1 });
+      setAnnouncement(t("todo.checklist.moved", { item, position: to + 1, total: list.length }));
+    }
   };
   const check = (id: string, value: boolean) => {
     const entry = entries.find((candidate) => candidate.id === id);
@@ -189,6 +206,7 @@ export function ChecklistEditor({ entries, onChange, positionOf }: ChecklistEdit
       entry={entry}
       index={index}
       draggable={!entry.checked && unchecked.length > 1}
+      movable={!entry.checked && unchecked.length > 1}
       onText={(value) => {
         update(entry.id, { text: value });
       }}
@@ -211,6 +229,9 @@ export function ChecklistEditor({ entries, onChange, positionOf }: ChecklistEdit
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <ul className="flex flex-col">{unchecked.map((entry, index) => row(entry, index, unchecked))}</ul>
       </DndContext>
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
       <Button
         variant="ghost"
         className="w-fit"

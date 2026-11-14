@@ -15,7 +15,6 @@ import type { Attachment } from "@/api/generated/types.gen";
 import { runWrite } from "@/api/write";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { imageFiles } from "@/lib/images";
 import { newStep } from "@/lib/undo";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +42,7 @@ export function Attachments({ itemId, editable, pasteTarget }: AttachmentsProps)
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: attachments = [] } = useQuery(attachmentsQuery(itemId));
-  const { pending, upload, onPaste } = useAttachmentUpload(itemId, attachments.length);
+  const { pending, uploadFiles, onPaste } = useAttachmentUpload(itemId, attachments.length);
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -79,8 +78,7 @@ export function Attachments({ itemId, editable, pasteTarget }: AttachmentsProps)
     event.preventDefault();
     setDragging(false);
     if (!editable) return;
-    const files = imageFiles(event.dataTransfer.files);
-    if (files.length > 0) void upload(files);
+    uploadFiles(event.dataTransfer.files);
   }
 
   return (
@@ -119,7 +117,7 @@ export function Attachments({ itemId, editable, pasteTarget }: AttachmentsProps)
               tabIndex={-1}
               aria-label={t("attachments.add")}
               onChange={(event) => {
-                void upload(imageFiles(event.target.files));
+                uploadFiles(event.target.files);
                 event.target.value = "";
               }}
             />

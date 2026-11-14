@@ -16,6 +16,49 @@ on: the settings in `.env`, `compose.yaml`, the backup format and the REST API u
 At every level the database migrates forward by itself and is never migrated back: to return to an earlier version,
 restore the backup made before the upgrade ([roll back](docs/operations/deployment.md#roll-back-an-upgrade)).
 
+## [Unreleased]
+
+## [1.0.1] - 2026-11-13
+
+Fixes found in the acceptance test of 1.0.0 and a security update. The database and the data kept on devices do not
+change: upgrade with the [usual steps](docs/operations/deployment.md#3-upgrade); going back to 1.0.0 needs only the
+previous image, no restore.
+
+### Fixed
+
+- A password reset lifts a temporary sign-in lock, both by the link from the e-mail and by the one-time password an
+  administrator gives. Before, the new password was refused until the lock ran out.
+- A reset link that was used or has expired says so at once and offers a new one, instead of showing the form and
+  failing on save (the page asks the new API operation `POST /api/v1/auth/password-reset/info`).
+- The forms that set a password show a refused rule once, not as a hint and as an error together.
+- After a card is added with Enter, the focus stays in the field, so the next title can be typed at once.
+- On a phone the time-zone notice puts its buttons under the text at full width, and the selection hint names the long
+  press instead of Ctrl+click (the board, where a long press does not select, shows no hint there).
+- Ctrl+Z works in the event details card, also right after a colour was picked; other dialogs still undo nothing
+  behind them.
+- The repeat choice ("Only this occurrence", "This and following", "All occurrences") no longer cuts off a button.
+- Dropping or picking a file that is not an image says so once, instead of ignoring it.
+- The "?" overlay lists Alt with the arrow keys for moving a card and a checklist item; the checklist fields name these
+  keys to screen readers and a move is announced.
+- A calendar shared by another user is no longer marked "(default)"; its owner's name is shown next to it.
+- Preferences changed on another device reach an open page without a reload; a Preferences form being edited keeps
+  the edits and takes the other values.
+- The box that shows or hides a calendar changes at once instead of waiting for the server, and goes back with a
+  message if the change cannot be saved.
+- A change made offline says what was done and that it is kept on this device, and offers Undo like an online one.
+
+### Security
+
+- No installation is listed by search engines any more: the app answers every request with
+  `X-Robots-Tag: noindex, nofollow` and the page carries the same in a robots meta tag. Nothing to set; a reverse
+  proxy adds nothing.
+- An installation can name where security problems are reported: with `HAALENDAR_SECURITY_CONTACT` set to a `mailto:`
+  or `https:` address the app serves `/.well-known/security.txt` (RFC 9116). Without it nothing changes.
+- The image carries `opentelemetry-api` 1.45.2, a dependency of the web framework, which fixes CVE-2026-126360 (a
+  denial of service through slow parsing of a `traceparent` header).
+- The image carries `dnspython` 2.9.2, a dependency of the e-mail address check, which fixes CVE-2026-128089
+  (excessive memory and CPU use). The app checks the form of an address only and makes no DNS queries for it.
+
 ## [1.0.0] - 2026-11-11
 
 The first release of the new Haalendar: a self-hosted calendar, to-do list and kanban board for several users that
@@ -67,4 +110,6 @@ which stays available under the tag [`legacy`](https://github.com/hasanfalizada/
 - The minor findings of the acceptance test are open; they are listed in
   [the acceptance record](docs/requirements/uat.md#6-findings).
 
+[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.0.1...development
+[1.0.1]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.0

@@ -10,13 +10,14 @@ the first-run wizard in development refused every request; an empty SECRET_KEY u
 from __future__ import annotations
 
 import os
+import re
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 ENV_PREFIX = "HAALENDAR_"
@@ -57,6 +58,10 @@ def _read_secret_files(environ: dict[str, str]) -> dict[str, str]:
         if value:
             resolved[target] = value
     return resolved
+
+
+# One address, no spaces or line breaks: mailto:<local>@<domain> or https://<host>[/path].
+SECURITY_CONTACT = re.compile(r"mailto:[^\s@]+@[^\s@]+\.[^\s@]+|https://[^\s/?#]+\.[^\s/?#]+[^\s]*")
 
 
 class Settings(BaseSettings):
@@ -127,6 +132,19 @@ class Settings(BaseSettings):
     # these push services (host or its subdomain), so a forged subscription cannot make it call other hosts (SSRF).
     # Comma-separated additions to the known services; development and test accept any endpoint (local fake services).
     push_extra_hosts: str = ""
+    # +++===+++ 2026-11-13 21:58 +04 — Hasan Alizada — HAAL-177. Where security problems are reported (RFC 9116 Contact): a
+    # mailto: or https: address; empty = no /.well-known/security.txt (404). Checked at start.
+    security_contact: str = ""
+
+    @field_validator("security_contact")
+    @classmethod
+    def _check_security_contact(cls, value: str) -> str:
+        if value and not SECURITY_CONTACT.fullmatch(value):
+            raise ValueError(
+                "HAALENDAR_SECURITY_CONTACT must be one mailto: or https: address on one line, "
+                "e.g. mailto:security@example.org"
+            )
+        return value
 
     @model_validator(mode="after")
     def _forbid_insecure_production(self) -> Settings:

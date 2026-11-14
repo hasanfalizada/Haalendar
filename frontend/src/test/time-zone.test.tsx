@@ -58,6 +58,20 @@ describe("time zone mismatch notice", () => {
     expect(patch?.headers.get("If-Match")).toBe('"1"');
   });
 
+  it("puts the buttons under the text at full width on a phone, beside it from 768 px", async () => {
+    // UAT finding F13: on a phone the two buttons squeezed the sentence into a narrow column.
+    stubApi({ "GET /me": () => json(me({ time_zone: OTHER })) });
+    renderApp("/calendar");
+    const use = await screen.findByRole("button", { name: `Use ${DEVICE}` });
+    const buttons = use.parentElement;
+    expect(buttons).toContainElement(screen.getByRole("button", { name: `Keep ${OTHER}` }));
+    expect(buttons?.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(["flex", "w-full", "flex-col", "md:w-auto", "md:flex-row"]),
+    );
+    const text = screen.getByText(/This device is set to/);
+    expect(text.className.split(/\s+/)).toEqual(expect.arrayContaining(["basis-full", "md:basis-0"]));
+  });
+
   it("remembers 'keep' for this pair of zones on this device", async () => {
     stubApi({ "GET /me": () => json(me({ time_zone: OTHER })) });
     renderApp("/calendar");

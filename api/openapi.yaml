@@ -2,7 +2,7 @@
 openapi: 3.1.1
 info:
   title: Haalendar API
-  version: 1.0.0
+  version: 1.0.1
   summary: Calendar, To-Do and Kanban — self-hosted, multi-user, offline-first.
   description: |
     Conventions (see api/README.md):
@@ -50,6 +50,7 @@ paths:
   /auth/verify-email/resend: { $ref: './modules/accounts.yaml#/paths/auth_verify_email_resend' }
   /auth/password-reset/request: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_request' }
   /auth/password-reset/confirm: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_confirm' }
+  /auth/password-reset/info: { $ref: './modules/accounts.yaml#/paths/auth_password_reset_info' }
   /auth/reauth: { $ref: './modules/accounts.yaml#/paths/auth_reauth' }
   /auth/oidc/start: { $ref: './modules/accounts.yaml#/paths/auth_oidc_start' }
   /auth/oidc/callback: { $ref: './modules/accounts.yaml#/paths/auth_oidc_callback' }

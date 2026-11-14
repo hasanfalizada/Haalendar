@@ -67,21 +67,25 @@ export function TimeZoneMismatch() {
       role="status"
       className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface px-4 py-2 text-[13px]"
     >
-      <span className="min-w-0 flex-1">{t("timeZone.mismatch", { device, profile })}</span>
-      <Button variant="primary" disabled={busy} onClick={() => void switchToDevice()}>
-        {t("timeZone.useDevice", { zone: device })}
-      </Button>
-      <Button
-        variant="ghost"
-        disabled={busy}
-        onClick={() => {
-          writeDismissed(pair);
-          setDismissed(pair);
-          log.info("tz_mismatch_kept");
-        }}
-      >
-        {t("timeZone.keep", { zone: profile })}
-      </Button>
+      {/* +++===+++ 2026-11-11 23:58 +04 — Hasan Alizada — HAAL-174 (UAT finding F13). On a phone the sentence takes
+          the whole line and the buttons go under it at full width; from 768 px they sit beside it as before. */}
+      <span className="min-w-0 basis-full md:basis-0 md:flex-1">{t("timeZone.mismatch", { device, profile })}</span>
+      <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+        <Button variant="primary" disabled={busy} onClick={() => void switchToDevice()}>
+          {t("timeZone.useDevice", { zone: device })}
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={busy}
+          onClick={() => {
+            writeDismissed(pair);
+            setDismissed(pair);
+            log.info("tz_mismatch_kept");
+          }}
+        >
+          {t("timeZone.keep", { zone: profile })}
+        </Button>
+      </div>
     </div>
   );
 }

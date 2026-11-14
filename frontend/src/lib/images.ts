@@ -20,6 +20,15 @@ export async function checkImage(file: File): Promise<ImageProblem | null> {
   return imageTypeOf(head) === null ? "type" : null;
 }
 
+// +++===+++ 2026-11-12 00:02 +04 — Hasan Alizada — HAAL-174 (UAT finding F17). Dropped or picked files that are
+// not images are counted, so the page can say once that they were not taken instead of ignoring them silently.
+/** Dropped or picked files: the images, and how many other files there were. */
+export function sortFiles(list: FileList | null | undefined): { images: File[]; others: number } {
+  const all = list ? Array.from(list) : [];
+  const images = all.filter((file) => file.type.startsWith("image/"));
+  return { images, others: all.length - images.length };
+}
+
 /** Image files among dropped or pasted data (other files and text are left alone). */
 export function imageFiles(list: FileList | DataTransferItemList | null | undefined): File[] {
   if (!list) return [];

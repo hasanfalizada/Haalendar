@@ -27,16 +27,18 @@ RAM, 10 GB disk.
    - `HAALENDAR_SECRET_KEY`, `HAALENDAR_SETUP_TOKEN` — `openssl rand -hex 32` each;
    - `POSTGRES_PASSWORD`, `HAALENDAR_APP_DB_PASSWORD` — `openssl rand -hex 24` each (letters and digits only);
    - SMTP, so that invitations, e-mail verification and password resets are sent;
-   - `HAALENDAR_IMAGE` — a release tag, e.g. `ghcr.io/hasanfalizada/haalendar:1.0.0`.
+   - optionally `HAALENDAR_SECURITY_CONTACT` — where security problems with your installation are reported, a
+     `mailto:` or `https:` address; the app then serves it as `/.well-known/security.txt` (RFC 9116);
+   - `HAALENDAR_IMAGE` — a release tag, e.g. `ghcr.io/hasanfalizada/haalendar:1.0.1`.
      <!-- +++===+++ 2026-11-08 — Hasan Alizada — HAAL-151. What a release image is and how to see what is in it. -->
      One tag serves x86_64 and arm64 (Docker picks the host's). Each release image carries the list of everything in
      it (SBOM, SPDX) and how it was built (provenance):
-     `docker buildx imagetools inspect ghcr.io/hasanfalizada/haalendar:1.0.0 --format '{{ json .SBOM }}'`
+     `docker buildx imagetools inspect ghcr.io/hasanfalizada/haalendar:1.0.1 --format '{{ json .SBOM }}'`
      (`.Provenance` for the build). The list has two documents for each architecture: `SPDX` is the image itself
      (system and Python packages), `AdditionalSPDXs` is the stage that builds the web app (its JavaScript libraries,
      together with the tools used only to build it, such as Vite and ESLint, and that stage's system packages, which
      are not in the image). That the image was built by this project's CI from its sources, signed:
-     `gh attestation verify oci://ghcr.io/hasanfalizada/haalendar:1.0.0 --repo hasanfalizada/Haalendar` (GitHub CLI).
+     `gh attestation verify oci://ghcr.io/hasanfalizada/haalendar:1.0.1 --repo hasanfalizada/Haalendar` (GitHub CLI).
 3. Start it:
    - **with the bundled proxy** (the host is reachable from the internet on ports 80 and 443, DNS points to it): set
      `HAALENDAR_DOMAIN` to the host of the public URL and run `docker compose --profile proxy up -d`; Caddy gets the
@@ -97,7 +99,7 @@ Settings beyond the example (rate limits, session lifetimes, logging, metrics, t
 3. Check `docker compose ps` and the health endpoint as after the installation.
 
 Which versions exist and what each one changed: the [changelog](../../CHANGELOG.md). Name an exact version in
-`HAALENDAR_IMAGE` (`…/haalendar:1.0.0`) rather than `latest`, so that an upgrade happens only when you decide it. A
+`HAALENDAR_IMAGE` (`…/haalendar:1.0.1`) rather than `latest`, so that an upgrade happens only when you decide it. A
 major version (2.0.0) may need more than these steps; its release notes then say what.
 
 ### Roll back an upgrade
@@ -129,6 +131,8 @@ faulty one stays as it was published.
 - A shell in the app's image: `docker compose run --rm app sh`.
 - Metrics (optional): `HAALENDAR_METRICS_ENABLED=true` and a `HAALENDAR_METRICS_TOKEN`; scrape `/metrics` with
   `Authorization: Bearer <token>`.
+- Search engines: the app asks them not to list your installation (`X-Robots-Tag: noindex, nofollow` on every
+  response and the same in the page). There is no setting for it and no `robots.txt` is needed.
 
 ## 5. Back up and restore
 

@@ -16,6 +16,8 @@ x-demo-environment: &demo-environment
   # A visitor needs far less than a whole household behind one address.
   HAALENDAR_RATE_LIMIT_PER_MINUTE: "300"
   HAALENDAR_RATE_LIMIT_BURST: "100"
+  # +++===+++ 2026-11-13 — Hasan Alizada — HAAL-177. /.well-known/security.txt of the demo: reports go to the project.
+  HAALENDAR_SECURITY_CONTACT: "https://github.com/hasanfalizada/Haalendar/security/advisories/new"
 
 services:
   db:

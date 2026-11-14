@@ -94,6 +94,9 @@ describe("first-run setup wizard", { timeout: 15_000 }, () => {
     expect(screen.getByText("Do not include your name")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create administrator" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Use at least 15 characters");
+    // HAAL-174 (UAT finding F8): the refused rule is said once, as the error; the other hints stay.
+    expect(screen.getAllByText("Use at least 15 characters")).toHaveLength(1);
+    expect(screen.getByText("Do not include your name")).toBeInTheDocument();
     expect(requests.some((r) => r.url.endsWith("/setup/admin"))).toBe(false);
   });
 

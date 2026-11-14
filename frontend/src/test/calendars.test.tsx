@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { localDb } from "@/sync/db";
 
-import { json, me, noPush, renderApp, settings, stubApi } from "./fake-api";
+import { json, me, noPush, problem, renderApp, settings, stubApi } from "./fake-api";
 import { stubMatchMedia } from "./setup";
 
 const USER = me().id;
@@ -86,7 +86,8 @@ async function open(extra: Parameters<typeof stubApi>[0] = {}, hidden: string[] 
     calendar(MINE, "My calendar", { is_default: true }),
     calendar(WORK, "Work", { color: "red" }),
     calendar(OLD, "Old", { archived_at: "2026-01-01T00:00:00Z" }),
-    calendar(BOBS, "Family", { owner_id: "someone-else" }),
+    // Bob's own default calendar, shared with the user (UAT finding F21).
+    calendar(BOBS, "Family", { owner_id: "someone-else", is_default: true }),
   ]);
   await db.items.bulkPut([
     event("e1", "Dentist", MINE),
@@ -152,6 +153,59 @@ describe("calendar list", { timeout: 15_000 }, () => {
     });
     expect(saved).toEqual({ hidden_calendars: [MINE] });
     expect(within(sidebar).getByRole("checkbox", { name: "Show My calendar" })).not.toBeChecked();
+  });
+
+  // +++===+++ 2026-11-12 15:25 +04 — Hasan Alizada — HAAL-174 (UAT finding F16). The box and the views change at once,
+  // before the server has answered; a refused save puts them back and says so.
+  it("the show box changes at once and goes back when the save fails", async () => {
+    let answer: (response: Response) => void = () => undefined;
+    const { sidebar, user } = await open({
+      "PATCH /me/settings": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    expect(await screen.findByRole("button", { name: "Details of Dentist" })).toBeInTheDocument();
+    const box = within(sidebar).getByRole("checkbox", { name: "Show My calendar" });
+    await user.click(box);
+    // The server has not answered yet.
+    await waitFor(() => {
+      expect(box).not.toBeChecked();
+    });
+    expect(box).toBeEnabled();
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Details of Dentist" })).not.toBeInTheDocument();
+    });
+
+    answer(problem(500, "internal_error"));
+    await waitFor(() => {
+      expect(box).toBeChecked();
+    });
+    expect(await screen.findByRole("button", { name: "Details of Dentist" })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("two quick clicks end on the last state: the saves go one after another", async () => {
+    let stored: string[] = [];
+    let version = 1;
+    const bodies: unknown[] = [];
+    const { sidebar, user } = await open({
+      "GET /me/settings": () => json(settings({ hidden_calendars: stored, version })),
+      "PATCH /me/settings": (call) => {
+        bodies.push(call.body);
+        stored = (call.body as { hidden_calendars: string[] }).hidden_calendars;
+        version += 1;
+        return json(settings({ hidden_calendars: stored, version }));
+      },
+    });
+    const box = within(sidebar).getByRole("checkbox", { name: "Show Work" });
+    await user.click(box);
+    await user.click(box);
+    await waitFor(() => {
+      expect(bodies).toHaveLength(2);
+    });
+    expect(bodies).toEqual([{ hidden_calendars: [WORK] }, { hidden_calendars: [] }]);
+    expect(box).toBeChecked();
   });
 
   it("new, edit, make default and archive go through the outbox", async () => {
@@ -234,6 +288,10 @@ describe("calendar list", { timeout: 15_000 }, () => {
     await waitFor(() => {
       expect(within(shared).getByTitle("Shared by Bob")).toBeInTheDocument();
     });
+    // UAT finding F21: another user's default calendar is not "(default)" here; the owner's name tells it apart.
+    expect(within(shared).queryByText("(default)")).not.toBeInTheDocument();
+    expect(within(shared).getByText("· Bob")).toBeInTheDocument();
+    expect(within(sidebar).getByRole("region", { name: "My calendars" })).toHaveTextContent("(default)");
     await user.click(within(await menuOf(user, sidebar, "Family")).getByRole("menuitem", { name: "Leave" }));
     await screen.findByText("You left “Family”.");
     expect(left).toBe(true);
