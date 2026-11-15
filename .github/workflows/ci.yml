@@ -9,9 +9,10 @@
 # no caches (a workflow that publishes must not restore what another run could have written).
 name: CI
 
+# +++===+++ 2026-11-15 22:12 +04 — Hasan Alizada — HAAL-180. revamp, the trunk of the rewrite until 1.0, is retired: no runs for it.
 on:
   push:
-    branches: [revamp, development, master]
+    branches: [development, master]
     tags: ["v*.*.*"]
   pull_request:
   schedule:
