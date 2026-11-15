@@ -18,6 +18,12 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-13
+
+Fixes found in the acceptance test of 1.0.0 and a security update. The database and the data kept on devices do not
+change: upgrade with the [usual steps](docs/operations/deployment.md#3-upgrade); going back to 1.0.0 needs only the
+previous image, no restore.
+
 ### Fixed
 
 - A password reset lifts a temporary sign-in lock, both by the link from the e-mail and by the one-time password an
@@ -50,6 +56,8 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
   or `https:` address the app serves `/.well-known/security.txt` (RFC 9116). Without it nothing changes.
 - The image carries `opentelemetry-api` 1.45.2, a dependency of the web framework, which fixes CVE-2026-126360 (a
   denial of service through slow parsing of a `traceparent` header).
+- The image carries `dnspython` 2.9.2, a dependency of the e-mail address check, which fixes CVE-2026-128089
+  (excessive memory and CPU use). The app checks the form of an address only and makes no DNS queries for it.
 
 ## [1.0.0] - 2026-11-11
 
@@ -102,5 +110,6 @@ which stays available under the tag [`legacy`](https://github.com/hasanfalizada/
 - The minor findings of the acceptance test are open; they are listed in
   [the acceptance record](docs/requirements/uat.md#6-findings).
 
-[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.0.0...development
+[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.0.1...development
+[1.0.1]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.0

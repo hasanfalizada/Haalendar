@@ -69,7 +69,7 @@ points to it with ports 80 and 443 open. The bundled Caddy then obtains the HTTP
 DOMAIN=calendar.example.org   # your domain
 
 mkdir haalendar && cd haalendar
-BASE=https://raw.githubusercontent.com/hasanfalizada/Haalendar/v1.0.0
+BASE=https://raw.githubusercontent.com/hasanfalizada/Haalendar/v1.0.1
 curl -fsSLO "$BASE/compose.yaml"
 curl -fsSLO "$BASE/Caddyfile"
 curl -fsSLO "$BASE/scripts/backup.sh"
@@ -79,7 +79,7 @@ chmod 600 .env
 chmod +x backup.sh restore.sh
 
 sed -i \
-  -e "s|^HAALENDAR_IMAGE=.*|HAALENDAR_IMAGE=ghcr.io/hasanfalizada/haalendar:1.0.0|" \
+  -e "s|^HAALENDAR_IMAGE=.*|HAALENDAR_IMAGE=ghcr.io/hasanfalizada/haalendar:1.0.1|" \
   -e "s|^HAALENDAR_PUBLIC_URL=.*|HAALENDAR_PUBLIC_URL=https://$DOMAIN|" \
   -e "s|^HAALENDAR_DOMAIN=.*|HAALENDAR_DOMAIN=$DOMAIN|" \
   -e "s|^HAALENDAR_SECRET_KEY=.*|HAALENDAR_SECRET_KEY=$(openssl rand -hex 32)|" \

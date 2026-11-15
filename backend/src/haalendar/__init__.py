@@ -15,4 +15,4 @@ zoneinfo.reset_tzpath(to=[])
 # health endpoints and logs name what really runs; seen on the demo stand: 1.0.0-rc.3 answered 0.1.0.
 # +++===+++ 2026-11-11 — Hasan Alizada — HAAL-156. From the sources it is the version of the release being worked on, the
 # same as in backend/pyproject.toml, frontend/package.json and api/openapi.yaml (backend/tests/test_health.py).
-__version__ = os.environ.get("HAALENDAR_VERSION") or "1.0.0"
+__version__ = os.environ.get("HAALENDAR_VERSION") or "1.0.1"
