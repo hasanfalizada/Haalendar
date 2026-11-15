@@ -92,10 +92,11 @@ the owner's (finding F7).
 +++===+++ 2026-11-11 23:30 +04 — Hasan Alizada — HAAL-174. v1.91: decision D-106 (a password reset lifts the sign-in lock; the reset page checks its link first) approved by owner.
 +++===+++ 2026-11-12 15:52 +04 — Hasan Alizada — HAAL-174. v1.92: by owner on the UAT findings — D-82: the show box of a calendar changes at once and goes back with a message when the save is refused (F16); D-57: an offline write names what was done, says it is kept on this device and offers Undo (F22).
 +++===+++ 2026-11-13 22:08 +04 — Hasan Alizada — HAAL-177. v1.93: decision D-107 (security.txt when the operator names a contact) approved by owner.
++++===+++ 2026-11-15 17:24 +04 — Hasan Alizada — HAAL-069. v1.94: decision D-108 (one editor by design, no notice; FR-CAL-15 amended) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.93 |
+| Version | 1.94 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -260,7 +261,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-CAL-12 | Delete all occurrences: soft-deletes the series. | F-21, HAAL-067 |
 | FR-CAL-13 | Edit this occurrence: creates a separate one-off event for that date with the series' data and an exception in the series; editor opens on it. Cancel discards both (legacy saved on cancel — intentionally changed). | F-22, HAAL-067 |
 | FR-CAL-14 | When the first occurrences of a series are removed by exceptions, the series' effective start moves to the first remaining occurrence. | F-23, HAAL-067 |
-| FR-CAL-15 | Editor can be open only once; a second open attempt focuses it and shows a notice. | F-19, HAAL-069 |
+| FR-CAL-15 | Editor can be open only once: a second open attempt (a double click, the new-event shortcut inside the open editor) keeps the one editor with its input (D-108). | F-19, HAAL-069 |
 | FR-CAL-16 | Duplicate-title warning: on creating an event and on changing the title of an existing event, if another active event of the same user has the same title (exact match, case-insensitive), a warning with a link to the existing event is shown; the user may proceed or cancel. | U#2, HAAL-080 |
 | FR-CAL-17 | Overdue counter in sidebar: number of active one-off events whose start date is before today, plus active recurring series whose effective start (FR-CAL-14) is before today. Hidden when zero. Text: "N overdue event(s)". | F-32, HAAL-068 |
 | FR-CAL-18 | Color can be changed directly in the details popover; change is saved immediately and undoable. | U#3, HAAL-081 |
@@ -641,6 +642,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-105 | Search engines (HAAL-176) | No installation is offered to search engines: the app answers every request with `X-Robots-Tag: noindex, nofollow` and the page carries the same in a robots meta tag. There is no setting: nothing in the app is public (everything is behind the sign-in), and the public demo would put sample data before the project in a search. No `Disallow` in a robots.txt on purpose: a crawler that may not fetch a page never sees the rule and can still list the bare address. The header comes from the app like the other security headers, so a reverse proxy adds nothing. | HAAL-176 |
 | D-106 | Password reset and the sign-in lock (HAAL-174, UAT findings F10 and F11) | A new password set through the reset link lifts a temporary sign-in lock: the link proved control of the mailbox, and the lock protected the old password. The same holds for the one-time password an administrator gives when there is no e-mail server (the administrator may unlock anyway). A password changed in a signed-in session does not lift the lock, so someone guessing from elsewhere gets no fresh series of attempts. The reset page asks the server whether its link can still be used before it shows the form (`POST /auth/password-reset/info`); the answer says when the link ends and nothing about the account, and the question does not use the link up. A used or expired link is said at once, with the way to a new one. | FR-ACC-03, FR-ACC-04 |
 | D-107 | security.txt (HAAL-177, RFC 9116) | `/.well-known/security.txt` is served only when the operator sets `HAALENDAR_SECURITY_CONTACT` (one `mailto:` or `https:` address; anything else, or a line break, stops the start): `Contact`, `Expires` 180 days after the request (made on each request, so it never runs out on a running installation), `Preferred-Languages: en`, `Canonical` under `HAALENDAR_PUBLIC_URL`; plain text, `no-cache`. Without the setting the path stays a 404: an installation has no contact of its own by default, and the project's contact is not the operator's. The demo names the project's private report form on GitHub. A safe-harbor text in `SECURITY.md` is not part of it | HAAL-177 |
+| D-108 | Single editor (HAAL-069, FR-CAL-15, legacy F-19) | One editor is ensured by the design of the screen: each view keeps one open editor, the editor is a modal dialog, and the shortcuts that open an editor do nothing while a dialog is open. A second open attempt therefore cannot happen, and the notice of the earlier application ("You're already here!") is not shown. The end-to-end scenario F-19 guards it. The same event open in two browser tabs is outside this requirement | HAAL-069 |
 
 ### 9.2 Open issues
 | # | Issue | Status |
