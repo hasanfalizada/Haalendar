@@ -226,4 +226,35 @@ test("F-17 a deleted event is kept: it waits in the trash", async ({ page }) => 
   expect(trash.data.find((entry) => entry.title === title)?.deleted_at).toBeTruthy();
 });
 
-test.fixme("F-19 a second editor is refused with a notice while one is open (HAAL-069)", async () => {});
+// +++===+++ 2026-11-15 17:24 +04 — Hasan Alizada — HAAL-069. Decision D-108: one editor is ensured by the single editor
+// state and the modal dialog, so a second open attempt cannot happen and no notice is shown; this guards that.
+test("F-19 the editor opens only once: a double click, or N inside an open editor, keeps one editor with its input", async ({
+  page,
+}) => {
+  await page.goto("/calendar?date=2026-12-03");
+  await page.getByRole("button", { name: "New event" }).first().dblclick();
+  await expect(page.getByRole("dialog", { name: "New event" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // N, the shortcut for a new event, pressed outside a text field of the editor of an event being changed: the same
+  // editor stays, with the change not yet saved.
+  const title = unique("Standup");
+  await createEvent(page, { date: "2026-12-03", title });
+  await eventRow(page, title).click();
+  await page.getByRole("dialog", { name: "Event details" }).getByRole("button", { name: "Edit" }).click();
+  const editor = page.getByRole("dialog", { name: "Edit event" });
+  await editor.getByLabel("Location").fill("Room 2");
+  await editor.getByRole("checkbox", { name: "All day" }).focus();
+  await page.keyboard.press("n");
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(editor).toBeVisible();
+  await expect(editor.getByLabel("Title")).toHaveValue(title);
+  await expect(editor.getByLabel("Location")).toHaveValue("Room 2");
+
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+  await expect(eventRow(page, title)).toHaveCount(1);
+  await expect(eventRow(page, title)).toContainText("Room 2");
+});
