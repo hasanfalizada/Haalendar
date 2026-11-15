@@ -5,7 +5,7 @@
 
 **This file is the single source of tasks for Haalendar.** There is no other copy.
 
-Statuses: **To do**, **In progress**, **Blocked** (say by what), **Postponed** (by the owner), **Done**, **Closed** (by the owner without implementation; listed under "Closed", never under "Done"). Owner column: who the task is assigned to (— = not assigned).
+Statuses: **To do**, **In progress**, **Blocked** (say by what), **Postponed** (by the owner), **Done**, **Closed** (by the owner without implementation; listed under "Closed", never under "Done"). Rows under "Proposed" are not tasks: they wait until the owner turns one into a task. Owner column: who the task is assigned to (— = not assigned).
 
 ## Deadlines
 
@@ -33,7 +33,22 @@ Statuses: **To do**, **In progress**, **Blocked** (say by what), **Postponed** (
 | HAAL-157 | E11 Delivery | S3-compatible attachment storage adapter (AWS S3, Garage, SeaweedFS, Ceph RGW) | v1.1 | 040 | — | To do | — | owner backlog file |
 | HAAL-158 | E11 Delivery | OpenTelemetry tracing (API, worker, DB) with optional OTLP exporter | v1.1+ | 019 | — | To do | — | owner backlog file |
 | HAAL-168 | E12 Accounts | Optional OIDC/SSO login | Could | 160 | — | To do | — | owner, 2026-10-19 (chat) |
-| HAAL-179 | E11 Delivery | Release 1.0.1: the UAT fixes of HAAL-174, security.txt (HAAL-177), the help section (HAAL-178) and opentelemetry-api 1.45.2 — through `release/1.0.1` into `master`, tag `v1.0.1`, image, demo stand on 1.0.1 | Should | 174, 177, 178 | — | In progress | — | owner, 2026-11-11 (chat, decision 2 = A: release, then HAAL-174) and 2026-11-13 (chat: version 1.0.1) |
+
+## Proposed
+
+<!-- +++===+++ 2026-11-15 15:59 +04 — Hasan Alizada — HAAL-179. Gaps and ideas found along the way; none is a task until the owner makes it one. -->
+
+| # | Found | What | Evidence |
+|---|---|---|---|
+| P1 | 2026-11-12, HAAL-174 | The end-to-end job in CI sometimes fails on a cold start: the first page does not open within the 120 s of `e2e/global-setup.ts` (`FIRST_PAGE_MS`); a re-run passes | run 43070372863 attempt 1, run 43484572880 attempt 1, both failed at about 2 min 40 s; owner, 2026-11-13: later |
+| P2 | 2026-11-12, HAAL-174 | The end-to-end job could name its failure in an annotation, so the cause is seen without the job log | the job log is readable only when signed in; the failures of P1 had no annotation |
+| P3 | 2026-11-12, HAAL-177 | `SECURITY.md` has no safe harbour statement for good-faith research (legal text: requires verification by a licensed professional) | `SECURITY.md` |
+| P4 | 2026-11-12, HAAL-174 | The "?" overlay still does not list some keys: Enter and Backspace in a checklist, Enter and Esc when adding a card, Ctrl+B and Ctrl+I in Markdown, the arrows in the attachment preview and in the mini month; "?" does not open over a dialog | `frontend/src/lib/shortcuts.ts`, `components/shell/ShortcutsOverlay.tsx` |
+| P5 | 2026-11-13, HAAL-179 | CI still runs on pushes to `revamp`, a branch that is retired | `.github/workflows/ci.yml:14` |
+| P6 | 2026-11-13, HAAL-179 | The security baseline lists re-encoding of attachments as planned under HAAL-040, which is done | `docs/security/security-baseline.md:37`, HAAL-040 in "Done" |
+| P7 | 2026-11-11, HAAL-174 | The README has no roadmap: what comes next is only in this backlog | README headings |
+| P8 | 2026-11-15, HAAL-179 | The sign-in page logs a 401 and a warning in the browser console for every visitor not signed in (`GET /api/v1/me` asks who is signed in) | demo 1.0.1, console before sign-in; clean after sign-in |
+| P9 | 2026-11-15, HAAL-179 | In the demo the worker stops at every reset (its job listener loses the database) and Docker restarts it, logging two errors with a traceback each time; it could reconnect instead | demo 1.0.1: restart count 33 in 16 hours; documented in `docs/operations/demo.md` ("After a reset") |
 
 ## Closed
 
@@ -159,3 +174,4 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-174 | 2026-11-12 | d5db800, 53fb1a8, a2286a5 | fix: the minor findings F8–F22 of the v1.0 UAT, in three pull requests — accounts (a password reset lifts the sign-in lock, D-106; a used or expired reset link says so at once through `POST /auth/password-reset/info`; a refused password rule shown once), calendar, board and notes (focus kept after adding a card; phone time-zone notice and touch selection hint; Ctrl+Z in the event details card; repeat choice not cut off; non-image files reported; Alt+arrows in the "?" overlay and announced checklist moves; a shared calendar not marked "(default)" and its owner named), sync and offline (preferences from another device without a reload; the calendar show box changes at once; offline writes name what was done and offer Undo); F20, the share list of F21 and "no Unlock" of F10 not reproduced; SRS v1.91–v1.92; owner, 2026-11-07 (chat, UAT option A) (HAAL-174) |
 | HAAL-177 | 2026-11-13 | 20c75d6 | feat(security): security.txt (RFC 9116) when the operator names a contact — `HAALENDAR_SECURITY_CONTACT` (one `mailto:` or `https:` address, checked at start) makes the app serve `/.well-known/security.txt` with Contact, Expires 180 days ahead, Preferred-Languages and Canonical; without it a 404 as before (D-107, SRS v1.93); the demo names the project's private report form on GitHub; the guides, both `.env` examples and `SECURITY.md` name the setting; owner, 2026-11-13 (chat, option A) (HAAL-177) |
 | HAAL-178 | 2026-11-13 | 50b25cd | docs: where to turn for help — a "Getting help" section in the README and the same in `SUPPORT.md` (GitHub shows it when an issue is opened): bug report with the version from About, feature request, security problems only privately, the installation guide; a personal project, answered as time allows, without guaranteed response times; owner, 2026-11-13 (chat, option A) (HAAL-178) |
+| HAAL-179 | 2026-11-15 | 9515142 | chore(release): 1.0.1 — the UAT fixes of HAAL-174, security.txt (HAAL-177), the help section (HAAL-178), opentelemetry-api 1.45.2 and dnspython 2.9.2 (CVE-2026-126360, CVE-2026-128089); merged into `master` (#52), tag `v1.0.1`, image for amd64 and arm64 with SBOM and signed provenance, GitHub release; checked: quick start on a clean host, upgrade from 1.0.0 with data and back with the image only; demo on 1.0.1 (HAAL-179) |
