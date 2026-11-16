@@ -19,6 +19,22 @@ way of working.
 | security.txt | `/.well-known/security.txt` names the project's private vulnerability report form on GitHub (set in `compose.demo.yaml`). |
 | On the host | Memory, CPU and process limits per container, logs limited to 30 MB per container. No port is open beyond the one for the reverse proxy. |
 
+## Privacy
+
+<!-- +++===+++ 2026-11-16 20:04 +04 — Hasan Alizada — HAAL-181. What the demo keeps about a visitor, checked against the code and the
+demo host; a description for visitors, not a legal notice. -->
+What the stand keeps about a visitor, and for how long:
+
+| | |
+|---|---|
+| What is entered | Everything, files included, is removed at the next reset, at most 30 minutes later. Everything is public meanwhile: enter nothing personal. |
+| On the device | The app keeps a copy of the data in the browser's storage for offline use; it goes nowhere else and is wiped on sign-out. |
+| Cookie | One: the session, needed for signing in (`HttpOnly`, `Secure`). |
+| Session | The start of the address (/24 for IPv4, /48 for IPv6) and the browser name, shown to the user in the list of sessions; removed at the next reset. |
+| Logs of the app | Each request with its method, path, status and duration, without the address or the browser; overwritten after 30 MB per container. |
+| Web server of the host | Not part of Haalendar. On the stand it logs each request with the visitor's address, time, page, browser and referring page, and deletes the log after 14 days. |
+| Third parties | None: no analytics, no advertising, no fonts or scripts from elsewhere (the Content Security Policy allows only the stand's own address). Search engines are asked not to list it. |
+
 ## Install behind a reverse proxy on the host
 
 Choose a free port and a free Docker subnet first; the demo must not touch what else runs there:
