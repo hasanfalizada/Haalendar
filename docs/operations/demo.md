@@ -119,6 +119,18 @@ There is nothing to back up: all of it is made up.
 Remove: `docker compose down -v` in this directory removes its containers, networks and volumes, then remove the
 proxy's site. With `COMPOSE_PROJECT_NAME` set as above, nothing of another project is touched.
 
+## If the stand is attacked
+
+<!-- +++===+++ 2026-11-16 20:57 +04 — Hasan Alizada — HAAL-182. The incident plan of the demo: rebuild, do not repair. -->
+The stand holds nothing that must be kept, so it is rebuilt rather than repaired:
+
+1. Stop it at once: `docker compose down -v` in its directory.
+2. Find how it happened (the app's and the proxy's logs), and report a fault in Haalendar as a vulnerability
+   ([SECURITY.md](../../SECURITY.md)).
+3. New secrets in `.env` (`HAALENDAR_SECRET_KEY`, `POSTGRES_PASSWORD`, `HAALENDAR_APP_DB_PASSWORD`, made as in the
+   install above), the release with the fix, then `docker compose up -d`.
+4. The host itself is checked by its administrator: the stand may share it with other services.
+
 ## Scanning it
 
 `scripts/dev/dast-demo.sh https://demo.example.org` runs the full DAST against the stand: the web pages, signed in,
