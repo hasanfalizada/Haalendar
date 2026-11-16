@@ -189,7 +189,7 @@ the GitHub Actions files with actionlint and zizmor (Docker).
 
 ### CI (GitHub Actions)
 
-`.github/workflows/ci.yml` runs on every push to `revamp`, `development` and `master`, on every pull request and on a
+`.github/workflows/ci.yml` runs on every push to `development` and `master`, on every pull request and on a
 release tag. Its jobs call `scripts/dev/check-all.sh --only …`, so CI checks exactly what the script checks here:
 
 | Job | Steps |
