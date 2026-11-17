@@ -2,12 +2,14 @@
 // and that everything here is public. When the time is up it asks the server for the next one and tells the page
 // (`onReset`): the session is gone with the old data, so the app goes to the sign-in page. The time is not a live
 // region: a screen reader would read it every second.
+// +++===+++ 2026-11-17 19:52 +04 — Hasan Alizada — HAAL-183. And a link to the privacy and terms of the demo.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FlaskConical } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { demoStatusQuery } from "@/api/demo";
+import { DEMO_TERMS_URL } from "@/lib/about";
 import { cn } from "@/lib/utils";
 
 const RETRY_MS = 5_000;
@@ -48,7 +50,10 @@ export function DemoBanner({ className, onReset }: { className?: string; onReset
     <div className={cn("flex items-start gap-2 bg-primary-tint px-4 py-2 text-[13px] text-fg", className)}>
       <FlaskConical className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
       <span>
-        {left > 0 ? t("demo.banner", { time: timeLeft(left) }) : t("demo.resetting")} {t("demo.public")}
+        {left > 0 ? t("demo.banner", { time: timeLeft(left) }) : t("demo.resetting")} {t("demo.public")}{" "}
+        <a href={DEMO_TERMS_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+          {t("demo.terms")}
+        </a>
       </span>
     </div>
   );
