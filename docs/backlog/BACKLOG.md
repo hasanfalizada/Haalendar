@@ -12,6 +12,7 @@ Statuses: **To do**, **In progress**, **Blocked** (say by what), **Postponed** (
 | Due | What | Where it is enforced |
 |---|---|---|
 | 2026-12-11 | Review deepmerge 4.3.1 (GHSA-gcqx-w48m-w2h4, low, build time only via workbox-build; reviewed 2026-11-08, still no fix, extended): no fixed version yet — upgrade or replace the parent if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
+| 2026-12-17 | Review picomatch 4.0.7 (GHSA-fc5q-39xc-vjpf, high, ReDoS through repeated extglobs; build and development time only via vite, tinyglobby and fdir with our own globs; HAAL-184): no fixed version yet — upgrade if a fix exists, otherwise review and extend the exception | `backend/audit-ignores.json` (npm_ignores), `pnpm-workspace.yaml`, `backend/tests/test_audit_ignores.py` |
 
 ## Open tasks
 
