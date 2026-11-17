@@ -208,3 +208,13 @@ OWNS_CONTAINER_FUNCTION_0025 = OWNS_CONTAINER_FUNCTION_0022.replace(
     "    WHEN 'board' THEN RETURN EXISTS (SELECT 1 FROM board b WHERE b.id = container AND b.owner_id = me);\n"
     "    WHEN 'note' THEN",
 )
+
+
+# +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102 (migration 0032, D-109). Personal labels for notes: a label
+# of one user and its place on a note carry the user as container (`user`, the user's own id). The user owns that
+# container; nobody can be given a share of it (share.container_kind does not allow it), so only that user reads and
+# writes those rows, also on a note shared with them.
+OWNS_CONTAINER_FUNCTION_0032 = OWNS_CONTAINER_FUNCTION_0025.replace(
+    "    WHEN 'note' THEN",
+    "    WHEN 'user' THEN RETURN container = me;\n    WHEN 'note' THEN",
+)

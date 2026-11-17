@@ -144,6 +144,18 @@ class World:
                 "VALUES (%s, %s, 'note', %s, 'Milk', 'U', %s)",
                 (self.items["Milk"], self.items["Shopping"], self.items["Shopping"], self.ids["ada"]),
             )
+            # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102. A personal label of Ada's on the note.
+            self.items["Home"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO label (id, container_kind, container_id, name, color, created_by) "
+                "VALUES (%s, 'user', %s, 'Home', 'green', %s)",
+                (self.items["Home"], self.ids["ada"], self.ids["ada"]),
+            )
+            conn.execute(
+                "INSERT INTO item_label (id, item_id, label_id, container_kind, container_id, created_by) "
+                "VALUES (%s, %s, %s, 'user', %s, %s)",
+                (uuid.uuid7(), self.items["Shopping"], self.items["Home"], self.ids["ada"], self.ids["ada"]),
+            )
             # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-110. One Kanban board, archived.
             self.items["Revamp"] = str(uuid.uuid7())
             conn.execute(
@@ -298,7 +310,7 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "notes": 1,
         "checklist_items": 1,
         "boards": 1,
-        "labels": 1,
+        "labels": 2,
         "links": 1,  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120.
         "events": 2,  # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F2).
         "reminders": 2,
@@ -393,7 +405,11 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "09:30",
         [world.items["Urgent"]],
     )
-    assert [(label["name"], label["color"]) for label in document["labels"]] == [("Urgent", "red")]
+    # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102. Ada's personal label comes too, without a board.
+    assert sorted((label["name"], label["color"], label.get("board_id")) for label in document["labels"]) == [
+        ("Home", "green", None),
+        ("Urgent", "red", world.items["Revamp"]),
+    ]
     [link] = document["links"]  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Once, across the modules.
     assert (link["id"], link["from_item_id"], link["to_item_id"], link["origin"]) == (
         world.items["link"],
@@ -410,6 +426,9 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "U",
     )
     assert note.get("archived_at") is None and note["permission"] == "owner"
+    assert note["label_ids"] == [
+        world.items["Home"]
+    ]  # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102.
     [milk] = document["checklist_items"]
     assert (milk["item_id"], milk["text"], milk["checked"], milk["position"]) == (
         world.items["Shopping"],

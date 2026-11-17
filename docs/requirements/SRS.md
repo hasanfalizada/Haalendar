@@ -93,10 +93,11 @@ the owner's (finding F7).
 +++===+++ 2026-11-12 15:52 +04 — Hasan Alizada — HAAL-174. v1.92: by owner on the UAT findings — D-82: the show box of a calendar changes at once and goes back with a message when the save is refused (F16); D-57: an offline write names what was done, says it is kept on this device and offers Undo (F22).
 +++===+++ 2026-11-13 22:08 +04 — Hasan Alizada — HAAL-177. v1.93: decision D-107 (security.txt when the operator names a contact) approved by owner.
 +++===+++ 2026-11-15 17:24 +04 — Hasan Alizada — HAAL-069. v1.94: decision D-108 (one editor by design, no notice; FR-CAL-15 amended) approved by owner.
++++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102. v1.95: decision D-109 (personal labels for notes) approved by owner.
 
 | Field | Value |
 |---|---|
-| Version | 1.94 |
+| Version | 1.95 |
 | Status | Approved by owner (2026-10-14) |
 | Owner | Hasan Alizada |
 | Baseline | `requirements/legacy-feature-inventory.md` (F-01..F-34) |
@@ -291,7 +292,7 @@ Rule format: each requirement is testable. "Source" links to legacy features (F-
 | FR-TODO-01 | Note fields (D-87): title, body, color, priority, pinned flag, archived flag, labels, due date (optional), attachments, timestamps. | HAAL-100 |
 | FR-TODO-02 | Checklist notes (D-88): add, edit, check/uncheck, reorder items; checked items move to the bottom. | HAAL-101 |
 | FR-TODO-03 | Pinned notes are shown above others; archived notes are shown only in the Archive view. Archive is not delete. | HAAL-100 |
-| FR-TODO-04 | Labels: create, rename, assign; filter notes by label. | HAAL-102 |
+| FR-TODO-04 | Labels: create, rename, assign; filter notes by label. Labels are personal (D-109). | HAAL-102, D-109 |
 | FR-TODO-05 | Grid and list layout; manual order by drag-and-drop and keyboard; order persists across devices. | HAAL-103 |
 | FR-TODO-06 | A note with a due date appears in the calendar layer (FR-CAL-24). | HAAL-104 |
 | FR-TODO-07 | Reminders on notes, same behaviour as FR-CAL-29 (D-89). | T-01, HAAL-105 |
@@ -643,6 +644,7 @@ Defined by ADRs and contracts produced in later tasks: stack (HAAL-010), deploym
 | D-106 | Password reset and the sign-in lock (HAAL-174, UAT findings F10 and F11) | A new password set through the reset link lifts a temporary sign-in lock: the link proved control of the mailbox, and the lock protected the old password. The same holds for the one-time password an administrator gives when there is no e-mail server (the administrator may unlock anyway). A password changed in a signed-in session does not lift the lock, so someone guessing from elsewhere gets no fresh series of attempts. The reset page asks the server whether its link can still be used before it shows the form (`POST /auth/password-reset/info`); the answer says when the link ends and nothing about the account, and the question does not use the link up. A used or expired link is said at once, with the way to a new one. | FR-ACC-03, FR-ACC-04 |
 | D-107 | security.txt (HAAL-177, RFC 9116) | `/.well-known/security.txt` is served only when the operator sets `HAALENDAR_SECURITY_CONTACT` (one `mailto:` or `https:` address; anything else, or a line break, stops the start): `Contact`, `Expires` 180 days after the request (made on each request, so it never runs out on a running installation), `Preferred-Languages: en`, `Canonical` under `HAALENDAR_PUBLIC_URL`; plain text, `no-cache`. Without the setting the path stays a 404: an installation has no contact of its own by default, and the project's contact is not the operator's. The demo names the project's private report form on GitHub. A safe-harbor text in `SECURITY.md` is not part of it | HAAL-177 |
 | D-108 | Single editor (HAAL-069, FR-CAL-15, legacy F-19) | One editor is ensured by the design of the screen: each view keeps one open editor, the editor is a modal dialog, and the shortcuts that open an editor do nothing while a dialog is open. A second open attempt therefore cannot happen, and the notice of the earlier application ("You're already here!") is not shown. The end-to-end scenario F-19 guards it. The same event open in two browser tabs is outside this requirement | HAAL-069 |
+| D-109 | Personal labels for notes (FR-TODO-04, HAAL-102) | Built in two stages, each its own commit: server, then the To-Do page. A label for notes belongs to one user: name 1–40 (trimmed, unique among the user's live labels, case ignored), colour of the palette, at most 100 live labels per user. The user puts their labels on any live note they read — their own or one shared with them, with view or edit — at most 20 of their labels on one note; nobody else sees them, the owner of a shared note included (labels are the user's own arrangement, like pinned and archive in D-30). Stored in `label` without a board and in `item_label` with the user as container (`user`, migration 0032), so row-level security, pull and live updates keep them to that user; synced (offline), audited, soft-deleted. Only its user renames, recolours, deletes or restores a label; deleting it takes it off every note in the same batch (undo brings it back). A note's delete takes its owner's labels on it into the batch and the trash brings them back; another person's labels on a shared note stay and show again with it. Exported: the labels in `labels` without `board_id`, each note with `label_ids`. Page (stage 2): the labels as chips on a note's card; in the note editor a Labels picker (choose, create), saved with Save in one undo step; a Labels menu above the notes with check boxes — notes with any of the chosen labels, together with the priority filter, kept in the address (`?labels=<id>,…`, unknown ids dropped), in the Notes and Archive tabs — and Manage labels (create, rename, recolour, delete with Undo). No label list in the navigation | FR-TODO-04 |
 
 ### 9.2 Open issues
 | # | Issue | Status |

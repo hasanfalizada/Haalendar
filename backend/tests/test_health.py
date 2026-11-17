@@ -51,7 +51,8 @@ def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119: card assignees (0029).
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120: links (0030).
     # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F7): shared notes named in the notification (0031).
-    assert migration_head() == "0031"
+    # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102: personal labels for notes (0032).
+    assert migration_head() == "0032"
 
 
 def test_the_version_of_an_image_is_the_version_of_its_release(monkeypatch: pytest.MonkeyPatch) -> None:

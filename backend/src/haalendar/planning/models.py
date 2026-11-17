@@ -340,10 +340,16 @@ class Card(Base):
 
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. A label of a board (domain model 5.11, D-92): name 1-40 (unique on the
 # board among live labels, case ignored), colour; shared by everyone on the board. The board is its container.
+# +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102 (D-109). Without a board it is a personal label for notes:
+# its user is its container (`user`, container_id = created_by), the name unique among that user's live labels.
 class Label(Base):
     __tablename__ = "label"
     __table_args__ = (
-        CheckConstraint("container_kind = 'board' AND container_id = board_id", name="board_container"),
+        CheckConstraint(
+            "(board_id IS NOT NULL AND container_kind = 'board' AND container_id = board_id) "
+            "OR (board_id IS NULL AND container_kind = 'user' AND container_id = created_by)",
+            name="container",
+        ),
         CheckConstraint("char_length(btrim(name)) BETWEEN 1 AND 40", name="name_length"),
         CheckConstraint(f"color in ({', '.join(repr(c) for c in COLORS)})", name="color_valid"),
         Index(
@@ -353,11 +359,18 @@ class Label(Base):
             unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),
+        Index(
+            "uq_label_name_per_user",
+            "container_id",
+            text("lower(name)"),
+            unique=True,
+            postgresql_where=text("board_id IS NULL AND deleted_at IS NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
-    board_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("board.id"), index=True)
-    container_kind: Mapped[str] = mapped_column(String(10), default="board")
+    board_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("board.id"), index=True)
+    container_kind: Mapped[str] = mapped_column(String(10))
     container_id: Mapped[uuid.UUID] = mapped_column()
     name: Mapped[str] = mapped_column(String(40))
     color: Mapped[str] = mapped_column(String(10))
