@@ -8,6 +8,13 @@ archived board — haalendar.authz):
 - a label on an item: a row of its own (a set synced as add / remove, ADR-0009) for a live card of the label's board;
   the same label twice on one item is refused (409); removing is a soft delete, restore puts it back (refused while
   the label is in the trash).
+
++++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102 (D-109). Personal labels for notes: a label created without a
+board belongs to its user alone (container `user`) — name unique among the user's live labels, at most PERSONAL_MAX
+live labels; only that user changes, deletes or restores it. It goes on any live note the user reads, their own or one
+shared with them (view or edit), at most NOTE_MAX of the user's labels on one note; nobody else sees it. A note's
+delete takes its owner's labels on it along, and its restore brings them back; another person's labels on a shared
+note stay where they are and show again with the note.
 """
 
 from __future__ import annotations
@@ -29,6 +36,8 @@ from haalendar.softdelete import new_batch, restore_batch
 log = get_logger(__name__)
 
 NAME_MAX = 40
+PERSONAL_MAX = 100
+NOTE_MAX = 20
 
 
 def _problem(field: str, message: str) -> ProblemError:
@@ -62,17 +71,30 @@ async def _writable(db: AsyncSession, user_id: uuid.UUID, board_id: uuid.UUID) -
     await require(db, user_id, "write_items", "board", board_id)
 
 
-async def _name_free(db: AsyncSession, board_id: uuid.UUID, name: str, own_id: uuid.UUID) -> None:
+async def _may_change(db: AsyncSession, user_id: uuid.UUID, label: Label) -> None:
+    if label.board_id is not None:
+        await _writable(db, user_id, label.board_id)
+    elif label.container_id != user_id:  # row-level security hides it already; a second check here
+        raise _not_found()
+
+
+async def _name_free(db: AsyncSession, label: Label, name: str) -> None:
+    same_scope = (
+        Label.board_id == label.board_id
+        if label.board_id is not None
+        else (Label.board_id.is_(None) & (Label.container_id == label.container_id))
+    )
     taken = await db.scalar(
         select(Label.id).where(
-            Label.board_id == board_id,
+            same_scope,
             func.lower(Label.name) == name.lower(),
             Label.deleted_at.is_(None),
-            Label.id != own_id,
+            Label.id != label.id,
         )
     )
     if taken is not None:
-        raise ProblemError(409, ProblemCode.DUPLICATE, "This board already has a label with this name")
+        message = "This board already has" if label.board_id is not None else "You already have"
+        raise ProblemError(409, ProblemCode.DUPLICATE, f"{message} a label with this name")
 
 
 async def create_label(
@@ -80,25 +102,53 @@ async def create_label(
 ) -> Outcome:
     if await db.get(Label, row_id) is not None:
         raise ProblemError(409, ProblemCode.DUPLICATE, "A label with this id exists")
+    if data.get("board_id") is None:
+        return await _create_personal(db, user_id, row_id, data)
     board = await db.get(Board, data["board_id"])
     if board is None:
         raise _not_found()
     await _writable(db, user_id, board.id)
-    name = checked_name(data.get("name"))
-    await _name_free(db, board.id, name, row_id)
     row = Label(
         id=row_id,
         board_id=board.id,
         container_kind="board",
         container_id=board.id,
-        name=name,
+        name=checked_name(data.get("name")),
         color=checked_color(data.get("color") or "blue"),
         created_by=user_id,
         updated_by=user_id,
     )
+    await _name_free(db, row, row.name)
     db.add(row)
     await db.flush()
     log.info("label_created", label_id=str(row_id), board_id=str(board.id))
+    return Outcome(version=row.version)
+
+
+async def _create_personal(
+    db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID, data: dict[str, Any]
+) -> Outcome:
+    row = Label(
+        id=row_id,
+        board_id=None,
+        container_kind="user",
+        container_id=user_id,
+        name=checked_name(data.get("name")),
+        color=checked_color(data.get("color") or "blue"),
+        created_by=user_id,
+        updated_by=user_id,
+    )
+    await _name_free(db, row, row.name)
+    count = await db.scalar(
+        select(func.count())
+        .select_from(Label)
+        .where(Label.board_id.is_(None), Label.container_id == user_id, Label.deleted_at.is_(None))
+    )
+    if (count or 0) >= PERSONAL_MAX:
+        raise ProblemError(409, ProblemCode.INVALID_STATE, f"You can have at most {PERSONAL_MAX} labels")
+    db.add(row)
+    await db.flush()
+    log.info("label_created", label_id=str(row_id), personal=True)
     return Outcome(version=row.version)
 
 
@@ -106,7 +156,7 @@ async def _label(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID) -> Lab
     row = await db.get(Label, row_id)
     if row is None:  # unknown or not readable under row-level security
         raise _not_found()
-    await _writable(db, user_id, row.board_id)
+    await _may_change(db, user_id, row)
     return row
 
 
@@ -126,7 +176,7 @@ async def update_label(
     apply, conflicts = merge({"name": row.name, "color": row.color}, base, new)
     if "name" in apply:
         row.name = checked_name(apply["name"])
-        await _name_free(db, row.board_id, row.name, row.id)
+        await _name_free(db, row, row.name)
     if "color" in apply:
         row.color = checked_color(apply["color"])
     if apply:
@@ -160,7 +210,7 @@ async def delete_label(
 async def restore_label(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID) -> Outcome:
     row = await _label(db, user_id, row_id)
     if row.deleted_at is not None and row.delete_batch_id is not None:
-        await _name_free(db, row.board_id, row.name, row.id)
+        await _name_free(db, row, row.name)
         await restore_batch(db, [Label, ItemLabel], row.delete_batch_id, user_id)
         await db.refresh(row)
     return Outcome(version=row.version)
@@ -186,18 +236,29 @@ async def add_label(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID, dat
     label = await db.get(Label, data["label_id"])
     if item is None or label is None:
         raise _not_found()
-    if item.kind != "card" or item.container_kind != "board" or item.container_id != label.board_id:
-        raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A board label goes on a card of its board")
-    await _writable(db, user_id, label.board_id)
+    if label.board_id is None:
+        if item.kind != "note":
+            raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A personal label goes on a note")
+        await _may_change(db, user_id, label)
+        container_kind, container_id = "user", user_id
+    else:
+        if item.kind != "card" or item.container_kind != "board" or item.container_id != label.board_id:
+            raise ProblemError(
+                422, ProblemCode.VALIDATION_FAILED, "A board label goes on a card of its board"
+            )
+        await _writable(db, user_id, label.board_id)
+        container_kind, container_id = item.container_kind, item.container_id
     if item.deleted_at is not None or label.deleted_at is not None:
         raise ProblemError(409, ProblemCode.INVALID_STATE, "It was deleted on another device")
     await _live_pair(db, item.id, label.id, row_id)
+    if label.board_id is None:
+        await _note_room(db, user_id, item.id)
     row = ItemLabel(
         id=row_id,
         item_id=item.id,
         label_id=label.id,
-        container_kind=item.container_kind,
-        container_id=item.container_id,
+        container_kind=container_kind,
+        container_id=container_id,
         created_by=user_id,
         updated_by=user_id,
     )
@@ -207,11 +268,30 @@ async def add_label(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID, dat
     return Outcome(version=row.version)
 
 
+async def _note_room(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> None:
+    count = await db.scalar(
+        select(func.count())
+        .select_from(ItemLabel)
+        .where(
+            ItemLabel.item_id == item_id,
+            ItemLabel.container_kind == "user",
+            ItemLabel.container_id == user_id,
+            ItemLabel.deleted_at.is_(None),
+        )
+    )
+    if (count or 0) >= NOTE_MAX:
+        raise ProblemError(409, ProblemCode.INVALID_STATE, f"A note holds at most {NOTE_MAX} of your labels")
+
+
 async def _item_label(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID) -> ItemLabel:
     row = await db.get(ItemLabel, row_id)
     if row is None:
         raise _not_found()
-    await require(db, user_id, "write_items", "board", row.container_id)
+    if row.container_kind == "user":
+        if row.container_id != user_id:
+            raise _not_found()
+    else:
+        await require(db, user_id, "write_items", "board", row.container_id)
     return row
 
 
@@ -232,6 +312,8 @@ async def restore_item_label(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.
         if label is None or label.deleted_at is not None:
             raise ProblemError(409, ProblemCode.INVALID_STATE, "The label is in the trash")
         await _live_pair(db, row.item_id, row.label_id, row.id)
+        if row.container_kind == "user":
+            await _note_room(db, user_id, row.item_id)
         await restore_batch(db, [ItemLabel], row.delete_batch_id, user_id)
         await db.refresh(row)
     return Outcome(version=row.version)

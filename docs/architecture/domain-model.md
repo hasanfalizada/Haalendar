@@ -221,6 +221,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 
 ### 5.11 `label` · `item_label`
 <!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. As built (migration 0027, D-92): board labels only (board_id NN, the board as container; author created_by instead of owner_id; name unique per board, case ignored); `item_label` has its own id, the item's container and the common columns (a synced set row), one live row per item and label. Personal labels for notes come with HAAL-102. -->
+<!-- +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102. As built (migration 0032, D-109): a personal label has no board and its user as container (`container_kind` `user`, `container_id` = `created_by`; name unique among the user's live labels); a personal label on a note is an `item_label` with that user as container, on any note the user reads. -->
 | Table | Column | Type | Rules |
 |---|---|---|---|
 | label | id | uuid PK | |

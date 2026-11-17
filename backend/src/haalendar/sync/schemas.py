@@ -115,7 +115,8 @@ class LabelData(ApiModel):
 
 
 class LabelCreateData(LabelData):
-    board_id: uuid.UUID
+    # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102 (D-109). Without a board: a personal label for notes.
+    board_id: uuid.UUID | None = None
 
 
 class ItemLabelCreateData(ApiModel):

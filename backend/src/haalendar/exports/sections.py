@@ -236,6 +236,16 @@ async def todo_section(ctx: ExportContext) -> None:
             .order_by(Note.pinned.desc(), Note.position.collate("C"), Item.id)
         )
     ).all()
+    # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102 (D-109). Each note carries the ids of the user's labels
+    # on it; the user's personal labels (board_id null) go to the labels section.
+    note_labels: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for row in await ctx.db.scalars(
+        select(ItemLabel)
+        .where(ItemLabel.container_kind == "user", ItemLabel.container_id == ctx.owner_id)
+        .where(ItemLabel.deleted_at.is_(None))
+        .order_by(ItemLabel.created_at, ItemLabel.id)
+    ):
+        note_labels.setdefault(row.item_id, []).append(row.label_id)
     for item, note in rows:
         ctx.archive.add_row(
             "notes",
@@ -251,9 +261,19 @@ async def todo_section(ctx: ExportContext) -> None:
                 "position": note.position,
                 "due_at": note.due_at,
                 "is_checklist": note.is_checklist,
+                "label_ids": note_labels.get(item.id, []),
                 "permission": "owner",
                 **_meta(item),
             },
+        )
+    for label in await ctx.db.scalars(
+        select(Label)
+        .where(Label.board_id.is_(None), Label.container_id == ctx.owner_id)
+        .order_by(Label.name, Label.id)
+    ):
+        ctx.archive.add_row(
+            "labels",
+            {"id": label.id, "board_id": None, "name": label.name, "color": label.color, **_meta(label)},
         )
     ids = [item.id for item, _ in rows]
     await _checklist_items(ctx, ids)
