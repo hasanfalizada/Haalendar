@@ -200,6 +200,10 @@ describe("the public demo", () => {
     const button = await screen.findByRole("button", { name: "Sign in as Alex Stone" });
     expect(screen.getByText(/resets to the sample data in 12:30/)).toBeInTheDocument();
     expect(screen.getByText(/do not enter anything personal/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Privacy and terms" })).toHaveAttribute(
+      "href",
+      "https://github.com/hasanfalizada/Haalendar/blob/master/docs/operations/demo.md#privacy",
+    );
     expect(screen.getByText(/alex@example.org, password shown-on-purpose/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /forgot/i })).not.toBeInTheDocument();
 
@@ -236,6 +240,7 @@ describe("the public demo", () => {
     expect(await screen.findByRole("heading", { name: "Sign in to Haalendar" })).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /forgot/i })).toBeInTheDocument();
     expect(screen.queryByText(/public demo/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Privacy and terms" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Sign in as/ })).not.toBeInTheDocument();
   });
 });
