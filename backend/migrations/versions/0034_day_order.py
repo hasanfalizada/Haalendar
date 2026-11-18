@@ -2,7 +2,7 @@
 
 +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. Forward-only.
 - `user_settings.day_order`: how the calendar views order the events of one day, `time` (the default, as before) or
-  `color` (the legacy order: the colour's name, then title — atom calendar.day_order.v2); one choice for every device
+  `color` (the legacy order: the legacy colour rank, then title — atom calendar.day_order.v2); one choice for every device
   of the user, synced with the settings row.
 
 Revision ID: 0034
