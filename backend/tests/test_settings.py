@@ -22,6 +22,7 @@ DEFAULTS = {
     "agenda_days": 30,
     "week_ab": {"enabled": False, "anchor": None, "labels": ["A", "B"]},
     "hidden_calendars": [],  # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82).
+    "note_layout": "grid",  # +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110).
     "version": 1,
 }
 
@@ -67,6 +68,7 @@ def test_patch_with_if_match(api: TestClient, clean_db: str) -> None:
         "theme": "dark",
         "default_color": "blue",
         "agenda_days": 14,
+        "note_layout": "list",
     }
 
     missing = api.patch("/api/v1/me/settings", json=body, headers=headers)
@@ -118,6 +120,7 @@ def test_week_ab(api: TestClient, clean_db: str) -> None:
         {"default_color": "pink"},
         {"agenda_days": 0},
         {"agenda_days": 366},
+        {"note_layout": "table"},
         {"week_ab": {"labels": ["A"]}},
         {"week_ab": {"anchor": "2026-02-30"}},
         {"version": 3},

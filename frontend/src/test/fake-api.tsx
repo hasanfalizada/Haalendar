@@ -100,6 +100,7 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
     agenda_days: 30,
     week_ab: { enabled: false, anchor: null, labels: ["A", "B"] },
     hidden_calendars: [], // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82).
+    note_layout: "grid", // +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110).
     version: 1,
     ...overrides,
   };
