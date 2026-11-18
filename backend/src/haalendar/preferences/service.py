@@ -6,6 +6,7 @@ trimmed, 1 to 10 characters and must differ (atom calendar.week_ab_label.v1, err
 needs an anchor (any date of the week that is the first label). Changes are logged without their values.
 +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. `hidden_calendars` (D-82): the calendars hidden in the views, stored
 as a sorted list without repeats.
++++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103. `note_layout` (D-110): grid or list on the To-Do page.
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ def to_out(row: UserSettings) -> SettingsOut:
             enabled=row.week_ab_enabled, anchor=row.week_ab_anchor, labels=list(row.week_ab_labels)
         ),
         hidden_calendars=list(row.hidden_calendars),
+        note_layout=row.note_layout,
         version=row.version,
     )
 
@@ -85,7 +87,7 @@ async def update_settings(
         )
     changes: dict[str, Any] = {
         field: value
-        for field in ("week_start", "time_format", "theme", "default_color", "agenda_days")
+        for field in ("week_start", "time_format", "theme", "default_color", "agenda_days", "note_layout")
         if (value := getattr(patch, field)) is not None
     }
     if patch.hidden_calendars is not None:
