@@ -1,6 +1,9 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. An event from the day view: create, see it, delete it, restore it
 // from the trash.
+import type { Page } from "@playwright/test";
+
 import { expect, test, unique } from "../fixtures";
+import { createEvent } from "./legacy/calendar";
 
 test("creates an event, deletes it and restores it from the trash", async ({ page }) => {
   const title = unique("Dentist");
@@ -79,4 +82,46 @@ test("an event can start and end at any minute", async ({ page }) => {
   await editor.getByRole("button", { name: "Save" }).click();
   await expect(editor).toBeHidden();
   await expect(page.getByRole("button", { name: new RegExp(title) })).toContainText("20:50");
+});
+
+// +++===+++ 2026-11-18 21:44 +04 — Hasan Alizada — HAAL-186. With a mouse from 768 px the rows of the day list and of
+// the agenda are one compact line (D-53, about 30 px an event as in the legacy calendar), the place on the same line;
+// on a touch screen they keep the 44 px target.
+async function rowsOf(page: Page, view: "day" | "agenda", tag: string) {
+  await page.goto(`/calendar?date=2027-04-14&view=${view}`);
+  const rows = page.getByRole("listitem").filter({ hasText: tag });
+  await expect(rows).toHaveCount(2);
+  return rows.evaluateAll((items) =>
+    items.map((item) => ({ height: item.getBoundingClientRect().height, top: item.getBoundingClientRect().top })),
+  );
+}
+
+test("the rows of a day are compact with a mouse", async ({ page }) => {
+  const tag = unique("Compact");
+  await createEvent(page, {
+    date: "2027-04-14",
+    title: `Lunch ${tag}`,
+    start: "12:00",
+    end: "13:00",
+    location: "Café",
+  });
+  await createEvent(page, { title: `Call ${tag}`, start: "14:00", end: "14:30" });
+  for (const view of ["day", "agenda"] as const) {
+    const [first, second] = await rowsOf(page, view, tag);
+    expect(first?.height, `${view}: one line with the place`).toBeLessThanOrEqual(30);
+    expect((second?.top ?? 0) - (first?.top ?? 0), `${view}: the step between rows`).toBeLessThanOrEqual(32);
+  }
+});
+
+test.describe("on a touch screen", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+
+  test("the rows of a day keep the 44 px target", async ({ page }) => {
+    const tag = unique("Touch");
+    await createEvent(page, { date: "2027-04-14", title: `Lunch ${tag}`, start: "12:00", end: "13:00" });
+    await createEvent(page, { title: `Call ${tag}`, start: "14:00", end: "14:30" });
+    for (const view of ["day", "agenda"] as const) {
+      for (const row of await rowsOf(page, view, tag)) expect(row.height, view).toBeGreaterThanOrEqual(44);
+    }
+  });
 });

@@ -1,6 +1,8 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. The inside of an event row (taken out of the day list for the agenda):
 // the time ("All day", "09:00–09:30", "Until 02:00", "From 22:00"), the title with the repeat, description and
 // attachment icons (HAAL-083, D-72), the place, and the flags for screen readers under `flagsId`.
+// +++===+++ 2026-11-18 21:44 +04 — Hasan Alizada — HAAL-186. With a mouse from 768 px (D-53) the place follows the
+// title on the same line, so a row is one line high; on touch it stays under the title.
 import { FileText, MapPin, Paperclip, Repeat } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -20,7 +22,7 @@ export function EventRowBody({ entry, attachments, flags, flagsId }: EventRowBod
   return (
     <>
       <span className="w-28 shrink-0 text-muted tabular-nums">{range(entry)}</span>
-      <span className="flex min-w-0 flex-1 flex-col">
+      <span className="flex min-w-0 flex-1 flex-col pointer-fine:md:flex-row pointer-fine:md:flex-wrap pointer-fine:md:items-baseline pointer-fine:md:gap-x-3">
         <span className="flex items-center gap-1.5 font-medium wrap-anywhere">
           {entry.title || t("calendar.day.noTitle")}
           {entry.recurring ? (

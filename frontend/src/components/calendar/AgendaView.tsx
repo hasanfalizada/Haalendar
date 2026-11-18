@@ -104,7 +104,7 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
                 <span className={cn(relative && "font-normal text-muted")}>{full}</span>
               </button>
             </h2>
-            <ol aria-label={full} className="flex flex-col gap-1.5">
+            <ol aria-label={full} className="flex flex-col gap-1.5 pointer-fine:md:gap-0.5">
               {entries.map((entry) => {
                 const attachments = attachmentCounts.get(entry.id) ?? 0;
                 const flags = rowFlags(entry, attachments);
@@ -115,7 +115,7 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
                       entry={entry}
                       anchor={anchor}
                       describedBy={flags.length > 0 ? flagsId : undefined}
-                      className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
                     >
                       <EventRowBody entry={entry} attachments={attachments} flags={flags} flagsId={flagsId} />
                     </EventButton>
