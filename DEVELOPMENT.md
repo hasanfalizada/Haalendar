@@ -240,6 +240,7 @@ scripts/dev/stack-up.sh     # PostgreSQL 18 (port 55434), API 8081, worker, Vite
 STACK_API_PORT=8091 scripts/dev/stack-up.sh  # the API on another port when 8081 is taken (the stack refuses taken ports)
 scripts/dev/stack-up.sh --preview   # the same plus the production build (service worker, works offline) on 4173
 scripts/dev/stack-up.sh --scan      # rate limits raised and the Docker bridge host accepted, for scripts/dev/dast.sh
+scripts/dev/stack-up.sh --demo      # filled with the demo's made-up accounts and data (Mira is the administrator; the password is printed)
 scripts/dev/stack-down.sh   # stops everything and drops the database and the uploads
 ```
 

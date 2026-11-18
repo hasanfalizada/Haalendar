@@ -6,7 +6,7 @@
 # plain http on a host name is not a secure context, so browser APIs the app needs (crypto.randomUUID, service
 # worker) are missing there. Logs, uploads and the session ids live in <repo>/.dev (git-ignored);
 # each process runs in its own session (setsid), so stack-down stops it with all its children.
-# Usage: scripts/dev/stack-up.sh   then open the printed URL; stop with scripts/dev/stack-down.sh
+# Usage: scripts/dev/stack-up.sh [--demo] [--preview] [--scan]   then open the printed URL; stop with scripts/dev/stack-down.sh
 # +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. --preview also builds the web app for production and serves it with
 # `vite preview` on http://localhost:4173 (same API): the build with the service worker, so the app opens offline
 # after a reload (D-55). The offline end-to-end tests use it.
@@ -15,6 +15,9 @@
 # 172.17.0.1) accepted as Host, so the scanner in its container reaches the API through dast.sh's forwarder.
 # +++===+++ 2026-11-01 — Hasan Alizada — HAAL-145. Refuses to start when one of its ports is taken by another program
 # (scripts/dev/ports-free.sh); the API's port can be moved with STACK_API_PORT (default 8081).
+# +++===+++ 2026-11-18 21:00 +04 — Hasan Alizada — HAAL-193. --demo fills the new database with the public demo's
+# made-up accounts and data (dates of the current week; python -m haalendar.demo.local) and makes Mira its
+# administrator, so a live check starts without the first-run setup. Not demo mode: nothing is refused or reset.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
@@ -24,11 +27,13 @@ export PATH="$HOME/.local/bin:$PATH"
 
 PREVIEW=0
 SCAN=0
+DEMO=0
 for arg in "$@"; do
   case "$arg" in
     --preview) PREVIEW=1 ;;
     --scan) SCAN=1 ;;
-    *) echo "unknown option: $arg (--preview, --scan)"; exit 2 ;;
+    --demo) DEMO=1 ;;
+    *) echo "unknown option: $arg (--preview, --scan, --demo)"; exit 2 ;;
   esac
 done
 DB=haalendar-dev-db
@@ -60,6 +65,11 @@ fi
 cd backend
 uv run haalendar-db-bootstrap >"$DEV_DIR/bootstrap.log" 2>&1 || { echo "bootstrap failed, see $DEV_DIR/bootstrap.log"; exit 1; }
 uv run alembic upgrade head >"$DEV_DIR/migrate.log" 2>&1 || { echo "migrations failed, see $DEV_DIR/migrate.log"; exit 1; }
+DEMO_LINE=""
+if [ "$DEMO" = 1 ]; then
+  uv run python -m haalendar.demo.local >"$DEV_DIR/demo.log" 2>&1 || { echo "demo data failed, see $DEV_DIR/demo.log"; exit 1; }
+  DEMO_LINE=$(grep '^demo: ' "$DEV_DIR/demo.log")
+fi
 # Each process gets its own session; the session leader records its id ($$) so stack-down can stop the whole session.
 start() { local log=$1; shift; setsid bash -c 'echo $$ >>"$0"; exec "$@"' "$DEV_DIR/sessions" "$@" >"$DEV_DIR/$log" 2>&1 </dev/null & }
 rm -f "$DEV_DIR/sessions"
@@ -80,5 +90,6 @@ if [ "$PREVIEW" = 1 ]; then
   for _ in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:4173/" && break; sleep 1; done
   echo "build: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:4173/)   (production build with the service worker)"
 fi
+[ -n "$DEMO_LINE" ] && echo "$DEMO_LINE"
 echo "open:  $URL   (logs: $DEV_DIR)"
 echo "from another computer: ssh -N -L 5173:localhost:5173 $USER@$(hostname -f)   then open $URL there"
