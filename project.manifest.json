@@ -139,7 +139,7 @@
     {
       "id": "calendar.day_order.v2",
       "status": "implemented",
-      "purpose": "Display order of the entries of one day by the user's setting: by time (all-day first, then start, then title) or by colour (the colour's name, then title), then creation time and key.",
+      "purpose": "Display order of the entries of one day by the user's setting: by time (all-day first, then start, then title) or by colour (the legacy colour rank, then title), then creation time and key.",
       "contract": "atoms/calendar.day_order.v2/contract.json",
       "examples": "atoms/calendar.day_order.v2/examples.md",
       "vectors": "atoms/calendar.day_order.v2/vectors.json",
@@ -154,7 +154,7 @@
         "python": "backend/src/haalendar/atoms/calendar/day_order.py",
         "typescript": "frontend/src/atoms/calendar/dayOrder.ts"
       },
-      "hash": "b3:50defcbd4805419f01857cb0c36269773bb272cf8bffaf544086cce91713144e",
+      "hash": "b3:2b4e3ba445ee5e79b20fc26ee22f6f99c8d832f39f3302caf77120be15728350",
       "deps": [],
       "requirements": [
         "D-111",

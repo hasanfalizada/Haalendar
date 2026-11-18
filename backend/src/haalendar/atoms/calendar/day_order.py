@@ -4,8 +4,9 @@
 All-day first, then by start (a continuing entry counts as 00:00 and comes first), then by title — case and accents do
 not count — then by creation time and key. Colour never takes part (the legacy colour-name order is gone).
 +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. Version 2 (atoms/calendar.day_order.v2, D-111): `by` is the
-user's setting — "time" orders as above (the colour does not count), "color" as the legacy app: by the colour's name,
-then by title (all-day and times do not count), then by creation time and key.
+user's setting — "time" orders as above (the colour does not count), "color" as the legacy app: by the legacy colour
+rank (black, purple, green, blue, red, yellow, orange, brown — its `colors.rank`), then by the title itself, case counting
+(code points, as SQLite's binary order), all-day and times not counting, then by creation time and key.
 """
 
 from __future__ import annotations
@@ -15,6 +16,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 DayOrderBy = Literal["time", "color"]
+
+# The legacy calendar's `colors.rank` (its day list was `order by rank, title`).
+COLOR_RANK = {"black": 0, "purple": 1, "green": 2, "blue": 3, "red": 4, "yellow": 5, "orange": 6, "brown": 7}
 
 
 @dataclass(frozen=True)
@@ -35,9 +39,9 @@ def title_key(title: str) -> str:
 
 
 def _sort_key(entry: DayEntry, by: DayOrderBy) -> tuple[int, str, int, str, str, str, str]:
-    ties = (title_key(entry.title), entry.title, entry.created_at, entry.key)
     if by == "color":
-        return (0, entry.color, 0, *ties)
+        return (COLOR_RANK[entry.color], "", 0, entry.title, entry.title, entry.created_at, entry.key)
+    ties = (title_key(entry.title), entry.title, entry.created_at, entry.key)
     if entry.all_day:
         return (0, "", 0, *ties)
     start = "00:00" if entry.continues else (entry.start or "00:00")

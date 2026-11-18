@@ -9,7 +9,7 @@
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. Excluded dates of a series (`exceptions`, D-67) are left out; the
 // effective start of a series is its first occurrence that is not excluded (F-23), derived only.
 // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order is calendar.day_order.v2 by the user's setting
-// `day_order` (D-111): by time as before, or by colour as the legacy calendar (the colour's name, then title).
+// `day_order` (D-111): by time as before, or by colour as the legacy calendar (the legacy colour rank, then title).
 import type { Color } from "@/api/generated/types.gen";
 import { type DayOrderBy, dayOrder } from "@/atoms/calendar/dayOrder";
 import { occurrences } from "@/atoms/calendar/recurrence";

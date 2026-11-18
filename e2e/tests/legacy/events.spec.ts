@@ -134,13 +134,13 @@ test("F-13 editing opens the same editor filled with the event", async ({ page }
 test("F-14 the day lists all-day events first, then by start time, then by title; by colour on request", async ({
   page,
 }) => {
-  // Legacy ordered by colour name (defect 7); FR-CAL-01 orders by time, and by colour when the user chooses it (D-111).
+  // Legacy ordered by its colour rank (defect 7); FR-CAL-01 orders by time, and by colour when the user chooses it (D-111).
   const tag = unique("order");
   const day = "2026-12-07";
   await createEvent(page, { date: day, title: `B afternoon ${tag}`, start: "15:00", end: "16:00", color: "Red" });
   await createEvent(page, { title: `A morning ${tag}`, start: "08:00", end: "09:00", color: "Black" });
   await createEvent(page, { title: `C morning ${tag}`, start: "08:00", end: "09:00", color: "Blue" });
-  await createEvent(page, { title: `Z all day ${tag}`, color: "Yellow" });
+  await createEvent(page, { title: `Z all day ${tag}`, color: "Brown" });
   // An event of another day is not listed.
   await createEvent(page, { date: "2026-12-08", title: `Other day ${tag}` });
   await page.goto(`/calendar?date=${day}`);
@@ -156,7 +156,8 @@ test("F-14 the day lists all-day events first, then by start time, then by title
   ]);
 
   // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The legacy order on request (D-111): Settings → Events of a
-  // day → By color orders by the colour's name (black, blue, red, yellow), then title; then back to by time.
+  // day → By color orders by the legacy colour rank (black, purple, green, blue, red, yellow, orange, brown — brown after
+  // red, unlike the colours' names), then title; then back to by time.
   const order = async (value: "By color" | "By time") => {
     await page.goto("/settings");
     await page.getByRole("radio", { name: value }).click();

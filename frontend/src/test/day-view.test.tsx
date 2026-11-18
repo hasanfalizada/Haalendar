@@ -121,14 +121,14 @@ describe("entries of a day", () => {
       }),
     ];
     expect(titles(rows, "2026-10-22")).toEqual(["Birthday", "Flight", "Call", "Apple", "dentist"]);
-    // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. By colour (D-111), as the legacy calendar: the colour's
-    // name (black, blue, brown, red, yellow), then title; all-day and times do not count.
+    // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. By colour (D-111), as the legacy calendar: its colour
+    // rank (black, purple, green, blue, red, yellow, orange, brown), then title; all-day and times do not count.
     expect(titles(rows, "2026-10-22", "Europe/Berlin", "color")).toEqual([
       "Apple",
       "dentist",
-      "Flight",
       "Call",
       "Birthday",
+      "Flight",
     ]);
   });
 
@@ -200,7 +200,7 @@ describe("day view page", () => {
   it("follows the order by colour", async () => {
     const day = { tzid: VIEWER, start_date: "2026-10-22", end_date: "2026-10-22" };
     await seed([
-      event({ ...day, title: "Zoo trip", color: "yellow" }),
+      event({ ...day, title: "Zoo trip", color: "brown" }), // brown is last in the legacy rank
       event({ ...day, title: "Dentist", color: "red", all_day: false, start_time: "09:00", end_time: "09:30" }),
       event({ ...day, title: "Call", color: "red", all_day: false, start_time: "08:00", end_time: "08:30" }),
       event({ ...day, title: "Rent", color: "black" }),
