@@ -30,7 +30,8 @@ interface NoteEdit extends NoteRef {
   after: Row;
 }
 
-export type NoteChange = "edit" | "pin" | "unpin" | "color" | "archive" | "unarchive";
+// +++===+++ 2026-11-18 15:40 +04 — Hasan Alizada — HAAL-103. "move": a new position in the manual order (D-110).
+export type NoteChange = "edit" | "pin" | "unpin" | "color" | "archive" | "unarchive" | "move";
 
 const target = (id: string) => ({ entity_type: "item" as const, entity_id: id });
 

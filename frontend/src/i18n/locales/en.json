@@ -1398,7 +1398,12 @@
       "reminder": "Reminder:",
       "select": "Select {{title}}",
       "sharedEdit": "Shared · can edit",
-      "sharedView": "Shared · can view"
+      "sharedView": "Shared · can view",
+      "drag": "Drag {{title}} to another place",
+      "dragShort": "Drag to move",
+      "moveHint": "Alt with the arrow keys moves the note",
+      "moveKeys": "Move the focused note one place earlier or later",
+      "moved": "{{title}} moved to place {{position}} of {{total}}"
     },
     "editor": {
       "newTitle": "New note",
@@ -1426,7 +1431,8 @@
       "unarchive": "Unarchived {{title}}",
       "deleted": "Deleted {{title}} — it is in the trash",
       "checked": "Checked {{item}}",
-      "unchecked": "Unchecked {{item}}"
+      "unchecked": "Unchecked {{item}}",
+      "move": "Moved {{title}}"
     },
     "newList": "New list",
     "checklist": {
@@ -1475,6 +1481,11 @@
       "deleteOne": "Delete {{name}}",
       "deleteBody_one": "Delete the label “{{name}}”? It comes off {{count}} note. It can be undone.",
       "deleteBody_other": "Delete the label “{{name}}”? It comes off {{count}} notes. It can be undone."
+    },
+    "layout": {
+      "label": "Layout",
+      "grid": "Grid",
+      "list": "List"
     }
   },
   "kanban": {
