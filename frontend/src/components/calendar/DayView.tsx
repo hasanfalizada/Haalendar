@@ -278,7 +278,9 @@ function DayList({
       />
       <ol
         aria-label={t("calendar.day.listLabel", { date: label })}
-        className="flex flex-col gap-1.5 p-3 md:p-4"
+        // +++===+++ 2026-11-18 21:44 +04 — Hasan Alizada — HAAL-186. Compact rows with a mouse from 768 px, as the
+        // base components (D-53): about 30 px an event, as in the legacy calendar; 44 px on touch.
+        className="flex flex-col gap-1.5 p-3 pointer-fine:md:gap-0.5 md:p-4"
         {...navigation.listProps}
       >
         {entries.map((entry) => {
@@ -312,7 +314,7 @@ function DayList({
                 event.preventDefault();
                 if (pointer.current !== "touch") onOpen(entry);
               }}
-              className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-sm py-2 pr-3 pl-1 text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-sm py-2 pr-3 pl-1 text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
             >
               <EventRowBody entry={entry} attachments={attachments} flags={flags} flagsId={flagsId} />
             </button>
@@ -328,7 +330,7 @@ function DayList({
             >
               <input
                 type="checkbox"
-                className="mt-2.5 ml-3 size-4 shrink-0"
+                className="mt-2.5 ml-3 size-4 shrink-0 pointer-fine:md:mt-1.5"
                 aria-label={t("calendar.day.select", { title: entry.title || t("calendar.day.noTitle") })}
                 checked={selected}
                 // A prevented click on a controlled checkbox leaves the box drawn in its old state; Shift comes from
