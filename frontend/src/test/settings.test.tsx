@@ -46,11 +46,20 @@ describe("preferences", () => {
     const agenda = within(section).getByLabelText("Agenda shows (days)");
     await user.clear(agenda);
     await user.type(agenda, "14");
+    // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order of a day's events (D-111).
+    expect(within(section).getByRole("radio", { name: "By time" })).toBeChecked();
+    await user.click(within(section).getByRole("radio", { name: "By color" }));
     await user.click(within(section).getByRole("button", { name: "Save preferences" }));
 
     expect(await screen.findByText("Preferences saved.")).toBeInTheDocument();
     const patch = calls.find((c) => c.method === "PATCH" && c.path === "/me/settings");
-    expect(patch?.body).toEqual({ week_start: 0, time_format: "12h", default_color: "blue", agenda_days: 14 });
+    expect(patch?.body).toEqual({
+      week_start: 0,
+      time_format: "12h",
+      default_color: "blue",
+      agenda_days: 14,
+      day_order: "color",
+    });
     expect(patch?.headers.get("If-Match")).toBe('"1"');
     expect(within(await preferences()).getByRole("button", { name: "Save preferences" })).toBeDisabled();
   });

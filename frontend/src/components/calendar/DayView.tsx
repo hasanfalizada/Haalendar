@@ -389,6 +389,7 @@ export function DayView({
     agenda_days: agendaLength,
     time_format: timeFormat,
     default_color: defaultColor,
+    day_order: dayOrderBy,
   } = useSettings();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
@@ -404,7 +405,8 @@ export function DayView({
   const calendars = useCalendars(user);
   const { shown } = calendars;
   const rows = useMemo(() => allRows.filter((row) => shown(row.container_id)), [allRows, shown]);
-  const entries = useMemo(() => entriesOn(rows, date, viewerTz), [rows, date, viewerTz]);
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
+  const entries = useMemo(() => entriesOn(rows, date, viewerTz, dayOrderBy), [rows, date, viewerTz, dayOrderBy]);
   const today = todayIn(viewerTz);
   const label = dayLabel(date, i18n.language);
   const week = view === "week";

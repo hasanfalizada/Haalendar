@@ -4,6 +4,8 @@
 // unsaved-changes guard, local draft, Ctrl/Cmd+Enter. The theme is shown at once as a preview and stored on Save;
 // leaving without saving brings the saved theme back. Settings are stored on the server and follow the user to
 // every device; changing them needs a connection (offline editing arrives with HAAL-052).
+// +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order of a day's events in the calendar views: by time
+// or by colour as the legacy calendar (D-111, atom calendar.day_order.v2).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type SubmitEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +29,7 @@ import type { ThemePreference } from "@/theme/theme";
 
 type Theme = Settings["theme"];
 type TimeFormat = Settings["time_format"];
+type DayOrder = Settings["day_order"];
 
 const THEMES: { value: Theme; labelKey: `pages.settings.theme${"System" | "Light" | "Dark"}` }[] = [
   { value: "system", labelKey: "pages.settings.themeSystem" },
@@ -34,6 +37,7 @@ const THEMES: { value: Theme; labelKey: `pages.settings.theme${"System" | "Light
   { value: "dark", labelKey: "pages.settings.themeDark" },
 ];
 const TIME_FORMATS: readonly TimeFormat[] = ["24h", "12h"];
+const DAY_ORDERS: readonly DayOrder[] = ["time", "color"];
 const LABEL_MAX = 10;
 const SAMPLE_TIME = new Date(Date.UTC(2026, 0, 5, 14, 30));
 
@@ -44,6 +48,7 @@ interface Values extends Record<string, string> {
   time_format: TimeFormat;
   default_color: Color;
   agenda_days: string;
+  day_order: DayOrder;
   week_ab_enabled: "true" | "false";
   week_ab_anchor: string;
   week_ab_label_a: string;
@@ -59,6 +64,7 @@ function valuesOf(settings: Settings): Values {
     time_format: settings.time_format,
     default_color: settings.default_color,
     agenda_days: String(settings.agenda_days),
+    day_order: settings.day_order,
     week_ab_enabled: settings.week_ab.enabled ? "true" : "false",
     week_ab_anchor: settings.week_ab.anchor ?? "",
     week_ab_label_a: settings.week_ab.labels?.[0] ?? "A",
@@ -74,6 +80,7 @@ function patchOf(values: Values, saved: Values): SettingsPatch {
   if (values.time_format !== saved.time_format) patch.time_format = values.time_format;
   if (values.default_color !== saved.default_color) patch.default_color = values.default_color;
   if (values.agenda_days !== saved.agenda_days) patch.agenda_days = Number(values.agenda_days);
+  if (values.day_order !== saved.day_order) patch.day_order = values.day_order;
   const weekAb: NonNullable<SettingsPatch["week_ab"]> = {};
   if (values.week_ab_enabled !== saved.week_ab_enabled) weekAb.enabled = values.week_ab_enabled === "true";
   if (values.week_ab_anchor && values.week_ab_anchor !== saved.week_ab_anchor) weekAb.anchor = values.week_ab_anchor;
@@ -374,6 +381,14 @@ function PreferencesForm({ settings }: { settings: Settings }) {
             />
           )}
         </Field>
+        <Segmented
+          label={t("preferences.dayOrder")}
+          options={DAY_ORDERS.map((order) => ({ value: order, text: t(`preferences.dayOrders.${order}`) }))}
+          value={values.day_order}
+          onChange={(value) => {
+            set("day_order", value);
+          }}
+        />
 
         <fieldset className="flex flex-col gap-3 rounded-sm border border-line p-3">
           <legend className="px-1 text-[13px] font-medium">{t("preferences.weekAb.title")}</legend>

@@ -1,0 +1,60 @@
+{
+  "$comment": "+++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. Version 2 of the order of the events of one day (FR-CAL-01, F-14, D-111): the user chooses it (setting day_order) — by time, as version 1, or by colour, as the legacy app did (colour name, then title; times do not count). Two implementations (client views offline, server) against one contract.",
+  "id": "calendar.day_order.v2",
+  "version": "2.0.0",
+  "purpose": "Orders the entries shown on one day either by time (all-day first, then by start — an entry continuing from an earlier day counts as 00:00 and comes first — then by title) or by colour (by the colour's name, then by title), then by creation time and key.",
+  "kind": "pure",
+  "side_effects": [],
+  "input": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["by", "entries"],
+    "additionalProperties": false,
+    "properties": {
+      "by": { "type": "string", "enum": ["time", "color"], "description": "The user's setting day_order." },
+      "entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["key", "all_day", "continues", "start", "title", "color", "created_at"],
+          "additionalProperties": false,
+          "properties": {
+            "key": { "type": "string", "description": "Unique per entry (event id + occurrence date)." },
+            "all_day": { "type": "boolean" },
+            "continues": { "type": "boolean", "description": "A timed entry that started on an earlier day of the viewer." },
+            "start": {
+              "type": ["string", "null"],
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+              "description": "Start on this day in the viewer's zone (HH:MM); null for all-day entries; ignored when continues."
+            },
+            "title": { "type": "string" },
+            "color": {
+              "type": "string",
+              "enum": ["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"],
+              "description": "The entry's colour (the palette's name)."
+            },
+            "created_at": { "type": "string", "format": "date-time", "description": "RFC 3339 UTC (…Z), compared as text." }
+          }
+        }
+      }
+    }
+  },
+  "output": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["keys"],
+    "additionalProperties": false,
+    "properties": {
+      "keys": { "type": "array", "items": { "type": "string" }, "description": "All keys, in display order." }
+    }
+  },
+  "errors": [],
+  "events": [],
+  "invariants": [
+    "by time — exactly version 1: every all-day entry before every timed entry; all-day entries among themselves by title; timed entries by effective start (00:00 when continues, else start), earlier first, at the same effective start a continuing entry first; the colour never takes part",
+    "by colour — the legacy order: by the colour's name in alphabetical order (black, blue, brown, green, orange, purple, red, yellow), then by title; all_day, continues and start never take part",
+    "title comparison: first by the title key — Unicode NFKD, combining marks (category M) removed, lower-cased — so case and accents do not count (\"apple\" < \"Banana\", \"Eagle\" < \"Éclair\"); then by the title itself (code points)",
+    "then by created_at (earlier first), then by key — the order is total and stable"
+  ],
+  "requirements": ["FR-CAL-01", "F-14", "D-61", "D-111"]
+}
