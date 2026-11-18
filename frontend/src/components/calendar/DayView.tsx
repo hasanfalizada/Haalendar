@@ -417,12 +417,13 @@ export function DayView({
   const days = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
   const weeks = useMemo(() => monthWeeks(monthOf(date), weekStart), [date, weekStart]);
   const agendaRange = useMemo(() => agendaDays(date, agendaLength), [date, agendaLength]);
+  // On a phone the week and the agenda name their months short, so the date fits next to ‹ Today › (HAAL-187).
   const title = week
-    ? rangeTitle(days, i18n.language)
+    ? rangeTitle(days, i18n.language, !tablet)
     : month
       ? monthTitle(monthOf(date), i18n.language)
       : agenda
-        ? rangeTitle(agendaRange, i18n.language)
+        ? rangeTitle(agendaRange, i18n.language, !tablet)
         : dateTitle(date, today, i18n.language, t("calendar.header.today"));
   const weekday = view === "day" ? weekdayName(date, i18n.language) : null;
   /** The date one period (day, week, month or agenda range) before or after `from`. */
@@ -935,31 +936,9 @@ export function DayView({
               <PanelLeft aria-hidden />
             </Button>
           ) : null}
-          {tablet ? (
-            <div className="flex min-w-0 items-baseline gap-2">
-              <h1 className="text-lg font-semibold">
-                <span className="sr-only">{t("pages.calendar.title")}: </span>
-                {title}
-              </h1>
-              {weekday ? <span className="text-[13px] text-muted">{weekday}</span> : null}
-            </div>
-          ) : (
-            <h1 className="min-w-0 text-base font-semibold">
-              <span className="sr-only">{t("pages.calendar.title")}: </span>
-              <Button
-                variant="ghost"
-                className="-ml-2 px-2 text-base font-semibold"
-                aria-label={t("calendar.nav.chooseDate", { date: label })}
-                onClick={() => {
-                  setPickerOpen(true);
-                }}
-              >
-                {title}
-                <ChevronDown aria-hidden />
-              </Button>
-            </h1>
-          )}
-          <div className="flex items-center gap-1">
+          {/* +++===+++ 2026-11-18 22:47 +04 — Hasan Alizada — HAAL-187. ‹ Today › come before the date, whose length
+              changes from day to day, so they stay in place in every view; on a phone a long date is cut, not wrapped. */}
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -989,6 +968,32 @@ export function DayView({
               <ChevronRight aria-hidden />
             </Button>
           </div>
+          {tablet ? (
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h1 className="text-lg font-semibold">
+                <span className="sr-only">{t("pages.calendar.title")}: </span>
+                {title}
+              </h1>
+              {weekday ? <span className="text-[13px] text-muted">{weekday}</span> : null}
+            </div>
+          ) : (
+            <h1 className="min-w-0 flex-1 text-base font-semibold">
+              <span className="sr-only">{t("pages.calendar.title")}: </span>
+              <Button
+                variant="ghost"
+                className="max-w-full px-2 text-base font-semibold"
+                aria-label={t("calendar.nav.chooseDate", { date: label })}
+                onClick={() => {
+                  setPickerOpen(true);
+                }}
+              >
+                <span className="truncate">{title}</span>
+                <ChevronDown aria-hidden />
+              </Button>
+            </h1>
+          )}
+          {/* A phone ends the first line after the date: the rest goes to the next lines. */}
+          <div aria-hidden className="h-0 basis-full max-md:order-1 md:hidden" />
           <div className="flex w-full items-center gap-3 text-xs text-muted max-md:order-last md:ml-auto md:w-auto md:text-[13px]">
             <LiveClock timeZone={viewerTz} />
             <IsoWeekLabel date={date} />
@@ -1001,13 +1006,15 @@ export function DayView({
               aria-pressed={showPanel}
               aria-label={t("calendar.timeBlock.toggle")}
               onClick={togglePanel}
+              // On a phone it joins the views on the second line, leaving the first to ‹ Today › and the date.
+              className="max-md:order-1"
             >
               <StickyNote aria-hidden />
               {/* A narrow header keeps it on the line as an icon, like New event. */}
               <span className="@max-[80rem]:sr-only">{t("calendar.timeBlock.toggle")}</span>
             </Button>
           ) : null}
-          <div className="max-md:ml-auto">
+          <div className="max-md:order-1 max-md:ml-auto">
             <ViewSwitch view={view} onChange={switchView} />
           </div>
           {tablet ? (

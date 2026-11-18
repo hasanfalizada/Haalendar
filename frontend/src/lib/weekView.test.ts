@@ -85,4 +85,9 @@ describe("rangeTitle", () => {
     expect(title("2026-10-28")).toBe("October 26 – November 1, 2026");
     expect(title("2026-12-31")).toBe("December 28, 2026 – January 3, 2027");
   });
+  it("names the months short for a phone", () => {
+    const short = (date: string) => rangeTitle(weekDays(date, 1), "en", true).replace(/\s/g, " ");
+    expect(short("2026-09-30")).toBe("Sep 28 – Oct 4, 2026");
+    expect(short("2026-11-18")).toBe("Nov 16 – 22, 2026");
+  });
 });

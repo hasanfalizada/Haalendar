@@ -74,7 +74,7 @@ describe("week view", { timeout: 15_000 }, () => {
     expect(within(views).getByRole("radio", { name: "Day" })).toBeChecked();
     await user.click(within(views).getByRole("radio", { name: "Week" }));
 
-    const heading = await screen.findByRole("heading", { level: 1, name: /October 26.*November 1, 2026/ });
+    const heading = await screen.findByRole("heading", { level: 1, name: /Oct 26.*Nov 1, 2026/ });
     expect(heading).toBeInTheDocument();
     expect(router.state.location.search).toMatchObject({ date: DAY, view: "week" });
     expect(screen.queryByTitle(/^Day \d+ of/)).not.toBeInTheDocument(); // no Day Number for a week
@@ -85,7 +85,7 @@ describe("week view", { timeout: 15_000 }, () => {
     await screen.findByRole("heading", { level: 1, name: /Today|October 28, 2026/ });
     expect(router.state.location.search).toMatchObject({ view: "day" });
     await user.keyboard("w");
-    await screen.findByRole("heading", { level: 1, name: /October 26.*November 1, 2026/ });
+    await screen.findByRole("heading", { level: 1, name: /Oct 26.*Nov 1, 2026/ });
   });
 
   it("lists the week's events per day: all-day on top, timed by time, overlapping side by side", async () => {
@@ -118,7 +118,7 @@ describe("week view", { timeout: 15_000 }, () => {
   it("moves by a week with the buttons and the arrow keys; an event opens its details", async () => {
     const { router, user } = await open(`/calendar?date=${DAY}&view=week`);
     await user.click(await screen.findByRole("button", { name: "Next week" }));
-    await screen.findByRole("heading", { level: 1, name: /November 2.*8, 2026/ });
+    await screen.findByRole("heading", { level: 1, name: /Nov 2.*8, 2026/ });
     expect(router.state.location.search).toMatchObject({ date: "2026-11-04", view: "week" });
     await user.click(await screen.findByRole("button", { name: "Details of Next week" }));
     const card = await screen.findByRole("dialog", { name: "Event details" });
@@ -128,7 +128,7 @@ describe("week view", { timeout: 15_000 }, () => {
       expect(screen.queryByRole("dialog", { name: "Event details" })).not.toBeInTheDocument();
     });
     await user.keyboard("{ArrowLeft}");
-    await screen.findByRole("heading", { level: 1, name: /October 26.*November 1, 2026/ });
+    await screen.findByRole("heading", { level: 1, name: /Oct 26.*Nov 1, 2026/ });
   });
 
   it("draws the current-time line only in today's column", async () => {
