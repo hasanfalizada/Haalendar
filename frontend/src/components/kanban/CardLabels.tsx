@@ -2,6 +2,8 @@
 // of the board as a toggle (on the card or not — written with the editor's Save); "New label…" creates a board label at
 // once and puts it on the card; each label's menu renames / recolours it or deletes it from the board (a confirmation
 // naming the cards it is on; Undo brings it back with them). Board labels are written at once, with Undo.
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The same in the note editor with the user's personal labels
+// (`scope` notes, no board, D-109): its texts speak of notes, and at most `max` labels can be chosen.
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,7 +28,8 @@ type Row = Record<string, unknown>;
 
 interface CardLabelsProps {
   user: string;
-  boardId: string;
+  /** The board of the labels, or null for the user's personal labels of notes. */
+  boardId: string | null;
   /** The board's live labels, by name. */
   labels: Row[];
   /** Every label-on-item row of the local database (how many cards a label is on). */
@@ -35,12 +38,28 @@ interface CardLabelsProps {
   chosen: string[];
   onChange: (next: string[]) => void;
   canWrite: boolean;
+  /** Whose labels: a board's (cards) or the user's (notes). */
+  scope?: "board" | "notes";
+  /** At most this many can be chosen. */
+  max?: number;
 }
 
 type Dialog = { kind: "new" } | { kind: "edit" | "delete"; row: Row } | null;
 
-export function CardLabels({ user, boardId, labels, itemLabels, chosen, onChange, canWrite }: CardLabelsProps) {
+export function CardLabels({
+  user,
+  boardId,
+  labels,
+  itemLabels,
+  chosen,
+  onChange,
+  canWrite,
+  scope = "board",
+  max,
+}: CardLabelsProps) {
   const { t } = useTranslation();
+  const texts = scope === "notes" ? "todo.labels" : "kanban.labels";
+  const full = max !== undefined && chosen.length >= max;
   const [dialog, setDialog] = useState<Dialog>(null);
   const cardsWith = (labelId: string) => itemLabels.filter((row) => row.label_id === labelId && !row.deleted_at).length;
 
@@ -53,7 +72,8 @@ export function CardLabels({ user, boardId, labels, itemLabels, chosen, onChange
       <h3 id="card-labels" className="text-[13px] font-medium">
         {t("kanban.labels.title")}
       </h3>
-      {labels.length === 0 ? <p className="text-xs text-muted">{t("kanban.labels.none")}</p> : null}
+      {labels.length === 0 ? <p className="text-xs text-muted">{t(`${texts}.none`)}</p> : null}
+      {full ? <p className="text-xs text-muted">{t("todo.labels.full", { max })}</p> : null}
       <ul className="flex flex-wrap gap-1.5">
         {labels.map((label) => {
           const labelId = String(label.id);
@@ -70,7 +90,8 @@ export function CardLabels({ user, boardId, labels, itemLabels, chosen, onChange
               <button
                 type="button"
                 aria-pressed={on}
-                className="inline-flex min-h-11 items-center gap-1.5 px-2 text-[13px] pointer-fine:md:min-h-8"
+                disabled={!on && full}
+                className="inline-flex min-h-11 items-center gap-1.5 px-2 text-[13px] disabled:opacity-50 pointer-fine:md:min-h-8"
                 onClick={() => {
                   toggle(labelId);
                 }}
@@ -130,6 +151,7 @@ export function CardLabels({ user, boardId, labels, itemLabels, chosen, onChange
         <LabelDialog
           row={dialog.kind === "edit" ? dialog.row : null}
           others={labels}
+          scope={scope}
           onSave={async (name, color) => {
             if (dialog.kind === "edit") {
               const row = dialog.row;
@@ -140,7 +162,7 @@ export function CardLabels({ user, boardId, labels, itemLabels, chosen, onChange
               return updateLabel(user, row, data);
             }
             const id = await createLabel(user, boardId, name, color);
-            if (id) onChange([...chosen, id]);
+            if (id && !full) onChange([...chosen, id]);
             return id !== null;
           }}
           onClose={() => {
@@ -153,7 +175,7 @@ export function CardLabels({ user, boardId, labels, itemLabels, chosen, onChange
         title={t("kanban.labels.deleteTitle")}
         body={
           dialog?.kind === "delete"
-            ? t("kanban.labels.deleteBody", { name: String(dialog.row.name), count: cardsWith(String(dialog.row.id)) })
+            ? t(`${texts}.deleteBody`, { name: String(dialog.row.name), count: cardsWith(String(dialog.row.id)) })
             : ""
         }
         confirmLabel={t("kanban.deleteConfirm")}

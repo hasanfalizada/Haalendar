@@ -1377,7 +1377,7 @@
       "notesBody": "Notes you create will appear here. Pin the important ones to keep them on top.",
       "archiveTitle": "No archived notes",
       "archiveBody": "Notes you archive leave the main list and wait here — archiving does not delete them.",
-      "filtered": "No notes with this priority"
+      "filtered": "No notes match the filter"
     },
     "card": {
       "open": "Open {{title}}",
@@ -1461,6 +1461,20 @@
       "inPast": "Choose a time that is still ahead.",
       "duplicate": "This reminder is already set.",
       "none": "No reminders."
+    },
+    "labels": {
+      "on": "Labels:",
+      "none": "You have no labels yet.",
+      "private": "Your labels are yours alone: nobody else sees them, also on notes shared with you.",
+      "full": "A note holds at most {{max}} of your labels.",
+      "tooMany": "You can have at most {{max}} labels.",
+      "taken": "You already have a label with this name.",
+      "manage": "Manage labels…",
+      "manageTitle": "Labels",
+      "editOne": "Rename or recolor {{name}}",
+      "deleteOne": "Delete {{name}}",
+      "deleteBody_one": "Delete the label “{{name}}”? It comes off {{count}} note. It can be undone.",
+      "deleteBody_other": "Delete the label “{{name}}”? It comes off {{count}} notes. It can be undone."
     }
   },
   "kanban": {
