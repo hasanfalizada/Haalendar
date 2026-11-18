@@ -1099,6 +1099,11 @@
     "defaultColor": "Default color for new items",
     "agendaDays": "Agenda shows (days)",
     "agendaHint": "How many days ahead the agenda view lists, 1 to 365.",
+    "dayOrder": "Events of a day",
+    "dayOrders": {
+      "time": "By time",
+      "color": "By color"
+    },
     "agendaInvalid": "Enter a whole number from 1 to 365",
     "weekAb": {
       "title": "Week A/B",

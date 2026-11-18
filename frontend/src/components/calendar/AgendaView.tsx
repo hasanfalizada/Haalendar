@@ -9,6 +9,7 @@ import { CalendarDays } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSettings } from "@/api/settings";
 import { agendaOf } from "@/lib/agendaView";
 import { addDays } from "@/lib/datetime";
 import { dayLabel } from "@/lib/dayView";
@@ -38,7 +39,9 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
   const { t, i18n } = useTranslation();
   const attachmentCounts = useAttachmentCounts(user);
   const rowFlags = useRowFlags();
-  const agenda = useMemo(() => agendaOf(rows, days, viewerTz), [rows, days, viewerTz]);
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
+  const { day_order: by } = useSettings();
+  const agenda = useMemo(() => agendaOf(rows, days, viewerTz, by), [rows, days, viewerTz, by]);
   // A new range is a new list (the page keys it by its range), so it starts with one batch again.
   const [shown, setShown] = useState(() =>
     typeof IntersectionObserver === "undefined" ? Number.POSITIVE_INFINITY : BATCH,

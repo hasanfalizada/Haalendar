@@ -131,8 +131,10 @@ test("F-13 editing opens the same editor filled with the event", async ({ page }
   await expect(eventRow(page, title)).toContainText("10:00");
 });
 
-test("F-14 the day lists all-day events first, then by start time, then by title", async ({ page }) => {
-  // Legacy ordered by colour name (defect 7); FR-CAL-01 orders by time.
+test("F-14 the day lists all-day events first, then by start time, then by title; by colour on request", async ({
+  page,
+}) => {
+  // Legacy ordered by colour name (defect 7); FR-CAL-01 orders by time, and by colour when the user chooses it (D-111).
   const tag = unique("order");
   const day = "2026-12-07";
   await createEvent(page, { date: day, title: `B afternoon ${tag}`, start: "15:00", end: "16:00", color: "Red" });
@@ -152,6 +154,27 @@ test("F-14 the day lists all-day events first, then by start time, then by title
     `Details of C morning ${tag}`,
     `Details of B afternoon ${tag}`,
   ]);
+
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The legacy order on request (D-111): Settings → Events of a
+  // day → By color orders by the colour's name (black, blue, red, yellow), then title; then back to by time.
+  const order = async (value: "By color" | "By time") => {
+    await page.goto("/settings");
+    await page.getByRole("radio", { name: value }).click();
+    await page.getByRole("button", { name: "Save preferences" }).click();
+    await expect(page.getByText("Preferences saved.")).toBeVisible();
+  };
+  await order("By color");
+  await page.goto(`/calendar?date=${day}`);
+  await expect(titles).toHaveCount(4);
+  await expect
+    .poll(() => titles.evaluateAll((rows) => rows.map((row) => row.getAttribute("aria-label"))))
+    .toEqual([
+      `Details of A morning ${tag}`,
+      `Details of C morning ${tag}`,
+      `Details of B afternoon ${tag}`,
+      `Details of Z all day ${tag}`,
+    ]);
+  await order("By time");
 });
 
 test("F-15 click or right-click shows the details; a long description is cut at 50 characters", async ({ page }) => {

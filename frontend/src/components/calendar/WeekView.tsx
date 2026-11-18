@@ -89,16 +89,18 @@ export function WeekGrid({
   onSchedule,
 }: WeekGridProps) {
   const { t, i18n } = useTranslation();
-  const { time_format: timeFormat } = useSettings();
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The all-day row in the order the user chose (D-111); the
+  // timed events are laid out by their hours.
+  const { time_format: timeFormat, day_order: by } = useSettings();
   const now = useMinuteOfDay(viewerTz);
   const scroller = useRef<HTMLDivElement>(null);
   const week = useMemo(() => {
-    const byDay = entriesOnDays(rows, days, viewerTz);
+    const byDay = entriesOnDays(rows, days, viewerTz, by);
     return days.map((day) => {
       const entries = byDay.get(day) ?? [];
       return { day, allDay: entries.filter((entry) => entry.allDay), timed: layoutDay(entries) };
     });
-  }, [days, rows, viewerTz]);
+  }, [days, rows, viewerTz, by]);
   const hasToday = days.includes(today);
 
   // A new week opens an hour before now (this week) or at 08:00; re-renders of the same week keep the scroll.

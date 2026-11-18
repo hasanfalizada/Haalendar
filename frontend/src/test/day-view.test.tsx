@@ -36,8 +36,8 @@ function event(fields: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
-const titles = (rows: Record<string, unknown>[], date: string, tz = "Europe/Berlin") =>
-  entriesOn(rows, date, tz).map((e) => e.title);
+const titles = (rows: Record<string, unknown>[], date: string, tz = "Europe/Berlin", by: "time" | "color" = "time") =>
+  entriesOn(rows, date, tz, by).map((e) => e.title);
 
 describe("entries of a day", () => {
   it("one-off, multi-day, series and deleted events", () => {
@@ -121,6 +121,15 @@ describe("entries of a day", () => {
       }),
     ];
     expect(titles(rows, "2026-10-22")).toEqual(["Birthday", "Flight", "Call", "Apple", "dentist"]);
+    // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. By colour (D-111), as the legacy calendar: the colour's
+    // name (black, blue, brown, red, yellow), then title; all-day and times do not count.
+    expect(titles(rows, "2026-10-22", "Europe/Berlin", "color")).toEqual([
+      "Apple",
+      "dentist",
+      "Flight",
+      "Call",
+      "Birthday",
+    ]);
   });
 
   it("leaves out a rule this version cannot expand", () => {
@@ -185,6 +194,32 @@ describe("day view page", () => {
     stubApi({ "GET /me": () => json(me()), "GET /me/settings": () => json(settings({ time_format: "12h" })) });
     renderApp("/calendar?date=2026-10-22");
     expect(await screen.findByText(/^2:00\sPM–2:30\sPM$/)).toBeInTheDocument(); // ICU may use a narrow space
+  });
+
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The page follows the user's setting day_order (D-111).
+  it("follows the order by colour", async () => {
+    const day = { tzid: VIEWER, start_date: "2026-10-22", end_date: "2026-10-22" };
+    await seed([
+      event({ ...day, title: "Zoo trip", color: "yellow" }),
+      event({ ...day, title: "Dentist", color: "red", all_day: false, start_time: "09:00", end_time: "09:30" }),
+      event({ ...day, title: "Call", color: "red", all_day: false, start_time: "08:00", end_time: "08:30" }),
+      event({ ...day, title: "Rent", color: "black" }),
+    ]);
+    stubApi({ "GET /me": () => json(me()), "GET /me/settings": () => json(settings({ day_order: "color" })) });
+    renderApp("/calendar?date=2026-10-22");
+    const list = await screen.findByRole("list", { name: "Events on Thursday, October 22, 2026" });
+    await waitFor(() => {
+      expect(
+        within(list)
+          .getAllByRole("listitem")
+          .map((row) => row.textContent),
+      ).toEqual([
+        expect.stringContaining("Rent"),
+        expect.stringContaining("Call"),
+        expect.stringContaining("Dentist"),
+        expect.stringContaining("Zoo trip"),
+      ]);
+    });
   });
 
   it("opens today by default, shows an empty day and updates when an event arrives", async () => {

@@ -1,6 +1,7 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. Agenda (FR-CAL-27, C-03, D-77): the days from the selected date on, as
 // many as the user's setting says (1 to 365, default 30), with the events of each day; days without events are left
 // out.
+import type { DayOrderBy } from "@/atoms/calendar/dayOrder";
 import { addDays } from "@/lib/datetime";
 import { type DayEntry, entriesOnDays } from "@/lib/dayView";
 
@@ -16,8 +17,9 @@ export function agendaOf(
   rows: readonly Row[],
   days: readonly string[],
   viewerTz: string,
+  by: DayOrderBy = "time",
 ): { day: string; entries: DayEntry[] }[] {
-  const byDay = entriesOnDays(rows, days, viewerTz);
+  const byDay = entriesOnDays(rows, days, viewerTz, by);
   return days.flatMap((day) => {
     const entries = byDay.get(day) ?? [];
     return entries.length > 0 ? [{ day, entries }] : [];

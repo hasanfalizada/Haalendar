@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSettings } from "@/api/settings";
 import { type DayEntry, dayLabel, entriesOnDays } from "@/lib/dayView";
 import type { DropTarget } from "@/lib/eventDrag";
 import { useEntryTime } from "@/lib/entryTime";
@@ -89,7 +90,9 @@ export function MonthGrid({
   const { t, i18n } = useTranslation();
   const time = useEntryTime();
   const { ref, lines } = useLinesPerCell(weeks.length);
-  const byDay = useMemo(() => entriesOnDays(rows, weeks.flat(), viewerTz), [weeks, rows, viewerTz]);
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
+  const { day_order: by } = useSettings();
+  const byDay = useMemo(() => entriesOnDays(rows, weeks.flat(), viewerTz, by), [weeks, rows, viewerTz, by]);
   const firstWeek = weeks[0] ?? [];
 
   return (
