@@ -16,10 +16,24 @@
 // +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The user's personal labels (FR-TODO-04, D-109): chips on the
 // cards, a Labels menu next to the priority filter — the notes with any of the checked labels (`?labels=`, on both
 // tabs, together with the priority) — and Manage labels at its end.
-import { useQuery } from "@tanstack/react-query";
+// +++===+++ 2026-11-18 15:40 +04 — Hasan Alizada — HAAL-103. Grid or list (FR-TODO-05, D-110): a Grid | List switch in
+// the header, the user setting `note_layout` (all devices). Manual order: the user's own notes move within their section
+// (Pinned, Others, the archive) by the handle or Alt+arrows (NoteCard), among the notes shown when a filter is on; each
+// move is one update of the note's position with a notification and one undo step, told to screen readers; a note moved
+// from the keyboard keeps the focus. Notes shared with the user keep their owner's order and do not move.
+import {
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Archive, ListChecks, ListPlus, Plus, Tags } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Archive, LayoutGrid, List, ListChecks, ListPlus, Plus, Tags } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Priority } from "@/atoms/items/priority";
@@ -42,34 +56,48 @@ import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
 import {
   type NoteAccess,
+  type NoteLayout,
+  type NoteSection,
   type NotesTab,
+  dropIndex,
   filterByLabels,
   formatLabelsParam,
   isNote,
   labelsByNote,
+  movedPosition,
   noteAccess,
   noteGroups,
   notePositions,
   personalLabels,
+  stepIndex,
 } from "@/lib/notes";
 import { swatchClasses } from "@/lib/palette";
 import { atLabel, nextReminder } from "@/lib/reminders";
 import { useNow } from "@/lib/useNow";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { useSettings } from "@/api/settings";
+import { dropZoneUnderPointer } from "@/lib/dropZone";
 import { formatPriorityParam } from "@/lib/priority";
+import { useShortcut } from "@/lib/shortcuts";
 import { TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { useSelection } from "@/lib/useSelection";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 
-import { NoteCard } from "./NoteCard";
+import { NoteCard, type NoteDragData } from "./NoteCard";
 import { NoteEditor } from "./NoteEditor";
 import { NoteLabelsDialog } from "./NoteLabelsDialog";
+import { setNoteLayout } from "./noteLayout";
+import { noteName, updateNote } from "./noteWrites";
 
 type Row = Record<string, unknown>;
 
 const TABS: readonly NotesTab[] = ["notes", "archive"];
+const LAYOUTS: readonly { value: NoteLayout; Icon: typeof LayoutGrid }[] = [
+  { value: "grid", Icon: LayoutGrid },
+  { value: "list", Icon: List },
+];
+const NO_PRIORITIES: Priority[] = [];
 
 interface TodoPageProps {
   tab: NotesTab;
@@ -133,7 +161,8 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
   const attachments = useAttachmentCounts(user);
   const now = useNow();
   const viewerTz = useDisplayTimeZone();
-  const { time_format: timeFormat } = useSettings();
+  const { time_format: timeFormat, note_layout: layout } = useSettings();
+  const client = useQueryClient();
   const reminderText = (noteId: string) => {
     const next = nextReminder(reminderRows, noteId, now);
     return next ? atLabel(next, viewerTz, timeFormat, now) : null;
@@ -143,6 +172,29 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
     [rows, labelFilter, byNote, labels, tab, priorities, user],
   );
   const positions = useMemo(() => notePositions(rows), [rows]);
+  // The sections without the filters: a move among the notes shown keeps the hidden ones in their places.
+  const whole = useMemo(() => noteGroups(rows, tab, NO_PRIORITIES, user), [rows, tab, user]);
+  const [dragging, setDragging] = useState<NoteDragData | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  // The note moved from the keyboard gets the focus back once it is in its new place.
+  const refocus = useRef<{ id: string; position: string } | null>(null);
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const want = refocus.current;
+    if (!want || rows.find((row) => row.id === want.id)?.position !== want.position) return;
+    refocus.current = null;
+    list.current?.querySelector<HTMLElement>(`[data-note="${want.id}"]`)?.focus();
+  }, [rows]);
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
+  );
+  useShortcut({
+    id: "todo:note-move",
+    keys: ["Alt+Up", "Alt+Down", "Alt+Left", "Alt+Right"],
+    group: "items",
+    label: "todo.card.moveKeys",
+  });
   const shown = useMemo(() => [...groups.pinned, ...groups.others, ...groups.shared], [groups]);
   const selection = useSelection(
     shown.map((row) => String(row.id)),
@@ -198,18 +250,58 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
       replace: true,
     });
   };
+  // `index` counts the notes shown in the section, without the moved one.
+  async function moveNote(row: Row, section: NoteSection, index: number | null, keepFocus = false) {
+    if (index === null || !user) return;
+    const shownSection = groups[section];
+    const position = movedPosition(whole[section], shownSection, row, index);
+    if (position === null) return;
+    if (keepFocus) refocus.current = { id: String(row.id), position };
+    const ok = await updateNote(user, row, "move", { position });
+    if (!ok) {
+      refocus.current = null;
+      return;
+    }
+    setAnnouncement(t("todo.card.moved", { title: noteName(row), position: index + 1, total: shownSection.length }));
+  }
+  function onDragEnd({ active, over }: DragEndEvent) {
+    setDragging(null);
+    const moving = active.data.current as NoteDragData | undefined;
+    const target = over?.data.current as NoteDragData | undefined;
+    if (!moving || !target || moving.section !== target.section) return;
+    void moveNote(moving.row, moving.section, dropIndex(groups[moving.section], moving.row, target.row));
+  }
+
   // "Others" gets its heading when another section is shown too.
   const headed = groups.pinned.length > 0 || groups.shared.length > 0;
   const nothing = groups.pinned.length === 0 && groups.others.length === 0 && groups.shared.length === 0;
   const filtered = priorities.length > 0 || chosenLabels.length > 0;
 
-  const grid = (notes: Row[]) => (
-    <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] items-start gap-3">
+  // A section's notes; `section` when the user's own notes in it may be moved (not the shared ones).
+  const grid = (notes: Row[], section: NoteSection | null) => (
+    <ul
+      className={cn(
+        layout === "list"
+          ? "flex max-w-3xl flex-col gap-2"
+          : "grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] items-start gap-3",
+      )}
+    >
       {notes.map((row) => (
         <li key={String(row.id)} className="contents">
           <NoteCard
             user={user}
             row={row}
+            layout={layout}
+            move={
+              section && notes.length > 1 && accessOf(row) === "owner"
+                ? {
+                    section,
+                    onStep: (by) => {
+                      void moveNote(row, section, stepIndex(notes, row, by), true);
+                    },
+                  }
+                : undefined
+            }
             attachments={attachments.get(String(row.id)) ?? 0}
             checklist={row.is_checklist === true ? checklistOf(itemRows, String(row.id)) : null}
             nextReminder={reminderText(String(row.id))}
@@ -302,6 +394,31 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <div
+          role="radiogroup"
+          aria-label={t("todo.layout.label")}
+          className="inline-flex overflow-hidden rounded-sm border border-line"
+        >
+          {LAYOUTS.map(({ value, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={value === layout}
+              aria-label={t(`todo.layout.${value}`)}
+              title={t(`todo.layout.${value}`)}
+              onClick={() => {
+                if (value !== layout && user) void setNoteLayout(client, user, value, layout);
+              }}
+              className={cn(
+                "grid h-11 w-11 place-items-center border-r border-line last:border-r-0 pointer-fine:md:h-8 pointer-fine:md:w-8",
+                value === layout ? "bg-primary-tint text-primary" : "hover:bg-surface",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+            </button>
+          ))}
+        </div>
         <div className="ml-auto flex items-center gap-2">
           <Button
             size={tablet ? "md" : "icon"}
@@ -340,7 +457,7 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
           className="px-3 md:px-4"
         />
       )}
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
+      <div ref={list} className="min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
         {nothing ? (
           <div className="grid h-full place-items-center p-6 text-center">
             <div className="flex max-w-sm flex-col items-center gap-2">
@@ -358,40 +475,75 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-5">
-            {groups.pinned.length > 0 ? (
-              <section aria-labelledby="notes-pinned" className="flex flex-col gap-2">
-                <h2 id="notes-pinned" className="text-xs font-semibold tracking-wide text-muted uppercase">
-                  {t("todo.groups.pinned")}
-                </h2>
-                {grid(groups.pinned)}
-              </section>
-            ) : null}
-            {groups.others.length > 0 ? (
-              <section
-                aria-labelledby={headed ? "notes-others" : undefined}
-                aria-label={headed ? undefined : t(`todo.tabs.${tab}`)}
-                className="flex flex-col gap-2"
-              >
-                {headed ? (
-                  <h2 id="notes-others" className="text-xs font-semibold tracking-wide text-muted uppercase">
-                    {t("todo.groups.others")}
+          <DndContext
+            sensors={sensors}
+            // The note under the pointer is the target, not the one the carried box overlaps most.
+            collisionDetection={dropZoneUnderPointer}
+            onDragStart={({ active }) => {
+              setDragging((active.data.current as NoteDragData | undefined) ?? null);
+            }}
+            onDragEnd={onDragEnd}
+            onDragCancel={() => {
+              setDragging(null);
+            }}
+            accessibility={{
+              announcements: {
+                onDragStart: ({ active }) =>
+                  t("kanban.drag.picked", { name: noteName((active.data.current as NoteDragData).row) }),
+                onDragOver: () => undefined,
+                // The drop is told by the move itself (where the note went).
+                onDragEnd: () => undefined,
+                onDragCancel: ({ active }) =>
+                  t("kanban.drag.cancelled", { name: noteName((active.data.current as NoteDragData).row) }),
+              },
+            }}
+          >
+            <div className="flex flex-col gap-5">
+              {groups.pinned.length > 0 ? (
+                <section aria-labelledby="notes-pinned" className="flex flex-col gap-2">
+                  <h2 id="notes-pinned" className="text-xs font-semibold tracking-wide text-muted uppercase">
+                    {t("todo.groups.pinned")}
                   </h2>
-                ) : null}
-                {grid(groups.others)}
-              </section>
-            ) : null}
-            {groups.shared.length > 0 ? (
-              <section aria-labelledby="notes-shared" className="flex flex-col gap-2">
-                <h2 id="notes-shared" className="text-xs font-semibold tracking-wide text-muted uppercase">
-                  {t("todo.groups.shared")}
-                </h2>
-                {grid(groups.shared)}
-              </section>
-            ) : null}
-          </div>
+                  {grid(groups.pinned, "pinned")}
+                </section>
+              ) : null}
+              {groups.others.length > 0 ? (
+                <section
+                  aria-labelledby={headed ? "notes-others" : undefined}
+                  aria-label={headed ? undefined : t(`todo.tabs.${tab}`)}
+                  className="flex flex-col gap-2"
+                >
+                  {headed ? (
+                    <h2 id="notes-others" className="text-xs font-semibold tracking-wide text-muted uppercase">
+                      {t("todo.groups.others")}
+                    </h2>
+                  ) : null}
+                  {grid(groups.others, "others")}
+                </section>
+              ) : null}
+              {groups.shared.length > 0 ? (
+                <section aria-labelledby="notes-shared" className="flex flex-col gap-2">
+                  <h2 id="notes-shared" className="text-xs font-semibold tracking-wide text-muted uppercase">
+                    {t("todo.groups.shared")}
+                  </h2>
+                  {grid(groups.shared, null)}
+                </section>
+              ) : null}
+            </div>
+            <DragOverlay dropAnimation={null}>
+              {dragging ? (
+                <div className="w-60 rounded-md border border-primary bg-bg p-3 text-[13px] font-semibold wrap-anywhere shadow-lg">
+                  {noteName(dragging.row)}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
+
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
 
       {!tablet ? (
         <Button
