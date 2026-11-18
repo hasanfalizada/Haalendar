@@ -9,6 +9,8 @@
 // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). Sharing (FR-ACC-10, D-30): the owner shares the note
 // ("Share…", the shared dialog of calendars and boards); a note shared with the user says by whom and with which right,
 // can be left, and with "can view" its content is read-only (the user's own reminders stay theirs to set).
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The user's personal labels (D-109): chosen like a card's
+// labels and written with Save, on any note the user reads — a view share too, since nobody else sees them.
 import { useQuery } from "@tanstack/react-query";
 import { ListChecks, ListX, LogOut, Users } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -30,7 +32,7 @@ import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { type ChecklistEntry, checklistChanges, checklistOf, entriesOf } from "@/lib/checklist";
 import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
-import { type NoteAccess, text } from "@/lib/notes";
+import { NOTE_LABELS_MAX, type NoteAccess, personalLabels, text } from "@/lib/notes";
 import { DEFAULT_COLOR } from "@/lib/palette";
 import { topPosition } from "@/lib/position";
 import { useDraft } from "@/lib/useDraft";
@@ -39,6 +41,8 @@ import { uuidv7 } from "@/lib/uuid";
 import { localKeys, localRows } from "@/sync";
 
 import { reminderChanges } from "@/components/calendar/reminderWrites";
+import { CardLabels } from "@/components/kanban/CardLabels";
+import { labelChanges } from "@/components/kanban/labelWrites";
 import { ItemLinks } from "@/components/links/ItemLinks";
 
 import { ChecklistEditor } from "./ChecklistEditor";
@@ -61,6 +65,8 @@ interface NoteForm {
   checklist: string;
   /** The user's reminders of the note as canonical text (specsText). */
   reminders: string;
+  /** The ids of the user's labels on the note as JSON (sorted). */
+  labels: string;
 }
 
 // A stable empty list while the items load.
@@ -102,6 +108,26 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
     queryFn: () => localRows(user, "item"),
     enabled: Boolean(user) && note !== null,
   });
+  const { data: labelRows = NO_ROWS } = useQuery({
+    queryKey: [...localKeys.table("label"), user],
+    queryFn: () => localRows(user, "label"),
+    enabled: Boolean(user),
+  });
+  const { data: itemLabelRows = NO_ROWS } = useQuery({
+    queryKey: [...localKeys.table("item_label"), user],
+    queryFn: () => localRows(user, "item_label"),
+    enabled: Boolean(user),
+  });
+  const labels = useMemo(() => personalLabels(labelRows, user), [labelRows, user]);
+  const ownLabels = useMemo(() => new Set(labels.map((label) => String(label.id))), [labels]);
+  const onNote = useMemo(
+    () =>
+      itemLabelRows
+        .filter((row) => row.item_id === id && !row.deleted_at && ownLabels.has(String(row.label_id)))
+        .map((row) => String(row.label_id))
+        .sort(),
+    [itemLabelRows, id, ownLabels],
+  );
   const storedVersion = noteRows.find((row) => row.id === id)?.version;
   const onServer = typeof storedVersion === "number" && storedVersion > 0;
   const existingReminders = useMemo(() => remindersOf(reminderRows, id), [reminderRows, id]);
@@ -127,8 +153,9 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
             : [],
       ),
       reminders: specsText(existingReminders.map((reminder) => reminder.spec)),
+      labels: JSON.stringify(onNote),
     }),
-    [note, settings.default_color, asList, stored, firstItem, existingReminders],
+    [note, settings.default_color, asList, stored, firstItem, existingReminders, onNote],
   );
   const [form, setForm] = useState<NoteForm>(baseline);
   // The items arrive from the local database after opening: an untouched form follows them.
@@ -189,15 +216,16 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
       values: { title: fields.title },
     };
     const reminders = reminderChanges(user, id, existingReminders, specsFromText(form.reminders), label);
+    const labelWrites = labelChanges(id, itemLabelRows, JSON.parse(form.labels) as string[], ownLabels);
     if (!note) {
       const data = { ...fields, is_checklist: hasList, pinned: false, position: topPosition(positions) };
-      return saveNote(user, id, null, data, items, reminders);
+      return saveNote(user, id, null, data, items, reminders, labelWrites);
     }
     const changed: Record<string, unknown> = Object.fromEntries(
       Object.entries(fields).filter(([name, value]) => text(note[name]) !== value),
     );
     if ((note.is_checklist === true) !== hasList) changed.is_checklist = hasList;
-    return saveNote(user, id, note, changed, items, reminders);
+    return saveNote(user, id, note, changed, items, reminders, labelWrites);
   }
 
   async function onSubmit(submitted: SubmitEvent<HTMLFormElement>) {
@@ -229,7 +257,8 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
           draft={draft.pending}
           onRestore={() => {
             const restored = draft.restore();
-            if (restored) setForm(restored);
+            // A draft kept before a field was added lacks it: the field keeps the note's value.
+            if (restored) setForm({ ...baseline, ...restored });
           }}
           onDiscard={() => void draft.discard()}
         />
@@ -293,6 +322,19 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
             onChange={(next) => {
               set({ reminders: specsText(next) });
             }}
+          />
+          <CardLabels
+            user={user}
+            boardId={null}
+            scope="notes"
+            max={NOTE_LABELS_MAX}
+            labels={labels}
+            itemLabels={itemLabelRows}
+            chosen={JSON.parse(form.labels) as string[]}
+            onChange={(next) => {
+              set({ labels: JSON.stringify([...next].sort()) });
+            }}
+            canWrite
           />
           <fieldset disabled={readOnly} className="contents">
             <ColorPicker

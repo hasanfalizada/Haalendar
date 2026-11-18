@@ -9,6 +9,7 @@
 // Shift+click and a long press on the card (`select`); a selected card is ringed.
 // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). A note shared with the user says so ("Shared · can
 // edit / can view"); pin, archive and delete are its owner's, the colour needs an edit share.
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The user's labels on the note as chips (D-109).
 import { Archive, ArchiveRestore, Bell, Paperclip, Palette, Pin, PinOff, Trash2, Users } from "lucide-react";
 import { type MouseEvent, type PointerEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +22,7 @@ import { PriorityBadge } from "@/components/ui/priority";
 import { CARD_ITEMS, type ChecklistGroups } from "@/lib/checklist";
 import { toPlainText } from "@/lib/markdown-text";
 import { type NoteAccess, text } from "@/lib/notes";
-import { DEFAULT_COLOR, itemColorClasses } from "@/lib/palette";
+import { DEFAULT_COLOR, itemColorClasses, swatchClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
 import { deleteNote, noteName, toggleItem, updateNote } from "./noteWrites";
@@ -41,6 +42,8 @@ interface NoteCardProps {
   onOpen: () => void;
   /** The user's right on the note (owner when absent). */
   access?: NoteAccess;
+  /** The user's labels on the note, by name. */
+  labels?: readonly Row[];
   /** Multi-select of the page: whether the card is selected, its toggle and the open button's click handlers. */
   select?: {
     selected: boolean;
@@ -62,6 +65,7 @@ export function NoteCard({
   nextReminder,
   onOpen,
   access = "owner",
+  labels = [],
   select,
 }: NoteCardProps) {
   const owner = access === "owner";
@@ -95,6 +99,23 @@ export function NoteCard({
         )}
         onClick={select ? select.rowProps.onClick : onOpen}
       >
+        {labels.length > 0 ? (
+          <span className="flex flex-wrap gap-1">
+            <span className="sr-only">{t("todo.labels.on")} </span>
+            {labels.map((label) => (
+              <span
+                key={String(label.id)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-sm px-1.5 text-[11px] font-medium",
+                  `ev-${String(label.color)} ev-tint`,
+                )}
+              >
+                <span className={cn("size-2 rounded-full", swatchClasses(label.color as Color))} aria-hidden />
+                {String(label.name)}
+              </span>
+            ))}
+          </span>
+        ) : null}
         {title ? <h3 className="text-[15px] font-semibold">{title}</h3> : null}
         {preview ? <p className="line-clamp-8 text-[13px] whitespace-pre-line text-fg/90">{preview}</p> : null}
         {attachments > 0 || text(row.priority) !== "medium" || nextReminder || !owner ? (

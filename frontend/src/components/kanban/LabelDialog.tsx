@@ -1,5 +1,6 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112 (stage 3). A new board label (row null) or the name and colour of one
 // (D-92): name 1-40, not the name of another label of the board (case ignored), colour of the palette.
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. Or of the user's personal labels of notes (D-109).
 import { type SubmitEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,14 +16,16 @@ const NAME_MAX = 40;
 
 interface LabelDialogProps {
   row: Row | null;
-  /** The board's other live labels (their names are taken). */
+  /** The board's other live labels, or the user's (their names are taken). */
   others: readonly Row[];
+  /** Whose labels: a board's (cards) or the user's (notes). */
+  scope?: "board" | "notes";
   /** Saves the trimmed name and the colour; true when written. */
   onSave: (name: string, color: Color) => Promise<boolean>;
   onClose: () => void;
 }
 
-export function LabelDialog({ row, others, onSave, onClose }: LabelDialogProps) {
+export function LabelDialog({ row, others, scope = "board", onSave, onClose }: LabelDialogProps) {
   const { t } = useTranslation();
   const id = useId();
   const [name, setName] = useState(row ? String(row.name) : "");
@@ -60,7 +63,11 @@ export function LabelDialog({ row, others, onSave, onClose }: LabelDialogProps) 
         closeLabel={t("common.close")}
       >
         <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-4">
-          <Field id={`${id}-name`} label={t("kanban.name")} error={taken ? t("kanban.labels.taken") : undefined}>
+          <Field
+            id={`${id}-name`}
+            label={t("kanban.name")}
+            error={taken ? t(scope === "notes" ? "todo.labels.taken" : "kanban.labels.taken") : undefined}
+          >
             {(aria) => (
               <Input
                 {...aria}

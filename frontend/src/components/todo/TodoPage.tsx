@@ -13,9 +13,12 @@
 // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). Notes shared with the user (FR-ACC-10) in their own
 // section "Shared with me"; the bar offers only what every selected note allows (delete: own notes only; colour and
 // priority: own notes or an edit share).
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The user's personal labels (FR-TODO-04, D-109): chips on the
+// cards, a Labels menu next to the priority filter — the notes with any of the checked labels (`?labels=`, on both
+// tabs, together with the priority) — and Manage labels at its end.
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Archive, ListChecks, ListPlus, Plus } from "lucide-react";
+import { Archive, ListChecks, ListPlus, Plus, Tags } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -26,10 +29,30 @@ import { runItemBulk } from "@/components/shared/itemBulk";
 import { Button } from "@/components/ui/button";
 import { type BarAction, BulkBar } from "@/components/ui/bulk-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PriorityFilter } from "@/components/ui/priority";
 import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
-import { type NoteAccess, type NotesTab, isNote, noteAccess, noteGroups, notePositions } from "@/lib/notes";
+import {
+  type NoteAccess,
+  type NotesTab,
+  filterByLabels,
+  formatLabelsParam,
+  isNote,
+  labelsByNote,
+  noteAccess,
+  noteGroups,
+  notePositions,
+  personalLabels,
+} from "@/lib/notes";
+import { swatchClasses } from "@/lib/palette";
 import { atLabel, nextReminder } from "@/lib/reminders";
 import { useNow } from "@/lib/useNow";
 import { useDisplayTimeZone } from "@/lib/datetime";
@@ -42,6 +65,7 @@ import { localKeys, localRows } from "@/sync";
 
 import { NoteCard } from "./NoteCard";
 import { NoteEditor } from "./NoteEditor";
+import { NoteLabelsDialog } from "./NoteLabelsDialog";
 
 type Row = Record<string, unknown>;
 
@@ -50,11 +74,15 @@ const TABS: readonly NotesTab[] = ["notes", "archive"];
 interface TodoPageProps {
   tab: NotesTab;
   priorities: Priority[];
+  /** The ids of the labels to filter by (any of them). */
+  labelFilter?: string[];
   /** A note to open (from its reminder). */
   focusNote?: string;
 }
 
-export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
+const NO_LABELS: string[] = [];
+
+export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }: TodoPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tablet = useMediaQuery(TABLET_UP);
@@ -80,6 +108,27 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
     queryFn: () => (user ? localRows(user, "share") : Promise.resolve([])),
     enabled: Boolean(user),
   });
+  const { data: labelRows = [] } = useQuery({
+    queryKey: [...localKeys.table("label"), user],
+    queryFn: () => (user ? localRows(user, "label") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
+  const { data: itemLabelRows = [] } = useQuery({
+    queryKey: [...localKeys.table("item_label"), user],
+    queryFn: () => (user ? localRows(user, "item_label") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
+  const labels = useMemo(() => personalLabels(labelRows, user), [labelRows, user]);
+  const byNote = useMemo(() => labelsByNote(itemLabelRows, labels), [itemLabelRows, labels]);
+  // The chosen labels that still exist: a deleted one no longer filters (nor counts).
+  const chosenLabels = labels
+    .filter((label) => labelFilter.includes(String(label.id)))
+    .map((label) => String(label.id));
+  const labelsOf = (noteId: string) => {
+    const on = byNote.get(noteId) ?? [];
+    return labels.filter((label) => on.includes(String(label.id)));
+  };
+  const [managing, setManaging] = useState(false);
   const accessOf = (row: Row): NoteAccess => noteAccess(row, user, shareRows);
   const attachments = useAttachmentCounts(user);
   const now = useNow();
@@ -89,7 +138,10 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
     const next = nextReminder(reminderRows, noteId, now);
     return next ? atLabel(next, viewerTz, timeFormat, now) : null;
   };
-  const groups = useMemo(() => noteGroups(rows, tab, priorities, user), [rows, tab, priorities, user]);
+  const groups = useMemo(
+    () => noteGroups(filterByLabels(rows, labelFilter, byNote, labels), tab, priorities, user),
+    [rows, labelFilter, byNote, labels, tab, priorities, user],
+  );
   const positions = useMemo(() => notePositions(rows), [rows]);
   const shown = useMemo(() => [...groups.pinned, ...groups.others, ...groups.shared], [groups]);
   const selection = useSelection(
@@ -99,7 +151,7 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
   const { clear: clearSelection } = selection;
   useEffect(() => {
     clearSelection();
-  }, [tab, priorities, clearSelection]);
+  }, [tab, priorities, labelFilter, clearSelection]);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const selectedRows = shown.filter((row) => selection.isSelected(String(row.id)));
@@ -133,13 +185,14 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
     }
   }
 
-  const go = (next: { tab?: NotesTab; priorities?: Priority[] }) => {
+  const go = (next: { tab?: NotesTab; priorities?: Priority[]; labels?: string[] }) => {
     const nextTab = next.tab ?? tab;
     void navigate({
       to: "/todo",
       search: {
         tab: nextTab === "archive" ? "archive" : undefined,
         priority: formatPriorityParam(next.priorities ?? priorities),
+        labels: formatLabelsParam(next.labels ?? chosenLabels),
         note: undefined,
       },
       replace: true,
@@ -148,7 +201,7 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
   // "Others" gets its heading when another section is shown too.
   const headed = groups.pinned.length > 0 || groups.shared.length > 0;
   const nothing = groups.pinned.length === 0 && groups.others.length === 0 && groups.shared.length === 0;
-  const filtered = priorities.length > 0;
+  const filtered = priorities.length > 0 || chosenLabels.length > 0;
 
   const grid = (notes: Row[]) => (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] items-start gap-3">
@@ -161,6 +214,7 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
             checklist={row.is_checklist === true ? checklistOf(itemRows, String(row.id)) : null}
             nextReminder={reminderText(String(row.id))}
             access={accessOf(row)}
+            labels={labelsOf(String(row.id))}
             onOpen={() => {
               setEditing(row);
             }}
@@ -212,6 +266,42 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
             go({ priorities: next });
           }}
         />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
+              <Tags aria-hidden />
+              {chosenLabels.length > 0
+                ? t("kanban.filters.labelsCount", { count: chosenLabels.length })
+                : t("kanban.filters.labels")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {labels.length === 0 ? <DropdownMenuItem disabled>{t("todo.labels.none")}</DropdownMenuItem> : null}
+            {labels.map((label) => {
+              const id = String(label.id);
+              return (
+                <DropdownMenuCheckboxItem
+                  key={id}
+                  checked={chosenLabels.includes(id)}
+                  onCheckedChange={(checked) => {
+                    go({ labels: checked ? [...chosenLabels, id] : chosenLabels.filter((other) => other !== id) });
+                  }}
+                >
+                  <span className={cn("size-2.5 rounded-full", swatchClasses(label.color as Color))} aria-hidden />
+                  {String(label.name)}
+                </DropdownMenuCheckboxItem>
+              );
+            })}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => {
+                setManaging(true);
+              }}
+            >
+              {t("todo.labels.manage")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="ml-auto flex items-center gap-2">
           <Button
             size={tablet ? "md" : "icon"}
@@ -336,6 +426,16 @@ export function TodoPage({ tab, priorities, focusNote }: TodoPageProps) {
           setConfirmDelete(false);
         }}
       />
+      {managing && user ? (
+        <NoteLabelsDialog
+          user={user}
+          labels={labels}
+          itemLabels={itemLabelRows}
+          onClose={() => {
+            setManaging(false);
+          }}
+        />
+      ) : null}
       {editing && user ? (
         <NoteEditor
           user={user}
