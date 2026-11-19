@@ -190,7 +190,8 @@ export function MonthGrid({
                           entry={entry}
                           anchor={anchor}
                           describedBy={id}
-                          drag={{ day, accepts: "day", disabled: !canDrag(entry) }}
+                          place={day}
+                          drag={{ accepts: "day", disabled: !canDrag(entry) }}
                           className={cn(
                             "flex h-5 w-full items-center gap-1 rounded-sm pr-1 pl-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary",
                             itemColorClasses(entry.color),
