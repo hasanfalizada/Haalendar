@@ -82,7 +82,7 @@ export function TimeBlockPanel({ user, draggable, hint, showTitle = true, onSche
       />
       <p className="text-xs text-muted">{hint}</p>
       {found.length === 0 ? <p className="text-xs text-muted">{t("calendar.timeBlock.none")}</p> : null}
-      <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+      <ul className="relative flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {found.map((entry) => (
           <PanelItem
             key={String(entry.row.id)}

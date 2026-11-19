@@ -89,7 +89,7 @@ export function BoardsPage() {
         {tablet ? <div className="ml-auto">{newButton}</div> : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
+      <div className="relative min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
         {!boards.loaded ? null : nothing ? (
           <div className="grid h-full place-items-center p-6 text-center">
             <div className="flex max-w-sm flex-col items-center gap-2">

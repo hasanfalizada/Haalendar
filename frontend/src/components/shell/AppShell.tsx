@@ -222,11 +222,21 @@ export function AppShell() {
         <span className="font-semibold">{t("app.name")}</span>
       </header>
 
-      <main id="main" data-region="content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
+      {/* +++===+++ 2026-11-19 09:25 +04 — Hasan Alizada — HAAL-188. One scroll bar: the banners and the page form a
+          column, so a page of full height takes what the banners leave; main and every scrolling box are positioned,
+          so the hidden labels (sr-only, absolute) stay inside them instead of making the window scroll empty space. */}
+      <main
+        id="main"
+        data-region="content"
+        tabIndex={-1}
+        className="relative flex min-w-0 flex-1 flex-col overflow-auto outline-none"
+      >
         <DemoBanner onReset={goToSignIn} />
         <OfflineBanner />
         <TimeZoneMismatch />
-        <Outlet />
+        <div className="min-h-0 flex-1">
+          <Outlet />
+        </div>
       </main>
       {userMenu.dialogs}
       <NotificationsDialog open={notificationsOpen} onOpenChange={setNotificationsOpen} />

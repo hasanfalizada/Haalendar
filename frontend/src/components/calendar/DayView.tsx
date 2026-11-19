@@ -917,7 +917,7 @@ export function DayView({
         <aside
           id="calendar-sidebar"
           aria-label={t("calendar.nav.sidebar")}
-          className="w-[248px] shrink-0 overflow-y-auto border-r border-line bg-surface p-3"
+          className="relative w-[248px] shrink-0 overflow-y-auto border-r border-line bg-surface p-3"
         >
           {miniMonth()}
         </aside>
@@ -1034,7 +1034,7 @@ export function DayView({
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div ref={swipeArea} className="flex min-h-0 flex-1 flex-col touch-pan-y touch-pinch-zoom">
             {agenda ? (
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="relative min-h-0 flex-1 overflow-y-auto">
                 <AgendaList
                   key={`${date}:${String(agendaLength)}`}
                   user={user}
@@ -1121,7 +1121,7 @@ export function DayView({
                   <DropArea
                     id={`day:${date}`}
                     data={{ kind: "day", day: date }}
-                    className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+                    className="relative min-h-0 min-w-0 flex-1 overflow-y-auto"
                   >
                     {dayList}
                   </DropArea>
@@ -1129,7 +1129,7 @@ export function DayView({
                 </div>
               </CalendarDnd>
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto">{dayList}</div>
+              <div className="relative min-h-0 flex-1 overflow-y-auto">{dayList}</div>
             )}
           </div>
         </div>

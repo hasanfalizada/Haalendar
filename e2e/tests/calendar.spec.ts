@@ -162,3 +162,70 @@ test.describe("on a phone", () => {
     expectSteady(await navPlaces(page));
   });
 });
+
+// +++===+++ 2026-11-19 09:25 +04 — Hasan Alizada — HAAL-188. One scroll bar: a long day list or agenda scrolls in its
+// own box, the window never scrolls past the end of the events, and a notice above the calendar does not push it
+// below the window.
+async function scrolling(page: Page) {
+  await page.waitForTimeout(300); // the layout settles after the view has drawn
+  return page.evaluate(() => {
+    // The pinned month beside the calendar is a column of its own and may scroll on a short window.
+    const boxes = [...document.querySelectorAll("main *:not(#calendar-sidebar), main")]
+      .filter((el) => /(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight + 1)
+      .map((el) => `${el.tagName.toLowerCase()}.${String(el.className)}`);
+    window.scrollTo(0, 100_000);
+    const window_ = window.scrollY;
+    window.scrollTo(0, 0);
+    return { boxes, window: window_ };
+  });
+}
+
+test("a long day list and the agenda scroll in one box, the window does not scroll", async ({ page }) => {
+  const day = "2027-05-19";
+  const tag = unique("Busy");
+  for (let n = 0; n < 16; n++) {
+    await createEvent(page, {
+      date: day,
+      title: `Slot ${String(n)} ${tag}`,
+      start: `${String(8 + n).padStart(2, "0")}:00`,
+      end: `${String(8 + n).padStart(2, "0")}:30`,
+    });
+  }
+  for (const viewport of [
+    { width: 1280, height: 360 },
+    { width: 390, height: 560 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const view of ["day", "agenda"]) {
+      await page.goto(`/calendar?date=${day}&view=${view}`);
+      await expect(page.getByRole("button", { name: `Details of Slot 15 ${tag}` }).first()).toBeAttached();
+      const { boxes, window } = await scrolling(page);
+      const where = `${view} at ${String(viewport.width)} px`;
+      expect(window, `${where}: the window scrolls`).toBe(0);
+      expect(boxes, `${where}: the boxes that scroll`).toHaveLength(1);
+    }
+  }
+});
+
+test.describe("with a notice above the calendar", () => {
+  // The device is in another time zone than the profile (Berlin), so the notice about it shows.
+  test.use({ timezoneId: "UTC" });
+
+  test("the calendar takes what the notice leaves", async ({ page }) => {
+    for (const viewport of [
+      { width: 1280, height: 800 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      for (const view of ["day", "month"]) {
+        await page.goto(`/calendar?date=2027-05-19&view=${view}`);
+        await expect(page.getByRole("button", { name: "Use UTC" })).toBeVisible();
+        const { boxes, window } = await scrolling(page);
+        const where = `${view} at ${String(viewport.width)} px`;
+        expect(window, `${where}: the window scrolls`).toBe(0);
+        expect(boxes.length, `${where}: the boxes that scroll`).toBeLessThanOrEqual(1);
+        expect(boxes.join(), `${where}: the content area scrolls`).not.toMatch(/^main|,main/);
+      }
+    }
+  });
+});

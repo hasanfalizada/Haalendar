@@ -109,7 +109,7 @@ export function MonthGrid({
         </div>
         <div
           ref={ref}
-          className="grid min-h-0 flex-1 grid-cols-7 overflow-y-auto"
+          className="relative grid min-h-0 flex-1 grid-cols-7 overflow-y-auto"
           style={{ gridTemplateRows: `repeat(${String(weeks.length)}, minmax(5.5rem, 1fr))` }}
         >
           {weeks.flat().map((day) => {
