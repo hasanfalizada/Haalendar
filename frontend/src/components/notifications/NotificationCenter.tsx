@@ -144,7 +144,7 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
           {t("notifications.markAll")}
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="relative min-h-0 flex-1 overflow-y-auto">
         {center.isError ? (
           <p className="p-4 text-[13px] text-muted">{t("notifications.unavailable")}</p>
         ) : center.items.length === 0 ? (

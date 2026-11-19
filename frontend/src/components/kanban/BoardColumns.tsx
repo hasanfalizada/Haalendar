@@ -695,7 +695,7 @@ function Column({ row, target, cards, index, count, shownCount, canWrite, first,
           </DropdownMenu>
         ) : null}
       </div>
-      <div className="flex min-h-16 flex-col gap-2 overflow-y-auto px-2 pb-2">
+      <div className="relative flex min-h-16 flex-col gap-2 overflow-y-auto px-2 pb-2">
         {count === 0 && !canWrite ? <p className="px-1 text-xs text-muted">{t("kanban.columns.noCards")}</p> : null}
         {cards}
       </div>

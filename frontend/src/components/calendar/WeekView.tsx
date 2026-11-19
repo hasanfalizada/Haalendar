@@ -172,7 +172,7 @@ export function WeekGrid({
               </DropArea>
             ))}
           </div>
-          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto">
             <div className={columns} style={{ height: 24 * HOUR_PX }}>
               <div className="relative" aria-hidden>
                 {Array.from({ length: 23 }, (_, i) => i + 1).map((hour) => (
