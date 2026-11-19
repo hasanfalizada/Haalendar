@@ -149,7 +149,7 @@ describe("month view", { timeout: 15_000 }, () => {
     await screen.findByRole("heading", { level: 1, name: "Calendar: October 2026" });
     expect(router.state.location.search).toMatchObject({ date: "2026-10-30" });
     await user.click(screen.getByRole("radio", { name: "Week" }));
-    await screen.findByRole("heading", { level: 1, name: /October 26.*November 1, 2026/ });
+    await screen.findByRole("heading", { level: 1, name: /Oct 26.*Nov 1, 2026/ });
   });
 
   it("phones: a day is one button with its event count that opens the day", async () => {

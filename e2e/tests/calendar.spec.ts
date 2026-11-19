@@ -125,3 +125,40 @@ test.describe("on a touch screen", () => {
     }
   });
 });
+
+// +++===+++ 2026-11-18 22:47 +04 — Hasan Alizada — HAAL-187. ‹ Today › stay in place from day to day, week to week and
+// month to month, however long the date beside them is; on a phone too.
+async function navPlaces(page: Page) {
+  const places: string[] = [];
+  for (const view of ["day", "week", "month", "agenda"]) {
+    for (const date of ["2026-05-01", "2026-09-30", "2026-12-24"]) {
+      await page.goto(`/calendar?date=${date}&view=${view}`);
+      const header = page.getByRole("main");
+      await expect(header.getByRole("heading", { level: 1 })).toBeVisible();
+      const boxes = await Promise.all(
+        [/^Previous (day|week|month|days)$/, /^Today$/, /^Next (day|week|month|days)$/].map((name) =>
+          header.getByRole("button", { name }).last().boundingBox(),
+        ),
+      );
+      places.push(`${view}: ${boxes.map((box) => `${String(box?.x)},${String(box?.y)}`).join(" ")}`);
+    }
+  }
+  return places;
+}
+
+function expectSteady(places: string[]) {
+  const positions = places.map((place) => place.slice(place.indexOf(":") + 1));
+  expect(new Set(positions), places.join("\n")).toHaveProperty("size", 1);
+}
+
+test("previous, Today and next stay in place", async ({ page }) => {
+  expectSteady(await navPlaces(page));
+});
+
+test.describe("on a phone", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+
+  test("previous, Today and next stay in place", async ({ page }) => {
+    expectSteady(await navPlaces(page));
+  });
+});
