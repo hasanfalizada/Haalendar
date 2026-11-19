@@ -19,6 +19,7 @@ import { useSettings } from "@/api/settings";
 import { type DayEntry, clockText, dayLabel, entriesOnDays } from "@/lib/dayView";
 import { itemColorClasses } from "@/lib/palette";
 import { useEntryTime } from "@/lib/entryTime";
+import type { OpenDetails } from "@/lib/openDetails";
 import { cn } from "@/lib/utils";
 import type { DropTarget } from "@/lib/eventDrag";
 import { DAY_MINUTES, MIN_MINUTES, layoutDay } from "@/lib/weekView";
@@ -58,13 +59,15 @@ interface WeekGridProps {
   rows: readonly Row[];
   viewerTz: string;
   today: string;
-  /** The entry whose details are open (its key). */
-  openKey: string | null;
-  onOpen: (entry: DayEntry) => void;
-  onClose: () => void;
+  /** The open card. */
+  open: OpenDetails | null;
+  onOpen: (entry: DayEntry, place: string) => void;
+  onClose: (entry: DayEntry, place: string) => void;
   /** Details next to the event (popover); false on phones, where the page shows them in a sheet. */
   inPopover: boolean;
   details: (entry: DayEntry) => ReactNode;
+  /** The calendar's area the card stays inside. */
+  boundary: Element | null;
   /** May this event be dragged (its calendar is writable)? */
   canDrag: (entry: DayEntry) => boolean;
   onDrop: (data: DragData, target: DropTarget) => void;
@@ -78,11 +81,12 @@ export function WeekGrid({
   rows,
   viewerTz,
   today,
-  openKey,
+  open,
   onOpen,
   onClose,
   inPopover,
   details,
+  boundary,
   canDrag,
   onDrop,
   aside,
@@ -112,7 +116,7 @@ export function WeekGrid({
   }, [firstDay]);
 
   const { range: time } = useEntryTime();
-  const anchor: DetailsAnchor = { openKey, onOpen, onClose, inPopover, details };
+  const anchor: DetailsAnchor = { open, onOpen, onClose, inPopover, details, boundary };
 
   const columns = "grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] md:grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
   return (
@@ -155,7 +159,8 @@ export function WeekGrid({
                         entry={entry}
                         anchor={anchor}
                         describedBy={id}
-                        drag={{ day, accepts: "allday", disabled: !canDrag(entry) }}
+                        place={day}
+                        drag={{ accepts: "allday", disabled: !canDrag(entry) }}
                         className={cn(
                           "w-full truncate rounded-sm py-0.5 pr-1 pl-2 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary",
                           itemColorClasses(entry.color),
@@ -216,7 +221,8 @@ export function WeekGrid({
                           entry={block.entry}
                           anchor={anchor}
                           describedBy={id}
-                          drag={{ day, accepts: "time", disabled: block.entry.continues || !canDrag(block.entry) }}
+                          place={day}
+                          drag={{ accepts: "time", disabled: block.entry.continues || !canDrag(block.entry) }}
                           className={cn(
                             "flex size-full flex-col overflow-hidden rounded-sm py-0.5 pr-1 pl-2 text-left leading-tight outline-none focus-visible:ring-2 focus-visible:ring-primary",
                             itemColorClasses(block.entry.color),

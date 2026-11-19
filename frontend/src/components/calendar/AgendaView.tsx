@@ -114,6 +114,10 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
                     <EventButton
                       entry={entry}
                       anchor={anchor}
+                      place={day}
+                      // +++===+++ 2026-11-19 11:00 +04 — Hasan Alizada — HAAL-189. Opened from the keyboard, below the row, as in the
+                      // day list: beside a row as wide as the list there is no room (a click opens it at the cursor).
+                      side="bottom"
                       describedBy={flags.length > 0 ? flagsId : undefined}
                       className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
                     >

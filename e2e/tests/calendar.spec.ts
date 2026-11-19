@@ -229,3 +229,60 @@ test.describe("with a notice above the calendar", () => {
     }
   });
 });
+
+// +++===+++ 2026-11-19 10:40 +04 — Hasan Alizada — HAAL-189. With a card open, a click on another event opens that
+// event's card at once, in every view, beside the cursor and inside the window; an event over several days opens
+// where it is clicked; Esc still closes the card and gives the focus back to the event.
+test("with a card open, one click on another event opens its card", async ({ page }) => {
+  const tag = unique("Click");
+  const [first, second] = [`Breakfast ${tag}`, `Meeting ${tag}`];
+  await createEvent(page, { date: "2027-06-09", title: first, start: "08:00", end: "09:00" });
+  await createEvent(page, { title: second, start: "10:00", end: "11:00" });
+  const card = page.getByRole("dialog", { name: "Event details" });
+  for (const view of ["day", "week", "month", "agenda"]) {
+    await page.goto(`/calendar?date=2027-06-09&view=${view}`);
+    // The later event first: below a row the card may cover the rows after it, never the ones before.
+    const a = page.getByRole("button", { name: `Details of ${second}` });
+    const b = page.getByRole("button", { name: `Details of ${first}` });
+    await a.click();
+    await expect(card, view).toBeVisible();
+    await expect(a, view).toHaveAttribute("aria-expanded", "true");
+    // The card opens beside the point clicked, inside the window.
+    const row = await b.boundingBox();
+    const point = { x: (row?.x ?? 0) + 12, y: (row?.y ?? 0) + (row?.height ?? 0) / 2 };
+    await page.mouse.click(point.x, point.y);
+    await expect(card, `${view}: the second event's card`).toBeVisible();
+    const box = await card.boundingBox();
+    const width = page.viewportSize()?.width ?? 0;
+    expect(box?.x ?? -1, `${view}: the card starts inside the window`).toBeGreaterThanOrEqual(0);
+    expect((box?.x ?? 0) + (box?.width ?? 0), `${view}: the card ends inside the window`).toBeLessThanOrEqual(width);
+    const gap = Math.min(Math.abs((box?.x ?? 0) - point.x), Math.abs((box?.x ?? 0) + (box?.width ?? 0) - point.x));
+    expect(gap, `${view}: the card is beside the cursor`).toBeLessThanOrEqual(8);
+    await expect(b, view).toHaveAttribute("aria-expanded", "true");
+    await expect(a, view).toHaveAttribute("aria-expanded", "false");
+    await page.keyboard.press("Escape");
+    await expect(card, view).toBeHidden();
+    await expect(b, `${view}: the focus is back on the event`).toBeFocused();
+    // From the keyboard there is no cursor: the card opens at the event, inside the window too.
+    await page.keyboard.press("Enter");
+    await expect(card, `${view}: opened with Enter`).toBeVisible();
+    const keyed = await card.boundingBox();
+    expect(keyed?.x ?? -1, `${view}: with Enter, inside the window`).toBeGreaterThanOrEqual(0);
+    expect((keyed?.x ?? 0) + (keyed?.width ?? 0), `${view}: with Enter, inside the window`).toBeLessThanOrEqual(width);
+    await page.keyboard.press("Escape");
+  }
+});
+
+test("an event over several days opens its card where it is clicked", async ({ page }) => {
+  const title = unique("Trip");
+  await createEvent(page, { date: "2027-06-09", to: "2027-06-11", title });
+  for (const view of ["week", "agenda"]) {
+    await page.goto(`/calendar?date=2027-06-09&view=${view}`);
+    const shown = page.getByRole("button", { name: `Details of ${title}` });
+    await expect(shown, `${view}: shown on each day`).toHaveCount(3);
+    await shown.nth(1).click();
+    await expect(page.getByRole("dialog", { name: "Event details" }), view).toBeVisible();
+    await expect(shown.nth(1), view).toHaveAttribute("aria-expanded", "true");
+    await expect(shown.nth(0), view).toHaveAttribute("aria-expanded", "false");
+  }
+});

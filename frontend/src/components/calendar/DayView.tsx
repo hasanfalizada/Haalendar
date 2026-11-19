@@ -62,7 +62,6 @@ import { runItemBulk } from "@/components/shared/itemBulk";
 import { type BarAction, BulkBar } from "@/components/ui/bulk-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
@@ -85,12 +84,14 @@ import { monthTitle, monthWeeks } from "@/lib/monthView";
 import { weekDays, rangeTitle } from "@/lib/weekView";
 import type { EventForm } from "@/lib/eventForm";
 import { blockForm, suggestedStart } from "@/lib/timeBlock";
+import { isOpenAt, type OpenDetails } from "@/lib/openDetails";
 import { localKeys, localRows, mutate } from "@/sync";
 
 import { DayNumberLabel, IsoWeekLabel, LiveClock, WeekAbBadge } from "./HeaderInfo";
 import { AgendaList } from "./AgendaView";
 import { MonthGrid } from "./MonthView";
 import { WeekGrid } from "./WeekView";
+import { DetailsPopover } from "./DetailsPopover";
 import { DropArea } from "./DropArea";
 import { CalendarDnd } from "./EventDrag";
 import { TimeBlockPanel } from "./TimeBlockPanel";
@@ -190,13 +191,15 @@ interface DayListProps {
   user: string | undefined;
   date: string;
   entries: DayEntry[];
-  /** The entry whose details are open (its key). */
-  openKey: string | null;
-  onOpen: (entry: DayEntry) => void;
-  onClose: () => void;
+  /** The open card. */
+  open: OpenDetails | null;
+  onOpen: (entry: DayEntry, place: string) => void;
+  onClose: (entry: DayEntry, place: string) => void;
   /** Details next to the row (popover); false on phones, where the page shows them in a sheet. */
   inPopover: boolean;
   details: (entry: DayEntry) => ReactNode;
+  /** The calendar's area the card stays inside. */
+  boundary: Element | null;
   /** Delete key on a row. */
   onDelete: (entry: DayEntry) => void;
   selection: Selection;
@@ -215,11 +218,12 @@ function DayList({
   user,
   date,
   entries,
-  openKey,
+  open,
   onOpen,
   onClose,
   inPopover,
   details,
+  boundary,
   onDelete,
   selection,
   canChangeSelected,
@@ -241,7 +245,7 @@ function DayList({
       deleteLabel: "shortcuts.listDeleteFocused",
       onOpen: (key) => {
         const entry = byKey(key);
-        if (entry) onOpen(entry);
+        if (entry) onOpen(entry, date);
       },
       onDelete: (keys) => {
         if (keys.length > 1 || selection.count > 0) {
@@ -294,7 +298,7 @@ function DayList({
             inPopover
               ? undefined
               : () => {
-                  onOpen(entry);
+                  onOpen(entry, date);
                 },
           );
           const row = (
@@ -309,10 +313,10 @@ function DayList({
               aria-label={t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") })}
               aria-describedby={flags.length > 0 ? flagsId : undefined}
               aria-haspopup="dialog"
-              aria-expanded={openKey === entry.key}
+              aria-expanded={isOpenAt(open, entry.key, date)}
               onContextMenu={(event) => {
                 event.preventDefault();
-                if (pointer.current !== "touch") onOpen(entry);
+                if (pointer.current !== "touch") onOpen(entry, date);
               }}
               className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-sm py-2 pr-3 pl-1 text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
             >
@@ -340,27 +344,19 @@ function DayList({
                 }}
               />
               {inPopover ? (
-                <Popover
-                  open={openKey === entry.key}
-                  onOpenChange={(open) => {
-                    if (open) onOpen(entry);
-                    else onClose();
+                <DetailsPopover
+                  open={isOpenAt(open, entry.key, date)}
+                  onOpenChange={(next) => {
+                    if (next) onOpen(entry, date);
+                    else onClose(entry, date);
                   }}
+                  anotherOpen={open !== null}
+                  side="bottom"
+                  boundary={boundary}
+                  content={() => details(entry)}
                 >
-                  <PopoverTrigger asChild>{row}</PopoverTrigger>
-                  <PopoverContent
-                    side="bottom"
-                    align="start"
-                    sideOffset={6}
-                    collisionPadding={8}
-                    aria-label={t("calendar.details.title")}
-                    // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F5). Kept inside the window: no
-                    // taller than the room on its side of the row (at 1280×720 Edit and Delete ended below the screen).
-                    className="max-h-[min(70vh,var(--radix-popover-content-available-height))] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
-                  >
-                    {openKey === entry.key ? details(entry) : null}
-                  </PopoverContent>
-                </Popover>
+                  {row}
+                </DetailsPopover>
               ) : (
                 row
               )}
@@ -464,7 +460,21 @@ export function DayView({
   // On phones the panel is a sheet over the page: opened by the button each time, never remembered.
   const [sheetOpen, setSheetOpen] = useState(false);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
-  const [details, setDetails] = useState<DayEntry | null>(null);
+  // +++===+++ 2026-11-19 10:05 +04 — Hasan Alizada — HAAL-189. With the day it was opened on (an event over several days
+  // is shown on each); a card closes only itself, so another event's card opens with the same click.
+  // The calendar's area below the header: a details card stays inside it (HAAL-189).
+  const [area, setArea] = useState<HTMLDivElement | null>(null);
+  const [opened, setOpened] = useState<{ entry: DayEntry; place: string | null } | null>(null);
+  const details = opened?.entry ?? null;
+  const openAt: OpenDetails | null = opened ? { key: opened.entry.key, place: opened.place } : null;
+  const setDetails = (entry: DayEntry | null, place: string | null = null) => {
+    setOpened(entry ? { entry, place } : null);
+  };
+  const closeDetails = (entry: DayEntry, place: string) => {
+    setOpened((current) =>
+      current && isOpenAt({ key: current.entry.key, place: current.place }, entry.key, place) ? null : current,
+    );
+  };
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. The event (and its shown date) being duplicated.
   const [duplicating, setDuplicating] = useState<{ row: Record<string, unknown>; occurrence: string } | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
@@ -873,12 +883,11 @@ export function DayView({
       user={user}
       date={date}
       entries={entries}
-      openKey={details?.key ?? null}
+      open={openAt}
+      boundary={area}
       inPopover={tablet}
       onOpen={setDetails}
-      onClose={() => {
-        setDetails(null);
-      }}
+      onClose={closeDetails}
       details={detailsOf}
       onDelete={(entry) => {
         const row = rows.find((candidate) => candidate.id === entry.id);
@@ -1031,7 +1040,7 @@ export function DayView({
           ) : null}
         </div>
         {/* The content follows a swipe sideways; the outer box keeps it from widening the page. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div ref={setArea} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div ref={swipeArea} className="flex min-h-0 flex-1 flex-col touch-pan-y touch-pinch-zoom">
             {agenda ? (
               <div className="relative min-h-0 flex-1 overflow-y-auto">
@@ -1043,11 +1052,10 @@ export function DayView({
                   viewerTz={viewerTz}
                   today={today}
                   anchor={{
-                    openKey: details?.key ?? null,
+                    open: openAt,
+                    boundary: area,
                     onOpen: setDetails,
-                    onClose: () => {
-                      setDetails(null);
-                    },
+                    onClose: closeDetails,
                     inPopover: tablet,
                     details: detailsOf,
                   }}
@@ -1066,11 +1074,10 @@ export function DayView({
                   rows={rows}
                   viewerTz={viewerTz}
                   anchor={{
-                    openKey: details?.key ?? null,
+                    open: openAt,
+                    boundary: area,
                     onOpen: setDetails,
-                    onClose: () => {
-                      setDetails(null);
-                    },
+                    onClose: closeDetails,
                     inPopover: tablet,
                     details: detailsOf,
                   }}
@@ -1089,12 +1096,11 @@ export function DayView({
                   rows={rows}
                   viewerTz={viewerTz}
                   today={today}
-                  openKey={details?.key ?? null}
+                  open={openAt}
+                  boundary={area}
                   inPopover={tablet}
                   onOpen={setDetails}
-                  onClose={() => {
-                    setDetails(null);
-                  }}
+                  onClose={closeDetails}
                   details={detailsOf}
                   canDrag={canDrag}
                   onDrop={dropEvent}
