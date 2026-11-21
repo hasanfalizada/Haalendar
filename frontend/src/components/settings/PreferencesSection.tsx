@@ -22,7 +22,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { useDraft } from "@/lib/useDraft";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/ThemeProvider";
 import type { ThemePreference } from "@/theme/theme";
@@ -456,7 +456,7 @@ function PreferencesForm({ settings }: { settings: Settings }) {
           ) : null}
         </fieldset>
 
-        <Button type="submit" variant="primary" className="w-fit" disabled={busy || !dirty}>
+        <Button type="submit" variant="primary" className="w-fit" disabled={busy || !dirty} {...saveHint}>
           {t("preferences.save")}
         </Button>
       </form>

@@ -103,7 +103,7 @@ Shell regions: rail (modules Calendar / To-Do / Kanban, then Trash, Notification
 | Shift+N | Move selected to next day |
 | ↑ / ↓, Shift+↑/↓, Ctrl+A | Focus, extend selection, select all |
 | Ctrl+Z / Ctrl+Shift+Z | Undo / redo |
-| Ctrl+Enter | Save editor |
+| Ctrl+S or Ctrl+Enter | Save editor; Ctrl+S never opens the browser's "Save page as" while an editor is open — Ctrl+S added by D-116, 2026-11-20 |
 | Esc | Close (guarded if unsaved) |
 | 1–8 (in event popover) | Set color |
 | ? | Shortcut list |

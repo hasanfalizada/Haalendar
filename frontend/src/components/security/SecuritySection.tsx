@@ -33,7 +33,7 @@ import { Field, Input } from "@/components/ui/input";
 import { QrCode } from "@/components/ui/qr-code";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { useInstantFormat } from "@/lib/datetime";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 import { RecoveryCodesDialog } from "./RecoveryCodesDialog";
 
@@ -126,7 +126,7 @@ function ChangePassword({ me }: { me: Me }) {
         violations={violations}
         error={fieldError}
       />
-      <Button type="submit" className="w-fit" disabled={busy || !password}>
+      <Button type="submit" className="w-fit" disabled={busy || !password} {...saveHint}>
         {t("security.password.submit")}
       </Button>
     </form>
