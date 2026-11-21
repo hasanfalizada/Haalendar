@@ -26,7 +26,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { notify } from "@/lib/notify";
 import { useDraft } from "@/lib/useDraft";
 import { useSignOut } from "@/lib/useSignOut";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 export function ProfileSection() {
   const { data: me } = useQuery(meQuery);
@@ -212,7 +212,7 @@ function ProfileForm({ me }: { me: Me }) {
             </Select>
           )}
         </Field>
-        <Button type="submit" variant="primary" className="w-fit" disabled={busy || !dirty}>
+        <Button type="submit" variant="primary" className="w-fit" disabled={busy || !dirty} {...saveHint}>
           {t("profile.save")}
         </Button>
       </form>

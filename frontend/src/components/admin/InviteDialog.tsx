@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 import { useAdminReasons } from "./admin-errors";
 import type { OneTimePassword } from "./OneTimePasswordDialog";
@@ -170,7 +170,7 @@ export function InviteDialog({ open, onClose, onAccountCreated }: InviteDialogPr
           </Field>
           <DialogFooter>
             <Button onClick={close}>{t("common.cancel")}</Button>
-            <Button type="submit" variant="primary" disabled={busy}>
+            <Button type="submit" variant="primary" disabled={busy} {...saveHint}>
               {busy ? t("admin.invite.submitting") : t("admin.invite.submit")}
             </Button>
           </DialogFooter>

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 import { ShareRow } from "./ShareRow";
 import { type ActionResult, useShareActions } from "./useShareActions";
@@ -129,7 +129,7 @@ export function ShareDialog({ open, onClose, containerKind, containerId, contain
               </Select>
             )}
           </Field>
-          <Button type="submit" variant="primary" disabled={busy} className="md:mt-[22px]">
+          <Button type="submit" variant="primary" disabled={busy} className="md:mt-[22px]" {...saveHint}>
             {t("sharing.share")}
           </Button>
         </form>

@@ -43,7 +43,7 @@ import { DEFAULT_COLOR } from "@/lib/palette";
 import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
 import { useDraft } from "@/lib/useDraft";
 import { useNow } from "@/lib/useNow";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { localKeys, localRows } from "@/sync";
 
 import { assigneeChanges, assigneesOf } from "./assigneeWrites";
@@ -454,7 +454,7 @@ export function CardEditor({
             ) : null}
             <Button onClick={close}>{t(saving ? "common.cancel" : "common.close")}</Button>
             {saving ? (
-              <Button type="submit" variant="primary" disabled={busy || empty}>
+              <Button type="submit" variant="primary" disabled={busy || empty} {...saveHint}>
                 {t("kanban.save")}
               </Button>
             ) : null}

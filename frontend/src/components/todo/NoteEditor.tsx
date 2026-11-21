@@ -36,7 +36,7 @@ import { NOTE_LABELS_MAX, type NoteAccess, personalLabels, text } from "@/lib/no
 import { DEFAULT_COLOR } from "@/lib/palette";
 import { topPosition } from "@/lib/position";
 import { useDraft } from "@/lib/useDraft";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { uuidv7 } from "@/lib/uuid";
 import { localKeys, localRows } from "@/sync";
 
@@ -405,7 +405,7 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
               </Button>
             ) : null}
             <Button onClick={close}>{t("common.cancel")}</Button>
-            <Button type="submit" variant="primary" disabled={busy || empty}>
+            <Button type="submit" variant="primary" disabled={busy || empty} {...saveHint}>
               {t("todo.editor.save")}
             </Button>
           </DialogFooter>

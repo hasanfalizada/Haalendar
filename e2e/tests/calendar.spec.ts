@@ -286,3 +286,47 @@ test("an event over several days opens its card where it is clicked", async ({ p
     await expect(shown.nth(0), view).toHaveAttribute("aria-expanded", "false");
   }
 });
+
+// +++===+++ 2026-11-20 10:55 +04 — Hasan Alizada — HAAL-190 (D-116). Ctrl+S saves an editor as in most programs, with
+// Ctrl+Enter as before; without changes it does nothing and the browser's "Save page as" does not open; E edits the
+// event of the open card; the Save button names the key.
+test("Ctrl+S saves the event editor, E edits the event, Ctrl+Enter saves too", async ({ page }) => {
+  const title = unique("Saved by key");
+  await page.goto("/calendar?date=2027-07-14");
+  // Whether the browser kept the key: read after every listener has run.
+  await page.evaluate(() => {
+    const w = window as unknown as { kept: boolean[] };
+    w.kept = [];
+    window.addEventListener("keydown", (event) => {
+      if (event.code === "KeyS")
+        setTimeout(() => {
+          w.kept.push(!event.defaultPrevented);
+        });
+    });
+  });
+  const kept = () => page.evaluate(() => (window as unknown as { kept: boolean[] }).kept);
+
+  await page.getByRole("button", { name: "New event" }).first().click();
+  const editor = page.getByRole("dialog", { name: "New event" });
+  const save = editor.getByRole("button", { name: "Save" });
+  await expect(save).toHaveAttribute("title", "Ctrl+S");
+  await expect(save).toHaveAttribute("aria-keyshortcuts", "Control+S");
+  await editor.getByLabel("Title").focus();
+  await page.keyboard.press("Control+s"); // no changes yet: nothing saved, nothing for the browser
+  await expect(editor).toBeVisible();
+  await editor.getByLabel("Title").fill(title);
+  await page.keyboard.press("Control+s");
+  await expect(editor).toBeHidden();
+  await expect.poll(kept).toEqual([false, false]);
+  const row = page.getByRole("main").getByRole("button", { name: new RegExp(title) });
+  await expect(row).toBeVisible();
+
+  await row.click();
+  await expect(page.getByRole("dialog", { name: "Event details" })).toBeVisible();
+  await page.keyboard.press("e");
+  const edit = page.getByRole("dialog", { name: "Edit event" });
+  await edit.getByLabel("Title").fill(`${title} moved`);
+  await page.keyboard.press("Control+Enter");
+  await expect(edit).toBeHidden();
+  await expect(page.getByRole("main").getByRole("button", { name: new RegExp(`${title} moved`) })).toBeVisible();
+});

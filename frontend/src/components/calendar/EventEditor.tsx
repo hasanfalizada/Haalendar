@@ -69,7 +69,7 @@ import {
 import { planSplit } from "@/lib/seriesSplit";
 import { batchStep, newStep } from "@/lib/undo";
 import { useDraft } from "@/lib/useDraft";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { uuidv7 } from "@/lib/uuid";
 import { localKeys, localRows, mutate } from "@/sync";
 
@@ -689,7 +689,7 @@ export function EventEditor({
 
           <DialogFooter>
             <Button onClick={close}>{t("common.cancel")}</Button>
-            <Button type="submit" variant="primary" disabled={busy || invalid || !form.calendar_id}>
+            <Button type="submit" variant="primary" disabled={busy || invalid || !form.calendar_id} {...saveHint}>
               {t("calendar.editor.save")}
             </Button>
           </DialogFooter>
