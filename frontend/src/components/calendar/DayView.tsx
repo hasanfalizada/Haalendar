@@ -63,6 +63,7 @@ import { type BarAction, BulkBar } from "@/components/ui/bulk-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SearchField } from "@/components/search/SearchField";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
 import { notify } from "@/lib/notify";
@@ -1033,6 +1034,9 @@ export function DayView({
               <span className="@max-[80rem]:sr-only">{t("calendar.timeBlock.toggle")}</span>
             </Button>
           ) : null}
+          {/* +++===+++ 2026-11-23 15:00 +04 — Hasan Alizada — HAAL-039 (D-119). The search field; on phones it is in the
+              top bar. */}
+          <SearchField className="w-40 max-md:hidden @max-[64rem]:w-28" />
           <div className="max-md:order-1 max-md:ml-auto">
             <ViewSwitch view={view} onChange={switchView} />
           </div>

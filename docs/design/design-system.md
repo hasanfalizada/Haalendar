@@ -106,6 +106,7 @@ Shell regions: rail (modules Calendar / To-Do / Kanban, then Trash, Notification
 | Ctrl+S or Ctrl+Enter | Save editor; Ctrl+S never opens the browser's "Save page as" while an editor is open — Ctrl+S added by D-116, 2026-11-20 |
 | Esc | Close (guarded if unsaved) |
 | 1–8 (in event popover) | Set color |
+| / | Search (the search window, D-119) — added 2026-11-23 |
 | ? | Shortcut list |
 | F6 / Shift+F6 | Next / previous region (navigation, content, notifications) — added by D-42, 2026-10-16 |
 | Home / End, Space | First / last item, select the focused item — added by D-42 |

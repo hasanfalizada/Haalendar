@@ -82,12 +82,12 @@
 | F-xx | Scenario | State |
 |------|----------|-------|
 | F-01..F-05 | `navigation.spec.ts` | runs |
-| F-06 | `navigation.spec.ts` | fixme — search is HAAL-039 (postponed) |
+| F-06 | `navigation.spec.ts` | runs (search, HAAL-039) |
 | F-10..F-17 | `events.spec.ts` | runs |
 | F-18 | `live.spec.ts` (a second browser context as the other device) | runs |
 | F-19 | `events.spec.ts` (one editor by design, D-108) | runs |
 | F-20..F-23 | `recurrence.spec.ts` (F-23 seen through the overdue counter, which uses the effective start) | runs |
-| F-30 | `misc.spec.ts` | fixme — search is HAAL-039 (postponed) |
+| F-30 | `misc.spec.ts` | runs (search, HAAL-039) |
 | F-31, F-32, F-34 | `misc.spec.ts` | runs |
 | F-33 | `misc.spec.ts` | fixme — the history screen is HAAL-114; the audit log itself is covered by the backend tests (`backend/tests/test_audit.py`) |
 

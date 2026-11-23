@@ -6,22 +6,13 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { DayView } from "@/components/calendar/DayView";
 import { type CalendarViewKind, asView, storedView } from "@/lib/calendarView";
-import { todayIn, useDisplayTimeZone } from "@/lib/datetime";
+import { isRealDate, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 
 interface CalendarSearch {
   date?: string;
   view?: CalendarViewKind;
   // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. An event whose card opens (from a reminder notification).
   event?: string;
-}
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** "YYYY-MM-DD" naming a real day (2026-02-30 is not one). */
-function isRealDate(value: string): boolean {
-  if (!ISO_DATE.test(value)) return false;
-  const ms = Date.parse(`${value}T00:00:00Z`);
-  return !Number.isNaN(ms) && new Date(ms).toISOString().startsWith(value);
 }
 
 function CalendarPage() {

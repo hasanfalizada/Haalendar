@@ -85,4 +85,16 @@ test("F-05 the header shows the date, a live clock and the ISO week of the selec
   await expect(page.getByText("Week 53 · 2026", { exact: true })).toHaveAttribute("title", "ISO week 53 of 2026");
 });
 
-test.fixme("F-06 typing YYYY-MM-DD in the search and Enter opens that day (HAAL-039, postponed)", async () => {});
+// +++===+++ 2026-11-23 15:30 +04 — Hasan Alizada — HAAL-039 (D-119). The search is built: F-06 runs.
+test("F-06 typing YYYY-MM-DD in the search and Enter opens that day", async ({ page }) => {
+  await page.goto("/calendar");
+  await page.getByRole("main").getByRole("button", { name: "Search" }).click();
+  const search = page.getByRole("combobox", { name: "Search" });
+  await search.fill("2027-02-30"); // not a day: nothing to open
+  await expect(page.getByRole("option", { name: /^Go to/ })).toHaveCount(0);
+  await search.fill("2027-03-09");
+  await expect(page.getByRole("option").first()).toHaveText("Go to Tuesday, March 9, 2027");
+  await search.press("Enter");
+  await expect(page).toHaveURL(/date=2027-03-09/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Calendar: March 9, 2027");
+});

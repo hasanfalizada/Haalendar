@@ -4,6 +4,8 @@
 // - the items that can still be linked to it: live events, notes and cards on the device, not itself, not linked yet,
 //   whose title has the text typed;
 // - where an item opens: an event on its day, a note on the To-Do page, a card on its board.
+import { matchesQuery } from "./search";
+
 type Row = Record<string, unknown>;
 
 export const LINKED_KINDS = ["event", "note", "card"] as const;
@@ -50,7 +52,7 @@ export function linkCandidates(
   limit = 50,
 ): Row[] {
   const linked = new Set(linkedItems(links, items, itemId).map((entry) => entry.itemId));
-  const needle = query.trim().toLocaleLowerCase();
+  // HAAL-039 (D-119): matched as the search matches (accents and case ignored, words at word starts, any order).
   return items
     .filter(
       (row) =>
@@ -58,7 +60,7 @@ export function linkCandidates(
         !row.deleted_at &&
         row.id !== itemId &&
         !linked.has(String(row.id)) &&
-        (!needle || `${textOf(row.title)}\n${textOf(row.body)}`.toLocaleLowerCase().includes(needle)),
+        matchesQuery(`${textOf(row.title)}\n${textOf(row.body)}`, query),
     )
     .sort((a, b) => textOf(a.title).localeCompare(textOf(b.title)))
     .slice(0, limit);
