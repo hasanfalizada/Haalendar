@@ -104,7 +104,7 @@ the owner's (finding F7).
 +++===+++ 2026-11-22 10:05 +04 — Hasan Alizada — HAAL-191. v2.03: decision D-117 (the clock, the week and the day in the calendar header stand out in one frame) approved by owner.
 +++===+++ 2026-11-23 11:20 +04 — Hasan Alizada — HAAL-192. v2.04: decision D-118 (red, orange, yellow and brown told apart: crimson red, chocolate brown, a 28 % tint, secondary text on the tint darker) approved by owner.
 +++===+++ 2026-11-23 16:00 +04 — Hasan Alizada — HAAL-039. v2.05: decision D-119 (search over the items on the device: a small field in the headers opens the search window over the dimmed page, "/" too) approved by owner.
-+++===+++ 2026-11-24 13:00 +04 — Hasan Alizada — HAAL-046. v2.06: decision D-120 (search filters: module, dates, calendar, colour, priority, label, under the search field) approved by owner.
++++===+++ 2026-11-23 13:00 +04 — Hasan Alizada — HAAL-046. v2.06: decision D-120 (search filters: module, dates, calendar, colour, priority, label, under the search field) approved by owner.
 
 | Field | Value |
 |---|---|

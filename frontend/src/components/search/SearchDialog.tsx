@@ -103,7 +103,7 @@ function SearchWindow() {
   const items = useLocal(user, "item");
   const checklistItems = useLocal(user, "checklist_item");
   const boards = useLocal(user, "board");
-  // +++===+++ 2026-11-24 12:00 +04 — Hasan Alizada — HAAL-046 (D-120). The filters, under the field.
+  // +++===+++ 2026-11-23 12:00 +04 — Hasan Alizada — HAAL-046 (D-120). The filters, under the field.
   const labels = useLocal(user, "label");
   const itemLabels = useLocal(user, "item_label");
   const { shown, own, shared } = useCalendars(user);

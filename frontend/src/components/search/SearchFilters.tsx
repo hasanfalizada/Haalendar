@@ -1,4 +1,4 @@
-// +++===+++ 2026-11-24 11:40 +04 — Hasan Alizada — HAAL-046 (D-120). The filters of the search window, a row under the
+// +++===+++ 2026-11-23 11:40 +04 — Hasan Alizada — HAAL-046 (D-120). The filters of the search window, a row under the
 // field (FR-X-19): Module, Dates (today, this week, this month, the next 30 days or a range of one's own), Calendar,
 // Colour, Priority and Label as menus of checkboxes, and Reset. A button with a choice shows it ("Colour · 2"). On
 // phones the row scrolls sideways.

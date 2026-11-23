@@ -1,4 +1,4 @@
-// +++===+++ 2026-11-24 13:20 +04 — Hasan Alizada — HAAL-039 and HAAL-046 (D-119, D-120). The search window in the app:
+// +++===+++ 2026-11-23 13:20 +04 — Hasan Alizada — HAAL-039 and HAAL-046 (D-119, D-120). The search window in the app:
 // the header's field and "/" open it, results by module with the words marked and where they were found, arrow keys and
 // Enter open a result, a date opens its day, the filters narrow the results and list them without words,
 // Reset, nothing found.
