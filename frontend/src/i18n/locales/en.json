@@ -1691,6 +1691,30 @@
     },
     "count_one": "{{count}} result",
     "count_other": "{{count}} results",
-    "noTitle": "(No title)"
+    "noTitle": "(No title)",
+    "filters": {
+      "label": "Filters",
+      "module": "Module",
+      "dates": "Dates",
+      "calendar": "Calendar",
+      "colour": "Colour",
+      "priority": "Priority",
+      "labels": "Label",
+      "anyTime": "Any time",
+      "presets": {
+        "today": "Today",
+        "week": "This week",
+        "month": "This month",
+        "next30": "Next 30 days"
+      },
+      "custom": "Choose dates…",
+      "from": "From",
+      "to": "To",
+      "reset": "Reset",
+      "noCalendars": "No calendars shown",
+      "noLabels": "No labels yet"
+    },
+    "hintFilters": "Or choose filters below to list what matches them.",
+    "noneFiltered": "Nothing matches these filters."
   }
 }

@@ -162,11 +162,23 @@ function scoreOf(folded: Folded, words: readonly string[]): { score: number; fie
   return { score, field };
 }
 
-/** The items matching the query, by module, best first, at most `limit` in each. An empty query finds nothing. */
-export function searchItems(input: SearchInput, query: string, limit = 20): SearchResults {
+/** What the filters of the search (searchFilter.ts, HAAL-046) give the search. */
+export interface ResultFilter {
+  active: boolean;
+  modules: ReadonlySet<SearchModule>;
+  keep: (row: Row, module: SearchModule) => boolean;
+  dayOf: (row: Row) => string | null;
+}
+
+/**
+ * The items matching the query and the filter, by module, best first, at most `limit` in each. Without words only an
+ * active filter finds anything, and then the results go by their day (HAAL-046).
+ */
+export function searchItems(input: SearchInput, query: string, limit = 20, filter?: ResultFilter): SearchResults {
   const results: SearchResults = { calendar: [], todo: [], kanban: [] };
   const words = queryWords(query);
-  if (words.length === 0) return results;
+  const byFilterOnly = words.length === 0;
+  if (byFilterOnly && !filter?.active) return results;
   // Checklist text belongs to its item: a change of the checklists folds the items again.
   if (cachedChecklists !== input.checklistItems) {
     cache = new WeakMap();
@@ -179,14 +191,25 @@ export function searchItems(input: SearchInput, query: string, limit = 20): Sear
     if (!module || row.deleted_at) continue;
     if (module === "calendar" && !input.calendarShown(row.container_id)) continue;
     if (module === "kanban" && deletedBoards.has(String(row.container_id))) continue;
+    if (filter && (!filter.modules.has(module) || !filter.keep(row, module))) continue;
+    if (byFilterOnly) {
+      results[module].push({ row, module, score: 0, field: null });
+      continue;
+    }
     const folded = foldedOf(row, lists.get(String(row.id)) ?? "");
     if (!words.every((word) => folded.all.includes(word))) continue;
     const found = scoreOf(folded, words);
     if (found) results[module].push({ row, module, score: found.score, field: found.field });
   }
+  const dayOf = filter?.dayOf;
+  const byDay = (a: SearchHit, b: SearchHit) => {
+    if (!byFilterOnly || !dayOf) return 0;
+    const [x, y] = [dayOf(a.row), dayOf(b.row)];
+    return x === y ? 0 : x === null ? 1 : y === null ? -1 : x < y ? -1 : 1;
+  };
   for (const module of Object.keys(results) as SearchModule[]) {
     results[module] = results[module]
-      .sort((a, b) => b.score - a.score || text(a.row.title).localeCompare(text(b.row.title)))
+      .sort((a, b) => b.score - a.score || byDay(a, b) || text(a.row.title).localeCompare(text(b.row.title)))
       .slice(0, limit);
   }
   return results;

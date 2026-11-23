@@ -12,6 +12,7 @@ import { Dialog as RadixDialog } from "radix-ui";
 import { type ReactNode, useDeferredValue, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
 import { useCalendars } from "@/components/calendar/useCalendars";
 import { isRealDate, todayIn, useDisplayTimeZone } from "@/lib/datetime";
@@ -20,13 +21,30 @@ import { dayToShow } from "@/lib/duplicates";
 import { itemTarget } from "@/lib/links";
 import { log } from "@/lib/log";
 import { toPlainText } from "@/lib/markdown-text";
-import { fieldText, highlightRanges, type SearchHit, type SearchModule, searchItems, snippet } from "@/lib/search";
+import {
+  fieldText,
+  fold,
+  highlightRanges,
+  type SearchHit,
+  type SearchModule,
+  searchItems,
+  snippet,
+} from "@/lib/search";
+import { compileFilter } from "@/lib/searchFilter";
 import { useShortcut } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 import type { EntityType } from "@/sync/db";
 
-import { closedForResult, closeSearchForResult, setSearchOpen, useSearchOpen } from "./searchOpen";
+import { SearchFilters } from "./SearchFilters";
+import {
+  closedForResult,
+  closeSearchForResult,
+  setSearchFilter,
+  setSearchOpen,
+  useSearchFilter,
+  useSearchOpen,
+} from "./searchOpen";
 
 const MODULES: readonly SearchModule[] = ["calendar", "todo", "kanban"];
 
@@ -85,7 +103,12 @@ function SearchWindow() {
   const items = useLocal(user, "item");
   const checklistItems = useLocal(user, "checklist_item");
   const boards = useLocal(user, "board");
-  const { shown } = useCalendars(user);
+  // +++===+++ 2026-11-24 12:00 +04 — Hasan Alizada — HAAL-046 (D-120). The filters, under the field.
+  const labels = useLocal(user, "label");
+  const itemLabels = useLocal(user, "item_label");
+  const { shown, own, shared } = useCalendars(user);
+  const { week_start: weekStart } = useSettings();
+  const filter = useSearchFilter();
   const [query, setQuery] = useState("");
   // Typing stays quick on many items: the results follow the field when there is time.
   const deferred = useDeferredValue(query);
@@ -93,11 +116,31 @@ function SearchWindow() {
   const id = useId();
   const today = todayIn(viewerTz);
 
+  const compiled = useMemo(
+    () => compileFilter(filter, { labels, itemLabels, viewerTz, today }),
+    [filter, labels, itemLabels, viewerTz, today],
+  );
+  const shownCalendars = useMemo(
+    () =>
+      [...own, ...shared]
+        .filter((calendar) => shown(calendar.id))
+        .map((calendar) => ({ id: String(calendar.id), name: String(calendar.name) })),
+    [own, shared, shown],
+  );
+  const labelNames = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const label of labels) {
+      const name = typeof label.name === "string" ? label.name.trim() : "";
+      if (!label.deleted_at && name && !names.has(fold(name))) names.set(fold(name), name);
+    }
+    return [...names.values()].sort((a, b) => a.localeCompare(b));
+  }, [labels]);
   const results = useMemo(
-    () => searchItems({ items, checklistItems, boards, calendarShown: shown }, deferred),
-    [items, checklistItems, boards, shown, deferred],
+    () => searchItems({ items, checklistItems, boards, calendarShown: shown }, deferred, 20, compiled),
+    [items, checklistItems, boards, shown, deferred, compiled],
   );
   const trimmed = deferred.trim();
+  const asked = trimmed !== "" || compiled.active;
   const options = useMemo<Option[]>(
     () => [
       ...(isRealDate(trimmed) ? [{ kind: "date" as const, date: trimmed }] : []),
@@ -216,7 +259,7 @@ function SearchWindow() {
         className={cn(
           "search-open fixed z-50 flex flex-col overflow-hidden bg-bg shadow-xl",
           "inset-0 pt-[env(safe-area-inset-top)]",
-          "md:inset-auto md:top-[10vh] md:left-1/2 md:max-h-[75vh] md:w-[min(40rem,calc(100vw-2rem))] md:-translate-x-1/2 md:rounded-md md:border md:border-line md:pt-0",
+          "md:inset-auto md:top-[10vh] md:left-1/2 md:max-h-[75vh] md:w-[min(44rem,calc(100vw-2rem))] md:-translate-x-1/2 md:rounded-md md:border md:border-line md:pt-0",
         )}
       >
         <RadixDialog.Title className="sr-only">{t("search.label")}</RadixDialog.Title>
@@ -248,8 +291,19 @@ function SearchWindow() {
             <X className="size-5 md:hidden" aria-hidden />
           </RadixDialog.Close>
         </div>
+        <SearchFilters
+          filter={filter}
+          onChange={(next) => {
+            setSearchFilter(next);
+            setActive(0);
+          }}
+          calendars={shownCalendars}
+          labels={labelNames}
+          today={today}
+          weekStart={weekStart}
+        />
         <div aria-live="polite" className="sr-only">
-          {trimmed ? t("search.count", { count }) : ""}
+          {asked ? t("search.count", { count }) : ""}
         </div>
         <div
           id={`${id}-list`}
@@ -257,7 +311,11 @@ function SearchWindow() {
           aria-label={t("search.results")}
           className="min-h-0 flex-1 overflow-y-auto p-2"
         >
-          {trimmed === "" ? <p className="px-3 py-2 text-[13px] text-muted">{t("search.hint")}</p> : null}
+          {asked ? null : (
+            <p className="px-3 py-2 text-[13px] text-muted">
+              {t("search.hint")} {t("search.hintFilters")}
+            </p>
+          )}
           {options[0]?.kind === "date" ? (
             <div {...optionProps(options[0])}>
               <span className="font-medium">
@@ -290,8 +348,10 @@ function SearchWindow() {
               </div>
             ) : null,
           )}
-          {trimmed !== "" && options.length === 0 ? (
-            <p className="px-3 py-2 text-[13px] text-muted">{t("search.none", { query: trimmed })}</p>
+          {asked && options.length === 0 ? (
+            <p className="px-3 py-2 text-[13px] text-muted">
+              {trimmed ? t("search.none", { query: trimmed }) : t("search.noneFiltered")}
+            </p>
           ) : null}
         </div>
       </RadixDialog.Content>
