@@ -48,7 +48,7 @@ const items = [
     rrule: "FREQ=WEEKLY",
     color: "green",
   },
-  { id: "n1", kind: "note", title: "Plan packing", color: "red", due_at: "2026-11-24T23:30:00Z" },
+  { id: "n1", kind: "note", title: "Plan packing", color: "red", due_date: "2026-11-25", due_time: "00:30" },
   { id: "n2", kind: "note", title: "Plan review", priority: "low" },
   { id: "k1", kind: "card", title: "Plan the route", container_id: "b1", due_date: "2026-11-26", priority: "high" },
 ];
@@ -79,10 +79,10 @@ describe("search filters", () => {
     expect(found({ calendars: ["home"], labels: ["trips"] })).toEqual([]);
   });
 
-  it("dates: a day of an event, an occurrence of a series, a due date in the viewer's zone", () => {
+  it("dates: a day of an event, an occurrence of a series, a wall-clock due date", () => {
     expect(found({ from: "2026-12-11", to: "2026-12-31" })).toEqual(["e2", "e3"]); // e2 runs 10–12 Dec
     expect(found({ from: "2026-11-27", to: "2026-11-29" })).toEqual([]); // Fri–Sun: no Monday of the series
-    expect(found({ from: "2026-11-25", to: "2026-11-25" })).toEqual(["e1", "n1"]); // 23:30 UTC is 00:30 on the 25th in Berlin
+    expect(found({ from: "2026-11-25", to: "2026-11-25" })).toEqual(["e1", "n1"]); // a wall-clock due date (D-121)
     expect(found({ from: "2026-11-26" })).toEqual(["k1"]); // one end alone is that day
     expect(found({ from: "2027-12-01", to: "2029-01-31" })).toEqual(["e3"]); // a long range, asked a year at a time
   });

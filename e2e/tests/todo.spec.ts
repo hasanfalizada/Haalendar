@@ -110,3 +110,26 @@ test("orders notes by keyboard and by dragging, and keeps the list layout", asyn
   await page.getByRole("radio", { name: "Grid" }).click();
   await expect(page.getByRole("radio", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
 });
+
+// +++===+++ 2026-11-23 22:10 +04 — Hasan Alizada — HAAL-104. The due date of a note (D-121): set in the editor, shown on
+// the card with "Overdue" when passed, still there after a reload (it reached the server and comes back from it).
+test("gives a note a due date that is still there after a reload", async ({ page }) => {
+  const title = unique("Renew the passport");
+  await page.goto("/todo");
+  await page.getByRole("button", { name: "New note" }).first().click();
+  const editor = page.getByRole("dialog", { name: "New note" });
+  await editor.getByLabel("Title").fill(title);
+  await editor.getByLabel("Due date").fill("2020-01-15");
+  await editor.getByLabel("Time (optional)").fill("09:30");
+  const pushed = page.waitForResponse((r) => r.url().endsWith("/api/v1/sync/push") && r.ok());
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+  const card = page.getByRole("article", { name: title });
+  await expect(card.getByLabel(/^Overdue, due .*2020/)).toBeVisible();
+  await pushed;
+
+  await page.reload();
+  await expect(page.getByRole("article", { name: title }).getByLabel(/^Overdue, due .*2020/)).toBeVisible();
+  await page.getByRole("button", { name: `Open ${title}` }).click();
+  await expect(page.getByRole("dialog", { name: "Edit note" }).getByLabel("Time (optional)")).toHaveValue("09:30");
+});

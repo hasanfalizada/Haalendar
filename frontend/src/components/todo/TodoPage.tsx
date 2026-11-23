@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PriorityFilter } from "@/components/ui/priority";
 import { SearchField } from "@/components/search/SearchField";
+import { dueState } from "@/lib/cards";
 import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
 import {
@@ -306,6 +307,9 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
             attachments={attachments.get(String(row.id)) ?? 0}
             checklist={row.is_checklist === true ? checklistOf(itemRows, String(row.id)) : null}
             nextReminder={reminderText(String(row.id))}
+            // +++===+++ 2026-11-23 22:10 +04 — Hasan Alizada — HAAL-104. An archived note is put away: its due date
+            // stays, without the overdue / due-soon badge.
+            dueState={row.archived_at ? null : dueState(row, viewerTz, now)}
             access={accessOf(row)}
             labels={labelsOf(String(row.id))}
             onOpen={() => {
