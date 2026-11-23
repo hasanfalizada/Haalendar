@@ -3,6 +3,8 @@
 // found is shown highlighted; arrow keys and Enter open a card on its board; on phones the field is in the top bar.
 import { expect, test, unique } from "../fixtures";
 
+import { createEvent, fixToday } from "./legacy/calendar";
+
 test("finds a note by its description and a card on its board, from the keyboard", async ({ page }) => {
   const tag = unique("Srch").split(" ")[1] ?? "";
   const note = `Weekend ideas ${tag}`;
@@ -76,4 +78,55 @@ test.describe("on a phone", () => {
     await window.getByRole("button", { name: "Close the search" }).click();
     await expect(window).toBeHidden();
   });
+});
+
+// +++===+++ 2026-11-24 12:30 +04 — Hasan Alizada — HAAL-046 (D-120). The filters under the field: colour and this week
+// narrow the events, without words too; a module leaves the rest out; Reset; they stay when the search opens again.
+test("filters narrow the search by colour, dates and module, without words too", async ({ page }) => {
+  await fixToday(page); // Wednesday, 4 November 2026
+  const tag = unique("Flt").split(" ")[1] ?? "";
+  await createEvent(page, { date: "2026-11-05", title: `Red this week ${tag}`, color: "Red" });
+  await createEvent(page, { date: "2026-12-10", title: `Red next month ${tag}`, color: "Red" });
+  await createEvent(page, { date: "2026-11-06", title: `Blue this week ${tag}`, color: "Blue" });
+
+  await page.keyboard.press("/");
+  const window = page.getByRole("dialog", { name: "Search" });
+  const search = window.getByRole("combobox", { name: "Search" });
+  await search.fill(tag);
+  const events = window.getByRole("group", { name: "Calendar" }).getByRole("option");
+  await expect(events).toHaveCount(3);
+
+  await window.getByRole("button", { name: "Colour" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Red" }).click();
+  await page.keyboard.press("Escape"); // the menu closes, the search stays
+  await expect(window).toBeVisible();
+  await expect(events).toHaveCount(2);
+  await window.getByRole("button", { name: "Dates" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "This week" }).click();
+  await page.keyboard.press("Escape");
+  await expect(window.getByRole("button", { name: "This week" })).toBeVisible();
+  await expect(events).toHaveCount(1);
+  await expect(events).toContainText(`Red this week ${tag}`);
+
+  // Without words the filters alone list what matches them.
+  await search.fill("");
+  await expect(events.filter({ hasText: `Red this week ${tag}` })).toHaveCount(1);
+  await expect(events.filter({ hasText: tag })).toHaveCount(1);
+
+  // A module leaves the others out.
+  await search.fill(tag);
+  await window.getByRole("button", { name: "Module" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "To-Do" }).click();
+  await page.keyboard.press("Escape");
+  await expect(events).toHaveCount(0);
+  await expect(window.getByText("Nothing found for")).toBeVisible();
+
+  // Kept when the search opens again; Reset clears them.
+  await page.keyboard.press("Escape");
+  await expect(window).toBeHidden();
+  await page.keyboard.press("/");
+  await expect(window.getByRole("button", { name: "Colour · 1" })).toBeVisible();
+  await window.getByRole("button", { name: "Reset" }).click();
+  await search.fill(tag);
+  await expect(events).toHaveCount(3);
 });
