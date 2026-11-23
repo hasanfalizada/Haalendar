@@ -103,7 +103,7 @@ components:
         entity_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
         op: { type: string, enum: [upsert, delete, tombstone], description: 'upsert carries the full resource (deleted_at included); tombstone = a container no longer readable (share revoked or left): remove it and everything in it' }
         version: { type: integer }
-        data: { type: object, description: 'Full resource for upsert/delete; an item of kind event carries its event fields, a series also `exceptions` (excluded dates, YYYY-MM-DD, ascending); an item of kind note (HAAL-100 / D-87) carries pinned, archived_at, position, due_at, is_checklist — a note is its own container (container_kind note, container_id = its id)' }
+        data: { type: object, description: 'Full resource for upsert/delete; an item of kind event carries its event fields, a series also `exceptions` (excluded dates, YYYY-MM-DD, ascending); an item of kind note (HAAL-100 / D-87) carries pinned, archived_at, position, due_date, due_time (HH:MM, D-121), is_checklist — a note is its own container (container_kind note, container_id = its id)' }
     Mutation:
       type: object
       required: [mutation_id, entity_type, entity_id, op]

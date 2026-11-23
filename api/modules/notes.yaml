@@ -92,7 +92,8 @@ components:
         archived: { type: boolean }
         is_checklist: { type: boolean }
         position: { $ref: '../components/common.yaml#/components/schemas/Position' }
-        due_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
+        due_date: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Date' }, { type: 'null' }], description: 'Due date (D-121), wall-clock in the owner''s zone' }
+        due_time: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/LocalTime' }, { type: 'null' }], description: 'Optional time of the due date (HH:MM); needs due_date' }
     NoteInput:
       allOf:
         - $ref: '#/components/schemas/NoteFields'

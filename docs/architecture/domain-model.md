@@ -179,13 +179,15 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 
 ### 5.7 `note` (subtype, also its own container)
 <!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. As built (migration 0022, D-87): the key column is `id` (= item.id) and the row carries `container_kind` = `note` / `container_id` = its own id (CHECK), like `event`; `position` is text ≤ 64 of letters and digits (CHECK). The note item is its own container: `haalendar_owns_container('note', id)` is the note item's owner; the `item` read / insert policies also admit the owner's own note while it is inserted. An archived note stays editable. -->
+<!-- +++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104. Migration 0035, D-121: `due_at` became `due_date` + `due_time` as on a card (time needs the date, CHECK). -->
 | Column | Type | Rules |
 |---|---|---|
 | item_id | uuid PK FK item | |
 | pinned | bool NN | default false (FR-TODO-03) |
 | archived_at | timestamptz | archive ≠ delete |
 | position | text NN | manual order (FR-TODO-05) |
-| due_at | timestamptz | optional; shown in calendar layer (FR-TODO-06) |
+| due_date | date | optional; shown in calendar layer (FR-TODO-06) |
+| due_time | time | optional, needs `due_date`; wall-clock in the owner's zone |
 | is_checklist | bool NN | checklist mode (FR-TODO-02) |
 
 ### 5.8 `card` (subtype)

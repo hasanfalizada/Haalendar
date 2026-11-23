@@ -16,13 +16,13 @@ one put it (never the column of one and the position of the other).
 from __future__ import annotations
 
 import uuid
-from datetime import date, time
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
+from haalendar.planning import due
 from haalendar.planning.models import BoardColumn, Card, Item
 from haalendar.planning.notes import checked_position
 
@@ -47,33 +47,11 @@ def checked_title(value: Any) -> str:
     return value.strip()
 
 
-def _due_date(value: Any) -> date | None:
-    if value is None:
-        return None
-    try:
-        return date.fromisoformat(str(value)) if len(str(value)) == 10 else None
-    except ValueError:
-        return None
-
-
-def _due_time(value: Any) -> time | None:
-    if value is None:
-        return None
-    text = str(value)
-    try:
-        return time.fromisoformat(text) if len(text) in (5, 8) else None
-    except ValueError:
-        return None
-
-
 def normalize(values: dict[str, Any]) -> dict[str, Any]:
     """Incoming card values in their canonical text form (ids as text, "HH:MM:SS" → "HH:MM")."""
-    out = dict(values)
+    out = due.normalize(dict(values))
     if out.get("column_id") is not None:
         out["column_id"] = str(out["column_id"])
-    value = out.get("due_time")
-    if isinstance(value, str) and len(value) == 8 and value.endswith(":00"):
-        out["due_time"] = value[:5]
     return out
 
 
@@ -88,8 +66,7 @@ def state_of(card: Card) -> dict[str, Any]:
     return {
         "column_id": str(card.column_id),
         "position": card.position,
-        "due_date": card.due_date.isoformat() if card.due_date else None,
-        "due_time": card.due_time.strftime("%H:%M") if card.due_time else None,
+        **due.state_of(card),
     }
 
 
@@ -113,20 +90,7 @@ async def apply(db: AsyncSession, card: Card, values: dict[str, Any]) -> None:
             card.column_id = await _column(db, card.board_id, value)
         elif name == "position":
             card.position = checked_position(value)
-        elif name == "due_date":
-            due = _due_date(value)
-            if value is not None and due is None:
-                raise _problem("due_date", "Use a date as YYYY-MM-DD")
-            card.due_date = due
-            if due is None:
-                card.due_time = None
-        elif name == "due_time":
-            at = _due_time(value)
-            if value is not None and at is None:
-                raise _problem("due_time", "Use a time as HH:MM")
-            card.due_time = at
-    if card.due_time is not None and card.due_date is None:
-        raise _problem("due_time", "A time needs a date")
+    due.apply(card, {name: value for name, value in values.items() if name in due.DUE_FIELDS}, _problem)
 
 
 async def create_card(
