@@ -974,7 +974,8 @@
     "restore": "Restore the entry",
     "listDelete": "Delete the selection (asks first)",
     "listDeleteFocused": "Delete the focused row (asks first)",
-    "save": "Save"
+    "save": "Save",
+    "search": "Search"
   },
   "unsaved": {
     "title": "Unsaved changes",
@@ -1668,5 +1669,28 @@
         "delete": "Deleted the label {{name}}"
       }
     }
+  },
+  "search": {
+    "open": "Search",
+    "placeholder": "Search events, notes and cards",
+    "label": "Search",
+    "results": "Search results",
+    "close": "Close the search",
+    "groups": {
+      "calendar": "Calendar",
+      "todo": "To-Do",
+      "kanban": "Boards"
+    },
+    "goToDate": "Go to {{date}}",
+    "none": "Nothing found for “{{query}}”.",
+    "hint": "Type words from a title, place, description or checklist. A date as YYYY-MM-DD opens that day.",
+    "fields": {
+      "location": "Place",
+      "body": "Description",
+      "checklist": "Checklist"
+    },
+    "count_one": "{{count}} result",
+    "count_other": "{{count}} results",
+    "noTitle": "(No title)"
   }
 }

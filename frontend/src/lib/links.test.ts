@@ -33,6 +33,9 @@ describe("links", () => {
     expect(linkCandidates(items, links, "c", "").map((row) => row.id)).toEqual(["e", "z"]);
     expect(linkCandidates(items, links, "c", "DENT").map((row) => row.id)).toEqual(["e"]);
     expect(linkCandidates(items, links, "e", "bread").map((row) => row.id)).toEqual(["n"]);
+    // HAAL-039 (D-119): as the search — accents ignored, a word inside another word is not a match.
+    expect(linkCandidates(items, links, "c", "dént").map((row) => row.id)).toEqual(["e"]);
+    expect(linkCandidates(items, links, "c", "ntist").map((row) => row.id)).toEqual([]);
   });
 
   it("opens an event on its day, a note on the To-Do page and a card on its board", () => {

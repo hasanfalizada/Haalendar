@@ -12,6 +12,7 @@ import { dueState } from "./cards";
 import { addDays, todayIn } from "./datetime";
 import { weekStartOf } from "./monthGrid";
 import { formatPriorityParam, parsePriorityParam } from "./priority";
+import { matchesQuery } from "./search";
 
 type Row = Record<string, unknown>;
 
@@ -89,11 +90,10 @@ export function cardMatches(card: Row, filter: BoardFilter, context: FilterConte
     if (!filter.priorities.includes(priority)) return false;
   }
   if (filter.due.length > 0 && !dueMatches(card, filter.due, context)) return false;
-  const needle = filter.text.trim().toLocaleLowerCase();
-  if (needle) {
+  // HAAL-039 (D-119): matched as the search matches (accents and case ignored, words at word starts, any order).
+  if (filter.text.trim()) {
     const items = context.checklistItems.filter((row) => row.item_id === id && !row.deleted_at).map((row) => row.text);
-    const haystack = [card.title, card.body, ...items].map(textOf).join("\n").toLocaleLowerCase();
-    if (!haystack.includes(needle)) return false;
+    if (!matchesQuery([card.title, card.body, ...items].map(textOf).join("\n"), filter.text)) return false;
   }
   return true;
 }

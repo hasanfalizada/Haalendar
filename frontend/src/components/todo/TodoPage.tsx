@@ -52,6 +52,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PriorityFilter } from "@/components/ui/priority";
+import { SearchField } from "@/components/search/SearchField";
 import { checklistOf } from "@/lib/checklist";
 import { useAttachmentCounts } from "@/lib/eventRow";
 import {
@@ -420,6 +421,8 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {/* HAAL-039 (D-119): the search field; on phones it is in the top bar. */}
+          <SearchField className="w-44 max-md:hidden" />
           <Button
             size={tablet ? "md" : "icon"}
             aria-label={tablet ? undefined : t("todo.newList")}

@@ -113,3 +113,12 @@ export function addDays(iso: string, days: number): string {
 export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** "YYYY-MM-DD" naming a real day (2026-02-30 is not one). Moved here from the calendar route for the search (HAAL-039). */
+export function isRealDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false;
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  return !Number.isNaN(ms) && new Date(ms).toISOString().startsWith(value);
+}
