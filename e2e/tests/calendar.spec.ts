@@ -330,3 +330,41 @@ test("Ctrl+S saves the event editor, E edits the event, Ctrl+Enter saves too", a
   await expect(edit).toBeHidden();
   await expect(page.getByRole("main").getByRole("button", { name: new RegExp(`${title} moved`) })).toBeVisible();
 });
+
+// +++===+++ 2026-11-22 09:55 +04 — Hasan Alizada — HAAL-191 (D-117). The clock, the week and the day stand out: one
+// framed group in the text colour (not the grey of secondary text), medium weight, the day only in the day view.
+test("the clock, the week and the day stand out in one frame", async ({ page }) => {
+  await page.goto("/calendar?view=day&date=2027-07-14");
+  const group = page.locator("[data-header-info]");
+  await expect(group.getByRole("timer")).toBeVisible();
+  await expect(group).toContainText("Week 28");
+  await expect(group).toContainText("Day 195");
+  const look = await group.evaluate((element) => {
+    const colourOf = (name: string) => {
+      const probe = document.createElement("span");
+      probe.className = name;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    };
+    const style = getComputedStyle(element);
+    return {
+      colour: style.color,
+      text: colourOf("text-fg"),
+      muted: colourOf("text-muted"),
+      weight: Number(style.fontWeight),
+      border: style.borderTopWidth,
+      parts: element.children.length,
+    };
+  });
+  expect(look.colour).toBe(look.text);
+  expect(look.colour).not.toBe(look.muted);
+  expect(look.weight).toBeGreaterThanOrEqual(500);
+  expect(look.border).toBe("1px");
+  expect(look.parts).toBe(3);
+
+  await page.goto("/calendar?view=week&date=2027-07-14");
+  await expect(group).toContainText("Week 28");
+  await expect(group).not.toContainText("Day 195");
+});

@@ -1003,11 +1003,21 @@ export function DayView({
           )}
           {/* A phone ends the first line after the date: the rest goes to the next lines. */}
           <div aria-hidden className="h-0 basis-full max-md:order-1 md:hidden" />
-          <div className="flex w-full items-center gap-3 text-xs text-muted max-md:order-last md:ml-auto md:w-auto md:text-[13px]">
-            <LiveClock timeZone={viewerTz} />
-            <IsoWeekLabel date={date} />
-            <WeekAbBadge date={date} />
-            {view === "day" ? <DayNumberLabel date={date} /> : null}
+          <div className="flex w-full items-center max-md:order-last md:ml-auto md:w-auto">
+            {/* +++===+++ 2026-11-22 09:40 +04 — Hasan Alizada — HAAL-191 (D-117). The clock, the week and the day
+                stand out: one framed group in the text colour, medium weight, the values parted by thin lines (they
+                were small grey text the owner hardly saw). */}
+            <div
+              data-header-info
+              className="flex items-center divide-x divide-line rounded-md border border-line bg-surface text-[13px] font-medium text-fg md:text-sm [&>*]:px-2.5 [&>*]:py-1"
+            >
+              <LiveClock timeZone={viewerTz} />
+              <span className="flex items-center gap-1.5">
+                <IsoWeekLabel date={date} />
+                <WeekAbBadge date={date} />
+              </span>
+              {view === "day" ? <DayNumberLabel date={date} /> : null}
+            </div>
           </div>
           {timeBlocking ? (
             <Button
