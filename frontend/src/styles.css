@@ -15,6 +15,9 @@
   --line: #d9e2e2;
   --fg: #111827;
   --muted: #56636f;
+  /* +++===+++ 2026-11-23 10:50 +04 — Hasan Alizada — HAAL-192 (D-118). Secondary text (an event's time) on the 28 %
+     tint of a colour: darker than --muted, so it keeps 4.5:1 on every colour. */
+  --muted-on-tint: #414b55;
   --primary: #0f766e;
   --primary-hover: #115e59;
   --primary-ink: #ffffff;
@@ -27,7 +30,10 @@
   --ok: #15803d;
   --warn-bg: #fef3c7;
   --warn-fg: #78350f;
-  --ev-red: #dc2626;
+  /* +++===+++ 2026-11-23 10:20 +04 — Hasan Alizada — HAAL-192 (D-118). Red, orange, yellow and brown were hard to
+     tell apart: red moved to crimson and brown to chocolate (orange and yellow kept), and the tint went from 16 % to
+     28 %; the nearest warm pair went from ΔE2000 4.0 to 10.0 on the tint. Checked by palette-contrast.test.ts. */
+  --ev-red: #e11d48;
   --ev-orange: #ea580c;
   /* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (D-47). Light-theme yellow darkened from #eab308 (1.92:1 against
      white) to keep the colour bar and swatch at ≥ 3:1 (WCAG 1.4.11); checked by palette-contrast.test.ts. */
@@ -35,7 +41,7 @@
   --ev-green: #16a34a;
   --ev-blue: #2563eb;
   --ev-purple: #9333ea;
-  --ev-brown: #92400e;
+  --ev-brown: #704214;
   --ev-black: #1f2937;
   color-scheme: light;
 }
@@ -47,6 +53,7 @@
   --line: #253243;
   --fg: #eef2f6;
   --muted: #9aa7b4;
+  --muted-on-tint: #aeb9c4; /* HAAL-192 (D-118): lighter than --muted, 4.5:1 on every tint */
   --primary: #2dd4bf;
   --primary-hover: #5eead4;
   --primary-ink: #0b1220;
@@ -61,7 +68,7 @@
   /* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (D-47). Dark-theme brown lightened from #92400e (2.64:1); yellow
      keeps its original bright value here (the darker light-theme variant is only needed on white). */
   --ev-yellow: #eab308;
-  --ev-brown: #a8622a;
+  --ev-brown: #9a6a4a; /* HAAL-192 (D-118): from #a8622a, apart from orange */
   color-scheme: dark;
 }
 
@@ -131,7 +138,7 @@
 }
 
 /* +++===+++ 2026-10-18 — Hasan Alizada — HAAL-042 (FR-X-13, D-47). User colours on items: `ev-<colour>` picks the colour,
-   `ev-tint` mixes 16 % of it into the background (text keeps the normal foreground colour, so text contrast does not
+   `ev-tint` mixes 28 % (HAAL-192, D-118; 16 % before) of it into the background (text keeps the normal foreground colour, so text contrast does not
    depend on the colour), `ev-bar` draws the 4 px colour bar, `ev-swatch` fills a colour sample. */
 .ev-red {
   --ev: var(--ev-red);
@@ -158,7 +165,8 @@
   --ev: var(--ev-black);
 }
 .ev-tint {
-  background-color: color-mix(in srgb, var(--ev) 16%, var(--bg));
+  background-color: color-mix(in srgb, var(--ev) 28%, var(--bg));
+  --muted: var(--muted-on-tint);
 }
 .ev-bar {
   border-left: 4px solid var(--ev);
