@@ -11,6 +11,9 @@
 // can be left, and with "can view" its content is read-only (the user's own reminders stay theirs to set).
 // +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The user's personal labels (D-109): chosen like a card's
 // labels and written with Save, on any note the user reads — a view share too, since nobody else sees them.
+// +++===+++ 2026-11-23 22:10 +04 — Hasan Alizada — HAAL-104. The due date (D-121), as a card's: a date and an optional
+// time (none without the date; clearing the date clears it), "Overdue" / "Due soon" beside them, read only on a view
+// share.
 import { useQuery } from "@tanstack/react-query";
 import { ListChecks, ListX, LogOut, Users } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -31,17 +34,21 @@ import { Field, Input } from "@/components/ui/input";
 import { PrioritySelect } from "@/components/ui/priority";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
 import { type ChecklistEntry, checklistChanges, checklistOf, entriesOf } from "@/lib/checklist";
+import { dueState } from "@/lib/cards";
+import { useDisplayTimeZone } from "@/lib/datetime";
 import { remindersOf, specsFromText, specsText } from "@/lib/reminders";
 import { NOTE_LABELS_MAX, type NoteAccess, personalLabels, text } from "@/lib/notes";
 import { DEFAULT_COLOR } from "@/lib/palette";
 import { topPosition } from "@/lib/position";
 import { useDraft } from "@/lib/useDraft";
+import { useNow } from "@/lib/useNow";
 import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { uuidv7 } from "@/lib/uuid";
 import { localKeys, localRows } from "@/sync";
 
 import { reminderChanges } from "@/components/calendar/reminderWrites";
 import { CardLabels } from "@/components/kanban/CardLabels";
+import { DueBadge } from "@/components/kanban/CardTile";
 import { labelChanges } from "@/components/kanban/labelWrites";
 import { ItemLinks } from "@/components/links/ItemLinks";
 
@@ -67,6 +74,10 @@ interface NoteForm {
   reminders: string;
   /** The ids of the user's labels on the note as JSON (sorted). */
   labels: string;
+  /** "YYYY-MM-DD" or "". */
+  due_date: string;
+  /** "HH:MM" or "" (only with a date). */
+  due_time: string;
 }
 
 // A stable empty list while the items load.
@@ -88,6 +99,8 @@ interface NoteEditorProps {
 export function NoteEditor({ user, note, positions, asList = false, access = "owner", onClose }: NoteEditorProps) {
   const { t } = useTranslation();
   const settings = useSettings();
+  const timeZone = useDisplayTimeZone();
+  const now = useNow();
   const [newId] = useState(uuidv7);
   const [firstItem] = useState(uuidv7);
   const id = note ? String(note.id) : newId;
@@ -154,6 +167,8 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
       ),
       reminders: specsText(existingReminders.map((reminder) => reminder.spec)),
       labels: JSON.stringify(onNote),
+      due_date: text(note?.due_date),
+      due_time: text(note?.due_time),
     }),
     [note, settings.default_color, asList, stored, firstItem, existingReminders, onNote],
   );
@@ -200,6 +215,8 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
     },
   });
 
+  const dueNow = dueState({ due_date: form.due_date, due_time: form.due_time }, timeZone, now);
+
   const set = (patch: Partial<NoteForm>) => {
     setForm((current) => ({ ...current, ...patch }) as NoteForm);
   };
@@ -217,13 +234,15 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
     };
     const reminders = reminderChanges(user, id, existingReminders, specsFromText(form.reminders), label);
     const labelWrites = labelChanges(id, itemLabelRows, JSON.parse(form.labels) as string[], ownLabels);
+    const due = { due_date: form.due_date || null, due_time: (form.due_date && form.due_time) || null };
     if (!note) {
-      const data = { ...fields, is_checklist: hasList, pinned: false, position: topPosition(positions) };
+      const data = { ...fields, ...due, is_checklist: hasList, pinned: false, position: topPosition(positions) };
       return saveNote(user, id, null, data, items, reminders, labelWrites);
     }
-    const changed: Record<string, unknown> = Object.fromEntries(
-      Object.entries(fields).filter(([name, value]) => text(note[name]) !== value),
-    );
+    const changed: Record<string, unknown> = Object.fromEntries([
+      ...Object.entries(fields).filter(([name, value]) => text(note[name]) !== value),
+      ...Object.entries(due).filter(([name, value]) => (text(note[name]) || null) !== value),
+    ]);
     if ((note.is_checklist === true) !== hasList) changed.is_checklist = hasList;
     return saveNote(user, id, note, changed, items, reminders, labelWrites);
   }
@@ -337,6 +356,48 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
             canWrite
           />
           <fieldset disabled={readOnly} className="contents">
+            <div className="flex flex-wrap items-end gap-2">
+              <Field id="note-due-date" label={t("kanban.cards.dueDate")}>
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    type="date"
+                    value={form.due_date}
+                    onChange={(e) => {
+                      set({ due_date: e.target.value, ...(e.target.value ? {} : { due_time: "" }) });
+                    }}
+                  />
+                )}
+              </Field>
+              <Field id="note-due-time" label={t("kanban.cards.dueTime")}>
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    type="time"
+                    value={form.due_time}
+                    disabled={!form.due_date}
+                    onChange={(e) => {
+                      set({ due_time: e.target.value });
+                    }}
+                  />
+                )}
+              </Field>
+              {form.due_date && !readOnly ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    set({ due_date: "", due_time: "" });
+                  }}
+                >
+                  {t("kanban.cards.clearDue")}
+                </Button>
+              ) : null}
+              {dueNow ? (
+                <span className="self-center text-xs" role="status">
+                  <DueBadge state={dueNow} />
+                </span>
+              ) : null}
+            </div>
             <ColorPicker
               name="note-color"
               legend={t("todo.editor.color")}
