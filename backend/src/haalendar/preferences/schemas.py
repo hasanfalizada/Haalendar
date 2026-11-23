@@ -17,6 +17,8 @@ from haalendar.security.schemas import ApiModel
 Color = Literal["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"]
 TimeFormat = Literal["24h", "12h"]
 Theme = Literal["system", "light", "dark"]
+NoteLayout = Literal["grid", "list"]
+DayOrder = Literal["time", "color"]
 
 
 class WeekAbOut(BaseModel):
@@ -33,6 +35,10 @@ class SettingsOut(BaseModel):
     agenda_days: int
     week_ab: WeekAbOut
     hidden_calendars: list[uuid.UUID]
+    # +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103. Grid or list on the To-Do page (D-110).
+    note_layout: NoteLayout
+    # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order of a day's events (D-111).
+    day_order: DayOrder
     version: int
 
 
@@ -51,3 +57,5 @@ class SettingsPatchIn(ApiModel):
     week_ab: WeekAbPatchIn | None = None
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094. The whole list (D-82): calendars hidden in the views.
     hidden_calendars: list[uuid.UUID] | None = Field(default=None, max_length=500)
+    note_layout: NoteLayout | None = None
+    day_order: DayOrder | None = None

@@ -7,9 +7,12 @@
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. Checklist items (D-88): the editor's Save writes the note and its
 // item changes as one write with one undo step; a checkbox on a card checks or unchecks one item with its own step.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-105. The note's reminders (D-89) go with Save as well.
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. And the user's personal labels put on and taken off the
+// note (D-109; their undo kinds are the board labels' ones, labelWrites).
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
 import type { ReminderChanges } from "@/components/calendar/reminderWrites";
+import type { LabelChanges } from "@/components/kanban/labelWrites";
 import type { ChecklistChanges } from "@/lib/checklist";
 import { type UndoStep, batchStep, newStep, registerUndo } from "@/lib/undo";
 import { text } from "@/lib/notes";
@@ -27,7 +30,8 @@ interface NoteEdit extends NoteRef {
   after: Row;
 }
 
-export type NoteChange = "edit" | "pin" | "unpin" | "color" | "archive" | "unarchive";
+// +++===+++ 2026-11-18 15:40 +04 — Hasan Alizada — HAAL-103. "move": a new position in the manual order (D-110).
+export type NoteChange = "edit" | "pin" | "unpin" | "color" | "archive" | "unarchive" | "move";
 
 const target = (id: string) => ({ entity_type: "item" as const, entity_id: id });
 
@@ -124,10 +128,12 @@ export async function deleteNote(user: string, row: Row): Promise<boolean> {
 }
 
 const NO_CHANGES: ChecklistChanges = { create: [], update: [], remove: [] };
+const NO_LABELS: LabelChanges = { add: [], remove: [] };
+const labelTarget = (id: string) => ({ entity_type: "item_label" as const, entity_id: id });
 
 /**
- * The editor's Save: a new note (`row` null) or the changed fields of one, with its checklist changes — one write,
- * one notification, one undo step.
+ * The editor's Save: a new note (`row` null) or the changed fields of one, with its checklist, reminder and label
+ * changes — one write, one notification, one undo step.
  */
 export async function saveNote(
   user: string,
@@ -136,9 +142,16 @@ export async function saveNote(
   data: Row,
   items: ChecklistChanges = NO_CHANGES,
   reminders?: ReminderChanges,
+  labels: LabelChanges = NO_LABELS,
 ): Promise<boolean> {
   const fields = Object.keys(data).length > 0;
-  const count = items.create.length + items.update.length + items.remove.length + (reminders?.count ?? 0);
+  const count =
+    items.create.length +
+    items.update.length +
+    items.remove.length +
+    (reminders?.count ?? 0) +
+    labels.add.length +
+    labels.remove.length;
   if (row && !fields && count === 0) return true;
   const values = { title: noteName({ ...(row ?? {}), ...data }) };
   const base = row ? Object.fromEntries(Object.keys(data).map((name) => [name, row[name] ?? null])) : {};
@@ -158,6 +171,10 @@ export async function saveNote(
       }
       for (const removed of items.remove) await mutate(user, { ...itemTarget(removed), op: "delete" });
       await reminders?.run();
+      for (const added of labels.add) {
+        await mutate(user, { ...labelTarget(added.id), op: "create", data: { item_id: id, label_id: added.label_id } });
+      }
+      for (const removed of labels.remove) await mutate(user, { ...labelTarget(removed), op: "delete" });
       return written;
     },
     // A repeat would make a second note.
@@ -176,6 +193,8 @@ export async function saveNote(
         ),
         ...items.remove.map((removed) => newStep("checklist.delete", label, { user, id: removed })),
         ...(reminders?.steps ?? []),
+        ...labels.add.map((added) => newStep("itemLabel.create", label, { user, id: added.id })),
+        ...labels.remove.map((removed) => newStep("itemLabel.delete", label, { user, id: removed })),
       ];
       return steps.length === 1 && steps[0] ? steps[0] : batchStep(label, steps);
     },

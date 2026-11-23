@@ -71,6 +71,9 @@ describe("board filters", () => {
     expect(shown({ text: "DEPLOY" })).toEqual(["b"]);
     expect(shown({ text: "release notes" })).toEqual(["c"]);
     expect(shown({ text: "  plan " })).toEqual(["a"]);
+    // HAAL-039 (D-119): as the search — words in any order, at word starts.
+    expect(shown({ text: "notes release" })).toEqual(["c"]);
+    expect(shown({ text: "elease" })).toEqual([]);
     expect(shown({ priorities: ["low"], due: ["week"] })).toEqual(["c"]);
     expect(shown({ labels: [L2], priorities: ["high"] })).toEqual([]);
   });

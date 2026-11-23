@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { sharesQuery } from "@/api/sharing";
 import { Button } from "@/components/ui/button";
+import { SearchField } from "@/components/search/SearchField";
 import { newBoardPosition } from "@/lib/boards";
 import { TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { localRows } from "@/sync";
@@ -86,10 +87,14 @@ export function BoardsPage() {
       <div className="flex items-center gap-3 border-b border-line px-2 py-1.5 md:px-4">
         <h1 className="text-lg font-semibold">{t("pages.kanban.title")}</h1>
         {/* On phones New board is the floating button. */}
-        {tablet ? <div className="ml-auto">{newButton}</div> : null}
+        {/* HAAL-039 (D-119): the search field; on phones it is in the top bar. */}
+        <div className="ml-auto flex items-center gap-2">
+          <SearchField className="w-44 max-md:hidden" />
+          {tablet ? newButton : null}
+        </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
+      <div className="relative min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-4">
         {!boards.loaded ? null : nothing ? (
           <div className="grid h-full place-items-center p-6 text-center">
             <div className="flex max-w-sm flex-col items-center gap-2">

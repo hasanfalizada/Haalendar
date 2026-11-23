@@ -25,6 +25,9 @@ haalendar-export-YYYY-MM-DD.zip
 ## archive.json
 Defined by the JSON Schema (draft 2020-12) shipped with the code at [`backend/src/haalendar/exports/haalendar-export-1.0.schema.json`](../../backend/src/haalendar/exports/haalendar-export-1.0.schema.json) and copied into every archive. Top level: `format` (`haalendar-export`), `schema_version`, `exported_at`, `user`, `settings` (the user's preferences, added in HAAL-045), `modules`, `include_images`, then the record lists `calendars`, `events`, `notes`, `boards`, `labels`, `checklist_items`, `comments`, `links`, `reminders`, `attachments`. Every record carries `created_at`, `updated_at`, `version` and, for deleted records, `deleted_at` / `delete_batch_id`. Attachments are metadata only (name, type, size, dimensions, BLAKE3 content hash); with images included `archive_path` points to the file in the ZIP. Timestamps are UTC (RFC 3339, `Z`).
 
+<!-- +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102. -->
+`labels` holds the labels of the user's boards (with `board_id`) and the user's personal labels for notes (without it); cards and notes carry the ids of their labels in `label_ids`.
+
 Today the calendar module fills `calendars`, the calendar `.ics` files and `attachments`; events, notes, boards and their details are filled as their modules ship, inside schema 1.x.
 
 ## Versioning

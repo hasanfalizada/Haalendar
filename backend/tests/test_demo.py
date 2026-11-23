@@ -6,6 +6,9 @@ the reset removes only a demo's data and refuses everything else.
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -20,8 +23,12 @@ from sqlalchemy.engine import make_url
 
 from haalendar.accounts.mailer import DisabledMailer, create_mailer
 from haalendar.config import Settings
+from haalendar.db import ALEMBIC_INI
+from haalendar.dbroles import bootstrap
 from haalendar.demo import ALEX, MAX_UPLOAD_BYTES, MIRA, PASSWORD, REFUSED, is_refused, next_reset_at
 from haalendar.demo import reset as reset_module
+from haalendar.demo.local import RefusedError as LocalRefusedError
+from haalendar.demo.local import fill
 from haalendar.demo.reset import RefusedError, reset
 from haalendar.main import create_app
 
@@ -299,3 +306,47 @@ def test_the_first_reset_waits_for_the_migrations_and_the_app() -> None:
     depends_on = yaml.safe_load(overlay.read_text())["services"]["demo"]["depends_on"]
     assert depends_on["migrate"]["condition"] == "service_completed_successfully"
     assert depends_on["app"]["condition"] == "service_healthy"
+
+
+def migrated(settings: Settings) -> None:
+    """Bootstrap and migrations, as scripts/dev/stack-up.sh does before it adds the demo data."""
+    bootstrap(settings)
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=ALEMBIC_INI.parent,
+        check=True,
+        env={
+            **os.environ,
+            "HAALENDAR_DATABASE_URL": settings.database_url.get_secret_value(),
+            "HAALENDAR_MIGRATION_DATABASE_URL": settings.migration_database_url.get_secret_value(),
+        },
+    )
+
+
+def test_a_local_stand_gets_the_demo_data_with_mira_as_its_administrator(stand: Stand) -> None:
+    # +++===+++ 2026-11-18 21:00 +04 — Hasan Alizada — HAAL-193. scripts/dev/stack-up.sh --demo: a stand for a live
+    # check opens filled, without the first-run setup; not a demo, so nothing is refused and nothing is reset.
+    settings = stand.settings.model_copy(update={"demo_mode": False})
+    migrated(settings)
+    fill(settings)
+    assert stand.sql("SELECT email, role FROM user_account ORDER BY email") == [
+        (ALEX.email, "user"),
+        (MIRA.email, "admin"),
+    ]
+    with TestClient(create_app(settings), base_url="https://testserver") as api:
+        assert api.get(f"{API}/setup/status").json()["setup_required"] is False
+        sign_in(api)
+        assert {"Team stand-up", "Groceries", "Dentist"} <= titled(pulled(api))
+        assert api.get(f"{API}/admin/users").status_code == 200
+
+
+def test_the_demo_data_goes_only_into_a_database_without_accounts(stand: Stand) -> None:
+    settings = stand.settings.model_copy(update={"demo_mode": False})
+    migrated(settings)
+    stand.sql(
+        "INSERT INTO user_account (id, email, password_hash, display_name, time_zone, role) "
+        "VALUES (gen_random_uuid(), 'real@example.org', 'x', 'Real', 'UTC', 'admin')"
+    )
+    with pytest.raises(LocalRefusedError):
+        fill(settings)
+    assert stand.sql("SELECT email FROM user_account") == [("real@example.org",)]

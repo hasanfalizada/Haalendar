@@ -157,3 +157,11 @@ AUDIENCE_FUNCTION_0025 = AUDIENCE_FUNCTION_0022.replace(
     "  SELECT i.owner_id FROM item i",
     "  SELECT b.owner_id FROM board b WHERE $1 = 'board' AND b.id = $2\n  UNION\n  SELECT i.owner_id FROM item i",
 )
+
+
+# +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102 (migration 0032, D-109). A personal label and its places on
+# notes are told to that user only.
+AUDIENCE_FUNCTION_0032 = AUDIENCE_FUNCTION_0025.replace(
+    "  SELECT s.grantee_id FROM share s",
+    "  SELECT $2 WHERE $1 = 'user'\n  UNION\n  SELECT s.grantee_id FROM share s",
+)

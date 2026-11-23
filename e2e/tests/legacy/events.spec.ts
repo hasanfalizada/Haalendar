@@ -131,14 +131,16 @@ test("F-13 editing opens the same editor filled with the event", async ({ page }
   await expect(eventRow(page, title)).toContainText("10:00");
 });
 
-test("F-14 the day lists all-day events first, then by start time, then by title", async ({ page }) => {
-  // Legacy ordered by colour name (defect 7); FR-CAL-01 orders by time.
+test("F-14 the day lists all-day events first, then by start time, then by title; by colour on request", async ({
+  page,
+}) => {
+  // Legacy ordered by its colour rank (defect 7); FR-CAL-01 orders by time, and by colour when the user chooses it (D-111).
   const tag = unique("order");
   const day = "2026-12-07";
   await createEvent(page, { date: day, title: `B afternoon ${tag}`, start: "15:00", end: "16:00", color: "Red" });
   await createEvent(page, { title: `A morning ${tag}`, start: "08:00", end: "09:00", color: "Black" });
   await createEvent(page, { title: `C morning ${tag}`, start: "08:00", end: "09:00", color: "Blue" });
-  await createEvent(page, { title: `Z all day ${tag}`, color: "Yellow" });
+  await createEvent(page, { title: `Z all day ${tag}`, color: "Brown" });
   // An event of another day is not listed.
   await createEvent(page, { date: "2026-12-08", title: `Other day ${tag}` });
   await page.goto(`/calendar?date=${day}`);
@@ -152,6 +154,28 @@ test("F-14 the day lists all-day events first, then by start time, then by title
     `Details of C morning ${tag}`,
     `Details of B afternoon ${tag}`,
   ]);
+
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The legacy order on request (D-111): Settings → Events of a
+  // day → By color orders by the legacy colour rank (black, purple, green, blue, red, yellow, orange, brown — brown after
+  // red, unlike the colours' names), then title; then back to by time.
+  const order = async (value: "By color" | "By time") => {
+    await page.goto("/settings");
+    await page.getByRole("radio", { name: value }).click();
+    await page.getByRole("button", { name: "Save preferences" }).click();
+    await expect(page.getByText("Preferences saved.")).toBeVisible();
+  };
+  await order("By color");
+  await page.goto(`/calendar?date=${day}`);
+  await expect(titles).toHaveCount(4);
+  await expect
+    .poll(() => titles.evaluateAll((rows) => rows.map((row) => row.getAttribute("aria-label"))))
+    .toEqual([
+      `Details of A morning ${tag}`,
+      `Details of C morning ${tag}`,
+      `Details of B afternoon ${tag}`,
+      `Details of Z all day ${tag}`,
+    ]);
+  await order("By time");
 });
 
 test("F-15 click or right-click shows the details; a long description is cut at 50 characters", async ({ page }) => {
@@ -226,4 +250,35 @@ test("F-17 a deleted event is kept: it waits in the trash", async ({ page }) => 
   expect(trash.data.find((entry) => entry.title === title)?.deleted_at).toBeTruthy();
 });
 
-test.fixme("F-19 a second editor is refused with a notice while one is open (HAAL-069)", async () => {});
+// +++===+++ 2026-11-15 17:24 +04 — Hasan Alizada — HAAL-069. Decision D-108: one editor is ensured by the single editor
+// state and the modal dialog, so a second open attempt cannot happen and no notice is shown; this guards that.
+test("F-19 the editor opens only once: a double click, or N inside an open editor, keeps one editor with its input", async ({
+  page,
+}) => {
+  await page.goto("/calendar?date=2026-12-03");
+  await page.getByRole("button", { name: "New event" }).first().dblclick();
+  await expect(page.getByRole("dialog", { name: "New event" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // N, the shortcut for a new event, pressed outside a text field of the editor of an event being changed: the same
+  // editor stays, with the change not yet saved.
+  const title = unique("Standup");
+  await createEvent(page, { date: "2026-12-03", title });
+  await eventRow(page, title).click();
+  await page.getByRole("dialog", { name: "Event details" }).getByRole("button", { name: "Edit" }).click();
+  const editor = page.getByRole("dialog", { name: "Edit event" });
+  await editor.getByLabel("Location").fill("Room 2");
+  await editor.getByRole("checkbox", { name: "All day" }).focus();
+  await page.keyboard.press("n");
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(editor).toBeVisible();
+  await expect(editor.getByLabel("Title")).toHaveValue(title);
+  await expect(editor.getByLabel("Location")).toHaveValue("Room 2");
+
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+  await expect(eventRow(page, title)).toHaveCount(1);
+  await expect(eventRow(page, title)).toContainText("Room 2");
+});

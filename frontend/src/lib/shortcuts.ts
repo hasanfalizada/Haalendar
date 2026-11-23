@@ -74,7 +74,9 @@ export function parseCombo(keys: string): Combo {
   const has = (name: string) => parts.slice(0, -1).includes(name);
   let code: string;
   let shift = has("Shift");
-  if (key === "?") {
+  // +++===+++ 2026-11-23 14:00 +04 — Hasan Alizada — HAAL-039 (D-119). "/" opens the search, by its key or its character.
+  if (key === "/") code = "Slash";
+  else if (key === "?") {
     code = "Slash";
     shift = true;
   } else if (/^[A-Z]$/.test(key)) code = `Key${key}`;
@@ -86,6 +88,7 @@ export function parseCombo(keys: string): Combo {
 export function matches(event: KeyboardEvent, keys: string): boolean {
   // "?" by the character as well: where the layout puts it elsewhere than Shift+/.
   if (keys === "?" && event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) return true;
+  if (keys === "/" && event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey) return true;
   const combo = parseCombo(keys);
   const code = event.code || (event.key === " " ? "Space" : event.key);
   if (code !== combo.code) return false;

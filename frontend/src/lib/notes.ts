@@ -4,6 +4,7 @@
 // group in the main list ("Shared with me"; their pin is the owner's); noteAccess says what the user may do with a note.
 import { type Priority, filterByPriority } from "@/atoms/items/priority";
 
+import { positionAt } from "./columns";
 import { comparePositions } from "./position";
 
 type Row = Record<string, unknown>;
@@ -68,4 +69,110 @@ export function noteGroups(
     others: own.filter((row) => row.pinned !== true),
     shared: user ? sorted.filter((row) => row.owner_id !== undefined && row.owner_id !== user) : [],
   };
+}
+
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. Labels of notes (FR-TODO-04, D-109): personal — a label
+// without a board belongs to its user, who puts it on any note they read; nobody else sees it. The filter shows the
+// notes with any of the chosen labels; a chosen label that is gone no longer filters.
+
+/** At most this many personal labels per user, and of them on one note (as the server, D-109). */
+export const PERSONAL_LABELS_MAX = 100;
+export const NOTE_LABELS_MAX = 20;
+
+/**
+ * The user's live personal labels, by name. One made on this device and not synced yet has no container: without a
+ * board it can only be the user's own.
+ */
+export function personalLabels(labels: readonly Row[], user: string): Row[] {
+  return labels
+    .filter(
+      (row) => row.board_id == null && (row.container_id === undefined || row.container_id === user) && !row.deleted_at,
+    )
+    .sort((a, b) => text(a.name).localeCompare(text(b.name)));
+}
+
+/** The ids of the given labels on each note (live rows only). */
+export function labelsByNote(itemLabels: readonly Row[], labels: readonly Row[]): Map<string, string[]> {
+  const live = new Set(labels.map((row) => String(row.id)));
+  const byNote = new Map<string, string[]>();
+  for (const row of itemLabels) {
+    if (row.deleted_at || !live.has(String(row.label_id))) continue;
+    const note = String(row.item_id);
+    byNote.set(note, [...(byNote.get(note) ?? []), String(row.label_id)]);
+  }
+  return byNote;
+}
+
+/** The notes with any of the chosen labels (the chosen ones still alive); every row when none is chosen. */
+export function filterByLabels(
+  rows: readonly Row[],
+  chosen: readonly string[],
+  byNote: Map<string, string[]>,
+  labels: readonly Row[],
+): Row[] {
+  const live = new Set(labels.map((row) => String(row.id)));
+  const wanted = chosen.filter((id) => live.has(id));
+  if (wanted.length === 0) return [...rows];
+  return rows.filter((row) => (byNote.get(String(row.id)) ?? []).some((id) => wanted.includes(id)));
+}
+
+const ID = /^[0-9a-f-]{36}$/i;
+
+/** `?labels=<id>,<id>` of the To-Do page (anything else dropped). */
+export function parseLabelsParam(value: unknown): string[] {
+  return typeof value === "string" && value ? value.split(",").filter((id) => ID.test(id)) : [];
+}
+
+export function formatLabelsParam(ids: readonly string[]): string | undefined {
+  return ids.length > 0 ? [...ids].sort().join(",") : undefined;
+}
+
+// +++===+++ 2026-11-18 15:40 +04 — Hasan Alizada — HAAL-103. Manual order of notes (FR-TODO-05, D-110): a note moves
+// only among its own section (Pinned, Others, or the archive); with a filter on, among the notes shown — the place
+// among the shown ones is turned into one among the whole section (right after the shown note above it), so the
+// hidden notes keep their places. The new position goes between its neighbours there (fractional index).
+
+export type NoteLayout = "grid" | "list";
+
+/** Which section of the page a note is in (the archive tab has only "others"). */
+export type NoteSection = "pinned" | "others";
+
+/**
+ * The position that puts `moving` at `index` among the shown notes of its section (counted without it); null when it
+ * is there already. `section` is the whole section in order (no filter), `shown` the notes of it on the page.
+ */
+export function movedPosition(
+  section: readonly Row[],
+  shown: readonly Row[],
+  moving: Row,
+  index: number,
+): string | null {
+  const all = section.filter((row) => row.id !== moving.id);
+  const visible = shown.filter((row) => row.id !== moving.id);
+  if (index < 0 || index > visible.length) return null;
+  // Its own place among the shown ones: it stays (not past a hidden note next to it).
+  if (shown.findIndex((row) => row.id === moving.id) === index) return null;
+  const above = visible[index - 1];
+  const first = visible[0];
+  const at = above
+    ? all.findIndex((row) => row.id === above.id) + 1
+    : first
+      ? all.findIndex((row) => row.id === first.id)
+      : all.length;
+  if (section.findIndex((row) => row.id === moving.id) === at) return null;
+  return positionAt(section, moving, at);
+}
+
+/** The place one step earlier (-1) or later (+1) among the shown notes, counted without the note; null at an edge. */
+export function stepIndex(shown: readonly Row[], moving: Row, by: -1 | 1): number | null {
+  const from = shown.findIndex((row) => row.id === moving.id);
+  const to = from + by;
+  return from < 0 || to < 0 || to >= shown.length ? null : to;
+}
+
+/** The place a note dropped on `target` takes among the shown notes (counted without it): the target's own place. */
+export function dropIndex(shown: readonly Row[], moving: Row, target: Row): number | null {
+  if (moving.id === target.id) return null;
+  const to = shown.findIndex((row) => row.id === target.id);
+  return to < 0 || shown.findIndex((row) => row.id === moving.id) < 0 ? null : to;
 }

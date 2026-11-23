@@ -15,7 +15,7 @@ import { useReauth } from "@/components/auth/reauth";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/input";
 import { UnsavedChangesDialog } from "@/components/ui/unsaved-changes-dialog";
-import { useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { saveHint, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 
 const instanceKey = ["admin", "instance-settings"] as const;
 
@@ -114,7 +114,7 @@ function InstanceForm({ current }: { current: InstanceSettings }) {
             />
             {t("admin.instance.requireTfa")}
           </label>
-          <Button type="submit" variant="primary" disabled={busy || !dirty}>
+          <Button type="submit" variant="primary" disabled={busy || !dirty} {...saveHint}>
             {t("admin.instance.save")}
           </Button>
         </div>

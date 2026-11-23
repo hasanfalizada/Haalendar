@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSettings } from "@/api/settings";
 import { type DayEntry, dayLabel, entriesOnDays } from "@/lib/dayView";
 import type { DropTarget } from "@/lib/eventDrag";
 import { useEntryTime } from "@/lib/entryTime";
@@ -89,7 +90,9 @@ export function MonthGrid({
   const { t, i18n } = useTranslation();
   const time = useEntryTime();
   const { ref, lines } = useLinesPerCell(weeks.length);
-  const byDay = useMemo(() => entriesOnDays(rows, weeks.flat(), viewerTz), [weeks, rows, viewerTz]);
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
+  const { day_order: by } = useSettings();
+  const byDay = useMemo(() => entriesOnDays(rows, weeks.flat(), viewerTz, by), [weeks, rows, viewerTz, by]);
   const firstWeek = weeks[0] ?? [];
 
   return (
@@ -106,7 +109,7 @@ export function MonthGrid({
         </div>
         <div
           ref={ref}
-          className="grid min-h-0 flex-1 grid-cols-7 overflow-y-auto"
+          className="relative grid min-h-0 flex-1 grid-cols-7 overflow-y-auto"
           style={{ gridTemplateRows: `repeat(${String(weeks.length)}, minmax(5.5rem, 1fr))` }}
         >
           {weeks.flat().map((day) => {
@@ -187,7 +190,8 @@ export function MonthGrid({
                           entry={entry}
                           anchor={anchor}
                           describedBy={id}
-                          drag={{ day, accepts: "day", disabled: !canDrag(entry) }}
+                          place={day}
+                          drag={{ accepts: "day", disabled: !canDrag(entry) }}
                           className={cn(
                             "flex h-5 w-full items-center gap-1 rounded-sm pr-1 pl-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary",
                             itemColorClasses(entry.color),

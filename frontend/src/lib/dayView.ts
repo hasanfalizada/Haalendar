@@ -8,8 +8,10 @@
 // - the order is calendar.day_order.v1 (all-day, start, title — never colour).
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. Excluded dates of a series (`exceptions`, D-67) are left out; the
 // effective start of a series is its first occurrence that is not excluded (F-23), derived only.
+// +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order is calendar.day_order.v2 by the user's setting
+// `day_order` (D-111): by time as before, or by colour as the legacy calendar (the legacy colour rank, then title).
 import type { Color } from "@/api/generated/types.gen";
-import { dayOrder } from "@/atoms/calendar/dayOrder";
+import { type DayOrderBy, dayOrder } from "@/atoms/calendar/dayOrder";
 import { occurrences } from "@/atoms/calendar/recurrence";
 import { eventDays } from "@/atoms/time/eventDays";
 import { localToUtc, wallClock } from "@/atoms/time/localToUtc";
@@ -95,8 +97,8 @@ function occurrenceDates(row: Row, start: string, rrule: string | null, date: st
   }
 }
 
-/** The entries of `date` ("YYYY-MM-DD") for a viewer in `viewerTz`, in display order. */
-export function entriesOn(rows: readonly Row[], date: string, viewerTz: string): DayEntry[] {
+/** The entries of `date` ("YYYY-MM-DD") for a viewer in `viewerTz`, in display order (`by`: the user's day_order). */
+export function entriesOn(rows: readonly Row[], date: string, viewerTz: string, by: DayOrderBy = "time"): DayEntry[] {
   const found: (DayEntry & { created_at: string })[] = [];
   for (const row of rows) {
     const [id, start, tzid] = [text(row.id), text(row.start_date), text(row.tzid)];
@@ -149,8 +151,10 @@ export function entriesOn(rows: readonly Row[], date: string, viewerTz: string):
       continues: e.continues,
       start: e.allDay ? null : e.start,
       title: e.title,
+      color: e.color,
       created_at: e.created_at,
     })),
+    by,
   );
   const byKey = new Map(found.map(({ created_at: created, ...shown }) => [shown.key, { shown, created }]));
   return order.flatMap((key) => {
@@ -167,6 +171,7 @@ export function entriesOnDays(
   rows: readonly Row[],
   days: readonly string[],
   viewerTz: string,
+  by: DayOrderBy = "time",
 ): Map<string, DayEntry[]> {
   const wanted = new Set(days);
   const [first = "", last = ""] = [days[0], days[days.length - 1]];
@@ -189,7 +194,7 @@ export function entriesOnDays(
       else oneOffs.set(day, [row]);
     }
   }
-  return new Map(days.map((day) => [day, entriesOn([...series, ...(oneOffs.get(day) ?? [])], day, viewerTz)]));
+  return new Map(days.map((day) => [day, entriesOn([...series, ...(oneOffs.get(day) ?? [])], day, viewerTz, by)]));
 }
 
 /** The full date of the day view, e.g. "Thursday, October 22, 2026" (a date, so no time zone may shift it). */

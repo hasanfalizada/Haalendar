@@ -18,6 +18,8 @@ export const DEFAULT_SETTINGS: Settings = {
   agenda_days: 30,
   week_ab: { enabled: false, anchor: null, labels: ["A", "B"] },
   hidden_calendars: [], // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82).
+  note_layout: "grid", // +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110).
+  day_order: "time", // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185 (D-111).
   version: 0,
 };
 

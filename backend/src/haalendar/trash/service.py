@@ -222,7 +222,8 @@ SOURCES: dict[str, TrashSource] = {
         may_restore=lambda user_id: Item.owner_id == user_id,
         refuse=lambda row, user_id: None if row.owner_id == user_id else "forbidden",
         # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. And its checklist items.
-        children=(("attachment", Attachment), ("checklist_item", ChecklistItem)),
+        # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102 (D-109). And its owner's labels on it.
+        children=(("attachment", Attachment), ("checklist_item", ChecklistItem), ("item_label", ItemLabel)),
         scope=lambda: Item.kind == "note",
     ),
     "attachment": TrashSource(

@@ -2,7 +2,7 @@
   "$schema": "./manifest.schema.json",
   "project": "haalendar",
   "manifest_version": "1.0.0",
-  "updated_at": "2026-10-29",
+  "updated_at": "2026-11-18",
   "description": "+++===+++ 2026-10-14 — Hasan Alizada — HAAL-014. Central registry of Haalendar atoms. Read this file first; then load only the contract, vectors and implementation of the atoms involved. Update it after every change.",
   "conventions": {
     "atoms_dir": "atoms",
@@ -111,7 +111,7 @@
     },
     {
       "id": "calendar.day_order.v1",
-      "status": "implemented",
+      "status": "deprecated",
       "purpose": "Display order of the entries of one day: all-day first, then by start (continuing entries count as 00:00 and come first), then by title ignoring case and accents, then creation time and key; colour never counts.",
       "contract": "atoms/calendar.day_order.v1/contract.json",
       "examples": "atoms/calendar.day_order.v1/examples.md",
@@ -135,6 +135,34 @@
         "FR-CAL-01"
       ],
       "notes": "Pure function; plain code-point comparisons so both implementations agree. The day view uses it (HAAL-060); agenda and export later."
+    },
+    {
+      "id": "calendar.day_order.v2",
+      "status": "implemented",
+      "purpose": "Display order of the entries of one day by the user's setting: by time (all-day first, then start, then title) or by colour (the legacy colour rank, then title), then creation time and key.",
+      "contract": "atoms/calendar.day_order.v2/contract.json",
+      "examples": "atoms/calendar.day_order.v2/examples.md",
+      "vectors": "atoms/calendar.day_order.v2/vectors.json",
+      "capabilities": [
+        "dayOrder"
+      ],
+      "tests_ref": {
+        "python": "backend/tests/test_day_order_atom.py",
+        "typescript": "frontend/src/atoms/calendar/dayOrder.test.ts"
+      },
+      "impl_ref": {
+        "python": "backend/src/haalendar/atoms/calendar/day_order.py",
+        "typescript": "frontend/src/atoms/calendar/dayOrder.ts"
+      },
+      "hash": "b3:2b4e3ba445ee5e79b20fc26ee22f6f99c8d832f39f3302caf77120be15728350",
+      "deps": [],
+      "requirements": [
+        "D-111",
+        "D-61",
+        "F-14",
+        "FR-CAL-01"
+      ],
+      "notes": "Pure function; plain code-point comparisons so both implementations agree. Replaces v1 (HAAL-185): by time is v1 unchanged, by colour is the legacy order. The day, week, month and agenda views use it with the user setting day_order."
     },
     {
       "id": "calendar.iso_week.v1",

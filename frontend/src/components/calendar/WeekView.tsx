@@ -19,6 +19,7 @@ import { useSettings } from "@/api/settings";
 import { type DayEntry, clockText, dayLabel, entriesOnDays } from "@/lib/dayView";
 import { itemColorClasses } from "@/lib/palette";
 import { useEntryTime } from "@/lib/entryTime";
+import type { OpenDetails } from "@/lib/openDetails";
 import { cn } from "@/lib/utils";
 import type { DropTarget } from "@/lib/eventDrag";
 import { DAY_MINUTES, MIN_MINUTES, layoutDay } from "@/lib/weekView";
@@ -58,13 +59,15 @@ interface WeekGridProps {
   rows: readonly Row[];
   viewerTz: string;
   today: string;
-  /** The entry whose details are open (its key). */
-  openKey: string | null;
-  onOpen: (entry: DayEntry) => void;
-  onClose: () => void;
+  /** The open card. */
+  open: OpenDetails | null;
+  onOpen: (entry: DayEntry, place: string) => void;
+  onClose: (entry: DayEntry, place: string) => void;
   /** Details next to the event (popover); false on phones, where the page shows them in a sheet. */
   inPopover: boolean;
   details: (entry: DayEntry) => ReactNode;
+  /** The calendar's area the card stays inside. */
+  boundary: Element | null;
   /** May this event be dragged (its calendar is writable)? */
   canDrag: (entry: DayEntry) => boolean;
   onDrop: (data: DragData, target: DropTarget) => void;
@@ -78,27 +81,30 @@ export function WeekGrid({
   rows,
   viewerTz,
   today,
-  openKey,
+  open,
   onOpen,
   onClose,
   inPopover,
   details,
+  boundary,
   canDrag,
   onDrop,
   aside,
   onSchedule,
 }: WeekGridProps) {
   const { t, i18n } = useTranslation();
-  const { time_format: timeFormat } = useSettings();
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The all-day row in the order the user chose (D-111); the
+  // timed events are laid out by their hours.
+  const { time_format: timeFormat, day_order: by } = useSettings();
   const now = useMinuteOfDay(viewerTz);
   const scroller = useRef<HTMLDivElement>(null);
   const week = useMemo(() => {
-    const byDay = entriesOnDays(rows, days, viewerTz);
+    const byDay = entriesOnDays(rows, days, viewerTz, by);
     return days.map((day) => {
       const entries = byDay.get(day) ?? [];
       return { day, allDay: entries.filter((entry) => entry.allDay), timed: layoutDay(entries) };
     });
-  }, [days, rows, viewerTz]);
+  }, [days, rows, viewerTz, by]);
   const hasToday = days.includes(today);
 
   // A new week opens an hour before now (this week) or at 08:00; re-renders of the same week keep the scroll.
@@ -110,7 +116,7 @@ export function WeekGrid({
   }, [firstDay]);
 
   const { range: time } = useEntryTime();
-  const anchor: DetailsAnchor = { openKey, onOpen, onClose, inPopover, details };
+  const anchor: DetailsAnchor = { open, onOpen, onClose, inPopover, details, boundary };
 
   const columns = "grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] md:grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
   return (
@@ -153,7 +159,8 @@ export function WeekGrid({
                         entry={entry}
                         anchor={anchor}
                         describedBy={id}
-                        drag={{ day, accepts: "allday", disabled: !canDrag(entry) }}
+                        place={day}
+                        drag={{ accepts: "allday", disabled: !canDrag(entry) }}
                         className={cn(
                           "w-full truncate rounded-sm py-0.5 pr-1 pl-2 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary",
                           itemColorClasses(entry.color),
@@ -170,7 +177,7 @@ export function WeekGrid({
               </DropArea>
             ))}
           </div>
-          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto">
             <div className={columns} style={{ height: 24 * HOUR_PX }}>
               <div className="relative" aria-hidden>
                 {Array.from({ length: 23 }, (_, i) => i + 1).map((hour) => (
@@ -214,7 +221,8 @@ export function WeekGrid({
                           entry={block.entry}
                           anchor={anchor}
                           describedBy={id}
-                          drag={{ day, accepts: "time", disabled: block.entry.continues || !canDrag(block.entry) }}
+                          place={day}
+                          drag={{ accepts: "time", disabled: block.entry.continues || !canDrag(block.entry) }}
                           className={cn(
                             "flex size-full flex-col overflow-hidden rounded-sm py-0.5 pr-1 pl-2 text-left leading-tight outline-none focus-visible:ring-2 focus-visible:ring-primary",
                             itemColorClasses(block.entry.color),

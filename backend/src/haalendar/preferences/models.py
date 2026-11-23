@@ -35,6 +35,10 @@ class UserSettings(Base):
     hidden_calendars: Mapped[list[uuid.UUID]] = mapped_column(
         ARRAY(Uuid(as_uuid=True)), default=list, server_default="{}"
     )
+    # +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103. Grid or list on the To-Do page (D-110).
+    note_layout: Mapped[str] = mapped_column(String(4), default="grid", server_default="grid")
+    # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order of a day's events: by time or colour (D-111).
+    day_order: Mapped[str] = mapped_column(String(5), default="time", server_default="time")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")

@@ -69,11 +69,14 @@ export function layoutDay(entries: readonly DayEntry[]): TimedBlock[] {
   return blocks;
 }
 
-/** "October 26 – November 1, 2026": the first to the last of `days` in the interface language (also the agenda). */
-export function rangeTitle(days: readonly string[], locale: string): string {
+/**
+ * "October 26 – November 1, 2026": the first to the last of `days` in the interface language (also the agenda);
+ * `short` gives "Oct 26 – Nov 1, 2026" for a phone's header (HAAL-187).
+ */
+export function rangeTitle(days: readonly string[], locale: string, short = false): string {
   const [first = "", last = first] = [days[0], days[days.length - 1]];
   return new Intl.DateTimeFormat(locale, {
-    month: "long",
+    month: short ? "short" : "long",
     day: "numeric",
     year: "numeric",
     timeZone: "UTC",

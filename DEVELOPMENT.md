@@ -189,7 +189,7 @@ the GitHub Actions files with actionlint and zizmor (Docker).
 
 ### CI (GitHub Actions)
 
-`.github/workflows/ci.yml` runs on every push to `revamp`, `development` and `master`, on every pull request and on a
+`.github/workflows/ci.yml` runs on every push to `development` and `master`, on every pull request and on a
 release tag. Its jobs call `scripts/dev/check-all.sh --only …`, so CI checks exactly what the script checks here:
 
 | Job | Steps |
@@ -240,6 +240,7 @@ scripts/dev/stack-up.sh     # PostgreSQL 18 (port 55434), API 8081, worker, Vite
 STACK_API_PORT=8091 scripts/dev/stack-up.sh  # the API on another port when 8081 is taken (the stack refuses taken ports)
 scripts/dev/stack-up.sh --preview   # the same plus the production build (service worker, works offline) on 4173
 scripts/dev/stack-up.sh --scan      # rate limits raised and the Docker bridge host accepted, for scripts/dev/dast.sh
+scripts/dev/stack-up.sh --demo      # filled with the demo's made-up accounts and data (Mira is the administrator; the password is printed)
 scripts/dev/stack-down.sh   # stops everything and drops the database and the uploads
 ```
 
@@ -455,7 +456,7 @@ The rules live in the atom `items.priority.v1` (`atoms/items.priority.v1`): serv
 
 ### Colors
 
-User colors come from `frontend/src/lib/palette.ts` (order, default brown) and the `ev-*` classes in `styles.css`: `itemColorClasses(color)` gives a row the 16 % tint and the 4 px bar, `ColorSwatch` / `ColorPicker` (`components/ui/color-picker.tsx`) show and choose colors. Changing a `--ev-*` token is checked by `palette-contrast.test.ts` (text ≥ 4.5:1 on the tint, bar ≥ 3:1, both themes); the palette list itself is checked against the contract and the backend by `backend/tests/test_palette.py`.
+User colors come from `frontend/src/lib/palette.ts` (order, default brown) and the `ev-*` classes in `styles.css`: `itemColorClasses(color)` gives a row the 28 % tint (D-118) and the 4 px bar, `ColorSwatch` / `ColorPicker` (`components/ui/color-picker.tsx`) show and choose colors. Changing a `--ev-*` token is checked by `palette-contrast.test.ts` (text ≥ 4.5:1 on the tint, bar ≥ 3:1, both themes); the palette list itself is checked against the contract and the backend by `backend/tests/test_palette.py`.
 
 ### Installable app (PWA) and offline start
 <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. -->
@@ -489,7 +490,7 @@ Calendars (D-82): every user has one default calendar, made in `accounts/service
 ICS (D-83): `backend/src/haalendar/planning/ics.py` reads a file into drafts and writes a calendar (library `icalendar`, pure), `ics_service.py` imports into a calendar (savepoint per event, `event.ics_uid` against repeats) and exports, `ics_api.py` the two endpoints; the data export uses the same writer. In the app: `components/calendar/IcsImportDialog.tsx`, `icsDownload.ts`. Tests: `backend/tests/test_ics.py` (parsing), `test_ics_import.py` (API), `frontend/src/test/calendars.test.tsx`.
 
 <!-- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-060. -->
-The day view (`/calendar?date=YYYY-MM-DD`) is `components/calendar/DayView.tsx` over `lib/dayView.ts` (`entriesOn(rows, date, viewerTz)`): which events and occurrences fall on the viewer's date, their local times, and the order from atom `calendar.day_order.v1`. Tests: `test/day-view.test.tsx` (note that the test user's zone is the device zone).
+The day view (`/calendar?date=YYYY-MM-DD`) is `components/calendar/DayView.tsx` over `lib/dayView.ts` (`entriesOn(rows, date, viewerTz)`): which events and occurrences fall on the viewer's date, their local times, and the order from atom `calendar.day_order.v2` (by the user's setting `day_order`: by time, or by colour as the legacy calendar — D-111). Tests: `test/day-view.test.tsx` (note that the test user's zone is the device zone).
 
 <!-- +++===+++ 2026-10-22 — Hasan Alizada — HAAL-061. -->
 Navigation and the mini month: `components/calendar/MiniMonth.tsx` over `lib/monthGrid.ts`; the layout switches by `useMediaQuery` (`lib/useMediaQuery.ts`, md 768 / lg 1024): inline sidebar, overlay sheet, phone date sheet. jsdom has no layout, so tests set the width with a `matchMedia` stub (`test/calendar-nav.test.tsx`).

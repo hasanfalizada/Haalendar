@@ -32,6 +32,8 @@ import {
 import { useReminderToasts } from "@/components/notifications/useReminderToasts";
 import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { SearchField } from "@/components/search/SearchField";
+import { SearchDialog } from "@/components/search/SearchDialog";
 import { allowDrafts } from "@/lib/drafts";
 import { listenToWorker } from "@/lib/push";
 import { startSync } from "@/sync";
@@ -220,16 +222,29 @@ export function AppShell() {
         </Sheet>
         <img src={LOGO_SRC} alt="" width={24} height={24} className="size-6" />
         <span className="font-semibold">{t("app.name")}</span>
+        {/* +++===+++ 2026-11-23 15:05 +04 — Hasan Alizada — HAAL-039 (D-119). Search on phones, in the top bar. */}
+        <SearchField className="mr-1 ml-auto w-36" />
       </header>
 
-      <main id="main" data-region="content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto outline-none">
+      {/* +++===+++ 2026-11-19 09:25 +04 — Hasan Alizada — HAAL-188. One scroll bar: the banners and the page form a
+          column, so a page of full height takes what the banners leave; main and every scrolling box are positioned,
+          so the hidden labels (sr-only, absolute) stay inside them instead of making the window scroll empty space. */}
+      <main
+        id="main"
+        data-region="content"
+        tabIndex={-1}
+        className="relative flex min-w-0 flex-1 flex-col overflow-auto outline-none"
+      >
         <DemoBanner onReset={goToSignIn} />
         <OfflineBanner />
         <TimeZoneMismatch />
-        <Outlet />
+        <div className="min-h-0 flex-1">
+          <Outlet />
+        </div>
       </main>
       {userMenu.dialogs}
       <NotificationsDialog open={notificationsOpen} onOpenChange={setNotificationsOpen} />
+      <SearchDialog />
     </div>
   );
 }

@@ -221,6 +221,7 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 
 ### 5.11 `label` · `item_label`
 <!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. As built (migration 0027, D-92): board labels only (board_id NN, the board as container; author created_by instead of owner_id; name unique per board, case ignored); `item_label` has its own id, the item's container and the common columns (a synced set row), one live row per item and label. Personal labels for notes come with HAAL-102. -->
+<!-- +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102. As built (migration 0032, D-109): a personal label has no board and its user as container (`container_kind` `user`, `container_id` = `created_by`; name unique among the user's live labels); a personal label on a note is an `item_label` with that user as container, on any note the user reads. -->
 | Table | Column | Type | Rules |
 |---|---|---|---|
 | label | id | uuid PK | |
@@ -340,7 +341,7 @@ Conflict records (both values of a field changed on two devices) live on the dev
 | Table | Key columns | Rules |
 |---|---|---|
 | `user_account` (table name; `user` is reserved in PostgreSQL) | id, email (U on lower(email)), email_verified_at, password_hash, display_name, avatar_key, time_zone (IANA), locale, role, totp_secret_enc, totp_enabled_at, failed_login_count, locked_until, last_login_at, deactivated_at, must_change_password, [common] | Argon2id hash; TOTP secret encrypted with server key; soft deactivation (ADR-0005) |
-| `user_settings` | owner_id PK (FK user_account), week_start (0..6, default 1 = Monday), time_format (`24h`/`12h`), theme (`system`/`light`/`dark`), default_color (default `brown`), agenda_days (1..365, default 30), week_ab_enabled, week_ab_anchor (date: any day of a week labelled first; required while enabled), week_ab_labels (text[2], default {A,B}, different), hidden_calendars (uuid[], default {}; calendars hidden in the views — migration 0020, D-82), created_at, updated_at, version, sync_seq | FR-ACC-09, FR-CAL-23/27; owner-only RLS, no delete, not audited (D-50, HAAL-045) |
+| `user_settings` | owner_id PK (FK user_account), week_start (0..6, default 1 = Monday), time_format (`24h`/`12h`), theme (`system`/`light`/`dark`), default_color (default `brown`), agenda_days (1..365, default 30), week_ab_enabled, week_ab_anchor (date: any day of a week labelled first; required while enabled), week_ab_labels (text[2], default {A,B}, different), hidden_calendars (uuid[], default {}; calendars hidden in the views — migration 0020, D-82), note_layout (`grid`/`list`, default `grid`; the To-Do page — migration 0033, D-110), day_order (`time`/`color`, default `time`; the events of a day — migration 0034, D-111), created_at, updated_at, version, sync_seq | FR-ACC-09, FR-CAL-23/27; owner-only RLS, no delete, not audited (D-50, HAAL-045) |
 | `session` | id, token_hash (U), user_id, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent, ip_prefix, csrf_secret, reauth_at | idle 30 d, absolute 90 d; re-auth window 15 min (ADR-0005) |
 | `auth_token` | id, user_id (NULL for invite to new e-mail), email, purpose, token_hash (U), expires_at, used_at, created_by | verify 24 h, reset 1 h, invite |
 | `recovery_code` | id, user_id, code_hash, used_at, created_at | 10 per TOTP enrolment |

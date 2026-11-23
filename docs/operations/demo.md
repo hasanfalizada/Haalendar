@@ -13,11 +13,43 @@ way of working.
 | Accounts | Mira Novak and Alex Stone, regular users with a published password; the sign-in page has a button for each. They share a calendar and a board. There is no administrator. |
 | Reset | At every full and half hour UTC. A minute before, a new database is built next to the current one (migrations, made-up data with dates of the current week); at the mark the two swap names and the files are removed. If the build fails, the stand stays as it is and the next mark tries again. |
 | After a reset | Visitors are signed out and devices sync from the start, dropping what is gone. The worker loses its connection and is restarted by Docker. Also on every start of the service `demo`. |
-| Banner | The time until the next reset and that everything is public, in the app and on the sign-in page. |
+| Banner | The time until the next reset, that everything is public, and a link to the [privacy](#privacy) and [terms of use](#terms-of-use) below, in the app and on the sign-in page. |
 | Refused (403) | Registration, first-run setup, password change and reset, e-mail verification, invitations, two-factor sign-in, ending sessions, Web Push subscriptions, data exports: each would let one visitor lock out the others, or make the stand send something or fill its disk. Wrong passwords do not lock a demo account. |
 | Limits | 1 MB per upload, 100 MB of attachments per account, 300 requests per minute per client. No mail, whatever `.env` says. |
 | security.txt | `/.well-known/security.txt` names the project's private vulnerability report form on GitHub (set in `compose.demo.yaml`). |
 | On the host | Memory, CPU and process limits per container, logs limited to 30 MB per container. No port is open beyond the one for the reverse proxy. |
+
+## Privacy
+
+<!-- +++===+++ 2026-11-16 20:04 +04 — Hasan Alizada — HAAL-181. What the demo keeps about a visitor, checked against the code and the
+demo host; a description for visitors, not a legal notice. -->
+What the stand keeps about a visitor, and for how long:
+
+| | |
+|---|---|
+| What is entered | Everything, files included, is removed at the next reset, at most 30 minutes later. Everything is public meanwhile: enter nothing personal. |
+| On the device | The app keeps a copy of the data in the browser's storage for offline use; it goes nowhere else and is wiped on sign-out. |
+| Cookie | One: the session, needed for signing in (`HttpOnly`, `Secure`). |
+| Session | The start of the address (/24 for IPv4, /48 for IPv6) and the browser name, shown to the user in the list of sessions; removed at the next reset. |
+| Logs of the app | Each request with its method, path, status and duration, without the address or the browser; overwritten after 30 MB per container. |
+| Web server of the host | Not part of Haalendar. On the stand it logs each request with the visitor's address, time, page, browser and referring page, and deletes the log after 14 days. |
+| Third parties | None: no analytics, no advertising, no fonts or scripts from elsewhere (the Content Security Policy allows only the stand's own address). Search engines are asked not to list it. |
+
+## Terms of use
+
+<!-- +++===+++ 2026-11-17 19:52 +04 — Hasan Alizada — HAAL-183. The terms for visitors of the demo, linked from its banner; a
+plain statement of how the stand is run, not reviewed as a legal text. -->
+By using the demo a visitor accepts that:
+
+- The stand is for trying Haalendar. It is provided as is, without any warranty, and may be unavailable, changed or
+  reset at any time.
+- Everything entered is seen by other visitors and removed at the next reset; nothing of it is backed up or returned.
+- Nothing personal or confidential is entered, nothing unlawful and nothing that infringes the rights of others, and
+  the stand is not attacked or used to store or spread anything.
+- What breaks these terms may be removed, and access blocked, at any time.
+- A security problem is reported privately as the [security policy](../../SECURITY.md) says.
+
+The software itself is under the [Apache License 2.0](../../LICENSE).
 
 ## Install behind a reverse proxy on the host
 
@@ -102,6 +134,18 @@ There is nothing to back up: all of it is made up.
 
 Remove: `docker compose down -v` in this directory removes its containers, networks and volumes, then remove the
 proxy's site. With `COMPOSE_PROJECT_NAME` set as above, nothing of another project is touched.
+
+## If the stand is attacked
+
+<!-- +++===+++ 2026-11-16 20:57 +04 — Hasan Alizada — HAAL-182. The incident plan of the demo: rebuild, do not repair. -->
+The stand holds nothing that must be kept, so it is rebuilt rather than repaired:
+
+1. Stop it at once: `docker compose down -v` in its directory.
+2. Find how it happened (the app's and the proxy's logs), and report a fault in Haalendar as a vulnerability
+   ([SECURITY.md](../../SECURITY.md)).
+3. New secrets in `.env` (`HAALENDAR_SECRET_KEY`, `POSTGRES_PASSWORD`, `HAALENDAR_APP_DB_PASSWORD`, made as in the
+   install above), the release with the fix, then `docker compose up -d`.
+4. The host itself is checked by its administrator: the stand may share it with other services.
 
 ## Scanning it
 

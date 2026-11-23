@@ -9,6 +9,7 @@ import { CalendarDays } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSettings } from "@/api/settings";
 import { agendaOf } from "@/lib/agendaView";
 import { addDays } from "@/lib/datetime";
 import { dayLabel } from "@/lib/dayView";
@@ -38,7 +39,9 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
   const { t, i18n } = useTranslation();
   const attachmentCounts = useAttachmentCounts(user);
   const rowFlags = useRowFlags();
-  const agenda = useMemo(() => agendaOf(rows, days, viewerTz), [rows, days, viewerTz]);
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
+  const { day_order: by } = useSettings();
+  const agenda = useMemo(() => agendaOf(rows, days, viewerTz, by), [rows, days, viewerTz, by]);
   // A new range is a new list (the page keys it by its range), so it starts with one batch again.
   const [shown, setShown] = useState(() =>
     typeof IntersectionObserver === "undefined" ? Number.POSITIVE_INFINITY : BATCH,
@@ -101,7 +104,7 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
                 <span className={cn(relative && "font-normal text-muted")}>{full}</span>
               </button>
             </h2>
-            <ol aria-label={full} className="flex flex-col gap-1.5">
+            <ol aria-label={full} className="flex flex-col gap-1.5 pointer-fine:md:gap-0.5">
               {entries.map((entry) => {
                 const attachments = attachmentCounts.get(entry.id) ?? 0;
                 const flags = rowFlags(entry, attachments);
@@ -111,8 +114,12 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
                     <EventButton
                       entry={entry}
                       anchor={anchor}
+                      place={day}
+                      // +++===+++ 2026-11-19 11:00 +04 — Hasan Alizada — HAAL-189. Opened from the keyboard, below the row, as in the
+                      // day list: beside a row as wide as the list there is no room (a click opens it at the cursor).
+                      side="bottom"
                       describedBy={flags.length > 0 ? flagsId : undefined}
-                      className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
                     >
                       <EventRowBody entry={entry} attachments={attachments} flags={flags} flagsId={flagsId} />
                     </EventButton>

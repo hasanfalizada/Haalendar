@@ -11,7 +11,29 @@ async function deleteEvent(page: import("@playwright/test").Page, title: string)
   await written(page, `Deleted ${title}`);
 }
 
-test.fixme("F-30 title autocomplete in the search jumps to the event's date (HAAL-039, postponed)", async () => {});
+// +++===+++ 2026-11-23 15:35 +04 — Hasan Alizada — HAAL-039 (D-119). The search is built: F-30 runs. Legacy listed
+// "ID n - title" of active events; now "title — date", the next date of a series, deleted events left out.
+test("F-30 title autocomplete in the search jumps to the event's date", async ({ page }) => {
+  await fixToday(page); // Wednesday, 4 November 2026
+  const tag = unique("Auto");
+  await createEvent(page, { date: "2027-05-12", title: `Piano lesson ${tag}` });
+  await createEvent(page, { date: "2026-11-02", title: `Choir ${tag}`, repeat: "Every week on Monday" });
+  await createEvent(page, { date: "2027-05-13", title: `Gone ${tag}` });
+  await deleteEvent(page, `Gone ${tag}`);
+
+  await page.keyboard.press("/");
+  const search = page.getByRole("combobox", { name: "Search" });
+  await search.fill(tag.toLowerCase());
+  const options = page.getByRole("group", { name: "Calendar" }).getByRole("option");
+  await expect(options).toHaveCount(2);
+  await expect(options.filter({ hasText: `Piano lesson ${tag}` })).toContainText("Wednesday, May 12, 2027");
+  // A series shows its next date from today, not its start.
+  await expect(options.filter({ hasText: `Choir ${tag}` })).toContainText("Monday, November 9, 2026");
+
+  await options.filter({ hasText: `Piano lesson ${tag}` }).click();
+  await expect(page).toHaveURL(/date=2027-05-12/);
+  await expect(page.getByRole("dialog", { name: "Event details" })).toContainText(`Piano lesson ${tag}`);
+});
 
 test("F-31 the trash lists deleted events, newest deletion first, and restores several at once", async ({ page }) => {
   const tag = unique("trash");

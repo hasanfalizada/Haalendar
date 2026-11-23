@@ -9,7 +9,24 @@
 // Shift+click and a long press on the card (`select`); a selected card is ringed.
 // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F7). A note shared with the user says so ("Shared · can
 // edit / can view"); pin, archive and delete are its owner's, the colour needs an edit share.
-import { Archive, ArchiveRestore, Bell, Paperclip, Palette, Pin, PinOff, Trash2, Users } from "lucide-react";
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The user's labels on the note as chips (D-109).
+// +++===+++ 2026-11-18 15:40 +04 — Hasan Alizada — HAAL-103. Manual order (FR-TODO-05, D-110): when the note may be moved
+// (`move`), a handle drags it — the mouse after 5 px, a finger after a short hold (a long press on the card still
+// selects) — the card is a drop target of its section, and Alt+arrows on the card move it one place (↑ / ← earlier,
+// ↓ / → later). In the list layout the card is a full-width row with a shorter preview.
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import {
+  Archive,
+  ArchiveRestore,
+  Bell,
+  GripVertical,
+  Paperclip,
+  Palette,
+  Pin,
+  PinOff,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { type MouseEvent, type PointerEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -20,8 +37,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PriorityBadge } from "@/components/ui/priority";
 import { CARD_ITEMS, type ChecklistGroups } from "@/lib/checklist";
 import { toPlainText } from "@/lib/markdown-text";
-import { type NoteAccess, text } from "@/lib/notes";
-import { DEFAULT_COLOR, itemColorClasses } from "@/lib/palette";
+import { type NoteAccess, type NoteLayout, type NoteSection, text } from "@/lib/notes";
+import { DEFAULT_COLOR, itemColorClasses, swatchClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
 import { deleteNote, noteName, toggleItem, updateNote } from "./noteWrites";
@@ -29,6 +46,14 @@ import { deleteNote, noteName, toggleItem, updateNote } from "./noteWrites";
 type Row = Record<string, unknown>;
 
 export const PREVIEW_CHARS = 280;
+
+const STEPS: Partial<Record<string, -1 | 1>> = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
+
+/** What a dragged note carries and what a note as a drop target says (TodoPage). */
+export interface NoteDragData {
+  row: Row;
+  section: NoteSection;
+}
 
 interface NoteCardProps {
   user: string;
@@ -41,6 +66,12 @@ interface NoteCardProps {
   onOpen: () => void;
   /** The user's right on the note (owner when absent). */
   access?: NoteAccess;
+  /** The user's labels on the note, by name. */
+  labels?: readonly Row[];
+  /** Grid (the default) or list. */
+  layout?: NoteLayout;
+  /** The note may be moved in its section: Alt+arrow on the card, the handle and the drop target. */
+  move?: { section: NoteSection; onStep: (by: -1 | 1) => void };
   /** Multi-select of the page: whether the card is selected, its toggle and the open button's click handlers. */
   select?: {
     selected: boolean;
@@ -62,10 +93,21 @@ export function NoteCard({
   nextReminder,
   onOpen,
   access = "owner",
+  labels = [],
+  layout = "grid",
+  move,
   select,
 }: NoteCardProps) {
   const owner = access === "owner";
   const { t } = useTranslation();
+  const id = String(row.id);
+  const drag = move ? ({ row, section: move.section } satisfies NoteDragData) : undefined;
+  const {
+    setNodeRef: dragRef,
+    listeners,
+    isDragging,
+  } = useDraggable({ id: `note-${id}`, data: drag, disabled: !move });
+  const { setNodeRef: dropRef, isOver } = useDroppable({ id: `over-${id}`, data: drag, disabled: !move });
   const name = noteName(row);
   const title = text(row.title).trim();
   const plain = toPlainText(text(row.body));
@@ -77,17 +119,30 @@ export function NoteCard({
 
   return (
     <article
+      ref={dropRef}
       aria-label={name}
       className={cn(
         "flex flex-col rounded-md border border-line",
         itemColorClasses(stored),
         select?.selected && "ring-2 ring-primary",
+        isOver && !isDragging && "outline-2 outline-offset-2 outline-primary outline-dashed",
+        isDragging && "opacity-50",
       )}
     >
       <button
         type="button"
         {...select?.rowProps}
+        data-note={id}
+        onKeyDown={(event) => {
+          const by = event.altKey && !event.ctrlKey && !event.metaKey ? STEPS[event.key] : undefined;
+          if (by === undefined || !move) return;
+          // Alt+← / Alt+→ are also the browser's Back / Forward.
+          event.preventDefault();
+          move.onStep(by);
+        }}
         aria-label={t("todo.card.open", { title: name })}
+        aria-description={move ? t("todo.card.moveHint") : undefined}
+        aria-keyshortcuts={move ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight" : undefined}
         className={cn(
           "flex flex-col gap-1.5 rounded-t-md p-3 text-left wrap-anywhere focus-visible:outline-2 focus-visible:outline-primary",
           // A card of a title only stays big enough to hit; a checklist below fills it anyway.
@@ -95,8 +150,34 @@ export function NoteCard({
         )}
         onClick={select ? select.rowProps.onClick : onOpen}
       >
+        {labels.length > 0 ? (
+          <span className="flex flex-wrap gap-1">
+            <span className="sr-only">{t("todo.labels.on")} </span>
+            {labels.map((label) => (
+              <span
+                key={String(label.id)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-sm px-1.5 text-[11px] font-medium",
+                  `ev-${String(label.color)} ev-tint`,
+                )}
+              >
+                <span className={cn("size-2 rounded-full", swatchClasses(label.color as Color))} aria-hidden />
+                {String(label.name)}
+              </span>
+            ))}
+          </span>
+        ) : null}
         {title ? <h3 className="text-[15px] font-semibold">{title}</h3> : null}
-        {preview ? <p className="line-clamp-8 text-[13px] whitespace-pre-line text-fg/90">{preview}</p> : null}
+        {preview ? (
+          <p
+            className={cn(
+              "text-[13px] whitespace-pre-line text-fg/90",
+              layout === "list" ? "line-clamp-3" : "line-clamp-8",
+            )}
+          >
+            {preview}
+          </p>
+        ) : null}
         {attachments > 0 || text(row.priority) !== "medium" || nextReminder || !owner ? (
           <span className="flex flex-wrap items-center gap-1.5">
             {owner ? null : (
@@ -152,6 +233,20 @@ export function NoteCard({
         </div>
       ) : null}
       <div className="mt-auto flex items-center gap-0.5 px-1 pb-1">
+        {move ? (
+          // Pointer only: from the keyboard the note moves with Alt+arrows on the card.
+          <button
+            ref={dragRef}
+            type="button"
+            tabIndex={-1}
+            aria-label={t("todo.card.drag", { title: name })}
+            title={t("todo.card.dragShort")}
+            className="grid size-11 shrink-0 cursor-grab touch-none place-items-center text-muted select-none pointer-fine:md:size-8"
+            {...listeners}
+          >
+            <GripVertical className="size-4" aria-hidden />
+          </button>
+        ) : null}
         {select ? (
           <label className="grid size-11 place-items-center pointer-fine:md:size-8">
             <input

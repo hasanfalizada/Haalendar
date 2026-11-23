@@ -10,3 +10,6 @@ export const REPOSITORY_URL = "https://github.com/hasanfalizada/Haalendar";
 export const LICENSE_URL = `${REPOSITORY_URL}/blob/master/LICENSE`;
 export const DOCS_URL = `${REPOSITORY_URL}/tree/master/docs`;
 export const ISSUES_URL = `${REPOSITORY_URL}/issues`;
+// +++===+++ 2026-11-17 19:52 +04 — Hasan Alizada — HAAL-183. What the public demo keeps about a visitor and its terms,
+// linked from the demo banner; the demo runs a release, so the guide on master matches it.
+export const DEMO_TERMS_URL = `${REPOSITORY_URL}/blob/master/docs/operations/demo.md#privacy`;

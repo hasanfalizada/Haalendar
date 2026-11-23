@@ -2,6 +2,8 @@
 
 +++===+++ 2026-10-15 — Hasan Alizada — HAAL-020. Verification target OWASP ASVS 5.0 Level 2 (SRS 4.3, D-19), plus OWASP Top 10:2025 and OWASP API Security Top 10:2023. Living document: update the status column with every security-relevant task.
 
++++===+++ 2026-11-15 22:12 +04 — Hasan Alizada — HAAL-180. Brought up to date with the backlog: the controls marked planned (⏳) under HAAL-040, 043, 095, 150, 154, 160..162 and 165 are done and checked against the code; the audit exceptions of A03 are the current ones; what has not been done is said in §8.
+
 Legend: ✅ implemented and tested · 🟡 partially implemented · ⏳ planned (task) · — not applicable.
 
 ## 1. Controls implemented in HAAL-016 … HAAL-020
@@ -21,8 +23,8 @@ Legend: ✅ implemented and tested · 🟡 partially implemented · ⏳ planned 
 | Logging: redaction of secrets (nested), correlation ids, slow SQL without parameters | `logging.py`, `observability.py` | `test_config_and_logging.py`, `test_observability.py` |
 | `/metrics` disabled by default; bearer token ≥ 24 chars, constant-time compare | `observability.py` | `test_observability.py` |
 | Supply chain: pnpm `minimumReleaseAge` 7 days, install scripts blocked, telemetry denied; exact pins + lockfiles (`uv.lock`, `pnpm-lock.yaml`) | `pnpm-workspace.yaml`, `pyproject.toml` | `pnpm install` enforces |
-| Dependency vulnerability scan: `pnpm security:audit` = `pnpm audit` (all severities) + `pip-audit` on the hashed lockfile export | root `package.json` | Run 2026-10-15: 0 known vulnerabilities |
-| Containers non-root, read-only rootfs, internal DB network | ADR-0004 | ⏳ HAAL-150 |
+| Dependency vulnerability scan: `pnpm security:audit` = `pnpm audit` (all severities) + `pip-audit` on the hashed lockfile export | root `package.json` | every `check-all.sh` run and every CI run, again every Monday in CI |
+| Containers non-root, read-only rootfs, no capabilities, `no-new-privileges`, internal DB network (HAAL-150) | `Dockerfile`, `compose.yaml`, ADR-0004 | `compose-check.sh` runs the stack with them |
 
 Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development tools only (js-yaml via @hey-api/openapi-ts → pnpm override 4.3.2; lodash, uuid, @faker-js/faker, braces via Prism → Prism removed from dependencies and run on demand with `pnpm dlx`). Nothing affected the shipped application.
 
@@ -34,17 +36,17 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | V2 Validation and Business Logic | 🟡 | `ApiModel` strict schemas; per-endpoint validation with each feature |
 | V3 Web Frontend Security | 🟡 | CSP, headers, CSRF layer 1 ✅; SPA served with CSP ✅ (HAAL-150); per-session CSRF token ✅ (server HAAL-160, sent by the SPA from HAAL-163, memory only) |
 | V4 API and Web Service | 🟡 | Content-type/body limits, RFC 9457, merge-patch, If-Match ✅/contract; per-endpoint enforcement with features |
-| V5 File Handling | 🟡 | Signature check, limits, names ✅; storage port with local adapter outside the web root, content-addressed (BLAKE3), never deleted, served only through the API with auth, nosniff and immutable versioned URLs ✅ (HAAL-166); avatars re-encoded (metadata stripped, pixel-bomb limit) ✅; the same for attachments ⏳ HAAL-040 |
+| V5 File Handling | ✅ | Signature check, limits, names ✅; storage port with local adapter outside the web root, content-addressed (BLAKE3), never deleted, served only through the API with auth, nosniff and immutable versioned URLs ✅ (HAAL-166); avatars re-encoded (metadata stripped, pixel-bomb limit) ✅; attachments re-encoded the same way (still images; animations kept as sent after validation), with a thumbnail ✅ HAAL-040 |
 | V6 Authentication | ✅ | Argon2id + rehash, 15-char policy atom with common-password list, invite-only registration, e-mail verification, generic responses, password reset (1 h single use), lockout 15 min doubling to 24 h (lifted by a password reset, D-106), auth rate limit 20/min, optional TOTP with replay protection and recovery codes, admin 2FA policy (HAAL-160..162) |
 | V7 Session Management | ✅ | Server sessions, hashed tokens, `__Host-` cookie, idle 30 d / abs 90 d, revocation on password change/reset, re-auth window 15 min, CSRF token (HAAL-160..161); session list with revoke one / all others and admin 2FA policy UI (HAAL-171) |
 | V8 Authorization | ✅ | Function level (admin role on every admin endpoint, re-auth for admin mutations, no self-changes, last active admin kept under an advisory lock — HAAL-164); data level: authz.check.v1 atom (default deny, admins without content access, 404 for unreadable / 403 for read-only), PostgreSQL RLS on every owner/share table, least-privilege app role without BYPASSRLS, permission-matrix and isolation tests (HAAL-165); every contract operation probed with another user's ids by a stranger and by an administrator, keyed by the contract so a new operation needs a rule (`test_isolation_api.py`, HAAL-144). Each content endpoint calls `authz.require` as it is built |
 | V9 Self-contained Tokens | — | No JWT in v1.0 (ADR-0005); personal API tokens v1.1 are opaque |
 | V10 OAuth and OIDC | ⏳ | HAAL-168 (Could): backend confidential client, PKCE, state/nonce |
-| V11 Cryptography | 🟡 | Standard libraries only (argon2-cffi, BLAKE3, TLS by proxy); key management with HAAL-160 |
-| V12 Secure Communication | 🟡 | HTTPS required in production, HSTS ✅; TLS termination via Caddy ⏳ HAAL-150 |
-| V13 Configuration | 🟡 | Twelve-factor, secrets files, production guards, docs off outside dev ✅; image: non-root user, runs with a read-only root filesystem, no capabilities, `no-new-privileges`, pinned base images ✅ HAAL-150; the same enforced by the Compose file ⏳ HAAL-150 |
-| V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) and for every role (no-delete triggers, ORM/SQL guards, source scan, contract `x-soft-delete` — HAAL-030) ✅; export ⏳ HAAL-043; GDPR erasure open (O-01) |
-| V15 Secure Coding and Architecture | 🟡 | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate, DAST of the API (ZAP) ✅ HAAL-144; full DAST on the demo ⏳ HAAL-154; SBOM per release image ✅ HAAL-151 |
+| V11 Cryptography | 🟡 | Standard libraries only (argon2-cffi, BLAKE3, TLS by proxy); passwords Argon2id, session and reset tokens random and stored hashed (HAAL-160..161); the secret key from the environment or a `*_FILE` secret, a default refused in production. No review of the whole chapter recorded |
+| V12 Secure Communication | ✅ | HTTPS required in production, HSTS ✅; TLS termination by the bundled Caddy (automatic certificates) or the operator's own proxy ✅ HAAL-150; old TLS refused and HTTP redirected, checked on the demo (`dast-demo.sh`, HAAL-154) |
+| V13 Configuration | ✅ | Twelve-factor, secrets files, production guards, docs off outside dev ✅; image: non-root user, runs with a read-only root filesystem, no capabilities, `no-new-privileges`, pinned base images ✅ HAAL-150; the same enforced by the Compose file ✅ HAAL-150 |
+| V14 Data Protection | 🟡 | No sensitive data in logs/URLs ✅; physical delete impossible for the app role (no DELETE privilege, HAAL-165) and for every role (no-delete triggers, ORM/SQL guards, source scan, contract `x-soft-delete` — HAAL-030) ✅; the user's data as a ZIP export ✅ HAAL-043; GDPR erasure open (O-01) |
+| V15 Secure Coding and Architecture | ✅ | Dependency pinning, release-age policy, audit ✅; SAST (Ruff/Bandit rules, ESLint security rules), secret scan of history and working tree, licence gate, DAST of the API (ZAP) ✅ HAAL-144; full DAST of the web pages on the demo stand ✅ HAAL-154; SBOM per release image ✅ HAAL-151 |
 | V16 Security Logging and Error Handling | ✅ | Structured logs, redaction, correlation, generic errors, security events logged (host/CSRF/rate-limit rejections); tamper-proof audit log of all changes written by database triggers, append-only, readable under RLS, linked by request id (HAAL-032) |
 | V17 WebRTC | — | Not used |
 
@@ -54,8 +56,8 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 |---|---|
 | A01 Broken Access Control | ✅ authz atom + RLS + least-privilege DB role + permission/isolation tests (HAAL-165), per-operation isolation over the whole contract (HAAL-144); CSRF layers 1–2 ✅; SSRF: no server-side fetch of user URLs in v1.0 |
 | A02 Security Misconfiguration | ✅ secure defaults, production guards, headers, docs disabled outside dev, Host allow-list, first-run wizard closed once an admin exists and token-protected in production (HAAL-163) |
-| A03 Software Supply Chain Failures | ✅ pins, lockfiles, 7-day release age, blocked install scripts, audits; temporary audit exceptions only with reason and expiry in `backend/audit-ignores.json`, enforced by a test for pip-audit and pnpm audit (Pillow 12.3.0 exception closed 2026-10-25 by the upgrade to 13.0.0; open: certifi 2026.7.22, dev-only via pip-audit, fix too young — upgrade due 2026-10-27; fast-uri 3.1.8 and serialize-javascript 7.1.2, build-time only via vite-plugin-pwa — upgrades due 2026-10-27 and 2026-10-30); licence gate ✅ HAAL-144; SBOM per release image and signed provenance ✅ HAAL-151 |
-| A04 Cryptographic Failures | 🟡 TLS + HSTS; Argon2id and token hashing with HAAL-160 |
+| A03 Software Supply Chain Failures | ✅ pins, lockfiles, 7-day release age, blocked install scripts, audits; temporary audit exceptions only with reason and expiry in `backend/audit-ignores.json`, enforced by a test for pip-audit and pnpm audit (open on 2026-11-17: deepmerge 4.3.1, build time only, no fix published, review due 2026-12-11; picomatch 4.0.7, build and development time only, no fix published, review due 2026-12-17, HAAL-184; the backlog lists them under Deadlines); licence gate ✅ HAAL-144; SBOM per release image and signed provenance ✅ HAAL-151 |
+| A04 Cryptographic Failures | ✅ TLS + HSTS; Argon2id passwords, tokens stored hashed (HAAL-160..161) |
 | A05 Injection | ✅ ORM parameters, no shell/eval; Markdown sanitising with XSS payload tests (HAAL-047) |
 | A06 Insecure Design | ✅ threat-driven requirements, ADRs, contract-first, soft delete |
 | A07 Authentication Failures | ✅ HAAL-160..162 (see V6/V7) |
@@ -71,12 +73,12 @@ Findings fixed during HAAL-020: 6 high / 4 moderate advisories in development to
 | API2 Broken Authentication | ✅ HAAL-160..162 |
 | API3 Broken Object Property Level Authorization | ✅ `ApiModel` forbids unknown fields; response schemas explicit in contract |
 | API4 Unrestricted Resource Consumption | ✅ rate limit, body limits, pagination ≤ 200, upload ≤ 10 MB, DB pool/timeouts |
-| API5 Broken Function Level Authorization | 🟡 admin checks ✅ (HAAL-164, tested per endpoint incl. non-admin refusal); owner checks in the authz atom ⏳ HAAL-165 |
-| API6 Unrestricted Access to Sensitive Business Flows | ⏳ registration invite-only, reset/register throttling (HAAL-160..162) |
+| API5 Broken Function Level Authorization | ✅ admin checks (HAAL-164, tested per endpoint incl. non-admin refusal); owner checks in the authz atom (HAAL-165) |
+| API6 Unrestricted Access to Sensitive Business Flows | ✅ registration invite-only, auth rate limit 20/min, lockout, generic answers to reset and sign-in (HAAL-160..162) |
 | API7 Server Side Request Forgery | ✅ no outbound requests driven by user input in v1.0 (link previews rejected, gap T-05 Later) |
 | API8 Security Misconfiguration | ✅ as A02 |
 | API9 Improper Inventory Management | ✅ single versioned contract (`/api/v1`), manifest, docs only in dev |
-| API10 Unsafe Consumption of APIs | — no third-party APIs consumed in v1.0 (ICS import parses files with limits ⏳ HAAL-095) |
+| API10 Unsafe Consumption of APIs | — no third-party APIs consumed in v1.0 (ICS import parses files with limits: 5 MB, 5 000 events ✅ HAAL-095) |
 
 ## 5. Baseline decisions
 1. Rate limiter is in-process (per replica). Sufficient for the reference load (SRS 4.2); a shared limiter (PostgreSQL-based) is considered only if horizontal scaling is used.
@@ -120,3 +122,11 @@ by `pnpm security:licences`; its rules are pinned by `backend/tests/test_licence
     Hypothesis was, HAAL-140);
   - OFL-1.1 for fonts (Inter, shipped) and CC-BY-4.0 for data used at build time (caniuse-lite).
 - A new exception needs the owner's decision; an exception no package needs any more fails the gate.
+
+## 8. Not done
+
+<!-- +++===+++ 2026-11-15 22:12 +04 — Hasan Alizada — HAAL-180. Said plainly, so the table above is not read as more. -->
+- No independent penetration test: every check above is the project's own (tests, SAST, DAST with ZAP).
+- No threat model of its own: the requirements and this baseline follow the OWASP lists, not a written analysis of
+  threats and of the events that must never happen.
+- The chapters still marked 🟡 (V2, V3, V4, V11, V14 and A08) have no recorded review of the whole chapter.

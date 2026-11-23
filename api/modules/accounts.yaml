@@ -594,7 +594,9 @@ components:
       # source of truth for every device (the browser keeps a cached copy for the first paint).
       type: object
       # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82). hidden_calendars: calendars hidden in the calendar views.
-      required: [week_start, time_format, theme, default_color, agenda_days, week_ab, hidden_calendars, version]
+      # +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110). note_layout: grid or list on the To-Do page.
+      # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185 (D-111). day_order: the events of a day by time or colour.
+      required: [week_start, time_format, theme, default_color, agenda_days, week_ab, hidden_calendars, note_layout, day_order, version]
       properties:
         week_start: { type: integer, minimum: 0, maximum: 6, default: 1, description: 0 = Sunday … 6 = Saturday }
         time_format: { type: string, enum: ['24h', '12h'] }
@@ -619,6 +621,8 @@ components:
           type: array
           items: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
           description: Calendars (own or shared) this user hides in the calendar views; sorted, no repeats.
+        note_layout: { type: string, enum: [grid, list], default: grid, description: How the To-Do page lays out the notes; one choice for all devices. }
+        day_order: { type: string, enum: [time, color], default: time, description: 'How the calendar views order the events of one day: by time, or by colour as the legacy app (atom calendar.day_order.v2); one choice for all devices.' }
         version: { type: integer }
     SettingsPatch:
       type: object
@@ -640,6 +644,8 @@ components:
           items: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
           maxItems: 500
           description: The whole list replaces the stored one.
+        note_layout: { type: string, enum: [grid, list] }
+        day_order: { type: string, enum: [time, color] }
     Session:
       type: object
       required: [id, created_at, last_seen_at, current]

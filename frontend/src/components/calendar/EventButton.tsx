@@ -9,21 +9,25 @@ import { useDraggable } from "@dnd-kit/core";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DayEntry } from "@/lib/dayView";
+import { isOpenAt, type OpenDetails } from "@/lib/openDetails";
 import { cn } from "@/lib/utils";
 
+import { DetailsPopover } from "./DetailsPopover";
 import type { DropData } from "./DropArea";
 
 /** What every grid passes on from the page: which card is open and how to show it. */
 export interface DetailsAnchor {
-  /** The entry whose details are open (its key). */
-  openKey: string | null;
-  onOpen: (entry: DayEntry) => void;
-  onClose: () => void;
+  open: OpenDetails | null;
+  /** `place`: the day the entry is shown on, where it was clicked. */
+  onOpen: (entry: DayEntry, place: string) => void;
+  /** Closes this card only (not another one opened by the same click). */
+  onClose: (entry: DayEntry, place: string) => void;
   /** Details next to the event (popover); false on phones, where the page shows them in a sheet. */
   inPopover: boolean;
   details: (entry: DayEntry) => ReactNode;
+  /** The calendar's area the card stays inside. */
+  boundary: Element | null;
 }
 
 interface EventButtonProps {
@@ -33,8 +37,13 @@ interface EventButtonProps {
   describedBy?: string | undefined;
   className: string;
   children: ReactNode;
-  /** Draggable in a grid: the day it is shown on and where it may land. */
-  drag?: { day: string; accepts: DropData["kind"]; disabled: boolean };
+  /** The day the entry is shown on (its card opens here). */
+  place: string;
+  /** Where the card opens from the keyboard (a click opens it at the cursor): beside the event in the grids, below a
+   * row as wide as the list (the agenda). */
+  side?: "right" | "bottom";
+  /** Draggable in a grid: where it may land. */
+  drag?: { accepts: DropData["kind"]; disabled: boolean };
 }
 
 /** What a dragged event carries to the grid's drop handler. */
@@ -44,13 +53,22 @@ export interface DragData {
   accepts: DropData["kind"];
 }
 
-export function EventButton({ entry, anchor, describedBy, className, children, drag }: EventButtonProps) {
+export function EventButton({
+  entry,
+  anchor,
+  describedBy,
+  className,
+  children,
+  place,
+  side = "right",
+  drag,
+}: EventButtonProps) {
   const { t } = useTranslation();
-  const { openKey, onOpen, onClose, inPopover, details } = anchor;
-  const open = openKey === entry.key;
-  const data: DragData | undefined = drag ? { entry, day: drag.day, accepts: drag.accepts } : undefined;
+  const { onOpen, onClose, inPopover, details } = anchor;
+  const open = isOpenAt(anchor.open, entry.key, place);
+  const data: DragData | undefined = drag ? { entry, day: place, accepts: drag.accepts } : undefined;
   const { setNodeRef, listeners, isDragging } = useDraggable({
-    id: `${drag?.day ?? ""}|${entry.key}`,
+    id: `${place}|${entry.key}`,
     data,
     disabled: !drag || drag.disabled,
   });
@@ -67,12 +85,12 @@ export function EventButton({ entry, anchor, describedBy, className, children, d
         inPopover
           ? undefined
           : () => {
-              onOpen(entry);
+              onOpen(entry, place);
             }
       }
       onContextMenu={(event) => {
         event.preventDefault();
-        onOpen(entry);
+        onOpen(entry, place);
       }}
       className={cn(className, isDragging && "opacity-40")}
     >
@@ -81,26 +99,18 @@ export function EventButton({ entry, anchor, describedBy, className, children, d
   );
   if (!inPopover) return button;
   return (
-    <Popover
+    <DetailsPopover
       open={open}
       onOpenChange={(next) => {
-        if (next) onOpen(entry);
-        else onClose();
+        if (next) onOpen(entry, place);
+        else onClose(entry, place);
       }}
+      anotherOpen={anchor.open !== null}
+      side={side}
+      boundary={anchor.boundary}
+      content={() => details(entry)}
     >
-      <PopoverTrigger asChild>{button}</PopoverTrigger>
-      <PopoverContent
-        side="right"
-        align="start"
-        sideOffset={6}
-        collisionPadding={8}
-        aria-label={t("calendar.details.title")}
-        // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F5). No taller than the room on its side of
-        // the trigger, so the actions at its end stay reachable inside the window.
-        className="max-h-[min(70vh,var(--radix-popover-content-available-height))] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
-      >
-        {open ? details(entry) : null}
-      </PopoverContent>
-    </Popover>
+      {button}
+    </DetailsPopover>
   );
 }

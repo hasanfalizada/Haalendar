@@ -974,7 +974,8 @@
     "restore": "Restore the entry",
     "listDelete": "Delete the selection (asks first)",
     "listDeleteFocused": "Delete the focused row (asks first)",
-    "save": "Save"
+    "save": "Save",
+    "search": "Search"
   },
   "unsaved": {
     "title": "Unsaved changes",
@@ -1099,6 +1100,11 @@
     "defaultColor": "Default color for new items",
     "agendaDays": "Agenda shows (days)",
     "agendaHint": "How many days ahead the agenda view lists, 1 to 365.",
+    "dayOrder": "Events of a day",
+    "dayOrders": {
+      "time": "By time",
+      "color": "By color"
+    },
     "agendaInvalid": "Enter a whole number from 1 to 365",
     "weekAb": {
       "title": "Week A/B",
@@ -1186,6 +1192,7 @@
     "banner": "This is the public demo. Everything resets to the sample data in {{time}}.",
     "resetting": "This is the public demo. It is being reset to the sample data.",
     "public": "Other visitors see what you enter, so please do not enter anything personal.",
+    "terms": "Privacy and terms",
     "tryIt": "Sign in with a sample account. The two share a calendar and a board, so try them in two windows.",
     "signInAs": "Sign in as {{name}}",
     "credentials": "Or type it yourself: {{emails}}, password {{password}}",
@@ -1376,7 +1383,7 @@
       "notesBody": "Notes you create will appear here. Pin the important ones to keep them on top.",
       "archiveTitle": "No archived notes",
       "archiveBody": "Notes you archive leave the main list and wait here — archiving does not delete them.",
-      "filtered": "No notes with this priority"
+      "filtered": "No notes match the filter"
     },
     "card": {
       "open": "Open {{title}}",
@@ -1397,7 +1404,12 @@
       "reminder": "Reminder:",
       "select": "Select {{title}}",
       "sharedEdit": "Shared · can edit",
-      "sharedView": "Shared · can view"
+      "sharedView": "Shared · can view",
+      "drag": "Drag {{title}} to another place",
+      "dragShort": "Drag to move",
+      "moveHint": "Alt with the arrow keys moves the note",
+      "moveKeys": "Move the focused note one place earlier or later",
+      "moved": "{{title}} moved to place {{position}} of {{total}}"
     },
     "editor": {
       "newTitle": "New note",
@@ -1425,7 +1437,8 @@
       "unarchive": "Unarchived {{title}}",
       "deleted": "Deleted {{title}} — it is in the trash",
       "checked": "Checked {{item}}",
-      "unchecked": "Unchecked {{item}}"
+      "unchecked": "Unchecked {{item}}",
+      "move": "Moved {{title}}"
     },
     "newList": "New list",
     "checklist": {
@@ -1460,6 +1473,25 @@
       "inPast": "Choose a time that is still ahead.",
       "duplicate": "This reminder is already set.",
       "none": "No reminders."
+    },
+    "labels": {
+      "on": "Labels:",
+      "none": "You have no labels yet.",
+      "private": "Your labels are yours alone: nobody else sees them, also on notes shared with you.",
+      "full": "A note holds at most {{max}} of your labels.",
+      "tooMany": "You can have at most {{max}} labels.",
+      "taken": "You already have a label with this name.",
+      "manage": "Manage labels…",
+      "manageTitle": "Labels",
+      "editOne": "Rename or recolor {{name}}",
+      "deleteOne": "Delete {{name}}",
+      "deleteBody_one": "Delete the label “{{name}}”? It comes off {{count}} note. It can be undone.",
+      "deleteBody_other": "Delete the label “{{name}}”? It comes off {{count}} notes. It can be undone."
+    },
+    "layout": {
+      "label": "Layout",
+      "grid": "Grid",
+      "list": "List"
     }
   },
   "kanban": {
@@ -1637,5 +1669,52 @@
         "delete": "Deleted the label {{name}}"
       }
     }
+  },
+  "search": {
+    "open": "Search",
+    "placeholder": "Search events, notes and cards",
+    "label": "Search",
+    "results": "Search results",
+    "close": "Close the search",
+    "groups": {
+      "calendar": "Calendar",
+      "todo": "To-Do",
+      "kanban": "Boards"
+    },
+    "goToDate": "Go to {{date}}",
+    "none": "Nothing found for “{{query}}”.",
+    "hint": "Type words from a title, place, description or checklist. A date as YYYY-MM-DD opens that day.",
+    "fields": {
+      "location": "Place",
+      "body": "Description",
+      "checklist": "Checklist"
+    },
+    "count_one": "{{count}} result",
+    "count_other": "{{count}} results",
+    "noTitle": "(No title)",
+    "filters": {
+      "label": "Filters",
+      "module": "Module",
+      "dates": "Dates",
+      "calendar": "Calendar",
+      "colour": "Colour",
+      "priority": "Priority",
+      "labels": "Label",
+      "anyTime": "Any time",
+      "presets": {
+        "today": "Today",
+        "week": "This week",
+        "month": "This month",
+        "next30": "Next 30 days"
+      },
+      "custom": "Choose dates…",
+      "from": "From",
+      "to": "To",
+      "reset": "Reset",
+      "noCalendars": "No calendars shown",
+      "noLabels": "No labels yet"
+    },
+    "hintFilters": "Or choose filters below to list what matches them.",
+    "noneFiltered": "Nothing matches these filters."
   }
 }

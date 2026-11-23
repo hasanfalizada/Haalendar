@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { STANDALONE_LINK } from "@/components/ui/link-styles";
+import { SearchField } from "@/components/search/SearchField";
 import { type BoardFilter, cardMatches, filterCount, formatBoardFilter } from "@/lib/boardFilter";
 import { cardsOf } from "@/lib/cards";
 import { columnsOf } from "@/lib/columns";
@@ -229,7 +230,9 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
         {!owner && share ? (
           <span className="text-xs text-muted">{t("kanban.sharedBy", { name: share.owner_name })}</span>
         ) : null}
-        <div className="ml-auto">
+        {/* HAAL-039 (D-119): the search field; on phones it is in the top bar. */}
+        <div className="ml-auto flex items-center gap-2">
+          <SearchField className="w-44 max-md:hidden" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label={t("kanban.menu", { name })}>

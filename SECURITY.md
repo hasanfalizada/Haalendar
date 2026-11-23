@@ -37,6 +37,23 @@ An installation run by someone else may name its own contact for problems with t
 
 This is a community project maintained on a best-effort basis. As stated in the [LICENSE](LICENSE), the software is provided "AS IS", without warranties or liability of any kind.
 
+## How a confirmed vulnerability is handled
+
+<!-- +++===+++ 2026-11-16 20:56 +04 — Hasan Alizada — HAAL-182. The incident plan of the project after the release of 1.0.0. -->
+1. The report stays private in a draft security advisory on GitHub; the fix is made there, with a test that fails
+   without it.
+2. The fix is released as a new patch version of the latest release, with an entry under "Security" in the
+   [changelog](CHANGELOG.md).
+3. The advisory is published with the affected and the fixed versions, and a CVE is requested through GitHub when the
+   issue affects installations.
+4. Operators upgrade with the usual [upgrade steps](docs/operations/deployment.md#3-upgrade); the advisory says when
+   more is needed, such as changing the secret key.
+
+## Releases
+
+There is no fixed schedule. A patch version is released when a fix is ready, a security fix as soon as it is ready;
+a minor version when a set of features is ready. Only the latest release is supported (see above).
+
 ## Security design
 
 Haalendar targets **OWASP ASVS 5.0 Level 2** and is reviewed against the OWASP Top 10:2025 and the OWASP API Security Top 10:2023. Built-in protections:

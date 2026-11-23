@@ -62,8 +62,8 @@ import { runItemBulk } from "@/components/shared/itemBulk";
 import { type BarAction, BulkBar } from "@/components/ui/bulk-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SearchField } from "@/components/search/SearchField";
 import { addDays, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { type DayEntry, clockText, dateTitle, dayLabel, entriesOn, weekdayName } from "@/lib/dayView";
 import { notify } from "@/lib/notify";
@@ -85,12 +85,14 @@ import { monthTitle, monthWeeks } from "@/lib/monthView";
 import { weekDays, rangeTitle } from "@/lib/weekView";
 import type { EventForm } from "@/lib/eventForm";
 import { blockForm, suggestedStart } from "@/lib/timeBlock";
+import { isOpenAt, type OpenDetails } from "@/lib/openDetails";
 import { localKeys, localRows, mutate } from "@/sync";
 
 import { DayNumberLabel, IsoWeekLabel, LiveClock, WeekAbBadge } from "./HeaderInfo";
 import { AgendaList } from "./AgendaView";
 import { MonthGrid } from "./MonthView";
 import { WeekGrid } from "./WeekView";
+import { DetailsPopover } from "./DetailsPopover";
 import { DropArea } from "./DropArea";
 import { CalendarDnd } from "./EventDrag";
 import { TimeBlockPanel } from "./TimeBlockPanel";
@@ -190,13 +192,15 @@ interface DayListProps {
   user: string | undefined;
   date: string;
   entries: DayEntry[];
-  /** The entry whose details are open (its key). */
-  openKey: string | null;
-  onOpen: (entry: DayEntry) => void;
-  onClose: () => void;
+  /** The open card. */
+  open: OpenDetails | null;
+  onOpen: (entry: DayEntry, place: string) => void;
+  onClose: (entry: DayEntry, place: string) => void;
   /** Details next to the row (popover); false on phones, where the page shows them in a sheet. */
   inPopover: boolean;
   details: (entry: DayEntry) => ReactNode;
+  /** The calendar's area the card stays inside. */
+  boundary: Element | null;
   /** Delete key on a row. */
   onDelete: (entry: DayEntry) => void;
   selection: Selection;
@@ -215,11 +219,12 @@ function DayList({
   user,
   date,
   entries,
-  openKey,
+  open,
   onOpen,
   onClose,
   inPopover,
   details,
+  boundary,
   onDelete,
   selection,
   canChangeSelected,
@@ -241,7 +246,7 @@ function DayList({
       deleteLabel: "shortcuts.listDeleteFocused",
       onOpen: (key) => {
         const entry = byKey(key);
-        if (entry) onOpen(entry);
+        if (entry) onOpen(entry, date);
       },
       onDelete: (keys) => {
         if (keys.length > 1 || selection.count > 0) {
@@ -278,7 +283,9 @@ function DayList({
       />
       <ol
         aria-label={t("calendar.day.listLabel", { date: label })}
-        className="flex flex-col gap-1.5 p-3 md:p-4"
+        // +++===+++ 2026-11-18 21:44 +04 — Hasan Alizada — HAAL-186. Compact rows with a mouse from 768 px, as the
+        // base components (D-53): about 30 px an event, as in the legacy calendar; 44 px on touch.
+        className="flex flex-col gap-1.5 p-3 pointer-fine:md:gap-0.5 md:p-4"
         {...navigation.listProps}
       >
         {entries.map((entry) => {
@@ -292,7 +299,7 @@ function DayList({
             inPopover
               ? undefined
               : () => {
-                  onOpen(entry);
+                  onOpen(entry, date);
                 },
           );
           const row = (
@@ -307,12 +314,12 @@ function DayList({
               aria-label={t("calendar.day.details", { title: entry.title || t("calendar.day.noTitle") })}
               aria-describedby={flags.length > 0 ? flagsId : undefined}
               aria-haspopup="dialog"
-              aria-expanded={openKey === entry.key}
+              aria-expanded={isOpenAt(open, entry.key, date)}
               onContextMenu={(event) => {
                 event.preventDefault();
-                if (pointer.current !== "touch") onOpen(entry);
+                if (pointer.current !== "touch") onOpen(entry, date);
               }}
-              className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-sm py-2 pr-3 pl-1 text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-sm py-2 pr-3 pl-1 text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
             >
               <EventRowBody entry={entry} attachments={attachments} flags={flags} flagsId={flagsId} />
             </button>
@@ -328,7 +335,7 @@ function DayList({
             >
               <input
                 type="checkbox"
-                className="mt-2.5 ml-3 size-4 shrink-0"
+                className="mt-2.5 ml-3 size-4 shrink-0 pointer-fine:md:mt-1.5"
                 aria-label={t("calendar.day.select", { title: entry.title || t("calendar.day.noTitle") })}
                 checked={selected}
                 // A prevented click on a controlled checkbox leaves the box drawn in its old state; Shift comes from
@@ -338,27 +345,19 @@ function DayList({
                 }}
               />
               {inPopover ? (
-                <Popover
-                  open={openKey === entry.key}
-                  onOpenChange={(open) => {
-                    if (open) onOpen(entry);
-                    else onClose();
+                <DetailsPopover
+                  open={isOpenAt(open, entry.key, date)}
+                  onOpenChange={(next) => {
+                    if (next) onOpen(entry, date);
+                    else onClose(entry, date);
                   }}
+                  anotherOpen={open !== null}
+                  side="bottom"
+                  boundary={boundary}
+                  content={() => details(entry)}
                 >
-                  <PopoverTrigger asChild>{row}</PopoverTrigger>
-                  <PopoverContent
-                    side="bottom"
-                    align="start"
-                    sideOffset={6}
-                    collisionPadding={8}
-                    aria-label={t("calendar.details.title")}
-                    // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F5). Kept inside the window: no
-                    // taller than the room on its side of the row (at 1280×720 Edit and Delete ended below the screen).
-                    className="max-h-[min(70vh,var(--radix-popover-content-available-height))] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4"
-                  >
-                    {openKey === entry.key ? details(entry) : null}
-                  </PopoverContent>
-                </Popover>
+                  {row}
+                </DetailsPopover>
               ) : (
                 row
               )}
@@ -389,6 +388,7 @@ export function DayView({
     agenda_days: agendaLength,
     time_format: timeFormat,
     default_color: defaultColor,
+    day_order: dayOrderBy,
   } = useSettings();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
@@ -404,7 +404,8 @@ export function DayView({
   const calendars = useCalendars(user);
   const { shown } = calendars;
   const rows = useMemo(() => allRows.filter((row) => shown(row.container_id)), [allRows, shown]);
-  const entries = useMemo(() => entriesOn(rows, date, viewerTz), [rows, date, viewerTz]);
+  // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
+  const entries = useMemo(() => entriesOn(rows, date, viewerTz, dayOrderBy), [rows, date, viewerTz, dayOrderBy]);
   const today = todayIn(viewerTz);
   const label = dayLabel(date, i18n.language);
   const week = view === "week";
@@ -413,12 +414,13 @@ export function DayView({
   const days = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
   const weeks = useMemo(() => monthWeeks(monthOf(date), weekStart), [date, weekStart]);
   const agendaRange = useMemo(() => agendaDays(date, agendaLength), [date, agendaLength]);
+  // On a phone the week and the agenda name their months short, so the date fits next to ‹ Today › (HAAL-187).
   const title = week
-    ? rangeTitle(days, i18n.language)
+    ? rangeTitle(days, i18n.language, !tablet)
     : month
       ? monthTitle(monthOf(date), i18n.language)
       : agenda
-        ? rangeTitle(agendaRange, i18n.language)
+        ? rangeTitle(agendaRange, i18n.language, !tablet)
         : dateTitle(date, today, i18n.language, t("calendar.header.today"));
   const weekday = view === "day" ? weekdayName(date, i18n.language) : null;
   /** The date one period (day, week, month or agenda range) before or after `from`. */
@@ -459,7 +461,21 @@ export function DayView({
   // On phones the panel is a sheet over the page: opened by the button each time, never remembered.
   const [sheetOpen, setSheetOpen] = useState(false);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-064. The entry whose details card is open.
-  const [details, setDetails] = useState<DayEntry | null>(null);
+  // +++===+++ 2026-11-19 10:05 +04 — Hasan Alizada — HAAL-189. With the day it was opened on (an event over several days
+  // is shown on each); a card closes only itself, so another event's card opens with the same click.
+  // The calendar's area below the header: a details card stays inside it (HAAL-189).
+  const [area, setArea] = useState<HTMLDivElement | null>(null);
+  const [opened, setOpened] = useState<{ entry: DayEntry; place: string | null } | null>(null);
+  const details = opened?.entry ?? null;
+  const openAt: OpenDetails | null = opened ? { key: opened.entry.key, place: opened.place } : null;
+  const setDetails = (entry: DayEntry | null, place: string | null = null) => {
+    setOpened(entry ? { entry, place } : null);
+  };
+  const closeDetails = (entry: DayEntry, place: string) => {
+    setOpened((current) =>
+      current && isOpenAt({ key: current.entry.key, place: current.place }, entry.key, place) ? null : current,
+    );
+  };
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. The event (and its shown date) being duplicated.
   const [duplicating, setDuplicating] = useState<{ row: Record<string, unknown>; occurrence: string } | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
@@ -868,12 +884,11 @@ export function DayView({
       user={user}
       date={date}
       entries={entries}
-      openKey={details?.key ?? null}
+      open={openAt}
+      boundary={area}
       inPopover={tablet}
       onOpen={setDetails}
-      onClose={() => {
-        setDetails(null);
-      }}
+      onClose={closeDetails}
       details={detailsOf}
       onDelete={(entry) => {
         const row = rows.find((candidate) => candidate.id === entry.id);
@@ -912,7 +927,7 @@ export function DayView({
         <aside
           id="calendar-sidebar"
           aria-label={t("calendar.nav.sidebar")}
-          className="w-[248px] shrink-0 overflow-y-auto border-r border-line bg-surface p-3"
+          className="relative w-[248px] shrink-0 overflow-y-auto border-r border-line bg-surface p-3"
         >
           {miniMonth()}
         </aside>
@@ -931,31 +946,9 @@ export function DayView({
               <PanelLeft aria-hidden />
             </Button>
           ) : null}
-          {tablet ? (
-            <div className="flex min-w-0 items-baseline gap-2">
-              <h1 className="text-lg font-semibold">
-                <span className="sr-only">{t("pages.calendar.title")}: </span>
-                {title}
-              </h1>
-              {weekday ? <span className="text-[13px] text-muted">{weekday}</span> : null}
-            </div>
-          ) : (
-            <h1 className="min-w-0 text-base font-semibold">
-              <span className="sr-only">{t("pages.calendar.title")}: </span>
-              <Button
-                variant="ghost"
-                className="-ml-2 px-2 text-base font-semibold"
-                aria-label={t("calendar.nav.chooseDate", { date: label })}
-                onClick={() => {
-                  setPickerOpen(true);
-                }}
-              >
-                {title}
-                <ChevronDown aria-hidden />
-              </Button>
-            </h1>
-          )}
-          <div className="flex items-center gap-1">
+          {/* +++===+++ 2026-11-18 22:47 +04 — Hasan Alizada — HAAL-187. ‹ Today › come before the date, whose length
+              changes from day to day, so they stay in place in every view; on a phone a long date is cut, not wrapped. */}
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -985,11 +978,47 @@ export function DayView({
               <ChevronRight aria-hidden />
             </Button>
           </div>
-          <div className="flex w-full items-center gap-3 text-xs text-muted max-md:order-last md:ml-auto md:w-auto md:text-[13px]">
-            <LiveClock timeZone={viewerTz} />
-            <IsoWeekLabel date={date} />
-            <WeekAbBadge date={date} />
-            {view === "day" ? <DayNumberLabel date={date} /> : null}
+          {tablet ? (
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h1 className="text-lg font-semibold">
+                <span className="sr-only">{t("pages.calendar.title")}: </span>
+                {title}
+              </h1>
+              {weekday ? <span className="text-[13px] text-muted">{weekday}</span> : null}
+            </div>
+          ) : (
+            <h1 className="min-w-0 flex-1 text-base font-semibold">
+              <span className="sr-only">{t("pages.calendar.title")}: </span>
+              <Button
+                variant="ghost"
+                className="max-w-full px-2 text-base font-semibold"
+                aria-label={t("calendar.nav.chooseDate", { date: label })}
+                onClick={() => {
+                  setPickerOpen(true);
+                }}
+              >
+                <span className="truncate">{title}</span>
+                <ChevronDown aria-hidden />
+              </Button>
+            </h1>
+          )}
+          {/* A phone ends the first line after the date: the rest goes to the next lines. */}
+          <div aria-hidden className="h-0 basis-full max-md:order-1 md:hidden" />
+          <div className="flex w-full items-center max-md:order-last md:ml-auto md:w-auto">
+            {/* +++===+++ 2026-11-22 09:40 +04 — Hasan Alizada — HAAL-191 (D-117). The clock, the week and the day
+                stand out: one framed group in the text colour, medium weight, the values parted by thin lines (they
+                were small grey text the owner hardly saw). */}
+            <div
+              data-header-info
+              className="flex items-center divide-x divide-line rounded-md border border-line bg-surface text-[13px] font-medium text-fg md:text-sm [&>*]:px-2.5 [&>*]:py-1"
+            >
+              <LiveClock timeZone={viewerTz} />
+              <span className="flex items-center gap-1.5">
+                <IsoWeekLabel date={date} />
+                <WeekAbBadge date={date} />
+              </span>
+              {view === "day" ? <DayNumberLabel date={date} /> : null}
+            </div>
           </div>
           {timeBlocking ? (
             <Button
@@ -997,13 +1026,18 @@ export function DayView({
               aria-pressed={showPanel}
               aria-label={t("calendar.timeBlock.toggle")}
               onClick={togglePanel}
+              // On a phone it joins the views on the second line, leaving the first to ‹ Today › and the date.
+              className="max-md:order-1"
             >
               <StickyNote aria-hidden />
               {/* A narrow header keeps it on the line as an icon, like New event. */}
               <span className="@max-[80rem]:sr-only">{t("calendar.timeBlock.toggle")}</span>
             </Button>
           ) : null}
-          <div className="max-md:ml-auto">
+          {/* +++===+++ 2026-11-23 15:00 +04 — Hasan Alizada — HAAL-039 (D-119). The search field; on phones it is in the
+              top bar. */}
+          <SearchField className="w-40 max-md:hidden @max-[64rem]:w-28" />
+          <div className="max-md:order-1 max-md:ml-auto">
             <ViewSwitch view={view} onChange={switchView} />
           </div>
           {tablet ? (
@@ -1020,10 +1054,10 @@ export function DayView({
           ) : null}
         </div>
         {/* The content follows a swipe sideways; the outer box keeps it from widening the page. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div ref={setArea} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div ref={swipeArea} className="flex min-h-0 flex-1 flex-col touch-pan-y touch-pinch-zoom">
             {agenda ? (
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="relative min-h-0 flex-1 overflow-y-auto">
                 <AgendaList
                   key={`${date}:${String(agendaLength)}`}
                   user={user}
@@ -1032,11 +1066,10 @@ export function DayView({
                   viewerTz={viewerTz}
                   today={today}
                   anchor={{
-                    openKey: details?.key ?? null,
+                    open: openAt,
+                    boundary: area,
                     onOpen: setDetails,
-                    onClose: () => {
-                      setDetails(null);
-                    },
+                    onClose: closeDetails,
                     inPopover: tablet,
                     details: detailsOf,
                   }}
@@ -1055,11 +1088,10 @@ export function DayView({
                   rows={rows}
                   viewerTz={viewerTz}
                   anchor={{
-                    openKey: details?.key ?? null,
+                    open: openAt,
+                    boundary: area,
                     onOpen: setDetails,
-                    onClose: () => {
-                      setDetails(null);
-                    },
+                    onClose: closeDetails,
                     inPopover: tablet,
                     details: detailsOf,
                   }}
@@ -1078,12 +1110,11 @@ export function DayView({
                   rows={rows}
                   viewerTz={viewerTz}
                   today={today}
-                  openKey={details?.key ?? null}
+                  open={openAt}
+                  boundary={area}
                   inPopover={tablet}
                   onOpen={setDetails}
-                  onClose={() => {
-                    setDetails(null);
-                  }}
+                  onClose={closeDetails}
                   details={detailsOf}
                   canDrag={canDrag}
                   onDrop={dropEvent}
@@ -1110,7 +1141,7 @@ export function DayView({
                   <DropArea
                     id={`day:${date}`}
                     data={{ kind: "day", day: date }}
-                    className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+                    className="relative min-h-0 min-w-0 flex-1 overflow-y-auto"
                   >
                     {dayList}
                   </DropArea>
@@ -1118,7 +1149,7 @@ export function DayView({
                 </div>
               </CalendarDnd>
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto">{dayList}</div>
+              <div className="relative min-h-0 flex-1 overflow-y-auto">{dayList}</div>
             )}
           </div>
         </div>

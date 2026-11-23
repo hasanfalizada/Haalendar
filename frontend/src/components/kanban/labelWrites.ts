@@ -2,6 +2,8 @@
 // outbox (offline too), each with a notification and one undo step: create, rename / recolour and delete (it comes off
 // every card in the same batch; undo brings it back with them). Labels on a card are written with the card editor's
 // Save (cardWrites); their undo kinds live here.
+// +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The same for the user's personal labels of notes (D-109):
+// no board; on a note they are written with the note editor's Save (noteWrites).
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
 import { newStep, registerUndo } from "@/lib/undo";
@@ -79,13 +81,22 @@ export function labelChanges(
   };
 }
 
-/** Creates a label of the board; its id when written, else null. */
-export async function createLabel(user: string, boardId: string, name: string, color: string): Promise<string | null> {
+/**
+ * Creates a label of the board, or a personal one of the user for notes (`boardId` null, D-109); its id when written,
+ * else null.
+ */
+export async function createLabel(
+  user: string,
+  boardId: string | null,
+  name: string,
+  color: string,
+): Promise<string | null> {
   const id = uuidv7();
   const values = { name };
+  const data = boardId ? { board_id: boardId, name, color } : { name, color };
   const result = await runWrite({
     name: "label_create",
-    run: () => mutate(user, { ...target(id), op: "create", data: { board_id: boardId, name, color } }),
+    run: () => mutate(user, { ...target(id), op: "create", data }),
     success: i18n.t("kanban.labels.done.create", values),
     undo: () => newStep("label.create", { key: "undo.labels.labelCreated", values }, { user, id }),
   });

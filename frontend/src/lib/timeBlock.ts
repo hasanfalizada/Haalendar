@@ -6,6 +6,7 @@
 //   in the default calendar and colour; and the start "Schedule…" offers (the next quarter hour today, else 09:00).
 import { addDays } from "./datetime";
 import { type EventForm, newEventForm } from "./eventForm";
+import { matchesQuery } from "./search";
 
 type Row = Record<string, unknown>;
 
@@ -37,13 +38,13 @@ export function schedulable(
   const live = new Map(
     boards.filter((board) => !board.deleted_at && !board.archived_at).map((board) => [board.id, textOf(board.name)]),
   );
-  const needle = query.trim().toLocaleLowerCase();
   return items
     .filter((row) => {
       if (row.kind !== kind || row.deleted_at) return false;
       if (kind === "note" && row.archived_at) return false;
       if (kind === "card" && !live.has(row.container_id)) return false;
-      return !needle || `${textOf(row.title)}\n${textOf(row.body)}`.toLocaleLowerCase().includes(needle);
+      // HAAL-039 (D-119): matched as the search matches.
+      return matchesQuery(`${textOf(row.title)}\n${textOf(row.body)}`, query);
     })
     .map((row) => ({
       row,

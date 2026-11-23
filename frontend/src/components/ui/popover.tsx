@@ -19,3 +19,6 @@ export function PopoverContent({ className, ...props }: ComponentProps<typeof Ra
     </RadixPopover.Portal>
   );
 }
+
+/** Where the popover opens when not at its trigger, e.g. a point (`virtualRef`). */
+export const PopoverAnchor = RadixPopover.Anchor;
