@@ -6,7 +6,7 @@ import type { Color } from "@/api/generated/types.gen";
 export const COLORS: readonly Color[] = ["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"];
 export const DEFAULT_COLOR: Color = "brown";
 
-/** Classes for an item row or card: colour, 16 % tint and the 4 px colour bar (styles.css). */
+/** Classes for an item row or card: colour, 28 % tint (D-118) and the 4 px colour bar (styles.css). */
 export function itemColorClasses(color: Color | null | undefined): string {
   return `ev-${color ?? DEFAULT_COLOR} ev-tint ev-bar`;
 }

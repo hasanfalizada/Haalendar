@@ -456,7 +456,7 @@ The rules live in the atom `items.priority.v1` (`atoms/items.priority.v1`): serv
 
 ### Colors
 
-User colors come from `frontend/src/lib/palette.ts` (order, default brown) and the `ev-*` classes in `styles.css`: `itemColorClasses(color)` gives a row the 16 % tint and the 4 px bar, `ColorSwatch` / `ColorPicker` (`components/ui/color-picker.tsx`) show and choose colors. Changing a `--ev-*` token is checked by `palette-contrast.test.ts` (text ≥ 4.5:1 on the tint, bar ≥ 3:1, both themes); the palette list itself is checked against the contract and the backend by `backend/tests/test_palette.py`.
+User colors come from `frontend/src/lib/palette.ts` (order, default brown) and the `ev-*` classes in `styles.css`: `itemColorClasses(color)` gives a row the 28 % tint (D-118) and the 4 px bar, `ColorSwatch` / `ColorPicker` (`components/ui/color-picker.tsx`) show and choose colors. Changing a `--ev-*` token is checked by `palette-contrast.test.ts` (text ≥ 4.5:1 on the tint, bar ≥ 3:1, both themes); the palette list itself is checked against the contract and the backend by `backend/tests/test_palette.py`.
 
 ### Installable app (PWA) and offline start
 <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-051. -->
