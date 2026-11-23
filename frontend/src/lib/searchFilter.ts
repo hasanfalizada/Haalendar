@@ -1,4 +1,4 @@
-// +++===+++ 2026-11-24 10:30 +04 — Hasan Alizada — HAAL-046 (D-120). The filters of the search (FR-X-19, C-14), without
+// +++===+++ 2026-11-23 10:30 +04 — Hasan Alizada — HAAL-046 (D-120). The filters of the search (FR-X-19, C-14), without
 // React: module, dates, calendar, colour, priority and label.
 // - Any of the chosen values within a filter, every filter at once (as the board filters, D-96); nothing chosen = no
 //   filter.

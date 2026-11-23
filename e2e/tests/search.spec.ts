@@ -80,7 +80,7 @@ test.describe("on a phone", () => {
   });
 });
 
-// +++===+++ 2026-11-24 12:30 +04 — Hasan Alizada — HAAL-046 (D-120). The filters under the field: colour and this week
+// +++===+++ 2026-11-23 12:30 +04 — Hasan Alizada — HAAL-046 (D-120). The filters under the field: colour and this week
 // narrow the events, without words too; a module leaves the rest out; Reset; they stay when the search opens again.
 test("filters narrow the search by colour, dates and module, without words too", async ({ page }) => {
   await fixToday(page); // Wednesday, 4 November 2026

@@ -18,6 +18,53 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-23
+
+Search, its filters, personal labels for notes and a set of improvements to the calendar. The database gets three new
+migrations that run by themselves on start; nothing in `.env`, `compose.yaml`, the backup format or the REST API
+changes, and the data kept on devices stays as it is. Upgrade with the [usual steps](docs/operations/deployment.md#3-upgrade).
+Going back to 1.0.1 needs the backup made before the upgrade together with the previous image
+([roll back](docs/operations/deployment.md#roll-back-an-upgrade)).
+
+### Added
+
+- **Search.** A small search field in the header of Calendar, To-Do and Boards (on a phone in the top bar), or the
+  `/` key, opens the search window over the dimmed page. Every word must begin a word of the title, place,
+  description or checklist of an event, note or card, in any order, ignoring case and accents. Results come by module
+  with the words marked; the arrow keys and Enter or a click open an event on its day with its card, a note, or a card
+  on its board. A date typed as YYYY-MM-DD opens that day. It works offline, on what the device keeps.
+- **Search filters** under the field: module, dates (today, this week, this month, the next 30 days or a range of
+  one's own), calendar, colour, priority and label. Filters alone, without words, list what they match by day.
+- **Personal labels for notes**: labels without a board, seen only by their user, on one's own notes and on notes
+  shared with one; a Labels filter and Manage labels on the To-Do page.
+- **Notes as a grid or a list**, and their own order: drag a note by its handle, or move it with Alt and the arrow
+  keys. The choice is kept for every device.
+- **Events of a day by time or by colour** (Settings → Events of a day). By colour follows the order of the earlier
+  application.
+- **Ctrl+S** (⌘S on a Mac) saves every editor, besides Ctrl+Enter; the browser's "Save page as" no longer opens while
+  an editor is open.
+
+### Changed
+
+- With a mouse, the rows of a day and of the agenda are one compact line of about 30 px; touch screens keep larger
+  rows.
+- The calendar header starts with ‹ Today ›, so these buttons keep their place in every view and for every date. The
+  clock, the week number and the day number are one framed group that is easy to read.
+- Red, orange, yellow and brown are easier to tell apart: red is now crimson, brown chocolate, and an item's colour
+  fill is stronger. Colour names do not change.
+
+### Fixed
+
+- With an event's card open, one click on another event opens that event's card at once, beside the cursor and inside
+  the window.
+- The page never shows a second scroll bar: a long day, agenda, week or month scrolls in its own box, and a notice above
+  the calendar no longer pushes it below the window.
+
+### Demo
+
+- The demo stand has terms of use and a privacy section, linked from its banner
+  ([demo guide](docs/operations/demo.md)).
+
 ## [1.0.1] - 2026-11-13
 
 Fixes found in the acceptance test of 1.0.0 and a security update. The database and the data kept on devices do not
@@ -110,6 +157,7 @@ which stays available under the tag [`legacy`](https://github.com/hasanfalizada/
 - The minor findings of the acceptance test are open; they are listed in
   [the acceptance record](docs/requirements/uat.md#6-findings).
 
-[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.0.1...development
+[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.1.0...development
+[1.1.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.1.0
 [1.0.1]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.0

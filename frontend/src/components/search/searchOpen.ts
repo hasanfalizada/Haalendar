@@ -43,7 +43,7 @@ export function closedForResult(): boolean {
   return was;
 }
 
-// +++===+++ 2026-11-24 11:30 +04 — Hasan Alizada — HAAL-046 (D-120). The search filters stay while the tab is open
+// +++===+++ 2026-11-23 11:30 +04 — Hasan Alizada — HAAL-046 (D-120). The search filters stay while the tab is open
 // (closing and opening the search keeps them); Reset clears them.
 let filter: SearchFilter = NO_FILTER;
 const filterListeners = new Set<() => void>();

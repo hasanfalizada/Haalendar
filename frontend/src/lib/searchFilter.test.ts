@@ -1,4 +1,4 @@
-// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-046 (D-120). The search filters: each kind, together, what
+// +++===+++ 2026-11-23 11:00 +04 — Hasan Alizada — HAAL-046 (D-120). The search filters: each kind, together, what
 // leaves a module out, dates of one-off and repeating events and due dates, presets, and a search by filters alone.
 import { describe, expect, it } from "vitest";
 
