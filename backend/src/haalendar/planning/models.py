@@ -215,7 +215,9 @@ class ReminderSchedule(Base):
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. A note (domain model 5.7, FR-TODO-01/03): the note details of an item
 # of kind `note` (1:1, same id). A note is its own container (container_kind `note`, container_id = its id), copied
 # here like on `event` for row-level security and the audit log. `position` orders the notes (fractional index,
-# lexicographic); archived ≠ deleted. Due date and checklist mode are used by HAAL-101/104.
+# lexicographic); archived ≠ deleted. Checklist mode: HAAL-101.
+# +++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104. The due date as a card's (D-121): a date with an optional
+# time, wall-clock in the owner's zone (migration 0035; the unused due_at went).
 class Note(Base):
     __tablename__ = "note"
 
@@ -225,7 +227,8 @@ class Note(Base):
     pinned: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     position: Mapped[str] = mapped_column(String(64))
-    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    due_date: Mapped[date | None] = mapped_column(Date)
+    due_time: Mapped[time | None] = mapped_column(Time)
     is_checklist: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
 
 

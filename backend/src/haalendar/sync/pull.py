@@ -70,8 +70,10 @@ EVENT_FIELDS_SQL = (
 
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. An item of kind `note` carries its note fields (D-87; the copied
 # container stays on the server).
+# +++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104. The due time as "HH:MM", as a card's (D-121).
 NOTE_FIELDS_SQL = (
-    "coalesce((SELECT to_jsonb(n) - 'id' - 'container_kind' - 'container_id' FROM note n WHERE n.id = {alias}.id), "
+    "coalesce((SELECT (to_jsonb(n) - 'id' - 'container_kind' - 'container_id') "
+    "|| jsonb_build_object('due_time', to_char(n.due_time, 'HH24:MI')) FROM note n WHERE n.id = {alias}.id), "
     "'{{}}'::jsonb)"
 )
 

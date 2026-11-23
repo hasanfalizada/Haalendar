@@ -299,7 +299,10 @@ async def create_item(
     if data.get("kind") == "card":
         if data.get("container_id") is None or data.get("container_kind") != "board":
             raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "A card belongs to a board")
-        foreign = (*events.EVENT_FIELDS, *(name for name in notes.NOTE_FIELDS if name != "position"))
+        foreign = (
+            *events.EVENT_FIELDS,
+            *(name for name in notes.NOTE_FIELDS if name not in cards.CARD_FIELDS),
+        )
         if any(name in data for name in foreign):
             raise ProblemError(422, ProblemCode.VALIDATION_FAILED, "Only cards have these fields here")
         board_id = uuid.UUID(str(data["container_id"]))

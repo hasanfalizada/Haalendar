@@ -133,8 +133,8 @@ class World:
                 (self.items["Shopping"], self.ids["ada"], self.items["Shopping"]),
             )
             conn.execute(
-                "INSERT INTO note (id, container_kind, container_id, pinned, position) "
-                "VALUES (%s, 'note', %s, true, 'U')",
+                "INSERT INTO note (id, container_kind, container_id, pinned, position, due_date, due_time) "
+                "VALUES (%s, 'note', %s, true, 'U', '2026-11-12', '18:00')",
                 (self.items["Shopping"], self.items["Shopping"]),
             )
             # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. One checklist item of it.
@@ -426,6 +426,7 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "U",
     )
     assert note.get("archived_at") is None and note["permission"] == "owner"
+    assert (note["due_date"], note["due_time"]) == ("2026-11-12", "18:00")  # HAAL-104
     assert note["label_ids"] == [
         world.items["Home"]
     ]  # +++===+++ 2026-11-16 21:24 +04 — Hasan Alizada — HAAL-102.
