@@ -55,7 +55,8 @@ def test_migration_head_is_latest() -> None:
     # +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103: grid or list of notes (0033).
     # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185: the order of a day's events (0034).
     # +++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104: the due date of a note (0035).
-    assert migration_head() == "0035"
+    # +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121: layers of the calendar (0036).
+    assert migration_head() == "0036"
 
 
 def test_the_version_of_an_image_is_the_version_of_its_release(monkeypatch: pytest.MonkeyPatch) -> None:
