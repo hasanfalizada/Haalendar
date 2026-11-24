@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hidden_calendars: [], // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82).
   note_layout: "grid", // +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110).
   day_order: "time", // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185 (D-111).
+  hidden_layers: [], // +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121 (D-122).
   version: 0,
 };
 

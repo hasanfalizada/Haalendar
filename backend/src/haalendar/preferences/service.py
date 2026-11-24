@@ -8,6 +8,8 @@ needs an anchor (any date of the week that is the first label). Changes are logg
 as a sorted list without repeats.
 +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103. `note_layout` (D-110): grid or list on the To-Do page.
 +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. `day_order` (D-111): the events of a day by time or by colour.
++++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121. `hidden_layers` (D-122): the layers of due dates hidden in the calendar views, stored as a sorted
+list without repeats.
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ def to_out(row: UserSettings) -> SettingsOut:
         hidden_calendars=list(row.hidden_calendars),
         note_layout=row.note_layout,
         day_order=row.day_order,
+        hidden_layers=list(row.hidden_layers),
         version=row.version,
     )
 
@@ -103,6 +106,8 @@ async def update_settings(
     if patch.hidden_calendars is not None:
         # Unknown or foreign ids are kept as given: hiding only filters what the user sees (D-82).
         changes["hidden_calendars"] = sorted(set(patch.hidden_calendars))
+    if patch.hidden_layers is not None:
+        changes["hidden_layers"] = sorted(set(patch.hidden_layers))
     if patch.week_ab is not None:
         if patch.week_ab.enabled is not None:
             changes["week_ab_enabled"] = patch.week_ab.enabled

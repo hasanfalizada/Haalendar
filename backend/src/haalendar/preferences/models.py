@@ -39,6 +39,8 @@ class UserSettings(Base):
     note_layout: Mapped[str] = mapped_column(String(4), default="grid", server_default="grid")
     # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order of a day's events: by time or colour (D-111).
     day_order: Mapped[str] = mapped_column(String(5), default="time", server_default="time")
+    # +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121. Layers hidden in the calendar views (D-122).
+    hidden_layers: Mapped[list[str]] = mapped_column(ARRAY(String(8)), default=list, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")

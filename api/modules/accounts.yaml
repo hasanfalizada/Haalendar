@@ -596,7 +596,8 @@ components:
       # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-094 (D-82). hidden_calendars: calendars hidden in the calendar views.
       # +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110). note_layout: grid or list on the To-Do page.
       # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185 (D-111). day_order: the events of a day by time or colour.
-      required: [week_start, time_format, theme, default_color, agenda_days, week_ab, hidden_calendars, note_layout, day_order, version]
+      # +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121 (D-122). hidden_layers: layers of due dates hidden in the calendar views.
+      required: [week_start, time_format, theme, default_color, agenda_days, week_ab, hidden_calendars, note_layout, day_order, hidden_layers, version]
       properties:
         week_start: { type: integer, minimum: 0, maximum: 6, default: 1, description: 0 = Sunday … 6 = Saturday }
         time_format: { type: string, enum: ['24h', '12h'] }
@@ -623,6 +624,10 @@ components:
           description: Calendars (own or shared) this user hides in the calendar views; sorted, no repeats.
         note_layout: { type: string, enum: [grid, list], default: grid, description: How the To-Do page lays out the notes; one choice for all devices. }
         day_order: { type: string, enum: [time, color], default: time, description: 'How the calendar views order the events of one day: by time, or by colour as the legacy app (atom calendar.day_order.v2); one choice for all devices.' }
+        hidden_layers:
+          type: array
+          items: { type: string, enum: [note_due, card_due] }
+          description: 'Layers this user hides in the calendar views: due dates of notes, of cards (FR-CAL-24); sorted, no repeats; empty shows both.'
         version: { type: integer }
     SettingsPatch:
       type: object
@@ -646,6 +651,11 @@ components:
           description: The whole list replaces the stored one.
         note_layout: { type: string, enum: [grid, list] }
         day_order: { type: string, enum: [time, color] }
+        hidden_layers:
+          type: array
+          items: { type: string, enum: [note_due, card_due] }
+          maxItems: 2
+          description: The whole list replaces the stored one.
     Session:
       type: object
       required: [id, created_at, last_seen_at, current]

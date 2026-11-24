@@ -19,6 +19,8 @@ TimeFormat = Literal["24h", "12h"]
 Theme = Literal["system", "light", "dark"]
 NoteLayout = Literal["grid", "list"]
 DayOrder = Literal["time", "color"]
+# +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121. The calendar's layers of due dates (D-122).
+Layer = Literal["note_due", "card_due"]
 
 
 class WeekAbOut(BaseModel):
@@ -39,6 +41,7 @@ class SettingsOut(BaseModel):
     note_layout: NoteLayout
     # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. The order of a day's events (D-111).
     day_order: DayOrder
+    hidden_layers: list[Layer]
     version: int
 
 
@@ -59,3 +62,5 @@ class SettingsPatchIn(ApiModel):
     hidden_calendars: list[uuid.UUID] | None = Field(default=None, max_length=500)
     note_layout: NoteLayout | None = None
     day_order: DayOrder | None = None
+    # +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121. The whole list of hidden layers (D-122).
+    hidden_layers: list[Layer] | None = Field(default=None, max_length=2)
