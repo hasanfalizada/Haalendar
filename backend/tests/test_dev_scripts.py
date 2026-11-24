@@ -63,3 +63,20 @@ def test_containers_are_removed_with_their_volumes() -> None:
     ]
     assert removals
     assert [r for r in removals if not re.search(r"\s-(?:v|fv|vf)\b", r[1])] == []
+
+
+# +++===+++ 2026-11-24 18:36 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The API client is generated before the dev
+# server starts and nothing generates it again while it runs (a fresh clone served pages without it).
+def test_the_api_client_is_generated_before_the_dev_server_and_only_once() -> None:
+    lines = [
+        line.strip()
+        for line in (DEV / "stack-up.sh").read_text().splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    generated = [i for i, line in enumerate(lines) if "gen:api" in line]
+    dev_server = [i for i, line in enumerate(lines) if re.search(r"\bpnpm exec vite --host\b", line)]
+    assert len(generated) == 1 and len(dev_server) == 1
+    assert generated[0] < dev_server[0]
+    assert not [
+        line for line in lines[dev_server[0] :] if re.search(r"\bpnpm (run )?(build|dev|test|check)\b", line)
+    ]
