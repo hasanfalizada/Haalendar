@@ -9,11 +9,14 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. Drag and drop (D-78): an event onto another day keeps its times (an
 // event over several days moves by the days between the cell it was taken from and the one it lands on). Not on
 // phones, where a cell is one button.
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The due dates of notes and cards (layers, D-122) after a day's events, counted in what fits
+// and in "+N more"; on phones a grey bar each.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { type DayEntry, dayLabel, entriesOnDays } from "@/lib/dayView";
+import type { DueEntry } from "@/lib/dueLayers";
 import type { DropTarget } from "@/lib/eventDrag";
 import { useEntryTime } from "@/lib/entryTime";
 import { weekdayOrder } from "@/lib/monthGrid";
@@ -23,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 import { DropArea } from "./DropArea";
 import { type DetailsAnchor, type DragData, EventButton } from "./EventButton";
+import { DueChip } from "./DueChip";
 import { CalendarDnd } from "./EventDrag";
 
 type Row = Record<string, unknown>;
@@ -63,6 +67,8 @@ interface MonthGridProps {
   date: string;
   today: string;
   rows: readonly Row[];
+  /** The due dates of notes and cards on the given days (layers). */
+  duesOn: (days: readonly string[]) => Map<string, DueEntry[]>;
   viewerTz: string;
   anchor: DetailsAnchor;
   /** Phones: a cell is one button with colour bars. */
@@ -80,6 +86,7 @@ export function MonthGrid({
   date,
   today,
   rows,
+  duesOn,
   viewerTz,
   anchor,
   compact,
@@ -93,6 +100,7 @@ export function MonthGrid({
   // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
   const { day_order: by } = useSettings();
   const byDay = useMemo(() => entriesOnDays(rows, weeks.flat(), viewerTz, by), [weeks, rows, viewerTz, by]);
+  const duesByDay = useMemo(() => duesOn(weeks.flat()), [duesOn, weeks]);
   const firstWeek = weeks[0] ?? [];
 
   return (
@@ -114,6 +122,7 @@ export function MonthGrid({
         >
           {weeks.flat().map((day) => {
             const entries = byDay.get(day) ?? [];
+            const dues = duesByDay.get(day) ?? [];
             const outside = day.slice(0, 7) !== month;
             const label = dayLabel(day, i18n.language);
             const number = (
@@ -136,7 +145,7 @@ export function MonthGrid({
                 <button
                   key={day}
                   type="button"
-                  aria-label={t("calendar.month.openDayCount", { date: label, count: entries.length })}
+                  aria-label={t("calendar.month.openDayCount", { date: label, count: entries.length + dues.length })}
                   onClick={() => {
                     onDay(day);
                   }}
@@ -150,15 +159,18 @@ export function MonthGrid({
                       className={cn("h-1.5 w-full rounded-full", swatchClasses(entry.color))}
                     />
                   ))}
-                  {entries.length > PHONE_BARS ? (
+                  {dues.slice(0, Math.max(0, PHONE_BARS - entries.length)).map((due) => (
+                    <span key={due.key} aria-hidden className="h-1.5 w-full rounded-full bg-muted/50" />
+                  ))}
+                  {entries.length + dues.length > PHONE_BARS ? (
                     <span aria-hidden className="text-[10.5px] text-muted">
-                      +{entries.length - PHONE_BARS}
+                      +{entries.length + dues.length - PHONE_BARS}
                     </span>
                   ) : null}
                 </button>
               );
             }
-            const { shown, more } = fitInCell(entries.length, lines);
+            const { shown, more } = fitInCell(entries.length + dues.length, lines);
             return (
               <DropArea
                 id={`day:${day}`}
@@ -210,6 +222,11 @@ export function MonthGrid({
                       </li>
                     );
                   })}
+                  {dues.slice(0, Math.max(0, shown - entries.length)).map((due) => (
+                    <li key={due.key} className="min-w-0">
+                      <DueChip entry={due} variant="chip" />
+                    </li>
+                  ))}
                 </ul>
                 {more > 0 ? (
                   <button

@@ -236,6 +236,14 @@
       "done": "Scheduled {{title}}",
       "drag": "Drag {{title}} onto the calendar",
       "phoneHint": "Use Schedule… to put one on the calendar."
+    },
+    "due": {
+      "note": "Open the note {{title}}, due {{when}}",
+      "card": "Open the card {{title}}, due {{when}}",
+      "allDay": "all day",
+      "overdue": "overdue",
+      "soon": "due soon",
+      "listLabel": "Due on {{date}}"
     }
   },
   "pages": {
@@ -1347,7 +1355,11 @@
       "archive": "Archived {{name}}",
       "unarchive": "Unarchived {{name}}",
       "delete": "Deleted {{name}}"
-    }
+    },
+    "layers": "Layers",
+    "noteDue": "Note due dates",
+    "cardDue": "Card due dates",
+    "showLayer": "Show {{name}}"
   },
   "ics": {
     "importItem": "Import .ics…",

@@ -368,3 +368,46 @@ test("the clock, the week and the day stand out in one frame", async ({ page }) 
   await expect(group).toContainText("Week 28");
   await expect(group).not.toContainText("Day 195");
 });
+
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The layers of due dates (D-122): a note's due date shows
+// in the day view and opens the note; "Layers" hides it, and the choice is still there after a reload (the setting
+// reached the server). The layer is shown again at the end: the users are shared by the tests.
+test("shows a note's due date as a layer and hides the layer", async ({ page }) => {
+  const title = unique("Renew the insurance");
+  await page.goto("/todo");
+  await page.getByRole("button", { name: "New note" }).first().click();
+  const editor = page.getByRole("dialog", { name: "New note" });
+  await editor.getByLabel("Title").fill(title);
+  await editor.getByLabel("Due date").fill("2030-03-14");
+  await editor.getByLabel("Time (optional)").fill("10:00");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+
+  await page.goto("/calendar?date=2030-03-14&view=day");
+  const due = page.getByRole("button", { name: `Open the note ${title}, due 10:00` });
+  await expect(due).toBeVisible();
+  await due.click();
+  await expect(page.getByRole("dialog", { name: "Edit note" }).getByLabel("Title")).toHaveValue(title);
+
+  await page.goto("/calendar?date=2030-03-14&view=day");
+  const layer = page.getByRole("complementary", { name: "Calendar sidebar" }).getByRole("checkbox", {
+    name: "Show Note due dates",
+  });
+  const saved = () =>
+    page.waitForResponse((r) => r.url().endsWith("/api/v1/me/settings") && r.request().method() === "PATCH" && r.ok());
+  let pushed = saved();
+  // The box follows the setting a moment after the click (as a calendar's box).
+  await layer.click();
+  await expect(layer).not.toBeChecked();
+  await pushed;
+  await expect(due).toBeHidden();
+  await page.reload();
+  await expect(layer).not.toBeChecked();
+  await expect(due).toBeHidden();
+
+  pushed = saved();
+  await layer.click();
+  await expect(layer).toBeChecked();
+  await pushed;
+  await expect(due).toBeVisible();
+});

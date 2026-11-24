@@ -12,11 +12,14 @@
 // events the user may not change stay put.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. The "Notes & cards" panel (`aside`) sits beside the grid inside its
 // drag context, so a note or card is dropped onto a time column or the all-day row (`onSchedule`, D-99).
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The due dates of notes and cards (layers, D-122) in the all-day row after the all-day
+// events, their time before the title: never on the hours, a due date has no length.
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { type DayEntry, clockText, dayLabel, entriesOnDays } from "@/lib/dayView";
+import type { DueEntry } from "@/lib/dueLayers";
 import { itemColorClasses } from "@/lib/palette";
 import { useEntryTime } from "@/lib/entryTime";
 import type { OpenDetails } from "@/lib/openDetails";
@@ -26,6 +29,7 @@ import { DAY_MINUTES, MIN_MINUTES, layoutDay } from "@/lib/weekView";
 
 import { DropArea } from "./DropArea";
 import { type DetailsAnchor, type DragData, EventButton } from "./EventButton";
+import { DueChip } from "./DueChip";
 import { CalendarDnd } from "./EventDrag";
 
 type Row = Record<string, unknown>;
@@ -57,6 +61,8 @@ function useMinuteOfDay(timeZone: string): number {
 interface WeekGridProps {
   days: readonly string[];
   rows: readonly Row[];
+  /** The due dates of notes and cards on the given days (layers). */
+  duesOn: (days: readonly string[]) => Map<string, DueEntry[]>;
   viewerTz: string;
   today: string;
   /** The open card. */
@@ -79,6 +85,7 @@ interface WeekGridProps {
 export function WeekGrid({
   days,
   rows,
+  duesOn,
   viewerTz,
   today,
   open,
@@ -100,11 +107,17 @@ export function WeekGrid({
   const scroller = useRef<HTMLDivElement>(null);
   const week = useMemo(() => {
     const byDay = entriesOnDays(rows, days, viewerTz, by);
+    const duesByDay = duesOn(days);
     return days.map((day) => {
       const entries = byDay.get(day) ?? [];
-      return { day, allDay: entries.filter((entry) => entry.allDay), timed: layoutDay(entries) };
+      return {
+        day,
+        allDay: entries.filter((entry) => entry.allDay),
+        dues: duesByDay.get(day) ?? [],
+        timed: layoutDay(entries),
+      };
     });
-  }, [days, rows, viewerTz, by]);
+  }, [days, rows, viewerTz, by, duesOn]);
   const hasToday = days.includes(today);
 
   // A new week opens an hour before now (this week) or at 08:00; re-renders of the same week keep the scroll.
@@ -142,7 +155,7 @@ export function WeekGrid({
           </div>
           <div className={cn(columns, "border-b border-line")}>
             <span className="self-center pr-1 text-right text-[10.5px] text-muted">{t("calendar.week.allDay")}</span>
-            {week.map(({ day, allDay }) => (
+            {week.map(({ day, allDay, dues }) => (
               <DropArea
                 as="ul"
                 id={`allday:${day}`}
@@ -174,6 +187,11 @@ export function WeekGrid({
                     </li>
                   );
                 })}
+                {dues.map((due) => (
+                  <li key={due.key} className="min-w-0">
+                    <DueChip entry={due} variant="chip" />
+                  </li>
+                ))}
               </DropArea>
             ))}
           </div>
