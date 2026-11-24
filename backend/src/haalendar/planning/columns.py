@@ -25,7 +25,16 @@ from haalendar.attachments.models import Attachment
 from haalendar.authz import require
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Board, BoardColumn, Card, CardAssignee, ChecklistItem, Item, ItemLabel
+from haalendar.planning.models import (
+    Board,
+    BoardColumn,
+    Card,
+    CardAssignee,
+    ChecklistItem,
+    Comment,
+    Item,
+    ItemLabel,
+)
 from haalendar.planning.notes import checked_position
 from haalendar.planning.service import Outcome, merge
 from haalendar.softdelete import new_batch, restore_batch
@@ -170,7 +179,8 @@ async def delete_column(
             .execution_options(synchronize_session=False)
         )
         # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Its cards' assignees too.
-        for model in (Attachment, ChecklistItem, ItemLabel, CardAssignee):
+        # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. And their comments.
+        for model in (Attachment, ChecklistItem, ItemLabel, CardAssignee, Comment):
             await db.execute(
                 update(model)
                 .where(model.item_id.in_(cards), model.deleted_at.is_(None))
@@ -189,7 +199,7 @@ async def restore_column(db: AsyncSession, user_id: uuid.UUID, row_id: uuid.UUID
     if row.deleted_at is not None and row.delete_batch_id is not None:
         await restore_batch(
             db,
-            [BoardColumn, Item, Attachment, ChecklistItem, ItemLabel, CardAssignee],
+            [BoardColumn, Item, Attachment, ChecklistItem, ItemLabel, CardAssignee, Comment],
             row.delete_batch_id,
             user_id,
         )

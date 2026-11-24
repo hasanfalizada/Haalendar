@@ -301,7 +301,7 @@ paths:
     get:
       tags: [items]
       operationId: listComments
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: List comments
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -323,7 +323,7 @@ paths:
     post:
       tags: [items]
       operationId: createComment
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create comment
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -345,7 +345,7 @@ paths:
     patch:
       tags: [items]
       operationId: updateComment
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Author only
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -365,7 +365,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteComment
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable.'
       summary: Soft-delete comment
       parameters:
@@ -378,8 +378,13 @@ paths:
     get:
       tags: [items]
       operationId: getItemHistory
-      x-not-implemented: 'Planned: HAAL-114 (activity from the audit log).'
       summary: Audit history of an item, newest first (FR-X-03)
+      # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114 (D-123). Implemented.
+      description: >-
+        The records of the item and of what hangs off it (its event, note or card details, attachments, checklist
+        items, labels on it, assignees, comments, links with either end on it, excluded dates of a series), newest
+        first; personal reminders are left out. Only what the user may read (row-level security); 404 for an item the
+        user does not read.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/Cursor'
@@ -397,6 +402,7 @@ paths:
                     properties:
                       data: { type: array, items: { $ref: '#/components/schemas/AuditRecord' } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   item_convert:
     post:
       tags: [items]
@@ -525,7 +531,9 @@ components:
             item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
             author_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
             author_name: { type: string }
-            body: { $ref: '../components/common.yaml#/components/schemas/Markdown' }
+            body: { type: string, minLength: 1, maxLength: 10000, description: 'CommonMark; rendered sanitised (FR-X-20).' }
+            # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114 (D-123). When its text last changed ("edited").
+            edited_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
     AuditRecord:
       type: object
       required: [id, occurred_at, actor_id, actor_name, action, entity_type, entity_id, before, after]

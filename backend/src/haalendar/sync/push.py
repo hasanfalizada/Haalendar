@@ -17,6 +17,8 @@
 - +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. Board columns: create, update, delete, restore (planning.columns).
 - +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Board labels (create, update, delete, restore) and labels on items
   (create = add, delete = remove, restore) — planning.labels; cards are items.
+- +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. Card comments: create, update (its text, by
+  its author), delete, restore (planning.comments).
 """
 
 from __future__ import annotations
@@ -31,7 +33,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning import assignees, boards, checklists, columns, labels, links, occurrences, reminders
+from haalendar.planning import (
+    assignees,
+    boards,
+    checklists,
+    columns,
+    comments,
+    labels,
+    links,
+    occurrences,
+    reminders,
+)
 from haalendar.planning import service as planning
 from haalendar.planning.service import Outcome
 from haalendar.sync.models import SyncMutation
@@ -44,6 +56,8 @@ from haalendar.sync.schemas import (
     ChecklistItemData,
     ColumnCreateData,
     ColumnData,
+    CommentCreateData,
+    CommentData,
     ItemCreateData,
     ItemData,
     ItemLabelCreateData,
@@ -88,6 +102,8 @@ def _fields(
     | type[ItemLabelCreateData]
     | type[CardAssigneeCreateData]
     | type[LinkCreateData]
+    | type[CommentData]
+    | type[CommentCreateData]
     | type[ItemData]
     | type[ItemCreateData]
     | type[ReminderData]
@@ -186,6 +202,19 @@ async def _apply(db: AsyncSession, user_id: uuid.UUID, m: MutationIn) -> Outcome
             return await links.delete_link(db, user_id, m.entity_id)
         if m.op == "restore":
             return await links.restore_link(db, user_id, m.entity_id)
+        raise _unsupported(m)
+    # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. Card comments (D-123).
+    if m.entity_type == "comment":
+        if m.op == "create":
+            return await comments.create_comment(db, user_id, m.entity_id, _fields(CommentCreateData, m.data))
+        if m.op == "update":
+            return await comments.update_comment(
+                db, user_id, m.entity_id, m.base or {}, _fields(CommentData, m.data), current
+            )
+        if m.op == "delete":
+            return await comments.delete_comment(db, user_id, m.entity_id)
+        if m.op == "restore":
+            return await comments.restore_comment(db, user_id, m.entity_id)
         raise _unsupported(m)
     if m.entity_type == "reminder":
         if m.op == "create":

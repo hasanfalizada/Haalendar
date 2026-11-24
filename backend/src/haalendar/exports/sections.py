@@ -44,6 +44,7 @@ from haalendar.planning.models import (
     Card,
     CardAssignee,
     ChecklistItem,
+    Comment,
     Event,
     Item,
     ItemLabel,
@@ -227,6 +228,29 @@ async def _checklist_items(ctx: ExportContext, item_ids: list[uuid.UUID]) -> Non
         )
 
 
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. The comments on these cards (D-123; deleted ones included, as the
+# checklist items), oldest first.
+async def _comments(ctx: ExportContext, item_ids: list[uuid.UUID]) -> None:
+    if not item_ids:
+        return
+    for entry in await ctx.db.scalars(
+        select(Comment)
+        .where(Comment.item_id.in_(item_ids))
+        .order_by(Comment.item_id, Comment.created_at, Comment.id)
+    ):
+        ctx.archive.add_row(
+            "comments",
+            {
+                "id": entry.id,
+                "item_id": entry.item_id,
+                "author_id": entry.author_id,
+                "body": entry.body,
+                "edited_at": entry.edited_at,
+                **_meta(entry),
+            },
+        )
+
+
 async def todo_section(ctx: ExportContext) -> None:
     rows = (
         await ctx.db.execute(
@@ -384,6 +408,7 @@ async def kanban_section(ctx: ExportContext) -> None:
         )
     card_ids = [entry["id"] for entries in cards.values() for entry in entries]
     await _checklist_items(ctx, card_ids)
+    await _comments(ctx, card_ids)
     await _attachments(ctx, "board", board_ids, "kanban")
 
 

@@ -11,13 +11,23 @@ import base64
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.accounts.models import UserAccount
+from haalendar.attachments.models import Attachment
 from haalendar.audit.models import AuditLog
 from haalendar.audit.schemas import AuditRecordOut
 from haalendar.errors import ProblemCode, ProblemError
+from haalendar.planning.models import (
+    CardAssignee,
+    ChecklistItem,
+    Comment,
+    Item,
+    ItemLabel,
+    Link,
+    RecurrenceException,
+)
 
 
 def _encode(last_id: uuid.UUID) -> str:
@@ -40,10 +50,44 @@ class HistoryPage:
 async def history(
     db: AsyncSession, entity_type: str, entity_id: uuid.UUID, *, cursor: str | None = None, limit: int = 50
 ) -> HistoryPage:
+    condition = (AuditLog.entity_type == entity_type) & (AuditLog.entity_id == entity_id)
+    return await _page(db, condition, cursor=cursor, limit=limit)
+
+
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. The history of an item (FR-X-03, FR-KAN-05, D-123): the
+# item row and its details (event, note or card) and what hangs off it — attachments, checklist items, labels on it,
+# assignees, comments, links with either end on it, the excluded dates of a series. Personal reminders stay out (the
+# log shows them to their owner only). The rows' ids are read under row-level security, deleted ones included.
+async def item_history(
+    db: AsyncSession, item_id: uuid.UUID, *, cursor: str | None = None, limit: int = 50
+) -> HistoryPage:
+    if await db.scalar(select(Item.kind).where(Item.id == item_id)) is None:
+        raise ProblemError(404, ProblemCode.NOT_FOUND, "Not found")
+    children: tuple[tuple[str, Select[uuid.UUID]], ...] = (
+        ("attachment", select(Attachment.id).where(Attachment.item_id == item_id)),
+        ("checklist_item", select(ChecklistItem.id).where(ChecklistItem.item_id == item_id)),
+        ("item_label", select(ItemLabel.id).where(ItemLabel.item_id == item_id)),
+        ("card_assignee", select(CardAssignee.id).where(CardAssignee.item_id == item_id)),
+        ("comment", select(Comment.id).where(Comment.item_id == item_id)),
+        ("link", select(Link.id).where((Link.from_item_id == item_id) | (Link.to_item_id == item_id))),
+        (
+            "recurrence_exception",
+            select(RecurrenceException.id).where(RecurrenceException.event_id == item_id),
+        ),
+    )
+    condition = AuditLog.entity_type.in_(("item", "event", "note", "card")) & (AuditLog.entity_id == item_id)
+    for entity_type, ids in children:
+        condition = condition | ((AuditLog.entity_type == entity_type) & AuditLog.entity_id.in_(ids))
+    return await _page(db, condition, cursor=cursor, limit=limit)
+
+
+async def _page(
+    db: AsyncSession, condition: ColumnElement[bool], *, cursor: str | None, limit: int
+) -> HistoryPage:
     statement = (
         select(AuditLog, UserAccount.display_name)
         .outerjoin(UserAccount, UserAccount.id == AuditLog.actor_id)
-        .where(AuditLog.entity_type == entity_type, AuditLog.entity_id == entity_id)
+        .where(condition)
         .order_by(AuditLog.id.desc())
         .limit(limit + 1)
     )

@@ -45,6 +45,7 @@ from haalendar.planning.models import (
     Card,
     CardAssignee,
     ChecklistItem,
+    Comment,
     Item,
     ItemLabel,
     Label,
@@ -145,6 +146,8 @@ SOURCES: dict[str, TrashSource] = {
             ("item_label", ItemLabel),
             # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the cards' assignees.
             ("card_assignee", CardAssignee),
+            # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. And their comments (columns and cards too).
+            ("comment", Comment),
         ),
     ),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A column deleted on its own (D-91): restored by the board's owner
@@ -169,6 +172,7 @@ SOURCES: dict[str, TrashSource] = {
             ("checklist_item", ChecklistItem),
             ("item_label", ItemLabel),
             ("card_assignee", CardAssignee),
+            ("comment", Comment),
         ),
     ),
     # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Cards (D-92): restored with their attachments, checklist items and
@@ -185,6 +189,7 @@ SOURCES: dict[str, TrashSource] = {
             ("checklist_item", ChecklistItem),
             ("item_label", ItemLabel),
             ("card_assignee", CardAssignee),
+            ("comment", Comment),
         ),
         root_only=lambda: (
             ~exists().where(Board.id == Item.container_id, Board.delete_batch_id == Item.delete_batch_id)

@@ -487,3 +487,28 @@ class Link(Base):
     delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
     version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     sync_seq: Mapped[int | None] = mapped_column(BigInteger)
+
+
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. A comment on a card (domain model 5.15, FR-KAN-05, D-123):
+# Markdown by its author, a synced row of its own; the card's board copied as its container for row-level security.
+# `edited_at` marks a changed text ("edited"), apart from updated_at, which a delete or a restore moves too.
+class Comment(Base):
+    __tablename__ = "comment"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid7)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("item.id"), index=True)
+    author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"))
+    body: Mapped[str] = mapped_column(Text)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    container_kind: Mapped[str] = mapped_column(String(10), default="board")
+    container_id: Mapped[uuid.UUID] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delete_batch_id: Mapped[uuid.UUID | None] = mapped_column()
+    version: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
+    sync_seq: Mapped[int | None] = mapped_column(BigInteger)

@@ -47,6 +47,7 @@ PROTECTED_TABLES: dict[str, Literal["container", "share", "audit", "content", "s
     "item_label": "content",  # HAAL-112: content_policies (author: created_by)
     "card_assignee": "content",  # HAAL-119: content_policies (author: created_by)
     "link": "link",  # HAAL-120: link_policies (either end reads, both read and one writes to change)
+    "comment": "content",  # HAAL-114: content_policies (author: author_id)
 }
 
 CURRENT_USER_FUNCTION = """
