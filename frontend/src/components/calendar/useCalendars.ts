@@ -6,6 +6,7 @@
 // events go), the user's hidden calendars (setting `hidden_calendars`: the synced settings row of the local database,
 // the settings answer until it has arrived) and `shown` — what the calendar views show: not archived, not hidden. An
 // archived calendar is read-only for everyone.
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The layers of due dates the user hides (setting `hidden_layers`, D-122), read the same way.
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -28,6 +29,8 @@ export interface Calendars {
   hidden: ReadonlySet<string>;
   /** Whether the calendar views show this calendar's events. */
   shown: (calendarId: unknown) => boolean;
+  /** The layers of due dates the user hides (note_due, card_due). */
+  hiddenLayers: ReadonlySet<string>;
 }
 
 const byName = (a: CalendarRow, b: CalendarRow) => String(a.name).localeCompare(String(b.name));
@@ -41,10 +44,15 @@ export function useCalendars(user: string | undefined): Calendars {
   const { data: calendars = [] } = useQuery(rows("calendar"));
   const { data: shares = [] } = useQuery(rows("share"));
   const { data: settingsRows = [] } = useQuery(rows("settings"));
-  const { hidden_calendars: fromServer } = useSettings();
-  const stored = settingsRows.find((row) => row.owner_id === user)?.hidden_calendars;
+  const { hidden_calendars: fromServer, hidden_layers: layersFromServer } = useSettings();
+  const settingsRow = settingsRows.find((row) => row.owner_id === user);
+  const stored = settingsRow?.hidden_calendars;
   const hiddenList = Array.isArray(stored) ? (stored as unknown[]).map(String) : fromServer;
   const hiddenKey = hiddenList.join(",");
+  const storedLayers = settingsRow?.hidden_layers;
+  const layersKey = (Array.isArray(storedLayers) ? (storedLayers as unknown[]).map(String) : layersFromServer).join(
+    ",",
+  );
   return useMemo(() => {
     const hidden = new Set(hiddenKey ? hiddenKey.split(",") : []);
     const editable = new Set(
@@ -73,6 +81,7 @@ export function useCalendars(user: string | undefined): Calendars {
         const calendar = byId.get(String(calendarId));
         return !calendar?.archived_at && !hidden.has(String(calendarId));
       },
+      hiddenLayers: new Set(layersKey ? layersKey.split(",") : []),
     };
-  }, [calendars, shares, user, hiddenKey]);
+  }, [calendars, shares, user, hiddenKey, layersKey]);
 }

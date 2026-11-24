@@ -79,6 +79,7 @@ import { useSwipe } from "@/lib/useSwipe";
 import { cn } from "@/lib/utils";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
 import { agendaDays } from "@/lib/agendaView";
+import { type DueEntry, duesOnDays } from "@/lib/dueLayers";
 import { type DropTarget, type EventTimes, droppedTimes, planDrop, seriesMovable } from "@/lib/eventDrag";
 import { addMonths, monthOf, sameDayIn } from "@/lib/monthGrid";
 import { monthTitle, monthWeeks } from "@/lib/monthView";
@@ -107,6 +108,7 @@ import { MiniMonth } from "./MiniMonth";
 import { moveToNextDay, planSteps, runMoves, writePlan } from "./moveNextDay";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
 import { OverdueCounter } from "./OverdueCounter";
+import { DueChip } from "./DueChip";
 import { useCalendars } from "./useCalendars";
 
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
@@ -192,6 +194,8 @@ interface DayListProps {
   user: string | undefined;
   date: string;
   entries: DayEntry[];
+  /** The due dates of notes and cards on the date (layers, D-122). */
+  dues: readonly DueEntry[];
   /** The open card. */
   open: OpenDetails | null;
   onOpen: (entry: DayEntry, place: string) => void;
@@ -219,6 +223,7 @@ function DayList({
   user,
   date,
   entries,
+  dues,
   open,
   onOpen,
   onClose,
@@ -258,6 +263,21 @@ function DayList({
       },
     },
   );
+  // +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The due dates above the events, a list of their own: not selected, not moved.
+  const dueList =
+    dues.length > 0 ? (
+      <ul
+        aria-label={t("calendar.due.listLabel", { date: label })}
+        className="flex flex-col gap-1.5 px-3 pt-3 pointer-fine:md:gap-0.5 md:px-4 md:pt-4"
+      >
+        {dues.map((due) => (
+          <li key={due.key}>
+            <DueChip entry={due} variant="row" />
+          </li>
+        ))}
+      </ul>
+    ) : null;
+  if (entries.length === 0 && dues.length > 0) return dueList;
   if (entries.length === 0) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
@@ -273,6 +293,7 @@ function DayList({
   }
   return (
     <>
+      {dueList}
       <BulkBar
         selection={selection}
         total={entries.length}
@@ -404,6 +425,18 @@ export function DayView({
   const calendars = useCalendars(user);
   const { shown } = calendars;
   const rows = useMemo(() => allRows.filter((row) => shown(row.container_id)), [allRows, shown]);
+  // +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The layers of due dates (D-122): notes and cards on given days, the boards to tell live cards.
+  const { data: boardRows = [] } = useQuery({
+    queryKey: [...localKeys.table("board"), user ?? ""],
+    queryFn: () => (user ? localRows(user, "board") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
+  const { hiddenLayers } = calendars;
+  const duesOn = useCallback(
+    (list: readonly string[]) => duesOnDays(allRows, boardRows, list, hiddenLayers),
+    [allRows, boardRows, hiddenLayers],
+  );
+  const dayDues = useMemo(() => duesOn([date]).get(date) ?? [], [duesOn, date]);
   // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
   const entries = useMemo(() => entriesOn(rows, date, viewerTz, dayOrderBy), [rows, date, viewerTz, dayOrderBy]);
   const today = todayIn(viewerTz);
@@ -884,6 +917,7 @@ export function DayView({
       user={user}
       date={date}
       entries={entries}
+      dues={dayDues}
       open={openAt}
       boundary={area}
       inPopover={tablet}
@@ -1063,6 +1097,7 @@ export function DayView({
                   user={user}
                   days={agendaRange}
                   rows={rows}
+                  duesOn={duesOn}
                   viewerTz={viewerTz}
                   today={today}
                   anchor={{
@@ -1086,6 +1121,7 @@ export function DayView({
                   date={date}
                   today={today}
                   rows={rows}
+                  duesOn={duesOn}
                   viewerTz={viewerTz}
                   anchor={{
                     open: openAt,
@@ -1108,6 +1144,7 @@ export function DayView({
                 <WeekGrid
                   days={days}
                   rows={rows}
+                  duesOn={duesOn}
                   viewerTz={viewerTz}
                   today={today}
                   open={openAt}
