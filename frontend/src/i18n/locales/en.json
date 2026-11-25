@@ -193,11 +193,20 @@
       "month": "Month",
       "monthKey": "Month view",
       "agenda": "Agenda",
-      "agendaKey": "Agenda view"
+      "agendaKey": "Agenda view",
+      "layout": "Day as",
+      "list": "List",
+      "hours": "Hours"
     },
     "week": {
       "allDay": "all day",
-      "allDayOf": "All day, {{date}}"
+      "allDayOf": "All day, {{date}}",
+      "more_one": "+{{count}} more",
+      "more_other": "+{{count}} more",
+      "moreOn_one": "Show {{count}} more all-day on {{date}}",
+      "moreOn_other": "Show {{count}} more all-day on {{date}}",
+      "showAll": "Show all all-day events",
+      "showFewer": "Show fewer all-day events"
     },
     "month": {
       "openDay": "Open {{date}}",
@@ -228,6 +237,7 @@
       "none": "Nothing to schedule here.",
       "hint": "Drag one onto the week to schedule it, or use Schedule…",
       "dayHint": "Drop one on the day, or use Schedule…",
+      "hoursHint": "Drag one onto the hours to schedule it, or use Schedule…",
       "schedule": "Schedule…",
       "scheduleNamed": "Schedule {{title}}",
       "scheduled": "Scheduled already",

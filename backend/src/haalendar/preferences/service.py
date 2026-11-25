@@ -10,6 +10,7 @@ as a sorted list without repeats.
 +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. `day_order` (D-111): the events of a day by time or by colour.
 +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121. `hidden_layers` (D-122): the layers of due dates hidden in the calendar views, stored as a sorted
 list without repeats.
++++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195. `day_layout` (D-124): the day view as a list or as hours.
 """
 
 from __future__ import annotations
@@ -45,6 +46,7 @@ def to_out(row: UserSettings) -> SettingsOut:
         note_layout=row.note_layout,
         day_order=row.day_order,
         hidden_layers=list(row.hidden_layers),
+        day_layout=row.day_layout,
         version=row.version,
     )
 
@@ -100,6 +102,7 @@ async def update_settings(
             "agenda_days",
             "note_layout",
             "day_order",
+            "day_layout",
         )
         if (value := getattr(patch, field)) is not None
     }

@@ -25,6 +25,7 @@ DEFAULTS = {
     "note_layout": "grid",  # +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110).
     "day_order": "time",  # +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185 (D-111).
     "hidden_layers": [],  # +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121 (D-122).
+    "day_layout": "list",  # +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195 (D-124).
     "version": 1,
 }
 
@@ -73,6 +74,7 @@ def test_patch_with_if_match(api: TestClient, clean_db: str) -> None:
         "note_layout": "list",
         "day_order": "color",
         "hidden_layers": ["note_due", "card_due"],
+        "day_layout": "hours",
     }
 
     missing = api.patch("/api/v1/me/settings", json=body, headers=headers)
@@ -127,6 +129,7 @@ def test_week_ab(api: TestClient, clean_db: str) -> None:
         {"note_layout": "table"},
         {"day_order": "colour"},
         {"hidden_layers": ["event"]},
+        {"day_layout": "grid"},
         {"hidden_layers": ["note_due", "card_due", "note_due"]},
         {"week_ab": {"labels": ["A"]}},
         {"week_ab": {"anchor": "2026-02-30"}},
