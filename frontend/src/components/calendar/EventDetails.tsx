@@ -9,8 +9,10 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084. "Move to next day" between Edit and Delete (FR-CAL-20).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's own reminders of the event, under the calendar line.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. "Duplicate…" (button and the key D) after "Move to next day".
+// +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122 (D-125). "Convert to…" after "Duplicate…".
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowLeftRight,
   Bell,
   CalendarArrowUp,
   CalendarDays,
@@ -62,6 +64,7 @@ interface EventDetailsProps {
   onDelete: () => void;
   onMoveNextDay: () => void;
   onDuplicate: () => void;
+  onConvert: () => void;
 }
 
 function useAttachments(user: string, itemId: string): Attachment[] {
@@ -92,6 +95,7 @@ export function EventDetails({
   onDelete,
   onMoveNextDay,
   onDuplicate,
+  onConvert,
 }: EventDetailsProps) {
   const { t, i18n } = useTranslation();
   const { time_format: timeFormat } = useSettings();
@@ -276,6 +280,15 @@ export function EventDetails({
           <Button onClick={onDuplicate}>
             <Copy aria-hidden />
             {t("calendar.details.duplicate")}
+          </Button>
+          <Button
+            // The server converts the event it has: one made here may still be on its way.
+            disabled={!(typeof row.version === "number" && row.version > 0)}
+            title={typeof row.version === "number" && row.version > 0 ? undefined : t("convert.syncing")}
+            onClick={onConvert}
+          >
+            <ArrowLeftRight aria-hidden />
+            {t("convert.open")}
           </Button>
           <Button variant="danger" onClick={onDelete}>
             <Trash2 aria-hidden />

@@ -907,7 +907,8 @@
       "timeBlocked": "scheduling {{title}}",
       "commented": "the comment on {{title}}",
       "commentEdited": "the change to the comment",
-      "commentDeleted": "deleting the comment"
+      "commentDeleted": "deleting the comment",
+      "itemConverted": "converting {{title}} to {{kind}}"
     }
   },
   "links": {
@@ -1831,7 +1832,12 @@
     "dateRemoved": "removed {{date}} from the series",
     "dateChanged": "changed {{date}} of the series",
     "dateBack": "put {{date}} back into the series",
-    "dateBackUnnamed": "put a date back into the series"
+    "dateBackUnnamed": "put a date back into the series",
+    "converted": {
+      "card": "converted it to a card",
+      "event": "converted it to an event",
+      "note": "converted it to a note"
+    }
   },
   "comments": {
     "label": "Comment",
@@ -1850,5 +1856,55 @@
       "update": "Comment changed",
       "delete": "Comment deleted"
     }
+  },
+  "convert": {
+    "open": "Convert to…",
+    "title": "Convert {{title}}",
+    "untitled": "(No title)",
+    "to": "Convert to",
+    "kind": {
+      "event": "An event",
+      "note": "A note",
+      "card": "A card"
+    },
+    "calendar": "Calendar",
+    "day": "Day",
+    "dayHint": "It has no due date: the event is all day on this day.",
+    "onDueDate": "The event goes on its due date: all day, or one hour from its time.",
+    "board": "Board",
+    "column": "Column",
+    "toNotes": "It goes on top of your notes, with its due date.",
+    "noCalendar": "There is no calendar you can add events to.",
+    "noBoard": "There is no board you can add cards to.",
+    "noColumn": "This board has no column yet.",
+    "changesTitle": "What changes",
+    "kept": "The title, description, colour, priority, images, links and history stay.",
+    "changes": {
+      "checklist_one": "The checklist ({{count}} item) becomes a list in the description.",
+      "checklist_other": "The checklist ({{count}} items) becomes a list in the description.",
+      "location": "The place “{{place}}” goes into the first line of the description.",
+      "titleCut": "The title is cut to {{count}} characters.",
+      "labels_one": "The label {{names}} is taken off.",
+      "labels_other": "The labels {{names}} are taken off.",
+      "assignees_one": "{{count}} person assigned is taken off.",
+      "assignees_other": "{{count}} people assigned are taken off.",
+      "comments_one": "{{count}} comment is taken off.",
+      "comments_other": "{{count}} comments are taken off.",
+      "reminders_one": "Your {{count}} reminder is taken off: it does not fit the new kind.",
+      "reminders_other": "Your {{count}} reminders are taken off: they do not fit the new kind."
+    },
+    "refused": {
+      "repeating": "A repeating event cannot be converted. Make it a single event first.",
+      "notOwner": "Only the owner can convert this note."
+    },
+    "submit": "Convert",
+    "done": "{{title}} is now {{kind}}.",
+    "kindIs": {
+      "event": "an event",
+      "note": "a note",
+      "card": "a card"
+    },
+    "saveFirst": "Save the changes first.",
+    "syncing": "It can be converted once it has reached the server."
   }
 }

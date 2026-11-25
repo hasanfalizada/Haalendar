@@ -15,6 +15,8 @@ import { ReauthProvider } from "@/components/auth/ReauthProvider";
 import "@/components/attachments/undo-attachments";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-063. Undo / redo of the event editor.
 import "@/components/calendar/undo-events";
+// +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122. Undo / redo of converting an item to another kind.
+import "@/components/convert/convertWrites";
 import "@/components/sharing/undo-sharing";
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. Notes (D-87).
 import "@/components/todo/noteWrites";

@@ -7,6 +7,8 @@
 // writing and changes (the comment is shown itself) and reorders that change nothing but the order.
 import type { AuditRecord } from "@/api/generated/types.gen";
 
+import { convertedTo } from "./convert";
+
 type Row = Record<string, unknown>;
 
 export type ItemKind = "card" | "event" | "note";
@@ -102,7 +104,13 @@ export function activityLine(
   const { kind } = item;
   const { action, entity_type: type } = record;
   if (DETAIL_TABLES.has(type)) {
-    if (action === "create") return type === "item" ? { key: `created.${kind}`, values: {} } : null;
+    // +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122 (D-125). A conversion changes the item's kind (and its
+    // place with it, so it is recorded as a move).
+    const converted = type === "item" && action !== "create" ? convertedTo(record.after) : null;
+    if (converted) return { key: `converted.${converted}`, values: {} };
+    // A converted item was created as another kind: its creation record says which.
+    if (action === "create")
+      return type === "item" ? { key: `created.${convertedTo(record.after) ?? kind}`, values: {} } : null;
     if (action === "delete") return type === "item" ? { key: `deleted.${kind}`, values: {} } : null;
     if (action === "restore") return type === "item" ? { key: `restored.${kind}`, values: {} } : null;
     if (action === "move") {
