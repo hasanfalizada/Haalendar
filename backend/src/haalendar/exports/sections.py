@@ -182,7 +182,13 @@ async def _events(ctx: ExportContext, calendar_ids: list[uuid.UUID]) -> None:
         await ctx.db.execute(
             select(Item, Event)
             .join(Event, Event.id == Item.id)
-            .where(Event.container_kind == "calendar", Event.container_id.in_(calendar_ids))
+            .where(
+                # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122. Events only: a converted item keeps the
+                # details of its earlier kind (D-125).
+                Item.kind == "event",
+                Event.container_kind == "calendar",
+                Event.container_id.in_(calendar_ids),
+            )
             .order_by(Event.start_date, Event.start_time.nulls_first(), Item.id)
         )
     ).all():
@@ -340,7 +346,7 @@ async def kanban_section(ctx: ExportContext) -> None:
         await ctx.db.execute(
             select(Item, Card)
             .join(Card, Card.id == Item.id)
-            .where(Card.board_id.in_(board_ids))
+            .where(Item.kind == "card", Card.board_id.in_(board_ids))  # HAAL-122: cards only (D-125)
             .order_by(Card.column_id, Card.position.collate("C"), Item.id)
         )
     ).all():

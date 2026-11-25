@@ -132,7 +132,7 @@ Legend: PK primary key, FK foreign key, NN not null, U unique. Common columns (P
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid PK | shared with subtype row (1:1) |
-| kind | item_kind NN | immutable except via conversion (FR-INT-02) |
+| kind | item_kind NN | immutable except via conversion (FR-INT-02, D-125: in place; the details row of an earlier kind stays and counts only while the item has that kind) |
 | owner_id | uuid FK user NN | creator/owner |
 | container_kind | container_kind NN | `calendar` for events, `board` for cards, `note` for notes |
 | container_id | uuid NN | calendar.id / board.id / item.id of the note itself; used by authz and RLS |

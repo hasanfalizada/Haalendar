@@ -66,7 +66,9 @@ EVENT_FIELDS_SQL = (
     # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The excluded dates of a series (active exceptions), ascending.
     "'exceptions', coalesce((SELECT jsonb_agg(to_char(x.occurrence_date, 'YYYY-MM-DD') ORDER BY x.occurrence_date) "
     "FROM recurrence_exception x WHERE x.event_id = e.id AND x.deleted_at IS NULL), '[]'::jsonb)) "
-    "FROM event e WHERE e.id = {alias}.id), '{{}}'::jsonb)"
+    # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122. Only the details of the item's kind: a converted item
+    # keeps those of its earlier kind (D-125), which must not travel with it.
+    "FROM event e WHERE e.id = {alias}.id AND {alias}.kind = 'event'), '{{}}'::jsonb)"
 )
 
 
@@ -75,7 +77,7 @@ EVENT_FIELDS_SQL = (
 # +++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104. The due time as "HH:MM", as a card's (D-121).
 NOTE_FIELDS_SQL = (
     "coalesce((SELECT (to_jsonb(n) - 'id' - 'container_kind' - 'container_id') "
-    "|| jsonb_build_object('due_time', to_char(n.due_time, 'HH24:MI')) FROM note n WHERE n.id = {alias}.id), "
+    "|| jsonb_build_object('due_time', to_char(n.due_time, 'HH24:MI')) FROM note n WHERE n.id = {alias}.id AND {alias}.kind = 'note'), "
     "'{{}}'::jsonb)"
 )
 
@@ -84,7 +86,7 @@ NOTE_FIELDS_SQL = (
 # the copied container stays on the server).
 CARD_FIELDS_SQL = (
     "coalesce((SELECT (to_jsonb(c) - 'id' - 'container_kind' - 'container_id' - 'board_id') "
-    "|| jsonb_build_object('due_time', to_char(c.due_time, 'HH24:MI')) FROM card c WHERE c.id = {alias}.id), "
+    "|| jsonb_build_object('due_time', to_char(c.due_time, 'HH24:MI')) FROM card c WHERE c.id = {alias}.id AND {alias}.kind = 'card'), "
     "'{{}}'::jsonb)"
 )
 
