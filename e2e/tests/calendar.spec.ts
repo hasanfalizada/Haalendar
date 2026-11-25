@@ -457,3 +457,22 @@ test("all-day events fold so the hours stay in sight; the day on the hours", asy
     await expect(layout.getByRole("radio", { name: "List" })).toBeChecked();
   }
 });
+
+// +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. The header keeps one line where it can, folding labels as
+// it needs (with the sidebar open, as a new user sees it: one line at 1600 px and up, New event with its label at
+// 1920 px); narrower it breaks after the date, and New event stays on the line of the views, never alone below.
+test("keeps the calendar header on one line, or breaks it after the date", async ({ page }) => {
+  await page.goto("/calendar?date=2026-11-26");
+  const newEvent = page.getByRole("button", { name: "New event" }).first();
+  const today = page.getByRole("button", { name: "Today", exact: true });
+  const views = page.getByRole("radiogroup", { name: "View", exact: true });
+  const top = async (locator: typeof newEvent) => Math.round((await locator.boundingBox())?.y ?? -1);
+  const sameLine = async (a: typeof newEvent, b: typeof newEvent) => Math.abs((await top(a)) - (await top(b))) < 12;
+  for (const width of [1920, 1600, 1366, 1280, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(newEvent).toBeVisible();
+    await expect.poll(() => sameLine(newEvent, views)).toBe(true);
+    if (width >= 1600) await expect.poll(() => sameLine(newEvent, today)).toBe(true);
+    if (width === 1920) await expect(newEvent).toHaveText("New event");
+  }
+});
