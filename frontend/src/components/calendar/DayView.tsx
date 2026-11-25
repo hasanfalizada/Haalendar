@@ -34,8 +34,8 @@
 // is the month grid (MonthView), whose days open the day view.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. Agenda (FR-CAL-27, D-77): key A; the range is the selected date and
 // the user's agenda days after it, ‹ › and ← / → move by that range; the title is the range; the content is the
-// agenda list (AgendaView), whose day headings open the day view. A header narrower than 64 rem shows New event as an
-// icon, so the four-view switch and range titles stay on one line.
+// agenda list (AgendaView), whose day headings open the day view. A header short of room shows New event as an icon,
+// so the four-view switch and range titles stay on one line (measured since HAAL-196).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. Drag and drop in the week and month grids (FR-CAL-28, D-78): only
 // events the user may change; a series first asks "only this occurrence or all?" (this and following: HAAL-093). The
 // move is written like every event change and is one undo step; the notification names the new day and time.
@@ -88,6 +88,7 @@ import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { type Selection, useSelection } from "@/lib/useSelection";
 import { useSwipe } from "@/lib/useSwipe";
 import { cn } from "@/lib/utils";
+import { useFitLevel } from "@/lib/useFitLevel";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
 import { agendaDays } from "@/lib/agendaView";
 import { type DueEntry, duesOnDays } from "@/lib/dueLayers";
@@ -146,8 +147,14 @@ function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (vie
             "h-11 border-r border-line px-3 text-[13px] last:border-r-0 md:px-2.5 pointer-fine:md:h-8",
             option === view ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
           )}
+          // +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. A header short of room even on two lines shows
+          // the first letter; the name stays for screen readers and on hover.
+          title={t(`calendar.views.${option}`)}
         >
-          {t(`calendar.views.${option}`)}
+          <span className="group-data-[fold-5]/header:sr-only">{t(`calendar.views.${option}`)}</span>
+          <span aria-hidden className="hidden group-data-[fold-5]/header:inline">
+            {t(`calendar.views.${option}`).charAt(0)}
+          </span>
         </button>
       ))}
     </div>
@@ -468,6 +475,11 @@ export function DayView({
   const client = useQueryClient();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
+  const headerRef = useRef<HTMLDivElement>(null);
+  // 1: Notes & cards as an icon, 2: New event as an icon too, 3: a shorter search field, 4: search as the magnifier,
+  // 5: the views by their first letter. Past level 4 the header takes two lines, ‹ Today › and the date on the first,
+  // the second folding again from nothing; level 5 only ever on that second line (HAAL-196).
+  useFitLevel(headerRef, 5, { enabled: tablet, oneLine: 4 });
   const { data: me } = useQuery(meQuery);
   const user = me?.id;
   const { data: allRows = [] } = useQuery({
@@ -1043,7 +1055,15 @@ export function DayView({
         </aside>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="@container flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 md:px-4">
+        {/* +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. From a tablet up the header keeps one line: it
+            measures what fits and folds in turn the label of Notes & cards, the label of New event, the width of the
+            search and its label (useFitLevel) — fixed widths could not, as the date, the view and the sidebar change
+            what it needs. When even that does not fit it breaks after the date, never leaving a button alone below.
+            A phone wraps it by design. */}
+        <div
+          ref={headerRef}
+          className="group/header flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 md:px-4"
+        >
           {tablet ? (
             <Button
               variant="ghost"
@@ -1112,7 +1132,9 @@ export function DayView({
               </Button>
             </h1>
           )}
-          {/* A phone ends the first line after the date: the rest goes to the next lines. */}
+          {/* A phone ends the first line after the date: the rest goes to the next lines. So does a larger header that
+              does not fit even folded (HAAL-196); the rest then keeps to the right of the second line. */}
+          <div aria-hidden data-fold-break className="hidden h-0 basis-full md:group-data-[fold-wrap]/header:block" />
           <div aria-hidden className="h-0 basis-full max-md:order-1 md:hidden" />
           <div className="flex w-full items-center max-md:order-last md:ml-auto md:w-auto">
             {/* +++===+++ 2026-11-22 09:40 +04 — Hasan Alizada — HAAL-191 (D-117). The clock, the week and the day
@@ -1142,13 +1164,17 @@ export function DayView({
               className="max-md:order-1"
             >
               <StickyNote aria-hidden />
-              {/* A narrow header keeps it on the line as an icon, like New event. */}
-              <span className="@max-[80rem]:sr-only">{t("calendar.timeBlock.toggle")}</span>
+              {/* A header short of room keeps it on the line as an icon, like New event. */}
+              <span className="group-data-[fold-1]/header:sr-only">{t("calendar.timeBlock.toggle")}</span>
             </Button>
           ) : null}
           {/* +++===+++ 2026-11-23 15:00 +04 — Hasan Alizada — HAAL-039 (D-119). The search field; on phones it is in the
               top bar. */}
-          <SearchField className="w-40 max-md:hidden @max-[64rem]:w-28" />
+          <SearchField
+            className="w-40 max-md:hidden group-data-[fold-3]/header:w-28 group-data-[fold-4]/header:w-auto"
+            labelClassName="group-data-[fold-4]/header:sr-only"
+            keyClassName="group-data-[fold-4]/header:hidden"
+          />
           <div className="flex items-center gap-2 max-md:order-1 max-md:ml-auto">
             {view === "day" && tablet ? layoutSwitch : null}
             <ViewSwitch view={view} onChange={switchView} />
@@ -1161,8 +1187,8 @@ export function DayView({
               }}
             >
               <Plus aria-hidden />
-              {/* A narrow header (sidebar open, long range title) keeps the button on the line as an icon. */}
-              <span className="@max-[64rem]:sr-only">{t("calendar.editor.newButton")}</span>
+              {/* A header short of room (sidebar open, long range title) keeps the button on the line as an icon. */}
+              <span className="group-data-[fold-2]/header:sr-only">{t("calendar.editor.newButton")}</span>
             </Button>
           ) : null}
         </div>

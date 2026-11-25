@@ -8,7 +8,15 @@ import { cn } from "@/lib/utils";
 
 import { setSearchOpen } from "./searchOpen";
 
-export function SearchField({ className }: { className?: string }) {
+// +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. A header short of room may fold it to the magnifier: the
+// label and the key hint take classes of their own (the label stays for screen readers).
+interface SearchFieldProps {
+  className?: string;
+  labelClassName?: string;
+  keyClassName?: string;
+}
+
+export function SearchField({ className, labelClassName, keyClassName }: SearchFieldProps) {
   const { t } = useTranslation();
   return (
     <button
@@ -26,8 +34,11 @@ export function SearchField({ className }: { className?: string }) {
       )}
     >
       <Search className="size-4 shrink-0" aria-hidden />
-      <span className="min-w-0 flex-1 truncate text-left">{t("search.open")}</span>
-      <kbd aria-hidden className="rounded-sm border border-line px-1.5 font-sans text-xs leading-5 max-md:hidden">
+      <span className={cn("min-w-0 flex-1 truncate text-left", labelClassName)}>{t("search.open")}</span>
+      <kbd
+        aria-hidden
+        className={cn("rounded-sm border border-line px-1.5 font-sans text-xs leading-5 max-md:hidden", keyClassName)}
+      >
         /
       </kbd>
     </button>
