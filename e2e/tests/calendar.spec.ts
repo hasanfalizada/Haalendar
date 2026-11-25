@@ -315,6 +315,9 @@ test("Ctrl+S saves the event editor, E edits the event, Ctrl+Enter saves too", a
   await page.keyboard.press("Control+s"); // no changes yet: nothing saved, nothing for the browser
   await expect(editor).toBeVisible();
   await editor.getByLabel("Title").fill(title);
+  // +++===+++ 2026-11-24 20:02 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The key saves once the default calendar
+  // has arrived from the first sync, as the button does (on a slow runner it came after the title was typed).
+  await expect(save).toBeEnabled();
   await page.keyboard.press("Control+s");
   await expect(editor).toBeHidden();
   await expect.poll(kept).toEqual([false, false]);

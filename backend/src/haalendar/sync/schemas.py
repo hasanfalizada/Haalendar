@@ -137,6 +137,15 @@ class LinkCreateData(ApiModel):
     origin: Literal["manual", "time_block", "conversion"] | None = None
 
 
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. A card comment (D-123): its card when created, then its text (checked by haalendar.planning.comments).
+class CommentData(ApiModel):
+    body: str | None = Field(default=None, max_length=10_000)
+
+
+class CommentCreateData(CommentData):
+    item_id: uuid.UUID
+
+
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-111. A board column (D-91): its board when created, then its fields
 # (checked by haalendar.planning.columns).
 class ColumnData(ApiModel):
@@ -168,6 +177,7 @@ class MutationIn(ApiModel):
         "item_label",
         "card_assignee",
         "link",
+        "comment",
     ]
     entity_id: uuid.UUID
     op: Literal["create", "update", "delete", "restore", "move", "exclude", "include"]

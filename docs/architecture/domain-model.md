@@ -284,6 +284,8 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | body | text NN | Markdown |
 | [common] | | |
 
++++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. As built (migration 0037, D-123): `body` 1-10 000 characters (check constraint); `edited_at` (timestamptz, set when the text changes: "edited"); the card's board as `container_kind` / `container_id` (content policies, author `author_id`); `created_by`, `updated_by`, `delete_batch_id`, `version`, `sync_seq`. Synced, audited, soft-deleted only; a new comment writes a `comment` notification for the card's assignees except the author.
+
 ### 5.16 `share`
 | Column | Type | Rules |
 |---|---|---|

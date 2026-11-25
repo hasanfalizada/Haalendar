@@ -30,6 +30,7 @@ NOTIFIED_TABLES: tuple[str, ...] = (
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Labels and labels on items: told like items.
 # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. Card assignees: told like items.
 # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links: told to both ends' audiences.
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. Card comments: told like items.
 NOTIFIED_TABLES_LATER: tuple[str, ...] = (
     "reminder",
     "checklist_item",
@@ -39,6 +40,7 @@ NOTIFIED_TABLES_LATER: tuple[str, ...] = (
     "item_label",
     "card_assignee",
     "link",
+    "comment",
 )
 
 NOTIFY_FUNCTION = f"""
@@ -113,6 +115,13 @@ NOTIFY_FUNCTION_0030 = NOTIFY_FUNCTION_0029.replace(
     "      message := jsonb_build_object('c', NEW.container_kind, 'i', NEW.container_id);\n"
     "    ELSE RETURN NULL;",
 ).replace("{channel}", CHANNEL)
+
+
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. (migration 0037): card comments are told like items.
+NOTIFY_FUNCTION_0037 = NOTIFY_FUNCTION_0030.replace(
+    "'label', 'item_label', 'card_assignee' THEN",
+    "'label', 'item_label', 'card_assignee', 'comment' THEN",
+)
 
 
 def notify_trigger(table: str) -> str:

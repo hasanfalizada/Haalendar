@@ -394,7 +394,9 @@ export function EventEditor({
   async function onSubmit(submitted: SubmitEvent<HTMLFormElement>) {
     submitted.preventDefault();
     setTouched(true);
-    if (invalid || busy) return;
+    // +++===+++ 2026-11-24 20:01 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The same check as the Save button: Ctrl+S
+    // and Ctrl+Enter submit the form past a disabled button, and an event without a calendar is rejected by the server.
+    if (invalid || busy || !form.calendar_id) return;
     const found = duplicatesOf();
     if (found.length > 0) {
       setDuplicates(found);

@@ -206,6 +206,13 @@ class World:
                     self.ids["ada"],
                 ),
             )
+            # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. A comment on the card.
+            self.items["comment"] = str(uuid.uuid7())
+            conn.execute(
+                "INSERT INTO comment (id, item_id, author_id, body, container_kind, container_id, created_by) "
+                "VALUES (%s, %s, %s, 'Ship *Monday*', 'board', %s, %s)",
+                (self.items["comment"], self.items["Release"], self.ids["ada"], revamp, self.ids["ada"]),
+            )
         with _as(db_url, self.ids["bob"]) as conn:
             conn.execute(
                 "INSERT INTO calendar (id, owner_id, name) VALUES (%s, %s, 'Bobs')",
@@ -312,6 +319,7 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         "boards": 1,
         "labels": 2,
         "links": 1,  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120.
+        "comments": 1,  # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114.
         "events": 2,  # +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (F2).
         "reminders": 2,
     }
@@ -410,6 +418,20 @@ def test_archive_holds_what_the_user_owns_valid_against_the_schema(world: World)
         ("Home", "green", None),
         ("Urgent", "red", world.items["Revamp"]),
     ]
+    [comment] = document["comments"]  # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114.
+    assert (
+        comment["id"],
+        comment["item_id"],
+        comment["author_id"],
+        comment["body"],
+        comment.get("edited_at"),
+    ) == (
+        world.items["comment"],
+        world.items["Release"],
+        world.ids["ada"],
+        "Ship *Monday*",
+        None,
+    )
     [link] = document["links"]  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Once, across the modules.
     assert (link["id"], link["from_item_id"], link["to_item_id"], link["origin"]) == (
         world.items["link"],
