@@ -684,7 +684,9 @@
       "item_label_one": "{{count}} label on a card",
       "item_label_other": "{{count}} labels on cards",
       "card_assignee_one": "{{count}} assignee",
-      "card_assignee_other": "{{count}} assignees"
+      "card_assignee_other": "{{count}} assignees",
+      "comment_one": "{{count}} comment",
+      "comment_other": "{{count}} comments"
     },
     "select": "Select {{title}}",
     "restore": "Restore",
@@ -770,7 +772,8 @@
       "label": "Label",
       "item_label": "Label on a card",
       "card_assignee": "Assignee of a card",
-      "link": "Link between items"
+      "link": "Link between items",
+      "comment": "Comment"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -891,7 +894,10 @@
       "labelDeleted": "deleting the label {{name}}",
       "linked": "linking {{title}}",
       "unlinked": "the link to {{title}}",
-      "timeBlocked": "scheduling {{title}}"
+      "timeBlocked": "scheduling {{title}}",
+      "commented": "the comment on {{title}}",
+      "commentEdited": "the change to the comment",
+      "commentDeleted": "deleting the comment"
     }
   },
   "links": {
@@ -1190,7 +1196,8 @@
     "reminderCardLate": "Reminder: {{title}} — {{when}} · {{board}} (sent late)",
     "generic": "You have a new notification.",
     "assigned": "{{by}} assigned you: {{title}} · {{board}}",
-    "reminderLate": "Reminder: {{title}} — {{when}} (sent late)"
+    "reminderLate": "Reminder: {{title}} — {{when}} (sent late)",
+    "comment": "{{by}} commented on {{title}} · {{board}}"
   },
   "pwa": {
     "updateReady": "A new version of Haalendar is available.",
@@ -1695,11 +1702,12 @@
     },
     "goToDate": "Go to {{date}}",
     "none": "Nothing found for “{{query}}”.",
-    "hint": "Type words from a title, place, description or checklist. A date as YYYY-MM-DD opens that day.",
+    "hint": "Type words from a title, place, description, checklist or comment. A date as YYYY-MM-DD opens that day.",
     "fields": {
       "location": "Place",
       "body": "Description",
-      "checklist": "Checklist"
+      "checklist": "Checklist",
+      "comments": "Comments"
     },
     "count_one": "{{count}} result",
     "count_other": "{{count}} results",
@@ -1728,5 +1736,109 @@
     },
     "hintFilters": "Or choose filters below to list what matches them.",
     "noneFiltered": "Nothing matches these filters."
+  },
+  "activity": {
+    "title": "Activity",
+    "history": "History",
+    "commentsOnly": "Comments only",
+    "empty": "No activity yet.",
+    "more": "Show more",
+    "you": "You",
+    "someone": "Someone",
+    "offline": "The history shows when this device is online. Comments are here offline too.",
+    "notOnServer": "The history shows once this has reached the server.",
+    "loadFailed": "The history could not be loaded.",
+    "created": {
+      "card": "created the card",
+      "event": "created the event",
+      "note": "created the note"
+    },
+    "deleted": {
+      "card": "moved the card to the trash",
+      "event": "moved the event to the trash",
+      "note": "moved the note to the trash"
+    },
+    "restored": {
+      "card": "restored the card",
+      "event": "restored the event",
+      "note": "restored the note"
+    },
+    "movedContainer": {
+      "card": "moved the card to another board",
+      "event": "moved the event to another calendar",
+      "note": "moved the note"
+    },
+    "moved": "moved the card",
+    "movedTo": "moved the card to {{column}}",
+    "changed": "changed {{fields}}",
+    "fields": {
+      "title": "the title",
+      "body": "the description",
+      "color": "the colour",
+      "priority": "the priority",
+      "due_date": "the due date",
+      "due_time": "the due time",
+      "location": "the place",
+      "all_day": "all day",
+      "start_date": "the start",
+      "start_time": "the start time",
+      "end_date": "the end",
+      "end_time": "the end time",
+      "tzid": "the time zone",
+      "rrule": "the repeat",
+      "pinned": "pinning",
+      "archived_at": "archiving",
+      "is_checklist": "the checklist view",
+      "other": "other details"
+    },
+    "checklistAdded": "added “{{text}}” to the checklist",
+    "checklistAddedUnnamed": "added a checklist item",
+    "checklistRemoved": "removed “{{text}}” from the checklist",
+    "checklistRemovedUnnamed": "removed a checklist item",
+    "checklistChecked": "checked “{{text}}”",
+    "checklistCheckedUnnamed": "checked a checklist item",
+    "checklistUnchecked": "unchecked “{{text}}”",
+    "checklistUncheckedUnnamed": "unchecked a checklist item",
+    "checklistRenamed": "renamed a checklist item to “{{text}}”",
+    "labelAdded": "added the label {{name}}",
+    "labelAddedUnnamed": "added a label",
+    "labelRemoved": "removed the label {{name}}",
+    "labelRemovedUnnamed": "removed a label",
+    "assigned": "assigned {{name}}",
+    "assignedUnnamed": "assigned someone",
+    "unassigned": "took {{name}} off the card",
+    "unassignedUnnamed": "took someone off the card",
+    "imageAdded": "added the image “{{name}}”",
+    "imageAddedUnnamed": "added an image",
+    "imageRemoved": "removed the image “{{name}}”",
+    "imageRemovedUnnamed": "removed an image",
+    "linked": "linked {{title}}",
+    "linkedUnnamed": "added a link",
+    "unlinked": "removed the link to {{title}}",
+    "unlinkedUnnamed": "removed a link",
+    "commentDeleted": "deleted a comment",
+    "commentRestored": "restored a comment",
+    "dateRemoved": "removed {{date}} from the series",
+    "dateChanged": "changed {{date}} of the series",
+    "dateBack": "put {{date}} back into the series",
+    "dateBackUnnamed": "put a date back into the series"
+  },
+  "comments": {
+    "label": "Comment",
+    "editLabel": "Text of the comment",
+    "placeholder": "Write a comment… (Ctrl+Enter sends)",
+    "send": "Comment",
+    "save": "Save",
+    "edit": "Change the comment",
+    "delete": "Delete the comment",
+    "edited": "edited",
+    "by": "Comment by {{name}}",
+    "none": "No comments yet.",
+    "tooLong": "At most {{max}} characters.",
+    "done": {
+      "create": "Comment added to {{title}}",
+      "update": "Comment changed",
+      "delete": "Comment deleted"
+    }
   }
 }

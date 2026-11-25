@@ -10,7 +10,17 @@
 // that leads elsewhere does not send the focus back to the bell (it would close the card it opened).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. A card's reminder opens the card on its board (D-94).
 import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, Bell, BellRing, Download, Share2, UserCheck, UserMinus, type LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  BellRing,
+  Download,
+  MessageSquare,
+  Share2,
+  UserCheck,
+  UserMinus,
+  type LucideIcon,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +41,7 @@ const ICONS: Record<string, LucideIcon> = {
   sync_error: AlertTriangle,
   reminder: BellRing,
   assigned: UserCheck,
+  comment: MessageSquare,
 };
 
 function useText() {
@@ -74,6 +85,14 @@ function useText() {
           title: text("title") || t("notifications.unnamed"),
           board: text("board_name") || t("notifications.unnamed"),
         });
+      // +++===+++ 2026-11-25 09:42 +04 — Hasan Alizada — HAAL-114. "Ada commented on Plan release · Revamp" (D-123); the
+      // text of the comment is not in the notification.
+      case "comment":
+        return t("notifications.comment", {
+          by,
+          title: text("title") || t("notifications.unnamed"),
+          board: text("board_name") || t("notifications.unnamed"),
+        });
       default:
         return t("notifications.generic");
     }
@@ -110,8 +129,9 @@ function NotificationPanel({ onNavigate, showTitle = true }: { onNavigate: () =>
       }
     }
     // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. An assignment opens the card on its board.
+    // +++===+++ 2026-11-25 09:42 +04 — Hasan Alizada — HAAL-114. So does a comment.
     if (
-      item.kind === "assigned" &&
+      (item.kind === "assigned" || item.kind === "comment") &&
       typeof item.payload.board_id === "string" &&
       typeof item.payload.item_id === "string"
     ) {

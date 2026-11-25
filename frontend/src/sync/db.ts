@@ -19,11 +19,13 @@
 //   LOCAL_SCHEMA 7 for the same reason.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links between items (D-98) in their own table (Dexie version 8);
 //   LOCAL_SCHEMA 8 for the same reason.
+// +++===+++ 2026-11-25 09:12 +04 — Hasan Alizada — HAAL-114. Card comments (D-123) in their own table (Dexie version 9);
+//   LOCAL_SCHEMA 9 for the same reason.
 import Dexie, { type Table } from "dexie";
 
 import { log } from "@/lib/log";
 
-export const LOCAL_SCHEMA = 8;
+export const LOCAL_SCHEMA = 9;
 
 export type EntityType =
   | "calendar"
@@ -38,7 +40,8 @@ export type EntityType =
   | "label"
   | "item_label"
   | "card_assignee"
-  | "link";
+  | "link"
+  | "comment";
 export type MutableEntity =
   | "calendar"
   | "item"
@@ -49,7 +52,8 @@ export type MutableEntity =
   | "label"
   | "item_label"
   | "card_assignee"
-  | "link";
+  | "link"
+  | "comment";
 // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. exclude / include: one occurrence of a series (D-67).
 export type MutationOp = "create" | "update" | "delete" | "restore" | "move" | "exclude" | "include";
 
@@ -111,6 +115,7 @@ export class LocalDb extends Dexie {
   itemLabels!: Table<Row, string>;
   cardAssignees!: Table<Row, string>;
   links!: Table<Row, string>;
+  comments!: Table<Row, string>;
   outbox!: Table<OutboxEntry, number>;
   conflicts!: Table<ConflictRecord, string>;
   meta!: Table<MetaRow, string>;
@@ -143,6 +148,7 @@ export class LocalDb extends Dexie {
     this.version(8).stores({
       links: "id, from_item_id, to_item_id, [container_kind+container_id], [to_container_kind+to_container_id]",
     });
+    this.version(9).stores({ comments: "id, item_id, [container_kind+container_id]" });
   }
 
   /** Every table of server rows (for transactions over all of them). */
@@ -161,6 +167,7 @@ export class LocalDb extends Dexie {
       this.itemLabels,
       this.cardAssignees,
       this.links,
+      this.comments,
     ];
   }
 }
@@ -180,6 +187,7 @@ export const ENTITY_TABLE: Record<
   | "itemLabels"
   | "cardAssignees"
   | "links"
+  | "comments"
 > = {
   calendar: "calendars",
   item: "items",
@@ -194,6 +202,7 @@ export const ENTITY_TABLE: Record<
   item_label: "itemLabels",
   card_assignee: "cardAssignees",
   link: "links",
+  comment: "comments",
 };
 
 export function dbName(user: string): string {
