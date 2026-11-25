@@ -162,6 +162,12 @@ describe("editor", { timeout: 15_000 }, () => {
     const dialog = await screen.findByRole("dialog", { name: "New event" });
     await user.type(within(dialog).getByLabelText("Title"), "Dentist");
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+    // +++===+++ 2026-11-24 20:01 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The keys save no more than the disabled
+    // button: an event without a calendar was sent and rejected ("container_id" empty).
+    await user.keyboard("{Control>}s{/Control}");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.getByRole("dialog", { name: "New event" })).toBeInTheDocument();
+    expect(await outbox()).toEqual([]);
 
     const db = await localDb(USER);
     await db.calendars.put({
