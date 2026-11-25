@@ -414,3 +414,46 @@ test("shows a note's due date as a layer and hides the layer", async ({ page }) 
   await pushed;
   await expect(due).toBeVisible();
 });
+
+// +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195. Many all-day events no longer hide the hours (D-124): the
+// week's all-day row shows 3 a day and "+N more", the hours stay in sight; the day view shows the same on its hours
+// (List | Hours, a setting of the user, put back to List at the end for the other scenarios).
+test("all-day events fold so the hours stay in sight; the day on the hours", async ({ page }) => {
+  const day = "2027-06-16";
+  const prefix = unique("Allday");
+  for (const n of [1, 2, 3, 4, 5]) await createEvent(page, { date: day, title: `${prefix} ${String(n)}` });
+  const meeting = unique("Meeting");
+  await createEvent(page, { date: day, title: meeting, start: "09:00", end: "10:00" });
+
+  await page.goto(`/calendar?date=${day}&view=week`);
+  const row = page.getByRole("list", { name: "All day, Wednesday, June 16, 2027" });
+  await expect(row.getByRole("button", { name: /^Show \d+ more all-day/ })).toBeVisible();
+  await expect(row.getByRole("button", { name: /^Details of / })).toHaveCount(3);
+  await expect(page.getByRole("button", { name: `Details of ${meeting}` })).toBeInViewport();
+  await page.getByRole("button", { name: "Show all all-day events" }).click();
+  await expect(row.getByRole("button", { name: new RegExp(`^Details of ${prefix}`) })).toHaveCount(5);
+  await page.getByRole("button", { name: "Show fewer all-day events" }).click();
+  await expect(row.getByRole("button", { name: /^Details of / })).toHaveCount(3);
+
+  await page.goto(`/calendar?date=${day}`);
+  const layout = page.getByRole("radiogroup", { name: "Day as" });
+  const saved = (value: string) =>
+    page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/v1/me/settings") &&
+        r.request().method() === "PATCH" &&
+        r.ok() &&
+        r.request().postData()?.includes(value) === true,
+    );
+  await Promise.all([saved('"hours"'), layout.getByRole("radio", { name: "Hours" }).click()]);
+  try {
+    await expect(page.getByRole("list", { name: "Wednesday, June 16, 2027", exact: true })).toBeVisible();
+    await expect(row.getByRole("button", { name: /^Details of / })).toHaveCount(3);
+    await expect(page.getByRole("button", { name: `Details of ${meeting}` })).toBeInViewport();
+    await page.reload();
+    await expect(layout.getByRole("radio", { name: "Hours" })).toBeChecked();
+  } finally {
+    await Promise.all([saved('"list"'), layout.getByRole("radio", { name: "List" }).click()]);
+    await expect(layout.getByRole("radio", { name: "List" })).toBeChecked();
+  }
+});

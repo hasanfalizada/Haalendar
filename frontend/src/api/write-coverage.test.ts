@@ -39,6 +39,8 @@ const REQUEST_HELPERS: Record<string, string[]> = {
   "api/profile.ts": ["uploadAvatarFile"],
   // logout: signing out always ends on the sign-in page.
   "api/session.ts": [],
+  // +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195. setSettingChoice saves through runWrite itself.
+  "api/settingChoice.ts": [],
 };
 
 function writeFunctions(): Set<string> {

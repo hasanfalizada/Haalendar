@@ -103,6 +103,7 @@ export function settings(overrides: Partial<Settings> = {}): Settings {
     note_layout: "grid", // +++===+++ 2026-11-18 14:33 +04 — Hasan Alizada — HAAL-103 (D-110).
     day_order: "time", // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185 (D-111).
     hidden_layers: [], // +++===+++ 2026-11-23 22:58 +04 — Hasan Alizada — HAAL-121 (D-122).
+    day_layout: "list", // +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195 (D-124).
     version: 1,
     ...overrides,
   };

@@ -47,13 +47,24 @@
 // cards" opens a panel (beside the content from tablets on, remembered on this device; a bottom sheet on phones). In
 // the week a note or card dropped on a time column or the all-day row becomes an event at once (one undo step, its card
 // opens); in the day list, which has no hours, a drop and "Schedule…" open the event editor for it, linked on Save.
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus, StickyNote } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  List,
+  PanelLeft,
+  Plus,
+  StickyNote,
+} from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Color, Priority } from "@/api/generated/types.gen";
+import type { Color, Priority, Settings } from "@/api/generated/types.gen";
+import { setSettingChoice } from "@/api/settingChoice";
 import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
 import { runWrite } from "@/api/write";
@@ -135,6 +146,46 @@ function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (vie
           )}
         >
           {t(`calendar.views.${option}`)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+type DayLayout = Settings["day_layout"];
+
+const DAY_LAYOUTS = [
+  { value: "list", Icon: List },
+  { value: "hours", Icon: Clock },
+] as const satisfies readonly { value: DayLayout; Icon: typeof List }[];
+
+// +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195. The day view as a list (the legacy day list) or as hours (the week's grid for one day), the user
+// setting `day_layout` for every device (D-124).
+function DayLayoutSwitch({ layout, onChange }: { layout: DayLayout; onChange: (layout: DayLayout) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      role="radiogroup"
+      aria-label={t("calendar.views.layout")}
+      className="inline-flex overflow-hidden rounded-sm border border-line"
+    >
+      {DAY_LAYOUTS.map(({ value, Icon }) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={value === layout}
+          aria-label={t(`calendar.views.${value}`)}
+          title={t(`calendar.views.${value}`)}
+          onClick={() => {
+            if (value !== layout) onChange(value);
+          }}
+          className={cn(
+            "grid h-11 w-11 place-items-center border-r border-line last:border-r-0 pointer-fine:md:h-8 pointer-fine:md:w-8",
+            value === layout ? "bg-primary-tint text-primary" : "hover:bg-surface",
+          )}
+        >
+          <Icon className="size-4" aria-hidden />
         </button>
       ))}
     </div>
@@ -410,7 +461,9 @@ export function DayView({
     time_format: timeFormat,
     default_color: defaultColor,
     day_order: dayOrderBy,
+    day_layout: dayLayout,
   } = useSettings();
+  const client = useQueryClient();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
   const { data: me } = useQuery(meQuery);
@@ -444,6 +497,9 @@ export function DayView({
   const week = view === "week";
   const month = view === "month";
   const agenda = view === "agenda";
+  // HAAL-195: the day on the hours (D-124).
+  const hours = view === "day" && dayLayout === "hours";
+  const oneDay = useMemo(() => [date], [date]);
   const days = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
   const weeks = useMemo(() => monthWeeks(monthOf(date), weekStart), [date, weekStart]);
   const agendaRange = useMemo(() => agendaDays(date, agendaLength), [date, agendaLength]);
@@ -687,8 +743,10 @@ export function DayView({
   }
   const occurrenceOf = (entry: DayEntry) => entry.key.slice(entry.key.lastIndexOf(":") + 1);
   const rowOf = (entry: DayEntry) => rows.find((candidate) => candidate.id === entry.id);
-  const selection = useSelection(view === "day" ? entries.map((entry) => entry.key) : [], {
-    selectAllShortcut: view === "day",
+  // The selection belongs to the day list (its rows carry the checkboxes).
+  const listed = view === "day" && !hours;
+  const selection = useSelection(listed ? entries.map((entry) => entry.key) : [], {
+    selectAllShortcut: listed,
   });
   const { clear: clearSelection } = selection;
   useEffect(() => {
@@ -946,7 +1004,9 @@ export function DayView({
             ? "calendar.timeBlock.phoneHint"
             : view === "week"
               ? "calendar.timeBlock.hint"
-              : "calendar.timeBlock.dayHint",
+              : hours
+                ? "calendar.timeBlock.hoursHint"
+                : "calendar.timeBlock.dayHint",
         )}
         showTitle={tablet}
         onSchedule={(source) => {
@@ -954,6 +1014,15 @@ export function DayView({
         }}
       />
     ) : null;
+
+  const layoutSwitch = (
+    <DayLayoutSwitch
+      layout={dayLayout}
+      onChange={(layout) => {
+        if (user) void setSettingChoice(client, user, "day_layout", layout, dayLayout);
+      }}
+    />
+  );
 
   return (
     <div className="flex h-full min-h-0">
@@ -1053,6 +1122,8 @@ export function DayView({
               </span>
               {view === "day" ? <DayNumberLabel date={date} /> : null}
             </div>
+            {/* A phone has no room for it beside the views: it ends the line of the clock. */}
+            {view === "day" && !tablet ? <div className="ml-auto">{layoutSwitch}</div> : null}
           </div>
           {timeBlocking ? (
             <Button
@@ -1071,7 +1142,8 @@ export function DayView({
           {/* +++===+++ 2026-11-23 15:00 +04 — Hasan Alizada — HAAL-039 (D-119). The search field; on phones it is in the
               top bar. */}
           <SearchField className="w-40 max-md:hidden @max-[64rem]:w-28" />
-          <div className="max-md:order-1 max-md:ml-auto">
+          <div className="flex items-center gap-2 max-md:order-1 max-md:ml-auto">
+            {view === "day" && tablet ? layoutSwitch : null}
             <ViewSwitch view={view} onChange={switchView} />
           </div>
           {tablet ? (
@@ -1139,10 +1211,10 @@ export function DayView({
                   onDrop={dropEvent}
                 />
               </div>
-            ) : week ? (
+            ) : week || hours ? (
               <div className="min-h-0 flex-1">
                 <WeekGrid
-                  days={days}
+                  days={week ? days : oneDay}
                   rows={rows}
                   duesOn={duesOn}
                   viewerTz={viewerTz}
