@@ -1000,7 +1000,8 @@
     "listDelete": "Delete the selection (asks first)",
     "listDeleteFocused": "Delete the focused row (asks first)",
     "save": "Save",
-    "search": "Search"
+    "search": "Search",
+    "commands": "Commands and search"
   },
   "unsaved": {
     "title": "Unsaved changes",
@@ -1699,6 +1700,22 @@
         "delete": "Deleted the label {{name}}"
       }
     }
+  },
+  "commands": {
+    "label": "Commands and search",
+    "placeholder": "Type a command or search",
+    "groups": {
+      "go": "Go to",
+      "create": "Create"
+    },
+    "today": "Today in the calendar",
+    "board": "Board “{{name}}”",
+    "newEvent": "New event",
+    "newNote": "New note",
+    "newList": "New list",
+    "createEvent": "Create event “{{title}}”",
+    "createNote": "Create note “{{title}}”",
+    "createCard": "Add card “{{title}}” to {{board}}"
   },
   "search": {
     "open": "Search",

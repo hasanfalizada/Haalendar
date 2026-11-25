@@ -454,11 +454,14 @@ export function DayView({
   date,
   view = "day",
   focusEvent,
+  createEvent,
 }: {
   date: string;
   view?: CalendarViewKind;
   /** HAAL-091: an event whose details card opens once it is among the date's events (then leaves the URL). */
   focusEvent?: string;
+  /** HAAL-123: the editor of a new event opens with this title ("" none), then the request leaves the URL. */
+  createEvent?: string;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -853,6 +856,16 @@ export function DayView({
       setDetails(entry);
     }
   }
+  // +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). The palette's new event: its editor, the title filled in.
+  const [created, setCreated] = useState<string | null>(null);
+  if ((createEvent ?? null) !== created) {
+    setCreated(createEvent ?? null);
+    if (createEvent !== undefined)
+      setEditing({ event: null, ...(createEvent ? { prefill: { title: createEvent } } : {}) });
+  }
+  useEffect(() => {
+    if (createEvent !== undefined) void navigate({ to: "/calendar", search: { date, view }, replace: true });
+  }, [createEvent, navigate, date, view]);
   useEffect(() => {
     if (focusEvent && focused === focusEvent) {
       void navigate({ to: "/calendar", search: { date, view }, replace: true });

@@ -98,10 +98,20 @@ interface NoteEditorProps {
   asList?: boolean;
   /** The user's right on the note (owner for a new one). */
   access?: NoteAccess;
+  /** HAAL-123: a new note's title (from the command palette). */
+  title?: string;
   onClose: () => void;
 }
 
-export function NoteEditor({ user, note, positions, asList = false, access = "owner", onClose }: NoteEditorProps) {
+export function NoteEditor({
+  user,
+  note,
+  positions,
+  asList = false,
+  access = "owner",
+  title: newTitle = "",
+  onClose,
+}: NoteEditorProps) {
   const { t } = useTranslation();
   const settings = useSettings();
   const timeZone = useDisplayTimeZone();
@@ -158,7 +168,7 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
   }, [itemRows, id]);
   const baseline = useMemo<NoteForm>(
     () => ({
-      title: text(note?.title),
+      title: note ? text(note.title) : newTitle,
       body: text(note?.body),
       color: text(note?.color) || settings.default_color || DEFAULT_COLOR,
       priority: text(note?.priority) || "medium",
@@ -178,7 +188,7 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
       due_date: text(note?.due_date),
       due_time: text(note?.due_time),
     }),
-    [note, settings.default_color, asList, stored, firstItem, existingReminders, onNote],
+    [note, newTitle, settings.default_color, asList, stored, firstItem, existingReminders, onNote],
   );
   const [form, setForm] = useState<NoteForm>(baseline);
   // The items arrive from the local database after opening: an untouched form follows them.
