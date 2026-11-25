@@ -15,6 +15,8 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. The card's assignees (CardAssignees, D-97): members of the board,
 // chosen in the form and written with Save in the same undo step.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. The card's links (ItemLinks, D-98), written at once; opening a linked item keeps a draft.
+// +++===+++ 2026-11-25 09:40 +04 — Hasan Alizada — HAAL-114. The card's activity (ItemActivity, D-123): its comments,
+// written at once, and its history.
 import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
@@ -23,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import type { BoardMember } from "@/api/boards";
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { Attachments } from "@/components/attachments/Attachments";
+import { ItemActivity } from "@/components/history/ItemActivity";
 import { ReminderPicker } from "@/components/calendar/ReminderPicker";
 import { reminderChanges } from "@/components/calendar/reminderWrites";
 import { ItemLinks } from "@/components/links/ItemLinks";
@@ -95,6 +98,8 @@ interface CardEditorProps {
   /** Every item row of the local database (where a moved card goes). */
   items: readonly Row[];
   canWrite: boolean;
+  /** The board's owner (deletes any comment). */
+  boardOwner: unknown;
   onClose: () => void;
 }
 
@@ -109,6 +114,7 @@ export function CardEditor({
   columns,
   items,
   canWrite,
+  boardOwner,
   onClose,
 }: CardEditorProps) {
   const { t } = useTranslation();
@@ -221,7 +227,10 @@ export function CardEditor({
     };
     const changed: Row = Object.fromEntries(
       Object.entries(values).filter(
-        ([name, value]) => (card[name] ?? null) !== value && !(card[name] === "" && value === ""),
+        // +++===+++ 2026-11-25 09:48 +04 — Hasan Alizada — HAAL-114. An empty field is no change of an empty value,
+        // stored as "" or null (a card added on the board has no description): the history read "changed the
+        // description".
+        ([name, value]) => (card[name] ?? null) !== value && !((card[name] ?? "") === "" && value === ""),
       ),
     );
     if (form.column_id !== text(card.column_id)) {
@@ -431,6 +440,7 @@ export function CardEditor({
               onClose();
             }}
           />
+          <ItemActivity user={user} item={card} comments={{ boardOwner, canWrite, members }} />
           {typeof card.created_at === "string" && typeof card.updated_at === "string" ? (
             <RecordTimestamps record={card as unknown as RecordTimes} />
           ) : null}

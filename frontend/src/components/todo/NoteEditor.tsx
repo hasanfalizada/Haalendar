@@ -23,6 +23,7 @@ import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
 import { sharesQuery } from "@/api/sharing";
 import { Attachments } from "@/components/attachments/Attachments";
+import { ItemActivity } from "@/components/history/ItemActivity";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { ShareDialog } from "@/components/sharing/ShareDialog";
 import { useShareActions } from "@/components/sharing/useShareActions";
@@ -141,7 +142,8 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
         .sort(),
     [itemLabelRows, id, ownLabels],
   );
-  const storedVersion = noteRows.find((row) => row.id === id)?.version;
+  const storedNote = note ? noteRows.find((row) => row.id === id) : undefined;
+  const storedVersion = storedNote?.version;
   const onServer = typeof storedVersion === "number" && storedVersion > 0;
   const existingReminders = useMemo(() => remindersOf(reminderRows, id), [reminderRows, id]);
   const stored = useMemo(() => {
@@ -434,6 +436,8 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
               }}
             />
           ) : null}
+          {/* +++===+++ 2026-11-25 09:48 +04 — Hasan Alizada — HAAL-114 (D-123). The note's history, closed until asked for. */}
+          {storedNote ? <ItemActivity user={user} item={storedNote} collapsed /> : null}
           {empty ? <p className="text-xs text-muted">{t("todo.editor.empty")}</p> : null}
           <DialogFooter>
             {note && access === "owner" ? (

@@ -102,6 +102,8 @@ function SearchWindow() {
   const user = me?.id;
   const items = useLocal(user, "item");
   const checklistItems = useLocal(user, "checklist_item");
+  // +++===+++ 2026-11-25 09:45 +04 — Hasan Alizada — HAAL-114. Card comments are searched too (D-123).
+  const comments = useLocal(user, "comment");
   const boards = useLocal(user, "board");
   // +++===+++ 2026-11-23 12:00 +04 — Hasan Alizada — HAAL-046 (D-120). The filters, under the field.
   const labels = useLocal(user, "label");
@@ -136,8 +138,8 @@ function SearchWindow() {
     return [...names.values()].sort((a, b) => a.localeCompare(b));
   }, [labels]);
   const results = useMemo(
-    () => searchItems({ items, checklistItems, boards, calendarShown: shown }, deferred, 20, compiled),
-    [items, checklistItems, boards, shown, deferred, compiled],
+    () => searchItems({ items, checklistItems, comments, boards, calendarShown: shown }, deferred, 20, compiled),
+    [items, checklistItems, comments, boards, shown, deferred, compiled],
   );
   const trimmed = deferred.trim();
   const asked = trimmed !== "" || compiled.active;
@@ -203,8 +205,8 @@ function SearchWindow() {
       if (typeof name === "string") parts.push(<span key="board">{name}</span>);
     }
     if (field) {
-      const source = fieldText(row, field, checklistItems);
-      // The body as plain text; of a checklist only the items with a match.
+      const source = fieldText(row, field, checklistItems, comments);
+      // The body as plain text; of a checklist only the items with a match, of the comments the ones with a match.
       const plain =
         field === "body"
           ? toPlainText(source, { singleLine: true })
@@ -213,7 +215,13 @@ function SearchWindow() {
                 .split("\n")
                 .filter((line) => highlightRanges(line, deferred).length > 0)
                 .join(" · ")
-            : source;
+            : field === "comments"
+              ? source
+                  .split("\n\n")
+                  .map((comment) => toPlainText(comment, { singleLine: true }))
+                  .filter((comment) => highlightRanges(comment, deferred).length > 0)
+                  .join(" · ")
+              : source;
       parts.push(
         <span key="field" className="min-w-0 truncate">
           {t(`search.fields.${field}`)}: <Marked text={snippet(plain, deferred)} query={deferred} />

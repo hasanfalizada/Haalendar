@@ -142,14 +142,16 @@ describe("layers of due dates", { timeout: 20_000 }, () => {
   it("the month shows them after the day's events", async () => {
     await open("month");
     const cell = await screen.findByRole("list", { name: "Tuesday, November 10, 2026" });
-    expect(within(cell).getByRole("button", { name: "Details of Dentist" })).toBeInTheDocument();
-    expect(within(cell).getByRole("button", { name: NOTE_LABEL })).toBeInTheDocument();
+    // +++===+++ 2026-11-25 09:48 +04 — Hasan Alizada — HAAL-114 (check run). The cell is there before the rows of the
+    // device are: waited for, not read at once (failed 1 run in 5).
+    expect(await within(cell).findByRole("button", { name: "Details of Dentist" })).toBeInTheDocument();
+    expect(await within(cell).findByRole("button", { name: NOTE_LABEL })).toBeInTheDocument();
   });
 
   it("the agenda lists them above the day's events", async () => {
     await open("agenda");
     const dues = await screen.findByRole("list", { name: "Due on Tuesday, November 10, 2026" });
-    expect(within(dues).getByRole("button", { name: CARD_LABEL })).toBeInTheDocument();
+    expect(await within(dues).findByRole("button", { name: CARD_LABEL })).toBeInTheDocument();
   });
 
   it("Layers hides the due dates of notes: the setting is saved and they go", async () => {

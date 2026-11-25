@@ -417,6 +417,7 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
           columns={columns.active}
           items={items}
           canWrite={canWrite}
+          boardOwner={row.owner_id}
           onClose={() => {
             setEditing(null);
             if (focusCard) {
