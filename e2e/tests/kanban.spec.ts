@@ -85,3 +85,52 @@ test("comments on a card and its activity", async ({ page }) => {
     .dispatchEvent("click");
   await expect(editor.getByRole("listitem", { name: "Comment by You" })).toContainText("Final draft is ready");
 });
+
+// +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122 (FR-INT-02, D-125). A note converted to a card on a board
+// opens there with its history saying so; Undo makes it a note again, still one after a reload.
+test("converts a note to a card and back", async ({ page }) => {
+  const board = unique("Errands");
+  const title = unique("Renew the passport");
+  await page.goto("/kanban");
+  await page.getByRole("button", { name: "New board" }).first().click();
+  await page.getByRole("dialog", { name: "New board" }).getByLabel("Name").fill(board);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name: "To do" })).toBeVisible();
+
+  await page.goto("/todo");
+  await page.getByRole("button", { name: "New note" }).first().click();
+  const created = page.getByRole("dialog", { name: "New note" });
+  await created.getByLabel("Title").fill(title);
+  await created.getByRole("button", { name: "Save" }).click();
+  await expect(created).toBeHidden();
+  await page.getByRole("button", { name: `Open ${title}` }).click();
+  const editor = page.getByRole("dialog", { name: "Edit note" });
+  // Enabled once the note has reached the server.
+  await editor.getByRole("button", { name: "Convert to…" }).click();
+  const dialog = page.getByRole("dialog", { name: `Convert ${title}` });
+  await dialog.getByLabel("Convert to").selectOption("card");
+  await dialog.getByLabel("Board").selectOption({ label: board });
+  await expect(dialog.getByLabel("Column")).toHaveValue(/.+/);
+  await dialog.getByRole("button", { name: "Convert" }).click();
+
+  await expect(page.getByText(`${title} is now a card.`)).toBeVisible();
+  const card = page.getByRole("dialog", { name: "Edit card" });
+  await expect(card.getByLabel("Title")).toHaveValue(title);
+  await expect(page).toHaveURL(/\/kanban\//);
+  await expect(card.getByText("converted it to a card")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(card).toBeHidden();
+  await expect(
+    page.getByRole("region", { name: "To do" }).getByRole("button", { name: `Open ${title}` }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: `${title} is now a card.` })
+    .getByRole("button", { name: "Undo" })
+    .click();
+  await expect(page.getByRole("region", { name: "To do" }).getByRole("button", { name: `Open ${title}` })).toBeHidden();
+  await page.goto("/todo");
+  await page.reload();
+  await expect(page.getByRole("article", { name: title })).toBeVisible();
+});

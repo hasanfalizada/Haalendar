@@ -114,6 +114,8 @@ import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
 import { CalendarList } from "./CalendarList";
+import { ConvertDialog } from "@/components/convert/ConvertDialog";
+
 import { DuplicateDialog } from "./DuplicateDialog";
 import { MiniMonth } from "./MiniMonth";
 import { moveToNextDay, planSteps, runMoves, writePlan } from "./moveNextDay";
@@ -567,6 +569,7 @@ export function DayView({
   };
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. The event (and its shown date) being duplicated.
   const [duplicating, setDuplicating] = useState<{ row: Record<string, unknown>; occurrence: string } | null>(null);
+  const [converting, setConverting] = useState<Record<string, unknown> | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The "this occurrence or all?" question waiting for an answer.
@@ -821,6 +824,10 @@ export function DayView({
         onDuplicate={() => {
           setDetails(null);
           setDuplicating({ row, occurrence: occurrenceOf(entry) });
+        }}
+        onConvert={() => {
+          setDetails(null);
+          setConverting(row);
         }}
       />
     );
@@ -1324,6 +1331,19 @@ export function DayView({
           onDone={(id, target) => {
             setDuplicating(null);
             void navigate({ to: "/calendar", search: { date: target, view, event: id }, replace: true });
+          }}
+        />
+      ) : null}
+      {converting && user ? (
+        <ConvertDialog
+          user={user}
+          row={converting}
+          onClose={() => {
+            setConverting(null);
+          }}
+          onDone={(target) => {
+            setConverting(null);
+            void navigate(target);
           }}
         />
       ) : null}

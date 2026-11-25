@@ -11,11 +11,14 @@
 // can be left, and with "can view" its content is read-only (the user's own reminders stay theirs to set).
 // +++===+++ 2026-11-17 22:40 +04 — Hasan Alizada — HAAL-102. The user's personal labels (D-109): chosen like a card's
 // labels and written with Save, on any note the user reads — a view share too, since nobody else sees them.
+// +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122 (D-125). "Convert to…" next to Share for the owner, once
+// the note is on the server and its changes are saved (the conversion takes the note as the server has it).
 // +++===+++ 2026-11-23 22:10 +04 — Hasan Alizada — HAAL-104. The due date (D-121), as a card's: a date and an optional
 // time (none without the date; clearing the date clears it), "Overdue" / "Due soon" beside them, read only on a view
 // share.
 import { useQuery } from "@tanstack/react-query";
-import { ListChecks, ListX, LogOut, Users } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeftRight, ListChecks, ListX, LogOut, Users } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +26,7 @@ import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
 import { sharesQuery } from "@/api/sharing";
 import { Attachments } from "@/components/attachments/Attachments";
+import { ConvertDialog } from "@/components/convert/ConvertDialog";
 import { ItemActivity } from "@/components/history/ItemActivity";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { ShareDialog } from "@/components/sharing/ShareDialog";
@@ -102,6 +106,8 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
   const settings = useSettings();
   const timeZone = useDisplayTimeZone();
   const now = useNow();
+  const navigate = useNavigate();
+  const [converting, setConverting] = useState(false);
   const [newId] = useState(uuidv7);
   const [firstItem] = useState(uuidv7);
   const id = note ? String(note.id) : newId;
@@ -454,6 +460,18 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
                 {t("todo.editor.share")}
               </Button>
             ) : null}
+            {note && storedNote && access === "owner" ? (
+              <Button
+                disabled={!onServer || dirty}
+                title={!onServer ? t("todo.editor.shareSyncing") : dirty ? t("convert.saveFirst") : undefined}
+                onClick={() => {
+                  setConverting(true);
+                }}
+              >
+                <ArrowLeftRight aria-hidden />
+                {t("convert.open")}
+              </Button>
+            ) : null}
             {note && access !== "owner" ? (
               <Button
                 className="sm:mr-auto"
@@ -477,6 +495,21 @@ export function NoteEditor({ user, note, positions, asList = false, access = "ow
         </form>
       </DialogContent>
       <UnsavedChangesDialog prompt={guard.prompt} />
+      {converting && storedNote ? (
+        <ConvertDialog
+          user={user}
+          row={storedNote}
+          onClose={() => {
+            setConverting(false);
+          }}
+          onDone={(target) => {
+            setConverting(false);
+            void draft.discard();
+            onClose();
+            void navigate(target);
+          }}
+        />
+      ) : null}
       {sharing && note ? (
         <ShareDialog
           open

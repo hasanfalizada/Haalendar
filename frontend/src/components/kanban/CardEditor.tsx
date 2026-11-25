@@ -17,14 +17,18 @@
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. The card's links (ItemLinks, D-98), written at once; opening a linked item keeps a draft.
 // +++===+++ 2026-11-25 09:40 +04 — Hasan Alizada — HAAL-114. The card's activity (ItemActivity, D-123): its comments,
 // written at once, and its history.
+// +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122 (D-125). "Convert to…" after Delete, once the card's
+// changes are saved (the conversion takes the card as the server has it).
 import { useQuery } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeftRight, Trash2 } from "lucide-react";
 import { type SubmitEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { BoardMember } from "@/api/boards";
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { Attachments } from "@/components/attachments/Attachments";
+import { ConvertDialog } from "@/components/convert/ConvertDialog";
 import { ItemActivity } from "@/components/history/ItemActivity";
 import { ReminderPicker } from "@/components/calendar/ReminderPicker";
 import { reminderChanges } from "@/components/calendar/reminderWrites";
@@ -181,6 +185,9 @@ export function CardEditor({
     return row ? text(row.position) : null;
   };
   const [busy, setBusy] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const onServer = typeof card.version === "number" && card.version > 0;
+  const navigate = useNavigate();
   const formRef = useRef<HTMLFormElement>(null);
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
   const remindersDirty = form.reminders !== baseline.reminders;
@@ -462,6 +469,19 @@ export function CardEditor({
                 {t("kanban.cards.delete")}
               </Button>
             ) : null}
+            {canWrite ? (
+              <Button
+                // The server converts the card it has: one made here may still be on its way, changes are saved first.
+                disabled={!onServer || dirty || remindersDirty}
+                title={!onServer ? t("convert.syncing") : dirty || remindersDirty ? t("convert.saveFirst") : undefined}
+                onClick={() => {
+                  setConverting(true);
+                }}
+              >
+                <ArrowLeftRight aria-hidden />
+                {t("convert.open")}
+              </Button>
+            ) : null}
             <Button onClick={close}>{t(saving ? "common.cancel" : "common.close")}</Button>
             {saving ? (
               <Button type="submit" variant="primary" disabled={busy || empty} {...saveHint}>
@@ -472,6 +492,21 @@ export function CardEditor({
         </form>
       </DialogContent>
       <UnsavedChangesDialog prompt={guard.prompt} />
+      {converting ? (
+        <ConvertDialog
+          user={user}
+          row={card}
+          onClose={() => {
+            setConverting(false);
+          }}
+          onDone={(target) => {
+            setConverting(false);
+            void draft.discard();
+            onClose();
+            void navigate(target);
+          }}
+        />
+      ) : null}
     </Dialog>
   );
 }

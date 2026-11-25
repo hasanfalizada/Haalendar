@@ -58,6 +58,23 @@ describe("activityLine", () => {
     expect(line({ after: { updated_at: "x" } })).toBeNull();
   });
 
+  // +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122 (D-125). A conversion is named by the kind it made, and
+  // the creation of a converted item by the kind it was created as.
+  it("names a conversion and the kind an item was created as", () => {
+    const moved = {
+      action: "move" as const,
+      before: { kind: "note", container_id: "n" },
+      after: { kind: "card", container_id: "b" },
+    };
+    expect(line(moved)).toEqual({ key: "converted.card", values: {} });
+    expect(line({ after: { kind: "event" } })).toEqual({ key: "converted.event", values: {} });
+    expect(line({ action: "create", after: { kind: "note", title: "Plan" } })).toEqual({
+      key: "created.note",
+      values: {},
+    });
+    expect(line({ action: "create", entity_type: "event", after: { kind: "event" } })).toBeNull();
+  });
+
   it("names moves: the column, another container, or only the order", () => {
     expect(line({ action: "move", entity_type: "card", after: { column_id: "col-2", position: "M" } })).toEqual({
       key: "movedTo",
