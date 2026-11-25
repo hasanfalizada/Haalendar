@@ -110,12 +110,19 @@ describe("searchItems", () => {
     const first = performance.now();
     const found = searchItems(data, "ecole rev");
     const cold = performance.now() - first;
-    const again = performance.now();
-    searchItems(data, "ecole revi");
-    const warm = performance.now() - again;
+    // +++===+++ 2026-11-25 15:40 +04 — Hasan Alizada — HAAL-122 (side fix). One timing alone failed CI at 301.8 ms on a
+    // busy runner (a pause of the collector or of the machine lands in it); the keys typed after the first search are
+    // timed one by one and their median must stay within the 300 ms, the slowest within twice that.
+    const warm = ["ecole revi", "ecole revie", "ecole review", "ecole revie", "ecole revi"].map((query) => {
+      const again = performance.now();
+      searchItems(data, query);
+      return performance.now() - again;
+    });
+    const sorted = [...warm].sort((a, b) => a - b);
     expect(found.calendar.length).toBeGreaterThan(0);
     expect(cold).toBeLessThan(1000);
-    expect(warm).toBeLessThan(300);
+    expect(sorted[2]).toBeLessThan(300);
+    expect(sorted[4]).toBeLessThan(600);
   });
 });
 
