@@ -267,6 +267,10 @@ def _probes(ada: Ada, h: dict[str, str]) -> dict[tuple[str, str], Callable[[Test
         ("get", "/items/{id}/attachments"): lambda c: c.get(f"{a}/items/{ada.note}/attachments"),
         # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114.
         ("get", "/items/{id}/history"): lambda c: c.get(f"{a}/items/{ada.card}/history"),
+        # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122.
+        ("post", "/items/{id}/convert"): lambda c: c.post(
+            f"{a}/items/{ada.card}/convert", json={"target_kind": "note", "position": "a"}, headers=h
+        ),
         ("post", "/items/{id}/attachments"): lambda c: c.post(
             f"{a}/items/{ada.note}/attachments", content=png(), headers=upload
         ),

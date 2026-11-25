@@ -83,6 +83,12 @@ async def _column(db: AsyncSession, board_id: uuid.UUID, value: Any) -> uuid.UUI
     return column_id
 
 
+# +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122. The same check where a converted item goes (D-125).
+async def live_column(db: AsyncSession, board_id: uuid.UUID, value: Any) -> uuid.UUID:
+    """A live, not archived column of the board (422 or 409 otherwise)."""
+    return await _column(db, board_id, value)
+
+
 async def apply(db: AsyncSession, card: Card, values: dict[str, Any]) -> None:
     """Writes the card fields given (checked); a date cleared takes the time along."""
     for name, value in values.items():

@@ -49,6 +49,7 @@ from haalendar.middleware import RequestContextMiddleware
 from haalendar.notifications.api import router as notifications_router
 from haalendar.observability import Metrics, attach_slow_query_logging, install_metrics_endpoint
 from haalendar.planning.boards_api import router as boards_router
+from haalendar.planning.convert_api import router as convert_router
 from haalendar.planning.ics_api import router as ics_router
 from haalendar.preferences.api import router as settings_router
 from haalendar.push.api import router as push_router
@@ -165,6 +166,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sync_router, prefix=API_PREFIX)
     app.include_router(ics_router, prefix=API_PREFIX)  # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095
     app.include_router(boards_router, prefix=API_PREFIX)  # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119
+    # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122. Converting items (D-125).
+    app.include_router(convert_router, prefix=API_PREFIX)
     app.include_router(live_router, prefix=API_PREFIX)
     app.include_router(demo_router, prefix=API_PREFIX)  # +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154
     install_metrics_endpoint(app, settings, metrics)

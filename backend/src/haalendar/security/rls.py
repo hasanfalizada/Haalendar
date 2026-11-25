@@ -219,3 +219,28 @@ OWNS_CONTAINER_FUNCTION_0032 = OWNS_CONTAINER_FUNCTION_0025.replace(
     "    WHEN 'note' THEN",
     "    WHEN 'user' THEN RETURN container = me;\n    WHEN 'note' THEN",
 )
+
+
+# +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122 (migration 0039, D-125). An item converted to a note in place
+# (FR-INT-02): the update of the item may make it the user's own note (the policy checks the new row; the container
+# lookup still sees the earlier kind), and the owner keeps owning the note container while the item is another kind,
+# so its note details (kept, never deleted) can be found again when it becomes a note once more.
+OWNS_CONTAINER_FUNCTION_0039 = OWNS_CONTAINER_FUNCTION_0032.replace(
+    "SELECT 1 FROM item i WHERE i.id = container AND i.kind = 'note' AND i.owner_id = me);",
+    "SELECT 1 FROM item i WHERE i.id = container AND i.owner_id = me\n"
+    "        AND (i.kind = 'note' OR EXISTS (SELECT 1 FROM note n WHERE n.id = i.id)));",
+)
+
+
+def item_update_policy_0039() -> list[str]:
+    """The `item` update policy of content_policies("item", "owner_id"), whose new row may also be the user's own
+    note that is its own container (a conversion to a note)."""
+    me = "haalendar_current_user_id()"
+    owns = "haalendar_owns_container(container_kind, container_id)"
+    shared = "haalendar_share_permission(container_kind, container_id)"
+    writable = f"({owns} OR {shared} = 'edit')"
+    own_note = f"(kind = 'note' AND container_kind = 'note' AND container_id = id AND owner_id = {me})"
+    return [
+        "DROP POLICY item_update ON item",
+        f"CREATE POLICY item_update ON item FOR UPDATE USING ({writable}) WITH CHECK ({writable} OR {own_note})",
+    ]
