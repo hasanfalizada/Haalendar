@@ -46,12 +46,17 @@ export default defineConfig({
             },
           },
           // +++===+++ 2026-11-26 17:45 +04 — Hasan Alizada — HAAL-143 (D-128). Core Web Vitals of the production build
-          // (the preview's files served compressed, tests/performance/server.ts) on a slowed-down phone.
-          {
-            name: "performance",
-            testMatch: "performance/**/*.spec.ts",
-            use: { ...devices["Desktop Chrome"], baseURL: offlineURL },
-          },
+          // (the preview's files served compressed, tests/performance/server.ts) on a slowed-down phone; only on the
+          // run's own stack, whose build is frontend/dist (not against an installation given by E2E_BASE_URL).
+          ...(process.env.E2E_BASE_URL
+            ? []
+            : [
+                {
+                  name: "performance",
+                  testMatch: "performance/**/*.spec.ts",
+                  use: { ...devices["Desktop Chrome"], baseURL: offlineURL },
+                },
+              ]),
         ]
       : []),
   ],
