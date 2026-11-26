@@ -27,7 +27,7 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
-      testIgnore: "offline/**",
+      testIgnore: ["offline/**", "performance/**"],
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 860 } },
     },
     // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-142. Offline and sync scenarios on the production build with its
@@ -44,6 +44,13 @@ export default defineConfig({
               baseURL: offlineURL,
               serviceWorkers: "allow" as const,
             },
+          },
+          // +++===+++ 2026-11-26 17:45 +04 — Hasan Alizada — HAAL-143 (D-128). Core Web Vitals of the production build
+          // (the preview's files served compressed, tests/performance/server.ts) on a slowed-down phone.
+          {
+            name: "performance",
+            testMatch: "performance/**/*.spec.ts",
+            use: { ...devices["Desktop Chrome"], baseURL: offlineURL },
           },
         ]
       : []),

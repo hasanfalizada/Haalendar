@@ -17,7 +17,8 @@ import { eventDays } from "@/atoms/time/eventDays";
 import { localToUtc, wallClock } from "@/atoms/time/localToUtc";
 import { addDays } from "@/lib/datetime";
 import { log } from "@/lib/log";
-import { toPlainText } from "@/lib/markdown-text";
+
+const HAS_TEXT = /[\p{L}\p{N}]/u;
 
 export interface DayEntry {
   key: string;
@@ -138,7 +139,10 @@ export function entriesOn(rows: readonly Row[], date: string, viewerTz: string, 
         location: text(row.location),
         allDay,
         recurring: rrule !== null,
-        hasDescription: toPlainText(text(row.body) ?? "", { singleLine: true }).trim() !== "",
+        // +++===+++ 2026-11-26 17:05 +04 — Hasan Alizada — HAAL-143 (NFR 4.3, D-128). A letter or a digit is a description;
+        // markup alone ("**  **", "---") is not. Without parsing the Markdown, so the parser stays out of the start
+        // bundle (it comes with the renderer, D-51) and a day of many events is not parsed row by row.
+        hasDescription: HAS_TEXT.test(text(row.body) ?? ""),
         ...entry,
         created_at: text(row.created_at) ?? "",
       });

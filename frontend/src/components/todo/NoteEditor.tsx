@@ -26,7 +26,7 @@ import type { Color, Priority } from "@/api/generated/types.gen";
 import { useSettings } from "@/api/settings";
 import { sharesQuery } from "@/api/sharing";
 import { Attachments } from "@/components/attachments/Attachments";
-import { ConvertDialog } from "@/components/convert/ConvertDialog";
+import { ConvertDialog } from "@/components/convert/ConvertDialogLazy";
 import { ItemActivity } from "@/components/history/ItemActivity";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { ShareDialog } from "@/components/sharing/ShareDialog";

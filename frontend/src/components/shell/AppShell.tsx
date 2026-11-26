@@ -33,7 +33,7 @@ import { useReminderToasts } from "@/components/notifications/useReminderToasts"
 import { useSettingsSync } from "@/components/settings/useSettingsSync";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SearchField } from "@/components/search/SearchField";
-import { SearchDialog } from "@/components/search/SearchDialog";
+import { SearchDialog } from "@/components/search/SearchLauncher";
 import { allowDrafts } from "@/lib/drafts";
 import { listenToWorker } from "@/lib/push";
 import { startSync } from "@/sync";

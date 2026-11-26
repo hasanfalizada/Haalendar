@@ -37,11 +37,11 @@ import { RecordTimestamps } from "@/components/ui/record-timestamps";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { eventRange } from "@/lib/dayView";
 import { describeRrule } from "@/lib/repeatRule";
-import { toPlainText } from "@/lib/markdown-text";
 import { ItemLinks } from "@/components/links/ItemLinks";
 import { reminderLabel, remindersOf } from "@/lib/reminders";
 import { useShortcut } from "@/lib/shortcuts";
 import { undo } from "@/lib/undo";
+import { usePlainText } from "@/lib/usePlainText";
 import { localKeys, localRows } from "@/sync";
 
 import { EventColor } from "./EventColor";
@@ -111,7 +111,7 @@ export function EventDetails({
   });
   const reminders = remindersOf(reminderRows, id);
   const body = text(row.body);
-  const plain = toPlainText(body, { singleLine: true });
+  const plain = usePlainText(body, { singleLine: true });
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The whole rule as text ("Every 2 weeks on Mon and Thu, 10 times").
   const repeat = row.rrule
     ? (describeRrule(row.rrule, text(row.start_date), i18n.language) ?? t("calendar.day.repeats"))

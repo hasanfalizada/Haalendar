@@ -28,7 +28,7 @@ import { useTranslation } from "react-i18next";
 import type { BoardMember } from "@/api/boards";
 import type { Color, Priority } from "@/api/generated/types.gen";
 import { Attachments } from "@/components/attachments/Attachments";
-import { ConvertDialog } from "@/components/convert/ConvertDialog";
+import { ConvertDialog } from "@/components/convert/ConvertDialogLazy";
 import { ItemActivity } from "@/components/history/ItemActivity";
 import { ReminderPicker } from "@/components/calendar/ReminderPicker";
 import { reminderChanges } from "@/components/calendar/reminderWrites";

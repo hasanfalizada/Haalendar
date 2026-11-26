@@ -87,7 +87,9 @@ step secrets "secret scan" scripts/dev/secrets-scan.sh
 step licences "licences" pnpm security:licences
 step workflows "workflow lint" workflows
 step frontend "frontend" pnpm check
-step build "build" pnpm build
+# +++===+++ 2026-11-26 17:20 +04 — Hasan Alizada — HAAL-143 (D-128). The build and the budget of the first page's JavaScript.
+build() { pnpm build && scripts/dev/bundle-budget.py; }
+step build "build" build
 step e2e-static "e2e static" pnpm --filter haalendar-e2e check
 step e2e "e2e" pnpm e2e
 

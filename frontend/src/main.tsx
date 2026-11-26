@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 
 import "./styles.css";
 import { log } from "@/lib/log";
+import { prefetchOnDemandCode } from "@/lib/prefetch";
 import { listenForInstall, registerServiceWorker } from "@/lib/pwa";
 import { applyTheme, readPreference, resolveTheme } from "@/theme/theme";
 
@@ -20,6 +21,13 @@ registerServiceWorker();
 const queryClient = createQueryClient();
 const router = createAppRouter(queryClient);
 
+// +++===+++ 2026-11-26 18:05 +04 — Hasan Alizada — HAAL-143 (NFR 4.3, D-128). The code of the page being opened ("/" opens
+// the calendar) starts loading now, while the session is checked: the router would ask for it only after /me answered.
+for (const match of router.matchRoutes(window.location.pathname === "/" ? "/calendar" : window.location.pathname, {})) {
+  const route = router.routesById[match.routeId];
+  void router.loadRouteChunk(route)?.catch(() => undefined);
+}
+
 const container = document.getElementById("root");
 if (!container) throw new Error("#root element missing in index.html");
 
@@ -29,3 +37,4 @@ createRoot(container).render(
   </StrictMode>,
 );
 log.info("app_mounted", { mode: import.meta.env.MODE });
+prefetchOnDemandCode();
