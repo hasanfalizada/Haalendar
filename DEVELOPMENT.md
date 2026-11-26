@@ -4,7 +4,7 @@
 
 How to set up, run and test Haalendar locally, and how the environments differ.
 
-> **Status (rewrite in progress):** backend, API contract and web app exist. Production runs on Docker Compose (`compose.yaml`, [installation guide](docs/operations/deployment.md)); CI on GitHub Actions checks every push and pull request and publishes the release images for x86_64 and arm64 (`ghcr.io/hasanfalizada/haalendar`, [CI](#ci-github-actions)); the demo stand comes with HAAL-154.
+> **Status (rewrite in progress):** backend, API contract and web app exist. Production runs on Docker Compose (`compose.yaml`, [installation guide](docs/guide/admin/install.md)); CI on GitHub Actions checks every push and pull request and publishes the release images for x86_64 and arm64 (`ghcr.io/hasanfalizada/haalendar`, [CI](#ci-github-actions)); the demo stand comes with HAAL-154.
 
 ## Contents
 1. [Prerequisites](#1-prerequisites)
@@ -208,7 +208,7 @@ release tag. Its jobs call `scripts/dev/check-all.sh --only …`, so CI checks e
   (`BUILDKIT_SBOM_SCAN_STAGE`), since the web app's libraries are only bundled files in the final stage; it therefore
   also lists tools used only to build. A provenance signed through Sigstore (`actions/attest-build-provenance`)
   lets anyone verify that this workflow built the image (`gh attestation verify`, see the installation guide). Nothing is deployed: each user installs the image
-  ([installation guide](docs/operations/deployment.md)).
+  ([installation guide](docs/guide/admin/install.md)).
 - **Weekly** (Monday) the security job runs again, for advisories published after the last push.
 - **By hand** (Actions → CI → Run workflow) with "Publish the image as …:ci-test" a test of the publishing; delete
   that package version afterwards (the package's settings on GitHub).
@@ -328,7 +328,7 @@ The environment is selected with `HAALENDAR_ENV`.
 
 - **development** — the default. Use `HAALENDAR_LOG_FORMAT=console` for human-readable logs.
 - **test** — used by the test suites; tests build their own settings and never read your `.env`.
-- **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. It runs on Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS): `compose.yaml`, `Caddyfile` and `.env.production.example` in the repository root, installation and upgrades in [`docs/operations/deployment.md`](docs/operations/deployment.md).
+- **production** — the backend refuses to start with insecure settings (default secret key, plain `http://`). Generate a key with `openssl rand -base64 48`. Every secret can be passed as a file: `HAALENDAR_SECRET_KEY_FILE=/run/secrets/secret_key`. It runs on Docker Compose (PostgreSQL 18, one-shot migrations, app, worker, optional Caddy for HTTPS): `compose.yaml`, `Caddyfile` and `.env.production.example` in the repository root, installation and upgrades in [`docs/guide/admin/install.md`](docs/guide/admin/install.md).
 - **demo** — production settings plus `compose.demo.yaml`: demo mode, made-up accounts and data, a reset every 30 minutes ([`docs/operations/demo.md`](docs/operations/demo.md)).
 
 ### Docker image
@@ -377,7 +377,7 @@ what the three numbers mean is at the top of the [changelog](CHANGELOG.md).
 
 A published version is never replaced: a fault is fixed in the next patch version, from a `hotfix/X.Y.Z` branch made
 from `master`. How an installation goes back to the previous version is in the
-[installation guide](docs/operations/deployment.md#roll-back-an-upgrade).
+[installation guide](docs/guide/admin/install.md#roll-back-an-upgrade).
 
 ### Trying accounts locally
 

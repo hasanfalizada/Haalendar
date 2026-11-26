@@ -2,6 +2,7 @@
 # +++===+++ 2026-11-08 — Hasan Alizada — HAAL-152. Takes the README's screenshots again (docs/screenshots) from the real
 # app on the throw-away stack with made-up data (e2e/screenshots). The stack starts and stops with the run; move the
 # API's port when it is taken: STACK_API_PORT=8091 scripts/dev/screenshots.sh
+# +++===+++ 2026-11-26 23:59 +04 — Hasan Alizada — HAAL-153 (D-129). Also the user guide's (docs/guide/user/images).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"

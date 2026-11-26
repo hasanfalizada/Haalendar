@@ -7,6 +7,9 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../../docs/screenshots");
+// +++===+++ 2026-11-26 23:30 +04 — Hasan Alizada — HAAL-153 (D-129, stage 2). The user guide's own screenshots, of the
+// same made-up data: an event's details and editor, a card, the command palette, the trash.
+const GUIDE = resolve(dirname(fileURLToPath(import.meta.url)), "../../docs/guide/user/images");
 const API = "/api/v1";
 const ZONE = "Europe/Berlin";
 let nextPosition = 0;
@@ -52,6 +55,11 @@ class Seed {
     return entity_id;
   }
 
+  /** Deletes what an earlier mutation of the same push created (version 1), for the trash. */
+  remove(entity_type: Entity, entity_id: string): void {
+    this.mutations.push({ mutation_id: randomUUID(), entity_type, entity_id, op: "delete", base_version: 1, data: {} });
+  }
+
   async push(page: Page, csrf: string): Promise<void> {
     const answer = await call<{ results: { status: string; problem?: unknown }[] }>(page, "POST", "/sync/push", csrf, {
       mutations: this.mutations,
@@ -81,7 +89,10 @@ async function seed(page: Page): Promise<string> {
       ...more,
     });
   timed("Team stand-up", 0, "09:00", "09:30", "blue", { rrule: "FREQ=WEEKLY;BYDAY=MO,WE,FR" });
-  timed("Design review", 0, "11:00", "12:30", "purple");
+  timed("Design review", 0, "11:00", "12:30", "purple", {
+    location: "Room 4.2",
+    body: "Walk through the **new navigation** and decide on the colours.\n\n- Desktop and phone\n- Dark theme",
+  });
   timed("Lunch with Mira", 1, "12:30", "13:30", "green");
   timed("Sprint planning", 1, "14:00", "16:00", "orange", { priority: "high" });
   timed("Dentist", 2, "16:00", "17:00", "red");
@@ -97,6 +108,8 @@ async function seed(page: Page): Promise<string> {
   note("Wi-Fi at the cabin", "yellow", "Ask the owner for the guest network.");
   note("Gift ideas", "orange", "A good pair of hiking socks, a plant, a board game.");
   note("Meeting notes", "brown", "Move the release to the second week.\n\n> Keep the scope small.");
+  data.remove("item", note("Old packing list", "black", "Tent, stove, rain jacket."));
+  data.remove("item", timed("Dentist (moved)", 4, "08:00", "09:00", "red"));
   const groceries = note("Groceries", "green", "", { pinned: true, is_checklist: true });
   for (const [text, checked] of [
     ["Oat milk", true],
@@ -116,7 +129,14 @@ async function seed(page: Page): Promise<string> {
   const label = (name: string, color: string) => data.add("label", { board_id: board, name, color });
   const design = label("Design", "purple");
   const content = label("Content", "blue");
-  const card = (column_id: string, title: string, priority: string, due: number | null, labelId?: string) => {
+  const card = (
+    column_id: string,
+    title: string,
+    priority: string,
+    due: number | null,
+    labelId?: string,
+    body = "",
+  ) => {
     const item_id = data.add("item", {
       kind: "card",
       container_kind: "board",
@@ -124,6 +144,7 @@ async function seed(page: Page): Promise<string> {
       column_id,
       title,
       priority,
+      body,
       position: position(),
       ...(due === null ? {} : { due_date: weekday(due) }),
     });
@@ -132,7 +153,14 @@ async function seed(page: Page): Promise<string> {
   card(todo, "Write the landing page copy", "high", 3, content);
   card(todo, "Collect customer quotes", "medium", null, content);
   card(todo, "Choose the pricing table layout", "low", 6, design);
-  card(doing, "Design the hero section", "high", -1, design);
+  card(
+    doing,
+    "Design the hero section",
+    "high",
+    -1,
+    design,
+    "A photo of the app on a phone, the claim and **one** button.",
+  );
   card(doing, "Set up analytics", "medium", 1);
   card(done, "Register the domain", "medium", null);
   card(done, "Pick the brand colours", "low", null, design);
@@ -141,7 +169,7 @@ async function seed(page: Page): Promise<string> {
   return board;
 }
 
-test("screenshots of the README", async ({ page, browser }) => {
+test("screenshots of the README and the user guide", async ({ page, browser }) => {
   await page.clock.setFixedTime(CLOCK);
   await page.goto("/calendar");
   const board = await seed(page);
@@ -158,6 +186,39 @@ test("screenshots of the README", async ({ page, browser }) => {
   await page.goto(`/kanban/${board}`);
   await expect(page.getByText("Design the hero section").first()).toBeVisible();
   await shot("kanban");
+
+  // The guide's records show when they were made ("Created 2 minutes ago"): the browser's clock at the real time now.
+  await page.clock.setFixedTime(new Date());
+  const guide = (name: string) => page.screenshot({ path: resolve(GUIDE, `${name}.png`) });
+  await page.getByRole("button", { name: "Open Design the hero section" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await guide("card-editor");
+  await page.keyboard.press("Escape");
+
+  await page.goto(`/calendar?view=week&date=${weekday(0)}`);
+  await page
+    .getByRole("button", { name: /^Details of Design review/ })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog", { name: "Event details" })).toBeVisible();
+  await guide("event-details");
+  await page.getByRole("dialog", { name: "Event details" }).getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("dialog", { name: "Edit event" })).toBeVisible();
+  await guide("event-editor");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Edit event" })).toBeHidden();
+
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("combobox", { name: "Commands and search" });
+  await palette.fill("lisbon");
+  await expect(page.getByText("Trip to Lisbon").first()).toBeVisible();
+  await guide("command-palette");
+  await page.keyboard.press("Escape");
+
+  await page.goto("/trash");
+  await expect(page.getByText("Old packing list").first()).toBeVisible();
+  await guide("trash");
+  await page.clock.setFixedTime(CLOCK);
 
   // Set before the page loads: otherwise the colours are caught in their transition.
   await page.emulateMedia({ colorScheme: "dark" });

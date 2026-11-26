@@ -5,7 +5,7 @@
 # Services: db (PostgreSQL 18, never published), migrate (database role and migrations, then exits), app (API, live
 # stream, web app), worker (reminders, exports), proxy (Caddy, profile "proxy"). Data: volumes pgdata (database) and
 # data (uploaded files, exports). Upgrade: back up, set HAALENDAR_IMAGE to the new tag, `docker compose up -d`
-# (migrate runs first). Guide: docs/operations/deployment.md.
+# (migrate runs first). Guide: docs/guide/admin/install.md.
 name: haalendar
 
 x-haalendar: &haalendar
