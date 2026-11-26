@@ -145,10 +145,14 @@ async function open(path: string, standupRule = "FREQ=WEEKLY") {
   stubApi({ "GET /me": () => json(me()), "POST /sync/push": noPush });
   renderApp(path);
   await screen.findByRole("heading", { level: 1, name: /^Calendar:/ });
+  // +++===+++ 2026-11-25 23:40 +04 — Hasan Alizada — HAAL-123. The month grid with its events takes longer than the 4 s
+  // of setup.ts on a busy CI runner (failed in CI on development in run 45630166419 and on PR #90; one run in three on
+  // one core here): the events are waited for once, longer, before the test looks for one of them.
+  await screen.findAllByRole("button", { name: /^Details of / }, { timeout: 12_000 });
   return { user: userEvent.setup(), db };
 }
 
-describe("drag and drop", { timeout: 15_000 }, () => {
+describe("drag and drop", { timeout: 30_000 }, () => {
   it("month: an event dropped on another day keeps its times; undo moves it back", async () => {
     const { user, db } = await open("/calendar?date=2026-10-14&view=month");
     const dentist = await screen.findByRole("button", { name: "Details of Dentist" });

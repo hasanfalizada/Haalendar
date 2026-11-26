@@ -223,7 +223,9 @@ export function AppShell() {
         <img src={LOGO_SRC} alt="" width={24} height={24} className="size-6" />
         <span className="font-semibold">{t("app.name")}</span>
         {/* +++===+++ 2026-11-23 15:05 +04 — Hasan Alizada — HAAL-039 (D-119). Search on phones, in the top bar. */}
-        <SearchField className="mr-1 ml-auto w-36" />
+        {/* +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). A phone has no Ctrl+K: its field opens
+            the window as the command palette, the commands listed while nothing is typed. */}
+        <SearchField className="mr-1 ml-auto w-36" palette />
       </header>
 
       {/* +++===+++ 2026-11-19 09:25 +04 — Hasan Alizada — HAAL-188. One scroll bar: the banners and the page form a

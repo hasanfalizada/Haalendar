@@ -14,9 +14,11 @@ interface SearchFieldProps {
   className?: string;
   labelClassName?: string;
   keyClassName?: string;
+  /** HAAL-123: opens the window as the command palette (the phones' field). */
+  palette?: boolean;
 }
 
-export function SearchField({ className, labelClassName, keyClassName }: SearchFieldProps) {
+export function SearchField({ className, labelClassName, keyClassName, palette = false }: SearchFieldProps) {
   const { t } = useTranslation();
   return (
     <button
@@ -25,7 +27,7 @@ export function SearchField({ className, labelClassName, keyClassName }: SearchF
       aria-haspopup="dialog"
       aria-keyshortcuts="/"
       onClick={() => {
-        setSearchOpen(true);
+        setSearchOpen(true, palette ? "commands" : "search");
       }}
       className={cn(
         "flex h-9 min-w-0 items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-[13px] text-muted",

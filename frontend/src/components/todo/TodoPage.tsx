@@ -108,11 +108,13 @@ interface TodoPageProps {
   labelFilter?: string[];
   /** A note to open (from its reminder). */
   focusNote?: string;
+  /** HAAL-123: the editor of a new note or list opens with this title, then the request leaves the URL. */
+  createNote?: { list: boolean; title: string };
 }
 
 const NO_LABELS: string[] = [];
 
-export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }: TodoPageProps) {
+export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote, createNote }: TodoPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const tablet = useMediaQuery(TABLET_UP);
@@ -231,6 +233,26 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
     editing && typeof editing === "object" ? (rows.find((row) => row.id === editing.id) ?? editing) : null;
   // The note a reminder leads to opens once it has arrived (adjusted while rendering, not in an effect).
   const [focused, setFocused] = useState<string | null>(null);
+  // +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). The palette's new note or list: its editor, the title filled in.
+  const createKey = createNote ? `${createNote.list ? "list" : "note"}:${createNote.title}` : null;
+  const [created, setCreated] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+  if (createKey !== created) {
+    setCreated(createKey);
+    if (createNote) {
+      setNewTitle(createNote.title);
+      setEditing(createNote.list ? "list" : "new");
+    }
+  }
+  useEffect(() => {
+    if (createKey !== null) {
+      void navigate({
+        to: "/todo",
+        search: (previous) => ({ ...previous, new: undefined, title: undefined }),
+        replace: true,
+      });
+    }
+  }, [createKey, navigate]);
   if (focusNote && focusNote !== focused) {
     const target = rows.find((row) => row.id === focusNote && isNote(row));
     if (target) {
@@ -601,9 +623,11 @@ export function TodoPage({ tab, priorities, labelFilter = NO_LABELS, focusNote }
           note={editingRow}
           positions={positions}
           asList={editing === "list"}
+          {...(editingRow ? {} : { title: newTitle })}
           access={editingRow ? accessOf(editingRow) : "owner"}
           onClose={() => {
             setEditing(null);
+            setNewTitle("");
             if (focusNote) go({});
           }}
         />
