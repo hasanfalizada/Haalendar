@@ -42,22 +42,13 @@ import {
   snippet,
 } from "@/lib/search";
 import { compileFilter } from "@/lib/searchFilter";
-import { keyCaps, useShortcut } from "@/lib/shortcuts";
+import { keyCaps } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 import type { EntityType } from "@/sync/db";
 
 import { SearchFilters } from "./SearchFilters";
-import {
-  closedForResult,
-  closeSearchForResult,
-  searchMode,
-  setSearchFilter,
-  setSearchOpen,
-  useSearchFilter,
-  useSearchMode,
-  useSearchOpen,
-} from "./searchOpen";
+import { closedForResult, closeSearchForResult, setSearchFilter, useSearchFilter, useSearchMode } from "./searchOpen";
 
 const MODULES: readonly SearchModule[] = ["calendar", "todo", "kanban"];
 
@@ -99,42 +90,9 @@ function useLocal(user: string | undefined, entity: EntityType) {
   return data;
 }
 
-export function SearchDialog() {
-  const open = useSearchOpen();
-  useShortcut({
-    id: "search",
-    keys: ["/"],
-    group: "general",
-    label: "shortcuts.search",
-    handler: () => {
-      setSearchOpen(true);
-    },
-  });
-  useShortcut({
-    id: "commands",
-    keys: ["Mod+K"],
-    group: "general",
-    label: "shortcuts.commands",
-    allowInFields: true,
-    allowInDialog: true,
-    handler: () => {
-      const now = searchMode();
-      if (now === "commands") setSearchOpen(false);
-      else if (now === "search") setSearchOpen(true, "commands");
-      // Not over another dialog (an editor with unsaved changes): the key is left to the browser.
-      else if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return false;
-      else setSearchOpen(true, "commands");
-      return undefined;
-    },
-  });
-  return (
-    <RadixDialog.Root open={open} onOpenChange={setSearchOpen}>
-      {open ? <SearchWindow /> : null}
-    </RadixDialog.Root>
-  );
-}
-
-function SearchWindow() {
+// +++===+++ 2026-11-26 16:20 +04 — Hasan Alizada — HAAL-143 (D-128). The window itself, a chunk of its own loaded the first
+// time it opens (SearchLauncher keeps the keys and the open state in the start bundle).
+export default function SearchWindow() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const viewerTz = useDisplayTimeZone();

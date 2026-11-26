@@ -21,6 +21,7 @@ import type { Color } from "@/api/generated/types.gen";
 
 import { DEFAULT_COLOR } from "./palette";
 import { fold, type SearchModule } from "./search";
+import type { SearchFilter } from "./searchFilterShape";
 
 type Row = Record<string, unknown>;
 
@@ -28,27 +29,9 @@ export const SEARCH_MODULES: readonly SearchModule[] = ["calendar", "todo", "kan
 export const DATE_PRESETS = ["today", "week", "month", "next30"] as const;
 export type DatePreset = (typeof DATE_PRESETS)[number];
 
-export interface SearchFilter {
-  modules: SearchModule[];
-  /** "YYYY-MM-DD" or null; one alone is that day. */
-  from: string | null;
-  to: string | null;
-  calendars: string[];
-  colors: Color[];
-  priorities: Priority[];
-  /** Label names, folded. */
-  labels: string[];
-}
-
-export const NO_FILTER: SearchFilter = {
-  modules: [],
-  from: null,
-  to: null,
-  calendars: [],
-  colors: [],
-  priorities: [],
-  labels: [],
-};
+// HAAL-143 (D-128): the shape and the empty filter live in searchFilterShape, which the start bundle may import without
+// the matching code (recurrence, day lists, Markdown).
+export { NO_FILTER, type SearchFilter } from "./searchFilterShape";
 
 export function filterActive(filter: SearchFilter): boolean {
   return (

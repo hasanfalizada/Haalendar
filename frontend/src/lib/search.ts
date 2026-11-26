@@ -7,6 +7,7 @@
 // - deleted items, events of calendars the views do not show and cards of deleted boards are left out;
 // - the folded text of an item is kept per row object, so typing does not fold every item again.
 // +++===+++ 2026-11-25 09:45 +04 — Hasan Alizada — HAAL-114 (D-123). And the comments of cards, ranked last.
+import { fold, queryWords, wordStart } from "./textMatch";
 type Row = Record<string, unknown>;
 
 export type SearchModule = "calendar" | "todo" | "kanban";
@@ -35,42 +36,9 @@ export type SearchResults = Record<SearchModule, SearchHit[]>;
 
 const MODULE_OF: Record<string, SearchModule> = { event: "calendar", note: "todo", card: "kanban" };
 const WEIGHT: Record<SearchField, number> = { title: 8, location: 4, body: 2, checklist: 2, comments: 1 };
-const MARKS = /\p{M}/gu;
-// eslint-disable-next-line no-control-regex -- the whole ASCII range on purpose
-const ASCII = /^[\x00-\x7f]*$/;
-
-/** Lower case without accents: the form both the query and the items are compared in. */
-export function fold(text: string): string {
-  // Plain ASCII has no accents to drop: lower case only, several times faster on a cold search of many items.
-  if (ASCII.test(text)) return text.toLowerCase();
-  return text.normalize("NFKD").replace(MARKS, "").toLocaleLowerCase();
-}
-
-const WORD_CHAR = /[\p{L}\p{N}]/u;
-
-/** The words of a query, folded; punctuation around them dropped. */
-export function queryWords(query: string): string[] {
-  return fold(query)
-    .split(/\s+/)
-    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
-    .filter((word) => word !== "");
-}
-
-/** Where `word` begins a word of `text` (both folded); -1 when it does not. */
-function wordStart(text: string, word: string, from = 0): number {
-  let at = text.indexOf(word, from);
-  while (at !== -1) {
-    if (at === 0 || !WORD_CHAR.test(text[at - 1] ?? "")) return at;
-    at = text.indexOf(word, at + 1);
-  }
-  return -1;
-}
-
-/** Every word of the query begins a word of the text (case and accents ignored); an empty query matches. */
-export function matchesQuery(text: string, query: string): boolean {
-  const folded = fold(text);
-  return queryWords(query).every((word) => wordStart(folded, word) !== -1);
-}
+// HAAL-143 (D-128): the matching of words lives in textMatch, which the start bundle may import without this module's
+// excerpts (Markdown).
+export { fold, matchesQuery, queryWords } from "./textMatch";
 
 /**
  * The parts of `text` to highlight for the query: [start, end) of every place a query word begins a word, merged.

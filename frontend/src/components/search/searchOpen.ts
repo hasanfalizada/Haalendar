@@ -2,7 +2,7 @@
 // the app shell, opened by the search field of any header or by "/".
 import { useSyncExternalStore } from "react";
 
-import { NO_FILTER, type SearchFilter } from "@/lib/searchFilter";
+import { NO_FILTER, type SearchFilter } from "@/lib/searchFilterShape";
 
 let open = false;
 const listeners = new Set<() => void>();

@@ -57,6 +57,9 @@ describe("hasDescription", () => {
     ["", false],
     ["   \n  ", false],
     ["**  **", false],
+    // HAAL-143: markup alone, without parsing the Markdown.
+    ["---\n> ", false],
+    ["_Ünïcode_", true],
     ["Bring the slides", true],
     ["- [ ] call Bob", true],
   ])("body %j → %s", (body, expected) => {

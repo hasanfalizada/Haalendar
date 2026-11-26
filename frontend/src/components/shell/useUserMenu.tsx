@@ -16,13 +16,14 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { FormattingHelpDialog } from "@/components/markdown/MarkdownEditor";
 import { log } from "@/lib/log";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { useSignOut } from "@/lib/useSignOut";
+
+import { FormattingHelpDialog } from "@/components/markdown/FormattingHelpLazy";
 
 import { AboutDialog, HelpDialog } from "./HelpAboutDialogs";
 
@@ -119,14 +120,18 @@ export function useUserMenu(): { actions: MenuAction[]; dialogs: ReactNode } {
           setFormattingOpen(true);
         }}
       />
-      <FormattingHelpDialog
-        open={formattingOpen}
-        onOpenChange={setFormattingOpen}
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          focusMenuButton();
-        }}
-      />
+      {formattingOpen ? (
+        <Suspense fallback={null}>
+          <FormattingHelpDialog
+            open={formattingOpen}
+            onOpenChange={setFormattingOpen}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              focusMenuButton();
+            }}
+          />
+        </Suspense>
+      ) : null}
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} returnFocus={focusMenuButton} />
       {signOutDialog}
     </>

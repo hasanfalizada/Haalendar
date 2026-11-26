@@ -115,7 +115,7 @@ import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
 import { CalendarList } from "./CalendarList";
-import { ConvertDialog } from "@/components/convert/ConvertDialog";
+import { ConvertDialog } from "@/components/convert/ConvertDialogLazy";
 
 import { DuplicateDialog } from "./DuplicateDialog";
 import { MiniMonth } from "./MiniMonth";
@@ -128,6 +128,21 @@ import { useCalendars } from "./useCalendars";
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
 function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (view: CalendarViewKind) => void }) {
   const { t } = useTranslation();
+  // +++===+++ 2026-11-26 18:50 +04 — Hasan Alizada — HAAL-143 (INP, D-128). The chosen view is shown at once and the
+  // calendar changes after that frame is painted: drawing a week or a month took up to 280 ms on a slow phone before
+  // anything answered the tap.
+  // The choice holds while the view it was made from is still shown.
+  const [chosen, setChosen] = useState<{ option: CalendarViewKind; from: CalendarViewKind } | null>(null);
+  const shown = chosen?.from === view ? chosen.option : view;
+  const choose = (option: CalendarViewKind) => {
+    if (option === shown) return;
+    setChosen({ option, from: view });
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        onChange(option);
+      }, 0);
+    });
+  };
   return (
     <div
       role="radiogroup"
@@ -139,14 +154,14 @@ function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (vie
           key={option}
           type="button"
           role="radio"
-          aria-checked={option === view}
+          aria-checked={option === shown}
           onClick={() => {
-            onChange(option);
+            choose(option);
           }}
           className={cn(
             // HAAL-143 (D-127): 44 px wide on touch even as a single letter.
             "h-11 min-w-11 border-r border-line px-3 text-[13px] last:border-r-0 md:px-2.5 pointer-fine:md:h-8 pointer-fine:md:min-w-0",
-            option === view ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
+            option === shown ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
           )}
           // +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. A header short of room even on two lines shows
           // the first letter; the name stays for screen readers and on hover.

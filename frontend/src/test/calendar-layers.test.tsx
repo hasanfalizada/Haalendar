@@ -135,7 +135,7 @@ describe("layers of due dates", { timeout: 20_000 }, () => {
   it("the week's all-day row shows them, the time before the title", async () => {
     await open("week");
     const allDay = await screen.findByRole("list", { name: "All day, Tuesday, November 10, 2026" });
-    expect(within(allDay).getByRole("button", { name: CARD_LABEL })).toHaveTextContent("09:30Paint the fence");
+    expect(await within(allDay).findByRole("button", { name: CARD_LABEL })).toHaveTextContent("09:30Paint the fence");
     expect(within(allDay).getByRole("button", { name: NOTE_LABEL })).toBeInTheDocument();
   });
 
