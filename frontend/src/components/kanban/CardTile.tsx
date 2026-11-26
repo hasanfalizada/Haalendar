@@ -134,7 +134,8 @@ export function CardTile({
         aria-description={movable ? t("kanban.cards.moveHint") : undefined}
         aria-keyshortcuts={movable ? "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight" : undefined}
         className={cn(
-          "flex w-full flex-col gap-1.5 rounded-sm border border-line bg-bg p-2 pl-3 text-left text-[13px] wrap-anywhere",
+          // HAAL-143 (D-127): at least 44 px high on touch.
+          "flex w-full flex-col gap-1.5 rounded-sm border border-line bg-bg p-2 pl-3 text-left text-[13px] wrap-anywhere pointer-coarse:min-h-11",
           "hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
           // A finger held on the card picks it up instead of selecting text or opening the system menu.
           movable && "touch-manipulation select-none [-webkit-touch-callout:none]",

@@ -23,7 +23,7 @@ describe("adding a card", () => {
         }
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Add a card to Done" }));
+    await user.click(screen.getByRole("button", { name: "Add card to Done" }));
     const field = screen.getByLabelText("Title of the new card in Done");
     await user.keyboard("First{Enter}");
     // A browser moves the focus to the page when the focused field is disabled; read-only keeps it.

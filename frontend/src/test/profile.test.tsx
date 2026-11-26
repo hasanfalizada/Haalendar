@@ -132,13 +132,16 @@ describe("avatar", () => {
     expect(initials("Ömer")).toBe("Ö");
     expect(initials("   ")).toBe("?");
     const { container, rerender } = render(<Avatar name="Ada Admin" url={null} />);
-    expect(container).toHaveTextContent("AA");
+    // HAAL-143: drawn by CSS from the attribute, not written as text.
+    const drawn = () => container.querySelector("[data-initials]")?.getAttribute("data-initials");
+    expect(drawn()).toBe("AA");
+    expect(container.textContent).toBe("");
     rerender(<Avatar name="Ada Admin" url={AVATAR_URL} />);
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
     img?.dispatchEvent(new Event("error"));
     return waitFor(() => {
-      expect(container).toHaveTextContent("AA");
+      expect(drawn()).toBe("AA");
     });
   });
 });

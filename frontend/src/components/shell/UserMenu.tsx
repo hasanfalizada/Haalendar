@@ -104,15 +104,17 @@ export function UserMenuList({
         type="button"
         aria-expanded={expanded}
         aria-controls="drawer-user-menu"
-        aria-label={t("userMenu.open", { name: me.display_name })}
         onClick={() => {
           setExpanded((value) => !value);
         }}
         className="flex items-center gap-3 rounded-sm p-2 text-left hover:bg-surface"
       >
         <Avatar name={me.display_name} url={me.avatar_url} size={36} />
+        {/* +++===+++ 2026-11-26 14:40 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.3, D-127). Named by what it shows: "Account
+            menu of" for screen readers, then the name and the e-mail of the block. */}
+        <span className="sr-only">{t("userMenu.openPrefix")}</span>{" "}
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{me.display_name}</span>
+          <span className="block truncate font-medium">{me.display_name}</span>{" "}
           <span className="block truncate text-xs text-muted">{me.email}</span>
         </span>
         <ChevronDown className={cn("size-4 text-muted transition-transform", expanded && "rotate-180")} aria-hidden />

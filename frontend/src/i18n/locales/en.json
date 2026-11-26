@@ -1082,6 +1082,7 @@
   },
   "userMenu": {
     "open": "Account menu of {{name}}",
+    "openPrefix": "Account menu of",
     "profile": "Profile",
     "settings": "Settings",
     "export": "Export your data",
@@ -1610,7 +1611,7 @@
     },
     "cards": {
       "add": "Add card",
-      "addTo": "Add a card to {{column}}",
+      "addTo": "Add card to {{column}}",
       "addButton": "Add",
       "titleIn": "Title of the new card in {{column}}",
       "titlePlaceholder": "Card title",
@@ -1722,7 +1723,7 @@
     "placeholder": "Search events, notes and cards",
     "label": "Search",
     "results": "Search results",
-    "close": "Close the search",
+    "close": "Close the search, Esc",
     "groups": {
       "calendar": "Calendar",
       "todo": "To-Do",

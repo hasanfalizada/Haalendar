@@ -98,7 +98,8 @@ export function AgendaList({ user, days, rows, duesOn, viewerTz, today, anchor, 
                   onDay(day);
                 }}
                 className={cn(
-                  "flex items-baseline gap-2 rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary",
+                  // HAAL-143 (D-127): a 44 px target on touch.
+                  "flex items-baseline gap-2 rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:min-h-11 pointer-coarse:items-center",
                   day === today && "text-primary",
                 )}
               >

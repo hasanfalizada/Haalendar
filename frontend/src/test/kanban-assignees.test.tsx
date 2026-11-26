@@ -142,8 +142,9 @@ describe("card assignees", { timeout: 20_000 }, () => {
     const section = within(editor).getByRole("region", { name: "Assignees" });
     const buttons = within(section).getAllByRole("button");
     expect(buttons.map((b) => [b.textContent, b.getAttribute("aria-pressed")])).toEqual([
-      ["AAAda Admin (me)", "false"],
-      ["BBBob Builder", "true"],
+      // HAAL-143: the avatar's initials are drawn by CSS, so the text is the name alone.
+      ["Ada Admin (me)", "false"],
+      ["Bob Builder", "true"],
     ]);
     await user.click(within(section).getByRole("button", { name: /Ada Admin \(me\)/ }));
     await user.click(within(section).getByRole("button", { name: /Bob Builder/ }));

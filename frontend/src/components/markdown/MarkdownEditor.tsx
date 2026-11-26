@@ -148,7 +148,8 @@ export function MarkdownEditor({
             <span aria-hidden>·</span>
             <button
               type="button"
-              className="text-primary underline underline-offset-2"
+              // HAAL-143 (D-127): a 44 px target on touch.
+              className="text-primary underline underline-offset-2 pointer-coarse:min-h-11"
               onClick={() => {
                 setHelpOpen(true);
               }}

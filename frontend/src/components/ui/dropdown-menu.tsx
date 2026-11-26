@@ -8,7 +8,12 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-export const DropdownMenu = RadixMenu.Root;
+// +++===+++ 2026-11-26 12:55 +04 — Hasan Alizada — HAAL-143 (WCAG 4.1.2, D-127). Not modal: a menu (ARIA) leaves the page
+// as it is. Radix's modal menu hid the rest of the page with aria-hidden while its links and buttons stayed focusable
+// (axe aria-hidden-focus); now Esc, a choice, a click outside or Tab away closes the menu.
+export function DropdownMenu(props: ComponentProps<typeof RadixMenu.Root>) {
+  return <RadixMenu.Root modal={false} {...props} />;
+}
 export const DropdownMenuTrigger = RadixMenu.Trigger;
 
 export function DropdownMenuContent({ className, ...props }: ComponentProps<typeof RadixMenu.Content>) {

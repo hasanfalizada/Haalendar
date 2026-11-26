@@ -24,7 +24,7 @@ test("finds a note by its description and a card on its board, from the keyboard
   await page.getByRole("dialog", { name: "New board" }).getByLabel("Name").fill(board);
   await page.keyboard.press("Enter");
   const todo = page.getByRole("region", { name: "To do" });
-  await todo.getByRole("button", { name: "Add a card to To do" }).click();
+  await todo.getByRole("button", { name: "Add card to To do" }).click();
   await todo.getByLabel("Title of the new card in To do").fill(card);
   await page.keyboard.press("Enter");
   await expect(page.getByText(`Card added: ${card}`)).toBeVisible();
@@ -82,7 +82,7 @@ test.describe("on a phone", () => {
     // Measured once it has opened out.
     await window.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
     expect(await window.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 800 });
-    await window.getByRole("button", { name: "Close the search" }).click();
+    await window.getByRole("button", { name: "Close the search, Esc" }).click();
     await expect(window).toBeHidden();
   });
 });

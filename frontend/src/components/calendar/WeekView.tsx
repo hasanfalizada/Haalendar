@@ -19,6 +19,9 @@
 // arrow at "all day", or a "+N more", opens the whole row for every day, and closes it again (remembered on the device);
 // an open row scrolls past 40 % of the view. The same grid shows one day: the day view's hours (`days` of one date, no
 // row of day names — the page's header names the day).
+// +++===+++ 2026-11-26 12:40 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.8, D-127). The all-day chips are 4 px apart, so a 24 px
+// circle around each touches no other target. The timed events keep their size on the hours: the length of an event
+// is what the grid shows (the "essential" exception); the day list offers the same events as large rows.
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -205,7 +208,7 @@ export function WeekGrid({
                 onClick={() => {
                   toggleAllDay(!allDayOpen);
                 }}
-                className="flex items-start justify-end gap-0.5 self-start pt-1 pr-1 text-right text-[10.5px] text-muted outline-none hover:text-fg focus-visible:ring-2 focus-visible:ring-primary"
+                className="flex items-start justify-end gap-0.5 self-start pt-1 pr-1 text-right pointer-coarse:min-h-11 text-[10.5px] text-muted outline-none hover:text-fg focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {t("calendar.week.allDay")}
                 {allDayOpen ? (
@@ -225,9 +228,10 @@ export function WeekGrid({
                   as="ul"
                   id={`allday:${day}`}
                   data={{ kind: "allday", day }}
+                  data-week-grid
                   key={day}
                   aria-label={t("calendar.week.allDayOf", { date: dayLabel(day, i18n.language) })}
-                  className="flex min-h-8 min-w-0 flex-col gap-0.5 border-l border-line p-0.5"
+                  className="flex min-h-8 min-w-0 flex-col gap-1 border-l border-line p-0.5"
                 >
                   {allDay.slice(0, shown).map((entry) => {
                     const id = `week-${day}-${entry.key}`;
@@ -296,6 +300,7 @@ export function WeekGrid({
                   as="ol"
                   id={`time:${day}`}
                   data={{ kind: "time", day }}
+                  data-week-grid
                   key={day}
                   aria-label={dayLabel(day, i18n.language)}
                   className={cn(

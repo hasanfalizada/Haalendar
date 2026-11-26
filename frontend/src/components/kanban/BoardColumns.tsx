@@ -634,7 +634,8 @@ function Column({ row, target, cards, index, count, shownCount, canWrite, first,
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-7 shrink-0"
+                // HAAL-143 (D-127): 44 px on touch, compact with a mouse.
+                className="size-7 shrink-0 pointer-coarse:size-11"
                 aria-label={t("kanban.columns.menu", { name })}
                 // The menu button is not a drag handle.
                 onPointerDown={(e) => {
