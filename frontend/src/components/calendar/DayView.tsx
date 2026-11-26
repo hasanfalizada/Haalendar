@@ -144,7 +144,8 @@ function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (vie
             onChange(option);
           }}
           className={cn(
-            "h-11 border-r border-line px-3 text-[13px] last:border-r-0 md:px-2.5 pointer-fine:md:h-8",
+            // HAAL-143 (D-127): 44 px wide on touch even as a single letter.
+            "h-11 min-w-11 border-r border-line px-3 text-[13px] last:border-r-0 md:px-2.5 pointer-fine:md:h-8 pointer-fine:md:min-w-0",
             option === view ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
           )}
           // +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. A header short of room even on two lines shows
@@ -414,9 +415,11 @@ function DayList({
                 selected && "ring-2 ring-primary",
               )}
             >
+              {/* +++===+++ 2026-11-26 12:40 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.8, D-127). 4 px between the 16 px box
+                  and the row, so a 24 px circle around the box touches no other target. */}
               <input
                 type="checkbox"
-                className="mt-2.5 ml-3 size-4 shrink-0 pointer-fine:md:mt-1.5"
+                className="mt-2.5 mr-1 ml-3 size-4 shrink-0 pointer-fine:md:mt-1.5"
                 aria-label={t("calendar.day.select", { title: entry.title || t("calendar.day.noTitle") })}
                 checked={selected}
                 // A prevented click on a controlled checkbox leaves the box drawn in its old state; Shift comes from
@@ -1135,7 +1138,11 @@ export function DayView({
               <Button
                 variant="ghost"
                 className="max-w-full px-2 text-base font-semibold"
-                aria-label={t("calendar.nav.chooseDate", { date: label })}
+                // +++===+++ 2026-11-26 14:00 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.3, D-127). The name begins with
+                // the words shown ("Jun 13 – 19, 2027"), then the chosen day when they do not already name it.
+                aria-label={t("calendar.nav.chooseDate", {
+                  date: label.includes(title) ? label : `${title}, ${label}`,
+                })}
                 onClick={() => {
                   setPickerOpen(true);
                 }}

@@ -170,14 +170,14 @@ describe("board filters", { timeout: 20_000 }, () => {
     expect(comparePositions(position, "C")).toBe(1);
     expect(comparePositions(position, "M")).toBe(-1);
 
-    await user.click(within(todo).getByRole("button", { name: "Add a card to To do" }));
+    await user.click(within(todo).getByRole("button", { name: "Add card to To do" }));
     await user.type(within(todo).getByLabelText("Title of the new card in To do"), "Fresh{Enter}");
     expect(await screen.findByText("Card added: Fresh")).toBeInTheDocument();
   });
 
   it("says when a card added is hidden by the filters", async () => {
     const { user, todo } = await open("?priority=high");
-    await user.click(within(todo).getByRole("button", { name: "Add a card to To do" }));
+    await user.click(within(todo).getByRole("button", { name: "Add card to To do" }));
     await user.type(within(todo).getByLabelText("Title of the new card in To do"), "Fresh{Enter}");
     expect(await screen.findByText("Card added: Fresh — hidden by the filters")).toBeInTheDocument();
   });

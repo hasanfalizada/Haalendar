@@ -31,9 +31,11 @@ import { CalendarDnd } from "./EventDrag";
 
 type Row = Record<string, unknown>;
 
-/** Height of one event line in a cell (chip 20 px + gap 2 px) and of the day number above them. */
-const LINE_PX = 22;
-const NUMBER_PX = 26;
+/** Height of one event line in a cell (chip 20 px + gap 4 px) and of the day number above them (24 px + gap 4 px). */
+// +++===+++ 2026-11-26 12:40 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.8, D-127). The chips stay 20 px high but 4 px apart, so
+// a 24 px circle around each touches no other target (the spacing exception of the criterion); "+N more" likewise.
+const LINE_PX = 24;
+const NUMBER_PX = 28;
 /** Lines assumed until the cells are measured (and where nothing can be measured, as in tests). */
 const DEFAULT_LINES = 3;
 const PHONE_BARS = 3;
@@ -136,7 +138,7 @@ export function MonthGrid({
               </span>
             );
             const cellClass = cn(
-              "flex min-h-0 min-w-0 flex-col gap-0.5 border-r border-b border-line p-0.5 [&:nth-child(7n)]:border-r-0",
+              "flex min-h-0 min-w-0 flex-col gap-1 border-r border-b border-line p-0.5 [&:nth-child(7n)]:border-r-0",
               outside && "bg-surface/60 text-muted",
               day === date && "outline-2 -outline-offset-2 outline-primary",
             );
@@ -163,9 +165,14 @@ export function MonthGrid({
                     <span key={due.key} aria-hidden className="h-1.5 w-full rounded-full bg-muted/50" />
                   ))}
                   {entries.length + dues.length > PHONE_BARS ? (
-                    <span aria-hidden className="text-[10.5px] text-muted">
-                      +{entries.length + dues.length - PHONE_BARS}
-                    </span>
+                    // +++===+++ 2026-11-26 14:10 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.3, D-127). "+N" is drawn by CSS:
+                    // the cell's name already gives the count ("…, 5 events"), and a visible "+2" written as text would
+                    // be a label missing from that name.
+                    <span
+                      aria-hidden
+                      data-more={`+${String(entries.length + dues.length - PHONE_BARS)}`}
+                      className="text-[10.5px] text-muted before:content-[attr(data-more)]"
+                    />
                   ) : null}
                 </button>
               );
@@ -192,7 +199,7 @@ export function MonthGrid({
                 >
                   {number}
                 </button>
-                <ul aria-label={label} className="flex min-w-0 flex-col gap-0.5">
+                <ul aria-label={label} className="flex min-w-0 flex-col gap-1">
                   {entries.slice(0, shown).map((entry) => {
                     const id = `month-${day}-${entry.key}`;
                     const start = time.start(entry);
@@ -205,7 +212,8 @@ export function MonthGrid({
                           place={day}
                           drag={{ accepts: "day", disabled: !canDrag(entry) }}
                           className={cn(
-                            "flex h-5 w-full items-center gap-1 rounded-sm pr-1 pl-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                            // HAAL-143: the normal text colour, not the dimmed one of a day of the next or previous month (4.1:1 on the tint).
+                            "flex h-5 w-full items-center gap-1 rounded-sm pr-1 pl-2 text-left text-fg outline-none focus-visible:ring-2 focus-visible:ring-primary",
                             itemColorClasses(entry.color),
                           )}
                         >
@@ -235,7 +243,7 @@ export function MonthGrid({
                     onClick={() => {
                       onDay(day);
                     }}
-                    className="w-fit rounded-sm px-1 text-left font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                    className="h-5 w-fit rounded-sm px-1 text-left font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     {t("calendar.month.more", { count: more })}
                   </button>

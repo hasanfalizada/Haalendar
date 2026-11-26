@@ -230,7 +230,8 @@ describe("user menu", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Open menu" }));
     const drawer = await screen.findByRole("dialog", { name: "Haalendar" });
-    const toggle = within(drawer).getByRole("button", { name: MENU_BUTTON });
+    // HAAL-143: the drawer's block is named by what it shows, the name and the e-mail.
+    const toggle = within(drawer).getByRole("button", { name: /^Account menu of Ada Admin \S+@/ });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -251,7 +252,7 @@ describe("user menu", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Open menu" }));
     const drawer = await screen.findByRole("dialog", { name: "Haalendar" });
-    await user.click(within(drawer).getByRole("button", { name: MENU_BUTTON }));
+    await user.click(within(drawer).getByRole("button", { name: /^Account menu of Ada Admin \S+@/ }));
     await user.click(within(drawer).getByRole("button", { name: "Help" }));
     const help = await screen.findByRole("dialog", { name: "Help" });
     await waitFor(() => {

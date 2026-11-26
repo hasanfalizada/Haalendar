@@ -164,7 +164,7 @@ describe("cards on the board", { timeout: 20_000 }, () => {
   it("adds cards at the end of a column and keeps the field open for the next one", async () => {
     const { user } = await open();
     const done = await screen.findByRole("region", { name: "Done" });
-    await user.click(within(done).getByRole("button", { name: "Add a card to Done" }));
+    await user.click(within(done).getByRole("button", { name: "Add card to Done" }));
     const field = within(done).getByLabelText("Title of the new card in Done");
     await user.type(field, "  First  {Enter}");
     await screen.findByText("Card added: First");

@@ -222,7 +222,8 @@ export function EventDetails({
           {plain.length > PREVIEW_CHARS || body !== plain ? (
             <button
               type="button"
-              className="w-fit text-primary underline underline-offset-2"
+              // HAAL-143 (D-127): a 44 px target on touch.
+              className="w-fit text-primary underline underline-offset-2 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center"
               aria-expanded={full}
               onClick={() => {
                 setFull(!full);

@@ -48,6 +48,13 @@
     },
     {
       "ecosystem": "npm",
+      "package": "*axe-core*",
+      "licence": "MPL-2.0",
+      "shipped": false,
+      "reason": "End-to-end tests only (HAAL-143): axe-core and @axe-core/playwright check the pages of the app against WCAG in the test browser; nothing of them reaches the app. Owner, 2026-11-01: MPL allowed in tooling that never ships."
+    },
+    {
+      "ecosystem": "npm",
       "package": "@fontsource-variable/inter",
       "licence": "OFL-1.1",
       "shipped": true,

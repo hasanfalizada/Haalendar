@@ -36,7 +36,11 @@ export function Avatar({ name, url, size = 32, className }: AvatarProps) {
           }}
         />
       ) : (
-        initials(name)
+        // +++===+++ 2026-11-26 12:50 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.3, D-127). The initials are drawn by CSS
+        // (`content: attr(data-initials)`), not written as text: the avatar is a picture, hidden from assistive
+        // technology, and the button around it is named "Account menu of <name>" — text initials inside it would be a
+        // visible label missing from that name.
+        <span data-initials={initials(name)} className="before:content-[attr(data-initials)]" />
       )}
     </span>
   );
