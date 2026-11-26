@@ -136,6 +136,6 @@ test("F-34 About says the app is free and links the author and the repository; H
   const help = page.getByRole("dialog", { name: "Help" });
   await expect(help.getByRole("link", { name: /Documentation/ })).toHaveAttribute(
     "href",
-    "https://github.com/hasanfalizada/Haalendar/tree/master/docs",
+    "https://github.com/hasanfalizada/Haalendar/blob/master/docs/guide/user/README.md",
   );
 });

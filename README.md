@@ -149,6 +149,7 @@ automatic import: version 1.0 starts empty and events are moved by hand. The old
 
 ## Documentation
 
+- [User guide](docs/guide/user/README.md): the calendar, To-Do, Kanban, sync, settings and keyboard shortcuts
 - [Admin guide](docs/guide/admin/README.md): install, settings, users, backups, security
 - [API reference](docs/guide/api.md), written from the [contract](api/openapi.yaml), and [calling the API from a script](docs/guide/api-usage.md)
 - [Changelog](CHANGELOG.md): what each version changed

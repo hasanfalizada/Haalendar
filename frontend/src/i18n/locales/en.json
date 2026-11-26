@@ -1098,7 +1098,7 @@
     "shortcuts": "Keyboard shortcuts",
     "shortcutsHint": "The keys that work on the current page. Press ? anywhere.",
     "docs": "Documentation",
-    "docsHint": "How Haalendar works, how to run it and its data formats.",
+    "docsHint": "How to use Haalendar: the calendar, To-Do, Kanban, sync and settings.",
     "issues": "Report a problem",
     "issuesHint": "Describe what happened; please leave out personal data.",
     "newTab": "(opens in a new tab)",
