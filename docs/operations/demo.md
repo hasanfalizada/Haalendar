@@ -1,7 +1,7 @@
 # The public demo stand
 
 <!-- +++===+++ 2026-11-09 — Hasan Alizada — HAAL-154. How the demo runs (FR-OPS-03, D-103). -->
-The demo is an ordinary installation ([deployment.md](deployment.md)) with one more Compose file, `compose.demo.yaml`.
+The demo is an ordinary installation ([install.md](../guide/admin/install.md)) with one more Compose file, `compose.demo.yaml`.
 **Never start it on an installation with real data:** every 30 minutes it removes the database and all uploaded files.
 The reset refuses a database that has any account other than the demo accounts, but that is a last safeguard, not a
 way of working.

@@ -95,11 +95,12 @@ grep HAALENDAR_SETUP_TOKEN .env
 Open `https://your-domain`: the first visit creates the administrator and asks for the setup token printed by the last
 command. Then invite your users from the admin panel.
 
-Already running a reverse proxy, or no public address? See the [installation guide](docs/operations/deployment.md).
+Already running a reverse proxy, or no public address? See the [installation guide](docs/guide/admin/install.md).
 
 ## Configuration
 
-Everything is set in `.env`; [`.env.production.example`](.env.production.example) describes each setting.
+Everything is set in `.env`; [`.env.production.example`](.env.production.example) describes each setting, and
+the [settings reference](docs/guide/admin/configuration.md) lists every one with its default.
 
 | Setting | What it is for |
 |---|---|
@@ -125,7 +126,7 @@ To restore, also on a new server with just `compose.yaml`, `Caddyfile` and `rest
 ```
 
 **Backups stay on this server until you copy them elsewhere**, and they hold passwords and all user data, so encrypt them
-there. Details are in the [installation guide](docs/operations/deployment.md#5-back-up-and-restore).
+there. Details are in the [backup guide](docs/guide/admin/backup.md).
 
 ## Upgrade
 
@@ -137,7 +138,7 @@ docker compose --profile proxy up -d
 ```
 
 The database migrates by itself before the app starts. Migrations only go forward: to go back, restore the backup and set
-the previous version ([roll back an upgrade](docs/operations/deployment.md#roll-back-an-upgrade)). What each version
+the previous version ([roll back an upgrade](docs/guide/admin/install.md#roll-back-an-upgrade)). What each version
 changed is in the [changelog](CHANGELOG.md).
 
 ## Coming from the old Haalendar
@@ -148,7 +149,8 @@ automatic import: version 1.0 starts empty and events are moved by hand. The old
 
 ## Documentation
 
-- [Installation guide](docs/operations/deployment.md): install, reverse proxies, upgrade, operating
+- [Admin guide](docs/guide/admin/README.md): install, settings, users, backups, security
+- [API reference](docs/guide/api.md), written from the [contract](api/openapi.yaml), and [calling the API from a script](docs/guide/api-usage.md)
 - [Changelog](CHANGELOG.md): what each version changed
 - [Development guide](DEVELOPMENT.md): build, run and test from the sources
 - [Development documentation](docs/README.md): requirements, architecture decisions, design, security
@@ -161,8 +163,8 @@ automatic import: version 1.0 starts empty and events are moved by hand. The old
   with the version (shown under **About Haalendar** in the app), how you run it and the steps that lead to the problem.
 - **An idea:** open a [feature request](https://github.com/hasanfalizada/Haalendar/issues/new?template=feature_request.yml).
 - **A security problem:** never in a public issue — report it privately as the [security policy](SECURITY.md) says.
-- **Installing and running it:** the [installation guide](docs/operations/deployment.md) covers reverse proxies,
-  backups and upgrades.
+- **Installing and running it:** the [admin guide](docs/guide/admin/README.md) covers reverse proxies, settings,
+  users, backups and upgrades.
 
 Haalendar is a personal project: questions are answered as time allows, without guaranteed response times.
 

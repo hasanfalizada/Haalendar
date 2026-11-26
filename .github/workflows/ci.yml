@@ -2,7 +2,7 @@
 # branches and every pull request runs the checks of scripts/dev/check-all.sh, each job its own steps (--only), and
 # builds the image for linux/amd64 and linux/arm64 on a native runner of each, checked end to end by
 # scripts/dev/compose-check.sh. A tag vX.Y.Z publishes that image to ghcr.io/hasanfalizada/haalendar with its SBOM
-# and a signed provenance once every check passed; nothing is ever deployed (each user installs it, docs/operations/deployment.md).
+# and a signed provenance once every check passed; nothing is ever deployed (each user installs it, docs/guide/admin/install.md).
 # Weekly the dependency audit and the secret scan run again, for advisories published later.
 # Supply chain: every action pinned by its commit SHA, at least 7 days old when chosen (Dependabot proposes updates with a
 # 7-day cooldown, .github/dependabot.yml); no secrets but the job's own GITHUB_TOKEN, read-only except for publishing;
@@ -305,7 +305,7 @@ jobs:
         with:
           name: sbom
           path: sbom/
-      # A signed statement that this repository's workflow built this image (verify: docs/operations/deployment.md).
+      # A signed statement that this repository's workflow built this image (verify: docs/guide/admin/install.md).
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ env.IMAGE }}

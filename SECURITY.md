@@ -46,7 +46,7 @@ This is a community project maintained on a best-effort basis. As stated in the 
    [changelog](CHANGELOG.md).
 3. The advisory is published with the affected and the fixed versions, and a CVE is requested through GitHub when the
    issue affects installations.
-4. Operators upgrade with the usual [upgrade steps](docs/operations/deployment.md#3-upgrade); the advisory says when
+4. Operators upgrade with the usual [upgrade steps](docs/guide/admin/install.md#3-upgrade); the advisory says when
    more is needed, such as changing the secret key.
 
 ## Releases

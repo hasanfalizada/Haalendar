@@ -14,11 +14,12 @@ How Haalendar is specified, designed and built — requirements and every owner 
 | [`architecture/`](architecture/) | [Domain model, ER diagrams and data dictionary](architecture/domain-model.md), [time handling](architecture/time-handling.md) |
 | [`design/`](design/) | [Brand guidelines](design/brand-guidelines.md), [design system](design/design-system.md), [wireframes](design/wireframes.html) |
 | [`security/`](security/) | [Security baseline](security/security-baseline.md) (OWASP ASVS 5.0 L2, Top 10, API Top 10 — status per control) |
+| [`guide/`](guide/) | [Guides](guide/README.md) for administrators and API clients, the [API reference](guide/api.md) written from the contract <!-- +++===+++ 2026-11-26 — Hasan Alizada — HAAL-153. --> |
 | [`export/`](export/) | [Data export](export/README.md): archive layout, archive.json schema and versioning |
 
 ## Where things live
 - **`docs/` (this folder):** development documentation — requirements, architecture, ADRs, design, security, later QA and handover notes.
-- **Repository root:** what users, administrators and contributors need first — [README](../README.md), [CHANGELOG](../CHANGELOG.md), [LICENSE](../LICENSE) / [NOTICE](../NOTICE), [DEVELOPMENT](../DEVELOPMENT.md), [CONTRIBUTING](../CONTRIBUTING.md), [SECURITY](../SECURITY.md). User and administrator guides (installation, configuration, backup/restore, upgrade, legacy migration) will be added under `docs/guide/`.
+- **Repository root:** what users, administrators and contributors need first — [README](../README.md), [CHANGELOG](../CHANGELOG.md), [LICENSE](../LICENSE) / [NOTICE](../NOTICE), [DEVELOPMENT](../DEVELOPMENT.md), [CONTRIBUTING](../CONTRIBUTING.md), [SECURITY](../SECURITY.md). The [guides](guide/README.md) for administrators (installation, settings, users, backup and restore, security) and the [API reference](guide/api.md) are in `docs/guide/`. <!-- +++===+++ 2026-11-26 — Hasan Alizada — HAAL-153 (D-129). -->
 - **Code-level references:** the HTTP contract in [`api/`](../api/), atom contracts in [`atoms/`](../atoms/), the registry in [`project.manifest.json`](../project.manifest.json).
 
 ## Conventions
