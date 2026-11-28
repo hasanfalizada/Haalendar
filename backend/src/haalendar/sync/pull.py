@@ -51,6 +51,8 @@ ENTITIES: dict[str, tuple[str, str, tuple[str, ...]]] = {
     "card_assignee": ("card_assignee", "id", ()),
     # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. Links with an end the user reads.
     "link": ("link", "id", ()),
+    # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. Card comments of the boards the user reads.
+    "comment": ("comment", "id", ()),
 }
 
 
@@ -64,14 +66,18 @@ EVENT_FIELDS_SQL = (
     # +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The excluded dates of a series (active exceptions), ascending.
     "'exceptions', coalesce((SELECT jsonb_agg(to_char(x.occurrence_date, 'YYYY-MM-DD') ORDER BY x.occurrence_date) "
     "FROM recurrence_exception x WHERE x.event_id = e.id AND x.deleted_at IS NULL), '[]'::jsonb)) "
-    "FROM event e WHERE e.id = {alias}.id), '{{}}'::jsonb)"
+    # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122. Only the details of the item's kind: a converted item
+    # keeps those of its earlier kind (D-125), which must not travel with it.
+    "FROM event e WHERE e.id = {alias}.id AND {alias}.kind = 'event'), '{{}}'::jsonb)"
 )
 
 
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. An item of kind `note` carries its note fields (D-87; the copied
 # container stays on the server).
+# +++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104. The due time as "HH:MM", as a card's (D-121).
 NOTE_FIELDS_SQL = (
-    "coalesce((SELECT to_jsonb(n) - 'id' - 'container_kind' - 'container_id' FROM note n WHERE n.id = {alias}.id), "
+    "coalesce((SELECT (to_jsonb(n) - 'id' - 'container_kind' - 'container_id') "
+    "|| jsonb_build_object('due_time', to_char(n.due_time, 'HH24:MI')) FROM note n WHERE n.id = {alias}.id AND {alias}.kind = 'note'), "
     "'{{}}'::jsonb)"
 )
 
@@ -80,7 +86,7 @@ NOTE_FIELDS_SQL = (
 # the copied container stays on the server).
 CARD_FIELDS_SQL = (
     "coalesce((SELECT (to_jsonb(c) - 'id' - 'container_kind' - 'container_id' - 'board_id') "
-    "|| jsonb_build_object('due_time', to_char(c.due_time, 'HH24:MI')) FROM card c WHERE c.id = {alias}.id), "
+    "|| jsonb_build_object('due_time', to_char(c.due_time, 'HH24:MI')) FROM card c WHERE c.id = {alias}.id AND {alias}.kind = 'card'), "
     "'{{}}'::jsonb)"
 )
 
@@ -151,6 +157,9 @@ def _container_content_sql() -> str:
         f"UNION ALL SELECT 'card_assignee', t.id, t.sync_seq, {_data_expr('t', ())} FROM card_assignee t "
         f"WHERE t.container_kind = :kind AND t.container_id = :container "
         # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. And the links with an end in it.
+        # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. And the comments on its cards.
+        f"UNION ALL SELECT 'comment', t.id, t.sync_seq, {_data_expr('t', ())} FROM comment t "
+        f"WHERE t.container_kind = :kind AND t.container_id = :container "
         f"UNION ALL SELECT 'link', t.id, t.sync_seq, {_data_expr('t', ())} FROM link t "
         f"WHERE (t.container_kind = :kind AND t.container_id = :container) "
         f"OR (t.to_container_kind = :kind AND t.to_container_id = :container)"

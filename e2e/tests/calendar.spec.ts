@@ -315,6 +315,9 @@ test("Ctrl+S saves the event editor, E edits the event, Ctrl+Enter saves too", a
   await page.keyboard.press("Control+s"); // no changes yet: nothing saved, nothing for the browser
   await expect(editor).toBeVisible();
   await editor.getByLabel("Title").fill(title);
+  // +++===+++ 2026-11-24 20:02 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The key saves once the default calendar
+  // has arrived from the first sync, as the button does (on a slow runner it came after the title was typed).
+  await expect(save).toBeEnabled();
   await page.keyboard.press("Control+s");
   await expect(editor).toBeHidden();
   await expect.poll(kept).toEqual([false, false]);
@@ -367,4 +370,109 @@ test("the clock, the week and the day stand out in one frame", async ({ page }) 
   await page.goto("/calendar?view=week&date=2027-07-14");
   await expect(group).toContainText("Week 28");
   await expect(group).not.toContainText("Day 195");
+});
+
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The layers of due dates (D-122): a note's due date shows
+// in the day view and opens the note; "Layers" hides it, and the choice is still there after a reload (the setting
+// reached the server). The layer is shown again at the end: the users are shared by the tests.
+test("shows a note's due date as a layer and hides the layer", async ({ page }) => {
+  const title = unique("Renew the insurance");
+  await page.goto("/todo");
+  await page.getByRole("button", { name: "New note" }).first().click();
+  const editor = page.getByRole("dialog", { name: "New note" });
+  await editor.getByLabel("Title").fill(title);
+  await editor.getByLabel("Due date").fill("2030-03-14");
+  await editor.getByLabel("Time (optional)").fill("10:00");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+
+  await page.goto("/calendar?date=2030-03-14&view=day");
+  const due = page.getByRole("button", { name: `Open the note ${title}, due 10:00` });
+  await expect(due).toBeVisible();
+  await due.click();
+  await expect(page.getByRole("dialog", { name: "Edit note" }).getByLabel("Title")).toHaveValue(title);
+
+  await page.goto("/calendar?date=2030-03-14&view=day");
+  const layer = page.getByRole("complementary", { name: "Calendar sidebar" }).getByRole("checkbox", {
+    name: "Show Note due dates",
+  });
+  const saved = () =>
+    page.waitForResponse((r) => r.url().endsWith("/api/v1/me/settings") && r.request().method() === "PATCH" && r.ok());
+  let pushed = saved();
+  // The box follows the setting a moment after the click (as a calendar's box).
+  await layer.click();
+  await expect(layer).not.toBeChecked();
+  await pushed;
+  await expect(due).toBeHidden();
+  await page.reload();
+  await expect(layer).not.toBeChecked();
+  await expect(due).toBeHidden();
+
+  pushed = saved();
+  await layer.click();
+  await expect(layer).toBeChecked();
+  await pushed;
+  await expect(due).toBeVisible();
+});
+
+// +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195. Many all-day events no longer hide the hours (D-124): the
+// week's all-day row shows 3 a day and "+N more", the hours stay in sight; the day view shows the same on its hours
+// (List | Hours, a setting of the user, put back to List at the end for the other scenarios).
+test("all-day events fold so the hours stay in sight; the day on the hours", async ({ page }) => {
+  const day = "2027-06-16";
+  const prefix = unique("Allday");
+  for (const n of [1, 2, 3, 4, 5]) await createEvent(page, { date: day, title: `${prefix} ${String(n)}` });
+  const meeting = unique("Meeting");
+  await createEvent(page, { date: day, title: meeting, start: "09:00", end: "10:00" });
+
+  await page.goto(`/calendar?date=${day}&view=week`);
+  const row = page.getByRole("list", { name: "All day, Wednesday, June 16, 2027" });
+  await expect(row.getByRole("button", { name: /^Show \d+ more all-day/ })).toBeVisible();
+  await expect(row.getByRole("button", { name: /^Details of / })).toHaveCount(3);
+  await expect(page.getByRole("button", { name: `Details of ${meeting}` })).toBeInViewport();
+  await page.getByRole("button", { name: "Show all all-day events" }).click();
+  await expect(row.getByRole("button", { name: new RegExp(`^Details of ${prefix}`) })).toHaveCount(5);
+  await page.getByRole("button", { name: "Show fewer all-day events" }).click();
+  await expect(row.getByRole("button", { name: /^Details of / })).toHaveCount(3);
+
+  await page.goto(`/calendar?date=${day}`);
+  const layout = page.getByRole("radiogroup", { name: "Day as" });
+  const saved = (value: string) =>
+    page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/v1/me/settings") &&
+        r.request().method() === "PATCH" &&
+        r.ok() &&
+        r.request().postData()?.includes(value) === true,
+    );
+  await Promise.all([saved('"hours"'), layout.getByRole("radio", { name: "Hours" }).click()]);
+  try {
+    await expect(page.getByRole("list", { name: "Wednesday, June 16, 2027", exact: true })).toBeVisible();
+    await expect(row.getByRole("button", { name: /^Details of / })).toHaveCount(3);
+    await expect(page.getByRole("button", { name: `Details of ${meeting}` })).toBeInViewport();
+    await page.reload();
+    await expect(layout.getByRole("radio", { name: "Hours" })).toBeChecked();
+  } finally {
+    await Promise.all([saved('"list"'), layout.getByRole("radio", { name: "List" }).click()]);
+    await expect(layout.getByRole("radio", { name: "List" })).toBeChecked();
+  }
+});
+
+// +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. The header keeps one line where it can, folding labels as
+// it needs (with the sidebar open, as a new user sees it: one line at 1600 px and up, New event with its label at
+// 1920 px); narrower it breaks after the date, and New event stays on the line of the views, never alone below.
+test("keeps the calendar header on one line, or breaks it after the date", async ({ page }) => {
+  await page.goto("/calendar?date=2026-11-26");
+  const newEvent = page.getByRole("button", { name: "New event" }).first();
+  const today = page.getByRole("button", { name: "Today", exact: true });
+  const views = page.getByRole("radiogroup", { name: "View", exact: true });
+  const top = async (locator: typeof newEvent) => Math.round((await locator.boundingBox())?.y ?? -1);
+  const sameLine = async (a: typeof newEvent, b: typeof newEvent) => Math.abs((await top(a)) - (await top(b))) < 12;
+  for (const width of [1920, 1600, 1366, 1280, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(newEvent).toBeVisible();
+    await expect.poll(() => sameLine(newEvent, views)).toBe(true);
+    if (width >= 1600) await expect.poll(() => sameLine(newEvent, today)).toBe(true);
+    if (width === 1920) await expect(newEvent).toHaveText("New event");
+  }
 });

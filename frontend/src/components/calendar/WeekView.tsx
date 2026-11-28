@@ -12,11 +12,23 @@
 // events the user may not change stay put.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-124. The "Notes & cards" panel (`aside`) sits beside the grid inside its
 // drag context, so a note or card is dropped onto a time column or the all-day row (`onSchedule`, D-99).
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The due dates of notes and cards (layers, D-122) in the all-day row after the all-day
+// events, their time before the title: never on the hours, a due date has no length.
+// +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195. The all-day row folds as in Outlook (D-124): a day shows 3
+// all-day events and due dates and "+N more" (all 4 when there are 4, never "+1 more"), so the hours stay in sight; the
+// arrow at "all day", or a "+N more", opens the whole row for every day, and closes it again (remembered on the device);
+// an open row scrolls past 40 % of the view. The same grid shows one day: the day view's hours (`days` of one date, no
+// row of day names — the page's header names the day).
+// +++===+++ 2026-11-26 12:40 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.8, D-127). The all-day chips are 4 px apart, so a 24 px
+// circle around each touches no other target. The timed events keep their size on the hours: the length of an event
+// is what the grid shows (the "essential" exception); the day list offers the same events as large rows.
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettings } from "@/api/settings";
 import { type DayEntry, clockText, dayLabel, entriesOnDays } from "@/lib/dayView";
+import type { DueEntry } from "@/lib/dueLayers";
 import { itemColorClasses } from "@/lib/palette";
 import { useEntryTime } from "@/lib/entryTime";
 import type { OpenDetails } from "@/lib/openDetails";
@@ -26,12 +38,32 @@ import { DAY_MINUTES, MIN_MINUTES, layoutDay } from "@/lib/weekView";
 
 import { DropArea } from "./DropArea";
 import { type DetailsAnchor, type DragData, EventButton } from "./EventButton";
+import { DueChip } from "./DueChip";
 import { CalendarDnd } from "./EventDrag";
 
 type Row = Record<string, unknown>;
 
 export const HOUR_PX = 48;
 const MINUTE_PX = HOUR_PX / 60;
+/** All-day entries a day shows while the row is folded. */
+export const ALL_DAY_SHOWN = 3;
+const ALL_DAY_KEY = "haalendar.calendar.allDay";
+
+function storedAllDayOpen(): boolean {
+  try {
+    return window.localStorage.getItem(ALL_DAY_KEY) === "open";
+  } catch {
+    return false;
+  }
+}
+
+function storeAllDayOpen(open: boolean): void {
+  try {
+    window.localStorage.setItem(ALL_DAY_KEY, open ? "open" : "closed");
+  } catch {
+    // Blocked storage: the row's state lasts for this page only.
+  }
+}
 
 /** Minutes after midnight now in `timeZone`, moved every minute. */
 function useMinuteOfDay(timeZone: string): number {
@@ -57,6 +89,8 @@ function useMinuteOfDay(timeZone: string): number {
 interface WeekGridProps {
   days: readonly string[];
   rows: readonly Row[];
+  /** The due dates of notes and cards on the given days (layers). */
+  duesOn: (days: readonly string[]) => Map<string, DueEntry[]>;
   viewerTz: string;
   today: string;
   /** The open card. */
@@ -79,6 +113,7 @@ interface WeekGridProps {
 export function WeekGrid({
   days,
   rows,
+  duesOn,
   viewerTz,
   today,
   open,
@@ -100,12 +135,25 @@ export function WeekGrid({
   const scroller = useRef<HTMLDivElement>(null);
   const week = useMemo(() => {
     const byDay = entriesOnDays(rows, days, viewerTz, by);
+    const duesByDay = duesOn(days);
     return days.map((day) => {
       const entries = byDay.get(day) ?? [];
-      return { day, allDay: entries.filter((entry) => entry.allDay), timed: layoutDay(entries) };
+      return {
+        day,
+        allDay: entries.filter((entry) => entry.allDay),
+        dues: duesByDay.get(day) ?? [],
+        timed: layoutDay(entries),
+      };
     });
-  }, [days, rows, viewerTz, by]);
+  }, [days, rows, viewerTz, by, duesOn]);
   const hasToday = days.includes(today);
+  const [allDayOpen, setAllDayOpen] = useState(storedAllDayOpen);
+  const toggleAllDay = (open: boolean) => {
+    storeAllDayOpen(open);
+    setAllDayOpen(open);
+  };
+  // A day folds only what is more than one entry past the limit: "+1 more" would take the room of the one it hides.
+  const folds = week.some(({ allDay, dues }) => allDay.length + dues.length > ALL_DAY_SHOWN + 1);
 
   // A new week opens an hour before now (this week) or at 08:00; re-renders of the same week keep the scroll.
   const firstDay = days[0];
@@ -118,12 +166,15 @@ export function WeekGrid({
   const { range: time } = useEntryTime();
   const anchor: DetailsAnchor = { open, onOpen, onClose, inPopover, details, boundary };
 
-  const columns = "grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] md:grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
+  const single = days.length === 1;
+  const columns = single
+    ? "grid grid-cols-[2.75rem_minmax(0,1fr)] md:grid-cols-[3.5rem_minmax(0,1fr)]"
+    : "grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] md:grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
   return (
     <CalendarDnd minutePx={MINUTE_PX} onDrop={onDrop} {...(onSchedule ? { onSchedule } : {})}>
       <div className="flex h-full min-h-0">
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col text-xs">
-          <div className={cn(columns, "border-b border-line")} aria-hidden>
+          <div className={cn(columns, "border-b border-line", single && "hidden")} aria-hidden>
             <span />
             {days.map((day) => {
               const date = new Date(Date.parse(`${day}T00:00:00Z`));
@@ -140,42 +191,96 @@ export function WeekGrid({
               );
             })}
           </div>
-          <div className={cn(columns, "border-b border-line")}>
-            <span className="self-center pr-1 text-right text-[10.5px] text-muted">{t("calendar.week.allDay")}</span>
-            {week.map(({ day, allDay }) => (
-              <DropArea
-                as="ul"
-                id={`allday:${day}`}
-                data={{ kind: "allday", day }}
-                key={day}
-                aria-label={t("calendar.week.allDayOf", { date: dayLabel(day, i18n.language) })}
-                className="flex min-h-8 min-w-0 flex-col gap-0.5 border-l border-line p-0.5"
+          <div
+            data-testid="all-day-row"
+            className={cn(
+              columns,
+              "shrink-0 border-b border-line",
+              allDayOpen && folds && "max-h-[40%] overflow-y-auto",
+            )}
+          >
+            {folds ? (
+              <button
+                type="button"
+                aria-expanded={allDayOpen}
+                aria-label={t(allDayOpen ? "calendar.week.showFewer" : "calendar.week.showAll")}
+                title={t(allDayOpen ? "calendar.week.showFewer" : "calendar.week.showAll")}
+                onClick={() => {
+                  toggleAllDay(!allDayOpen);
+                }}
+                className="flex items-start justify-end gap-0.5 self-start pt-1 pr-1 text-right pointer-coarse:min-h-11 text-[10.5px] text-muted outline-none hover:text-fg focus-visible:ring-2 focus-visible:ring-primary"
               >
-                {allDay.map((entry) => {
-                  const id = `week-${day}-${entry.key}`;
-                  return (
-                    <li key={entry.key} className="min-w-0">
-                      <EventButton
-                        entry={entry}
-                        anchor={anchor}
-                        describedBy={id}
-                        place={day}
-                        drag={{ accepts: "allday", disabled: !canDrag(entry) }}
-                        className={cn(
-                          "w-full truncate rounded-sm py-0.5 pr-1 pl-2 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                          itemColorClasses(entry.color),
-                        )}
-                      >
-                        {entry.title || t("calendar.day.noTitle")}
-                        <span id={id} className="sr-only">
-                          {time(entry)}
-                        </span>
-                      </EventButton>
+                {t("calendar.week.allDay")}
+                {allDayOpen ? (
+                  <ChevronUp className="size-3 shrink-0" aria-hidden />
+                ) : (
+                  <ChevronDown className="size-3 shrink-0" aria-hidden />
+                )}
+              </button>
+            ) : (
+              <span className="self-center pr-1 text-right text-[10.5px] text-muted">{t("calendar.week.allDay")}</span>
+            )}
+            {week.map(({ day, allDay, dues }) => {
+              const total = allDay.length + dues.length;
+              const shown = allDayOpen || total <= ALL_DAY_SHOWN + 1 ? total : ALL_DAY_SHOWN;
+              return (
+                <DropArea
+                  as="ul"
+                  id={`allday:${day}`}
+                  data={{ kind: "allday", day }}
+                  data-week-grid
+                  key={day}
+                  aria-label={t("calendar.week.allDayOf", { date: dayLabel(day, i18n.language) })}
+                  className="flex min-h-8 min-w-0 flex-col gap-1 border-l border-line p-0.5"
+                >
+                  {allDay.slice(0, shown).map((entry) => {
+                    const id = `week-${day}-${entry.key}`;
+                    return (
+                      <li key={entry.key} className="min-w-0">
+                        <EventButton
+                          entry={entry}
+                          anchor={anchor}
+                          describedBy={id}
+                          place={day}
+                          drag={{ accepts: "allday", disabled: !canDrag(entry) }}
+                          className={cn(
+                            "w-full truncate rounded-sm py-0.5 pr-1 pl-2 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                            itemColorClasses(entry.color),
+                          )}
+                        >
+                          {entry.title || t("calendar.day.noTitle")}
+                          <span id={id} className="sr-only">
+                            {time(entry)}
+                          </span>
+                        </EventButton>
+                      </li>
+                    );
+                  })}
+                  {dues.slice(0, Math.max(0, shown - allDay.length)).map((due) => (
+                    <li key={due.key} className="min-w-0">
+                      <DueChip entry={due} variant="chip" />
                     </li>
-                  );
-                })}
-              </DropArea>
-            ))}
+                  ))}
+                  {shown < total ? (
+                    <li className="min-w-0">
+                      <button
+                        type="button"
+                        aria-label={t("calendar.week.moreOn", {
+                          count: total - shown,
+                          date: dayLabel(day, i18n.language),
+                        })}
+                        onClick={() => {
+                          toggleAllDay(true);
+                        }}
+                        className="w-full truncate rounded-sm px-1 py-0.5 text-left font-medium text-muted outline-none hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        {t("calendar.week.more", { count: total - shown })}
+                      </button>
+                    </li>
+                  ) : null}
+                </DropArea>
+              );
+            })}
           </div>
           <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto">
             <div className={columns} style={{ height: 24 * HOUR_PX }}>
@@ -195,6 +300,7 @@ export function WeekGrid({
                   as="ol"
                   id={`time:${day}`}
                   data={{ kind: "time", day }}
+                  data-week-grid
                   key={day}
                   aria-label={dayLabel(day, i18n.language)}
                   className={cn(

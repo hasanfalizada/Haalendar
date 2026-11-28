@@ -7,10 +7,12 @@
 // - Dates: an event is kept when one of its days (or of its occurrences) is in the range; a note or a card when its due
 //   date is (none: left out). Presets: today, this week (from the user's first weekday), this month, the next 30 days.
 // - Labels by name (case and accents ignored): the personal labels of notes and the labels of boards in one list.
+// +++===+++ 2026-11-23 22:10 +04 — Hasan Alizada — HAAL-104 (D-121). A note's due date is a wall-clock date as a
+// card's; the planned instant `due_at` is gone.
 import { occurrences } from "@/atoms/calendar/recurrence";
 import type { Priority } from "@/atoms/items/priority";
 
-import { addDays, daysBetween, todayIn } from "./datetime";
+import { addDays, daysBetween } from "./datetime";
 import { exceptionsOf } from "./dayView";
 import { dayToShow } from "./duplicates";
 import { weekStartOf } from "./monthGrid";
@@ -19,6 +21,7 @@ import type { Color } from "@/api/generated/types.gen";
 
 import { DEFAULT_COLOR } from "./palette";
 import { fold, type SearchModule } from "./search";
+import type { SearchFilter } from "./searchFilterShape";
 
 type Row = Record<string, unknown>;
 
@@ -26,27 +29,9 @@ export const SEARCH_MODULES: readonly SearchModule[] = ["calendar", "todo", "kan
 export const DATE_PRESETS = ["today", "week", "month", "next30"] as const;
 export type DatePreset = (typeof DATE_PRESETS)[number];
 
-export interface SearchFilter {
-  modules: SearchModule[];
-  /** "YYYY-MM-DD" or null; one alone is that day. */
-  from: string | null;
-  to: string | null;
-  calendars: string[];
-  colors: Color[];
-  priorities: Priority[];
-  /** Label names, folded. */
-  labels: string[];
-}
-
-export const NO_FILTER: SearchFilter = {
-  modules: [],
-  from: null,
-  to: null,
-  calendars: [],
-  colors: [],
-  priorities: [],
-  labels: [],
-};
+// HAAL-143 (D-128): the shape and the empty filter live in searchFilterShape, which the start bundle may import without
+// the matching code (recurrence, day lists, Markdown).
+export { NO_FILTER, type SearchFilter } from "./searchFilterShape";
 
 export function filterActive(filter: SearchFilter): boolean {
   return (
@@ -93,14 +78,10 @@ export interface CompiledFilter {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
-/** The due day of a note or a card in the viewer's zone. */
-function dueDay(row: Row, viewerTz: string): string | null {
+/** The due day of a note or a card (a wall-clock date, D-92 / D-121). */
+function dueDay(row: Row): string | null {
   const date = text(row.due_date);
-  if (date) return date.slice(0, 10);
-  const at = text(row.due_at);
-  if (!at) return null;
-  const ms = Date.parse(at);
-  return Number.isNaN(ms) ? null : todayIn(viewerTz, new Date(ms));
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
 }
 
 /** One of the event's days (or occurrences) is within [from, to]. */
@@ -170,14 +151,14 @@ export function compileFilter(filter: SearchFilter, context: FilterContext): Com
     if (range) {
       const [start = "", end = ""] = range;
       if (module === "calendar") return eventIn(row, start, end, context.viewerTz);
-      const due = dueDay(row, context.viewerTz);
+      const due = dueDay(row);
       return due !== null && due >= start && due <= end;
     }
     return true;
   };
 
   const dayOf = (row: Row): string | null =>
-    row.kind === "event" ? dayToShow(row, context.today, context.viewerTz) : dueDay(row, context.viewerTz);
+    row.kind === "event" ? dayToShow(row, context.today, context.viewerTz) : dueDay(row);
 
   return { active: filterActive(filter), modules, keep, dayOf };
 }

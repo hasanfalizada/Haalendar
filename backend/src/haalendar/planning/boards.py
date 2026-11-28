@@ -23,7 +23,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from haalendar.attachments.models import Attachment
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
-from haalendar.planning.models import Board, BoardColumn, CardAssignee, ChecklistItem, Item, ItemLabel, Label
+from haalendar.planning.models import (
+    Board,
+    BoardColumn,
+    CardAssignee,
+    ChecklistItem,
+    Comment,
+    Item,
+    ItemLabel,
+    Label,
+)
 from haalendar.planning.notes import checked_position
 from haalendar.planning.service import Outcome, merge
 from haalendar.softdelete import new_batch, restore_batch
@@ -34,6 +43,7 @@ NAME_MAX = 100
 # The rows that live in a board and go to the trash with it.
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-112. Its labels and the labels on its cards too.
 # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the cards' assignees.
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. And the cards' comments.
 CONTENTS: tuple[type[Any], ...] = (
     BoardColumn,
     Item,
@@ -42,6 +52,7 @@ CONTENTS: tuple[type[Any], ...] = (
     Label,
     ItemLabel,
     CardAssignee,
+    Comment,
 )
 
 

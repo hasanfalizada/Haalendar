@@ -8,7 +8,10 @@ export const LICENSE_NAME = "Apache-2.0";
 export const AUTHOR_URL = "https://hasanalizada.net/";
 export const REPOSITORY_URL = "https://github.com/hasanfalizada/Haalendar";
 export const LICENSE_URL = `${REPOSITORY_URL}/blob/master/LICENSE`;
-export const DOCS_URL = `${REPOSITORY_URL}/tree/master/docs`;
+// +++===+++ 2026-11-26 23:58 +04 — Hasan Alizada — HAAL-153 (D-129). Help → Documentation opens the user guide (it led to
+// the development documentation); master holds the guide of the latest release. backend/tests/test_user_guide.py checks
+// that the page exists.
+export const DOCS_URL = `${REPOSITORY_URL}/blob/master/docs/guide/user/README.md`;
 export const ISSUES_URL = `${REPOSITORY_URL}/issues`;
 // +++===+++ 2026-11-17 19:52 +04 — Hasan Alizada — HAAL-183. What the public demo keeps about a visitor and its terms,
 // linked from the demo banner; the demo runs a release, so the guide on master matches it.

@@ -104,7 +104,8 @@ export function PriorityFilter({ value, onChange }: PriorityFilterProps) {
         type="button"
         aria-pressed={selected.size === 0}
         className={cn(
-          "h-11 rounded-sm px-2.5 text-[13px] pointer-fine:md:h-8",
+          // HAAL-143 (D-127): 44 px wide on touch too.
+          "h-11 min-w-11 rounded-sm px-2.5 text-[13px] pointer-fine:md:h-8 pointer-fine:md:min-w-0",
           selected.size === 0 ? "bg-primary-tint text-primary" : "text-muted hover:bg-surface",
         )}
         onClick={() => {

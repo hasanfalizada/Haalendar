@@ -164,7 +164,7 @@ describe("cards on the board", { timeout: 20_000 }, () => {
   it("adds cards at the end of a column and keeps the field open for the next one", async () => {
     const { user } = await open();
     const done = await screen.findByRole("region", { name: "Done" });
-    await user.click(within(done).getByRole("button", { name: "Add a card to Done" }));
+    await user.click(within(done).getByRole("button", { name: "Add card to Done" }));
     const field = within(done).getByLabelText("Title of the new card in Done");
     await user.type(field, "  First  {Enter}");
     await screen.findByText("Card added: First");
@@ -241,6 +241,20 @@ describe("cards on the board", { timeout: 20_000 }, () => {
     await waitFor(async () => {
       expect((await db.items.get(SHIP))?.deleted_at).toBeFalsy();
     });
+  });
+
+  // +++===+++ 2026-11-25 09:48 +04 — Hasan Alizada — HAAL-114 (found by the end-to-end test of the card's history). A
+  // card without a description (null, as a card added on the board is) keeps it: an empty field is no change.
+  it("leaves an empty description alone when saving another field", async () => {
+    const { user } = await open({}, null, [card("bare", "Bare", { body: null, position: "Z" })]);
+    await user.click(await screen.findByRole("button", { name: "Open Bare" }));
+    const editor = await screen.findByRole("dialog", { name: "Edit card" });
+    await user.type(within(editor).getByLabelText("Title"), " card");
+    await user.click(within(editor).getByRole("button", { name: "Save" }));
+    await screen.findByText("Saved Bare card");
+    const [update] = await outbox();
+    expect(update).toMatchObject({ entity_id: "bare", base: { title: "Bare" }, data: { title: "Bare card" } });
+    expect(Object.keys(update?.data ?? {})).toEqual(["title"]);
   });
 
   it("moves a card with Alt+arrows, keeping the focus, telling where it went and undoing it", async () => {

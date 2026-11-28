@@ -132,7 +132,7 @@ Legend: PK primary key, FK foreign key, NN not null, U unique. Common columns (P
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid PK | shared with subtype row (1:1) |
-| kind | item_kind NN | immutable except via conversion (FR-INT-02) |
+| kind | item_kind NN | immutable except via conversion (FR-INT-02, D-125: in place; the details row of an earlier kind stays and counts only while the item has that kind) |
 | owner_id | uuid FK user NN | creator/owner |
 | container_kind | container_kind NN | `calendar` for events, `board` for cards, `note` for notes |
 | container_id | uuid NN | calendar.id / board.id / item.id of the note itself; used by authz and RLS |
@@ -179,13 +179,15 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 
 ### 5.7 `note` (subtype, also its own container)
 <!-- +++===+++ 2026-10-29 — Hasan Alizada — HAAL-100. As built (migration 0022, D-87): the key column is `id` (= item.id) and the row carries `container_kind` = `note` / `container_id` = its own id (CHECK), like `event`; `position` is text ≤ 64 of letters and digits (CHECK). The note item is its own container: `haalendar_owns_container('note', id)` is the note item's owner; the `item` read / insert policies also admit the owner's own note while it is inserted. An archived note stays editable. -->
+<!-- +++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104. Migration 0035, D-121: `due_at` became `due_date` + `due_time` as on a card (time needs the date, CHECK). -->
 | Column | Type | Rules |
 |---|---|---|
 | item_id | uuid PK FK item | |
 | pinned | bool NN | default false (FR-TODO-03) |
 | archived_at | timestamptz | archive ≠ delete |
 | position | text NN | manual order (FR-TODO-05) |
-| due_at | timestamptz | optional; shown in calendar layer (FR-TODO-06) |
+| due_date | date | optional; shown in calendar layer (FR-TODO-06) |
+| due_time | time | optional, needs `due_date`; wall-clock in the owner's zone |
 | is_checklist | bool NN | checklist mode (FR-TODO-02) |
 
 ### 5.8 `card` (subtype)
@@ -282,6 +284,8 @@ Effective series start (FR-CAL-14) and overdue counter (FR-CAL-17) are computed 
 | body | text NN | Markdown |
 | [common] | | |
 
++++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. As built (migration 0037, D-123): `body` 1-10 000 characters (check constraint); `edited_at` (timestamptz, set when the text changes: "edited"); the card's board as `container_kind` / `container_id` (content policies, author `author_id`); `created_by`, `updated_by`, `delete_batch_id`, `version`, `sync_seq`. Synced, audited, soft-deleted only; a new comment writes a `comment` notification for the card's assignees except the author.
+
 ### 5.16 `share`
 | Column | Type | Rules |
 |---|---|---|
@@ -341,7 +345,7 @@ Conflict records (both values of a field changed on two devices) live on the dev
 | Table | Key columns | Rules |
 |---|---|---|
 | `user_account` (table name; `user` is reserved in PostgreSQL) | id, email (U on lower(email)), email_verified_at, password_hash, display_name, avatar_key, time_zone (IANA), locale, role, totp_secret_enc, totp_enabled_at, failed_login_count, locked_until, last_login_at, deactivated_at, must_change_password, [common] | Argon2id hash; TOTP secret encrypted with server key; soft deactivation (ADR-0005) |
-| `user_settings` | owner_id PK (FK user_account), week_start (0..6, default 1 = Monday), time_format (`24h`/`12h`), theme (`system`/`light`/`dark`), default_color (default `brown`), agenda_days (1..365, default 30), week_ab_enabled, week_ab_anchor (date: any day of a week labelled first; required while enabled), week_ab_labels (text[2], default {A,B}, different), hidden_calendars (uuid[], default {}; calendars hidden in the views — migration 0020, D-82), note_layout (`grid`/`list`, default `grid`; the To-Do page — migration 0033, D-110), day_order (`time`/`color`, default `time`; the events of a day — migration 0034, D-111), created_at, updated_at, version, sync_seq | FR-ACC-09, FR-CAL-23/27; owner-only RLS, no delete, not audited (D-50, HAAL-045) |
+| `user_settings` | owner_id PK (FK user_account), week_start (0..6, default 1 = Monday), time_format (`24h`/`12h`), theme (`system`/`light`/`dark`), default_color (default `brown`), agenda_days (1..365, default 30), week_ab_enabled, week_ab_anchor (date: any day of a week labelled first; required while enabled), week_ab_labels (text[2], default {A,B}, different), hidden_calendars (uuid[], default {}; calendars hidden in the views — migration 0020, D-82), note_layout (`grid`/`list`, default `grid`; the To-Do page — migration 0033, D-110), day_order (`time`/`color`, default `time`; the events of a day — migration 0034, D-111), hidden_layers (text[], subset of `note_due`/`card_due`, default {}; layers of due dates hidden in the calendar views — migration 0036, D-122), day_layout (`list`/`hours`, default `list`; the day view — migration 0038, D-124), created_at, updated_at, version, sync_seq | FR-ACC-09, FR-CAL-23/27; owner-only RLS, no delete, not audited (D-50, HAAL-045) |
 | `session` | id, token_hash (U), user_id, created_at, last_seen_at, idle_expires_at, absolute_expires_at, revoked_at, user_agent, ip_prefix, csrf_secret, reauth_at | idle 30 d, absolute 90 d; re-auth window 15 min (ADR-0005) |
 | `auth_token` | id, user_id (NULL for invite to new e-mail), email, purpose, token_hash (U), expires_at, used_at, created_by | verify 24 h, reset 1 h, invite |
 | `recovery_code` | id, user_id, code_hash, used_at, created_at | 10 per TOTP enrolment |

@@ -2,7 +2,7 @@
 openapi: 3.1.1
 info:
   title: Haalendar API
-  version: 1.1.0
+  version: 1.2.0
   summary: Calendar, To-Do and Kanban — self-hosted, multi-user, offline-first.
   description: |
     Conventions (see api/README.md):
@@ -36,7 +36,7 @@ tags:
   - { name: export, description: Data export }
   - { name: notifications, description: In-app notification center }
   - { name: bulk, description: Multi-select operations }
-  - { name: sync, description: 'Offline sync (ADR-0009): pull and push implemented; live updates (stream) planned for HAAL-055' }
+  - { name: sync, description: 'Offline sync (ADR-0009): pull, push and the live event stream' }
   - { name: system, description: Health and demo }
 
 paths:

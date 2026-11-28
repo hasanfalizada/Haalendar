@@ -13,13 +13,21 @@ interface CalendarSearch {
   view?: CalendarViewKind;
   // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. An event whose card opens (from a reminder notification).
   event?: string;
+  // +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). The command palette asks for a new event, with its title.
+  new?: "event";
+  title?: string;
 }
 
 function CalendarPage() {
-  const { date, view, event } = Route.useSearch();
+  const { date, view, event, new: create, title } = Route.useSearch();
   const viewerTz = useDisplayTimeZone();
   return (
-    <DayView date={date ?? todayIn(viewerTz)} view={view ?? storedView()} {...(event ? { focusEvent: event } : {})} />
+    <DayView
+      date={date ?? todayIn(viewerTz)}
+      view={view ?? storedView()}
+      {...(event ? { focusEvent: event } : {})}
+      {...(create ? { createEvent: title ?? "" } : {})}
+    />
   );
 }
 
@@ -29,6 +37,8 @@ export const Route = createFileRoute("/_app/calendar")({
     date: typeof search.date === "string" && isRealDate(search.date) ? search.date : undefined,
     view: asView(search.view),
     event: typeof search.event === "string" && /^[0-9a-f-]{36}$/i.test(search.event) ? search.event : undefined,
+    new: search.new === "event" ? "event" : undefined,
+    title: typeof search.title === "string" ? search.title.slice(0, 500) : undefined,
   }),
   component: CalendarPage,
 });

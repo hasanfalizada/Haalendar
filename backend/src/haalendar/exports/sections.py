@@ -44,6 +44,7 @@ from haalendar.planning.models import (
     Card,
     CardAssignee,
     ChecklistItem,
+    Comment,
     Event,
     Item,
     ItemLabel,
@@ -181,7 +182,13 @@ async def _events(ctx: ExportContext, calendar_ids: list[uuid.UUID]) -> None:
         await ctx.db.execute(
             select(Item, Event)
             .join(Event, Event.id == Item.id)
-            .where(Event.container_kind == "calendar", Event.container_id.in_(calendar_ids))
+            .where(
+                # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122. Events only: a converted item keeps the
+                # details of its earlier kind (D-125).
+                Item.kind == "event",
+                Event.container_kind == "calendar",
+                Event.container_id.in_(calendar_ids),
+            )
             .order_by(Event.start_date, Event.start_time.nulls_first(), Item.id)
         )
     ).all():
@@ -227,6 +234,29 @@ async def _checklist_items(ctx: ExportContext, item_ids: list[uuid.UUID]) -> Non
         )
 
 
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. The comments on these cards (D-123; deleted ones included, as the
+# checklist items), oldest first.
+async def _comments(ctx: ExportContext, item_ids: list[uuid.UUID]) -> None:
+    if not item_ids:
+        return
+    for entry in await ctx.db.scalars(
+        select(Comment)
+        .where(Comment.item_id.in_(item_ids))
+        .order_by(Comment.item_id, Comment.created_at, Comment.id)
+    ):
+        ctx.archive.add_row(
+            "comments",
+            {
+                "id": entry.id,
+                "item_id": entry.item_id,
+                "author_id": entry.author_id,
+                "body": entry.body,
+                "edited_at": entry.edited_at,
+                **_meta(entry),
+            },
+        )
+
+
 async def todo_section(ctx: ExportContext) -> None:
     rows = (
         await ctx.db.execute(
@@ -259,7 +289,8 @@ async def todo_section(ctx: ExportContext) -> None:
                 "pinned": note.pinned,
                 "archived_at": note.archived_at,
                 "position": note.position,
-                "due_at": note.due_at,
+                "due_date": note.due_date,
+                "due_time": note.due_time.strftime("%H:%M") if note.due_time else None,
                 "is_checklist": note.is_checklist,
                 "label_ids": note_labels.get(item.id, []),
                 "permission": "owner",
@@ -315,7 +346,7 @@ async def kanban_section(ctx: ExportContext) -> None:
         await ctx.db.execute(
             select(Item, Card)
             .join(Card, Card.id == Item.id)
-            .where(Card.board_id.in_(board_ids))
+            .where(Item.kind == "card", Card.board_id.in_(board_ids))  # HAAL-122: cards only (D-125)
             .order_by(Card.column_id, Card.position.collate("C"), Item.id)
         )
     ).all():
@@ -383,6 +414,7 @@ async def kanban_section(ctx: ExportContext) -> None:
         )
     card_ids = [entry["id"] for entries in cards.values() for entry in entries]
     await _checklist_items(ctx, card_ids)
+    await _comments(ctx, card_ids)
     await _attachments(ctx, "board", board_ids, "kanban")
 
 

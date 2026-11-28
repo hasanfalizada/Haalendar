@@ -4,6 +4,7 @@
 // - whether an item is already time-blocked (a live link of origin time_block to it);
 // - the event a drop makes: the item's title, at the dropped time for an hour (an all-day event on the all-day row),
 //   in the default calendar and colour; and the start "Schedule…" offers (the next quarter hour today, else 09:00).
+// +++===+++ 2026-11-23 22:10 +04 — Hasan Alizada — HAAL-104 (D-121). A note's due date is `due_date`, as a card's.
 import { addDays } from "./datetime";
 import { type EventForm, newEventForm } from "./eventForm";
 import { matchesQuery } from "./search";
@@ -25,7 +26,7 @@ const textOf = (value: unknown) => (typeof value === "string" ? value : "");
 const BLOCK_MINUTES = 60;
 
 function dueOf(row: Row): string | null {
-  const due = textOf(row.due_date) || textOf(row.due_at).slice(0, 10);
+  const due = textOf(row.due_date);
   return /^\d{4}-\d{2}-\d{2}$/.test(due) ? due : null;
 }
 

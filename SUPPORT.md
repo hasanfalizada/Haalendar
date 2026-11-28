@@ -8,7 +8,7 @@ issue is opened); the same as "Getting help" in the README. -->
   Please leave personal data out of logs and screenshots.
 - **An idea:** open a [feature request](https://github.com/hasanfalizada/Haalendar/issues/new?template=feature_request.yml).
 - **A security problem:** never in a public issue — report it privately as the [security policy](SECURITY.md) says.
-- **Installing and running it:** the [installation guide](docs/operations/deployment.md) covers reverse proxies,
-  backups and upgrades; [README](README.md) has the quick start.
+- **Installing and running it:** the [admin guide](docs/guide/admin/README.md) covers reverse proxies, settings,
+  users, backups and upgrades; [README](README.md) has the quick start.
 
 Haalendar is a personal project: questions are answered as time allows, without guaranteed response times.

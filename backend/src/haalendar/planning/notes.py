@@ -4,6 +4,9 @@
 (any time archives — the server takes its own time —, null unarchives; archive ≠ delete and an archived note stays
 editable), position (fractional index the client computes, lexicographic order). A note is its own container: only
 its owner creates it, it cannot move. Title may be empty (a note of body only). Written through sync like events.
++++===+++ 2026-11-23 17:40 +04 — Hasan Alizada — HAAL-104. A due date with an optional time, as a card's (D-121):
+wall-clock in the owner's zone, a date alone the whole day, a time only with a date (haalendar.planning.due). Like the
+title and the body it is the note's content: an edit share changes it too.
 """
 
 from __future__ import annotations
@@ -17,12 +20,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from haalendar.errors import ProblemCode, ProblemError
 from haalendar.logging import get_logger
+from haalendar.planning import due
 from haalendar.planning.models import Item, Note
 
 log = get_logger(__name__)
 
 # +++===+++ 2026-10-29 — Hasan Alizada — HAAL-101. is_checklist: the note has a checklist (D-88).
-NOTE_FIELDS = ("pinned", "archived_at", "position", "is_checklist")
+NOTE_FIELDS = ("pinned", "archived_at", "position", "is_checklist", "due_date", "due_time")
 POSITION = re.compile(r"[0-9A-Za-z]{1,64}")
 
 
@@ -48,11 +52,13 @@ def state_of(note: Note) -> dict[str, Any]:
         "archived_at": note.archived_at is not None,
         "position": note.position,
         "is_checklist": note.is_checklist,
+        **due.state_of(note),
     }
 
 
 def as_flag(values: dict[str, Any]) -> dict[str, Any]:
-    """Incoming archive times (base or new) as the flag they merge as."""
+    """Incoming archive times (base or new) as the flag they merge as; a due time as "HH:MM"."""
+    values = due.normalize(values)
     if "archived_at" not in values:
         return values
     return {**values, "archived_at": values["archived_at"] is not None and values["archived_at"] is not False}
@@ -68,6 +74,7 @@ def apply(note: Note, values: dict[str, Any]) -> None:
             note.pinned = bool(value)
         elif name == "is_checklist":
             note.is_checklist = bool(value)
+    due.apply(note, {name: value for name, value in values.items() if name in due.DUE_FIELDS}, _problem)
 
 
 async def create_note(
@@ -98,17 +105,23 @@ async def create_note(
     )
     db.add(item)
     await db.flush()
-    db.add(
-        Note(
-            id=item_id,
-            container_kind="note",
-            container_id=item_id,
-            pinned=bool(note_values.get("pinned")),
-            is_checklist=bool(note_values.get("is_checklist")),
-            archived_at=datetime.now(UTC) if note_values.get("archived_at") else None,
-            position=position,
-        )
+    note = Note(
+        id=item_id,
+        container_kind="note",
+        container_id=item_id,
+        pinned=bool(note_values.get("pinned")),
+        is_checklist=bool(note_values.get("is_checklist")),
+        archived_at=datetime.now(UTC) if note_values.get("archived_at") else None,
+        position=position,
+        due_date=None,
+        due_time=None,
     )
+    due.apply(
+        note,
+        due.normalize({name: note_values[name] for name in due.DUE_FIELDS if name in note_values}),
+        _problem,
+    )
+    db.add(note)
     await db.flush()
     log.info("note_created", item_id=str(item_id), user_id=str(user_id))
     return item.version

@@ -5,8 +5,13 @@
 // results (combobox and listbox), Enter or a click opens one: an event on its day with its card, a note, a card on its
 // board. A date typed as YYYY-MM-DD offers that day first, so Enter opens it. Works on the items of this device, so it
 // works offline. On phones it takes the whole screen.
+// +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). Opened by Ctrl+K (and on phones by the search
+// field) it is the command palette: the commands of lib/commands while the field is empty, and with words the matching
+// commands and "Create …" with them before the results. Pressed again Ctrl+K closes it; from the search it turns it
+// into the palette. An event and a note open their editors with the title; a card is added at once to the first
+// column of the board, with Undo, and the board opens.
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
 import { Dialog as RadixDialog } from "radix-ui";
 import { type ReactNode, useDeferredValue, useId, useMemo, useState } from "react";
@@ -15,6 +20,12 @@ import { useTranslation } from "react-i18next";
 import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
 import { useCalendars } from "@/components/calendar/useCalendars";
+import { createCard } from "@/components/kanban/cardWrites";
+import { boardLists } from "@/lib/boards";
+import { newCardPosition } from "@/lib/cards";
+import { columnsOf } from "@/lib/columns";
+import { type CommandAction, type PaletteCommand, pickCommands } from "@/lib/commands";
+import { asView } from "@/lib/calendarView";
 import { isRealDate, todayIn, useDisplayTimeZone } from "@/lib/datetime";
 import { dayLabel } from "@/lib/dayView";
 import { dayToShow } from "@/lib/duplicates";
@@ -31,24 +42,27 @@ import {
   snippet,
 } from "@/lib/search";
 import { compileFilter } from "@/lib/searchFilter";
-import { useShortcut } from "@/lib/shortcuts";
+import { keyCaps } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { localKeys, localRows } from "@/sync";
 import type { EntityType } from "@/sync/db";
 
 import { SearchFilters } from "./SearchFilters";
-import {
-  closedForResult,
-  closeSearchForResult,
-  setSearchFilter,
-  setSearchOpen,
-  useSearchFilter,
-  useSearchOpen,
-} from "./searchOpen";
+import { closedForResult, closeSearchForResult, setSearchFilter, useSearchFilter, useSearchMode } from "./searchOpen";
 
 const MODULES: readonly SearchModule[] = ["calendar", "todo", "kanban"];
 
-type Option = { kind: "date"; date: string } | { kind: "hit"; hit: SearchHit };
+type Option =
+  { kind: "date"; date: string } | { kind: "command"; command: PaletteCommand } | { kind: "hit"; hit: SearchHit };
+
+const GROUPS = ["go", "create"] as const;
+
+const keyOf = (option: Option) =>
+  option.kind === "date"
+    ? "date"
+    : option.kind === "command"
+      ? `command:${option.command.id}`
+      : String(option.hit.row.id);
 
 /** The text with the query's words marked. */
 function Marked({ text, query }: { text: string; query: string }) {
@@ -76,25 +90,9 @@ function useLocal(user: string | undefined, entity: EntityType) {
   return data;
 }
 
-export function SearchDialog() {
-  const open = useSearchOpen();
-  useShortcut({
-    id: "search",
-    keys: ["/"],
-    group: "general",
-    label: "shortcuts.search",
-    handler: () => {
-      setSearchOpen(true);
-    },
-  });
-  return (
-    <RadixDialog.Root open={open} onOpenChange={setSearchOpen}>
-      {open ? <SearchWindow /> : null}
-    </RadixDialog.Root>
-  );
-}
-
-function SearchWindow() {
+// +++===+++ 2026-11-26 16:20 +04 — Hasan Alizada — HAAL-143 (D-128). The window itself, a chunk of its own loaded the first
+// time it opens (SearchLauncher keeps the keys and the open state in the start bundle).
+export default function SearchWindow() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const viewerTz = useDisplayTimeZone();
@@ -102,12 +100,19 @@ function SearchWindow() {
   const user = me?.id;
   const items = useLocal(user, "item");
   const checklistItems = useLocal(user, "checklist_item");
+  // +++===+++ 2026-11-25 09:45 +04 — Hasan Alizada — HAAL-114. Card comments are searched too (D-123).
+  const comments = useLocal(user, "comment");
   const boards = useLocal(user, "board");
+  const columnRows = useLocal(user, "board_column");
+  const shares = useLocal(user, "share");
+  const mode = useSearchMode();
+  const palette = mode === "commands";
+  const location = useRouterState({ select: (state) => state.location });
   // +++===+++ 2026-11-23 12:00 +04 — Hasan Alizada — HAAL-046 (D-120). The filters, under the field.
   const labels = useLocal(user, "label");
   const itemLabels = useLocal(user, "item_label");
   const { shown, own, shared } = useCalendars(user);
-  const { week_start: weekStart } = useSettings();
+  const { week_start: weekStart, default_color: defaultColor } = useSettings();
   const filter = useSearchFilter();
   const [query, setQuery] = useState("");
   // Typing stays quick on many items: the results follow the field when there is time.
@@ -136,25 +141,106 @@ function SearchWindow() {
     return [...names.values()].sort((a, b) => a.localeCompare(b));
   }, [labels]);
   const results = useMemo(
-    () => searchItems({ items, checklistItems, boards, calendarShown: shown }, deferred, 20, compiled),
-    [items, checklistItems, boards, shown, deferred, compiled],
+    () => searchItems({ items, checklistItems, comments, boards, calendarShown: shown }, deferred, 20, compiled),
+    [items, checklistItems, comments, boards, shown, deferred, compiled],
   );
   const trimmed = deferred.trim();
   const asked = trimmed !== "" || compiled.active;
+  const currentBoard = /^\/kanban\/([^/]+)$/.exec(location.pathname)?.[1];
+  const commands = useMemo(() => {
+    if (!palette || !user) return [];
+    const lists = boardLists(boards, user);
+    const writable = new Set([
+      ...lists.own.map((board) => String(board.id)),
+      ...shares
+        .filter(
+          (share) =>
+            share.container_kind === "board" &&
+            share.grantee_id === user &&
+            share.permission === "edit" &&
+            !share.revoked_at,
+        )
+        .map((share) => String(share.container_id)),
+    ]);
+    return pickCommands(
+      {
+        boards: [...lists.own, ...lists.shared],
+        writable,
+        firstColumn: (boardId) => {
+          const first = columnsOf(columnRows, boardId).active[0];
+          return first ? String(first.id) : undefined;
+        },
+        admin: me.role === "admin",
+        ...(currentBoard ? { currentBoard } : {}),
+        t: (key, values) => t(key as never, values),
+      },
+      deferred,
+    );
+  }, [palette, user, boards, shares, columnRows, me, currentBoard, t, deferred]);
   const options = useMemo<Option[]>(
     () => [
       ...(isRealDate(trimmed) ? [{ kind: "date" as const, date: trimmed }] : []),
+      ...GROUPS.flatMap((group) =>
+        commands.filter((command) => command.group === group).map((command) => ({ kind: "command" as const, command })),
+      ),
       ...MODULES.flatMap((module) => results[module].map((hit) => ({ kind: "hit" as const, hit }))),
     ],
-    [results, trimmed],
+    [results, trimmed, commands],
   );
   const boardNames = useMemo(() => new Map(boards.map((board) => [String(board.id), board.name])), [boards]);
   const current = Math.min(active, Math.max(options.length - 1, 0));
   const optionId = (index: number) => `${id}-option-${String(index)}`;
 
+  // The day a new event starts on and the view: the ones shown in the calendar, else today and the view last chosen.
+  const calendarPlace = () => {
+    const { date, view } = location.search as { date?: unknown; view?: unknown };
+    const calendar = location.pathname === "/calendar";
+    return {
+      date: calendar && typeof date === "string" && isRealDate(date) ? date : today,
+      view: calendar ? asView(view) : undefined,
+    };
+  };
+  const run = (action: CommandAction) => {
+    log.info("command_run", { kind: action.kind });
+    switch (action.kind) {
+      case "module":
+        void navigate({ to: action.to });
+        return;
+      case "today":
+        void navigate({ to: "/calendar", search: { date: today } });
+        return;
+      case "board":
+        void navigate({ to: "/kanban/$boardId", params: { boardId: action.boardId } });
+        return;
+      case "newEvent":
+        void navigate({ to: "/calendar", search: { ...calendarPlace(), new: "event", title: action.title } });
+        return;
+      case "newNote":
+        void navigate({ to: "/todo", search: { new: action.list ? "list" : "note", title: action.title } });
+        return;
+      case "newCard": {
+        if (!user) return;
+        const card = {
+          boardId: action.boardId,
+          columnId: action.columnId,
+          title: action.title,
+          position: newCardPosition(items, action.columnId),
+          color: defaultColor,
+        };
+        void createCard(user, card).then((ok) => {
+          if (ok) void navigate({ to: "/kanban/$boardId", params: { boardId: action.boardId } });
+        });
+      }
+    }
+  };
+
   const choose = (option: Option | undefined) => {
     if (!option) return;
     closeSearchForResult();
+    if (option.kind === "command") {
+      run(option.command.action);
+      return;
+    }
     if (option.kind === "date") {
       log.info("search_opened", { kind: "date" });
       void navigate({ to: "/calendar", search: { date: option.date, view: "day" } });
@@ -203,8 +289,8 @@ function SearchWindow() {
       if (typeof name === "string") parts.push(<span key="board">{name}</span>);
     }
     if (field) {
-      const source = fieldText(row, field, checklistItems);
-      // The body as plain text; of a checklist only the items with a match.
+      const source = fieldText(row, field, checklistItems, comments);
+      // The body as plain text; of a checklist only the items with a match, of the comments the ones with a match.
       const plain =
         field === "body"
           ? toPlainText(source, { singleLine: true })
@@ -213,7 +299,13 @@ function SearchWindow() {
                 .split("\n")
                 .filter((line) => highlightRanges(line, deferred).length > 0)
                 .join(" · ")
-            : source;
+            : field === "comments"
+              ? source
+                  .split("\n\n")
+                  .map((comment) => toPlainText(comment, { singleLine: true }))
+                  .filter((comment) => highlightRanges(comment, deferred).length > 0)
+                  .join(" · ")
+              : source;
       parts.push(
         <span key="field" className="min-w-0 truncate">
           {t(`search.fields.${field}`)}: <Marked text={snippet(plain, deferred)} query={deferred} />
@@ -223,12 +315,9 @@ function SearchWindow() {
     return parts;
   };
 
-  const indexOf = useMemo(
-    () => new Map(options.map((option, at) => [option.kind === "date" ? "date" : String(option.hit.row.id), at])),
-    [options],
-  );
+  const indexOf = useMemo(() => new Map(options.map((option, at) => [keyOf(option), at])), [options]);
   const optionProps = (option: Option) => {
-    const mine = indexOf.get(option.kind === "date" ? "date" : String(option.hit.row.id)) ?? 0;
+    const mine = indexOf.get(keyOf(option)) ?? 0;
     return {
       id: optionId(mine),
       role: "option" as const,
@@ -262,19 +351,19 @@ function SearchWindow() {
           "md:inset-auto md:top-[10vh] md:left-1/2 md:max-h-[75vh] md:w-[min(44rem,calc(100vw-2rem))] md:-translate-x-1/2 md:rounded-md md:border md:border-line md:pt-0",
         )}
       >
-        <RadixDialog.Title className="sr-only">{t("search.label")}</RadixDialog.Title>
+        <RadixDialog.Title className="sr-only">{palette ? t("commands.label") : t("search.label")}</RadixDialog.Title>
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search className="size-5 shrink-0 text-muted" aria-hidden />
           <input
             autoFocus
             type="search"
             role="combobox"
-            aria-label={t("search.label")}
+            aria-label={palette ? t("commands.label") : t("search.label")}
             aria-expanded={options.length > 0}
             aria-controls={`${id}-list`}
             aria-autocomplete="list"
             {...(options.length > 0 ? { "aria-activedescendant": optionId(current) } : {})}
-            placeholder={t("search.placeholder")}
+            placeholder={palette ? t("commands.placeholder") : t("search.placeholder")}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -311,7 +400,7 @@ function SearchWindow() {
           aria-label={t("search.results")}
           className="min-h-0 flex-1 overflow-y-auto p-2"
         >
-          {asked ? null : (
+          {asked || palette ? null : (
             <p className="px-3 py-2 text-[13px] text-muted">
               {t("search.hint")} {t("search.hintFilters")}
             </p>
@@ -323,6 +412,41 @@ function SearchWindow() {
               </span>
             </div>
           ) : null}
+          {GROUPS.map((group) => {
+            const list = commands.filter((command) => command.group === group);
+            return list.length > 0 ? (
+              <div key={group} role="group" aria-labelledby={`${id}-${group}`} className="mt-1">
+                <div
+                  id={`${id}-${group}`}
+                  role="presentation"
+                  className="px-3 pt-2 pb-1 text-xs font-semibold text-muted uppercase"
+                >
+                  {t(`commands.groups.${group}`)}
+                </div>
+                {list.map((command) => (
+                  <div key={command.id} {...optionProps({ kind: "command", command })}>
+                    <span className="flex min-w-0 items-center justify-between gap-3 text-sm font-medium">
+                      <span className="truncate">
+                        <Marked text={command.label} query={command.id.startsWith("titled:") ? "" : deferred} />
+                      </span>
+                      {command.keys ? (
+                        <span aria-hidden className="flex shrink-0 gap-1 max-md:hidden">
+                          {keyCaps(command.keys).map((cap) => (
+                            <kbd
+                              key={cap}
+                              className="rounded-sm border border-line px-1.5 font-sans text-xs leading-5 text-muted"
+                            >
+                              {cap}
+                            </kbd>
+                          ))}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null;
+          })}
           {MODULES.map((module) =>
             results[module].length > 0 ? (
               <div key={module} role="group" aria-labelledby={`${id}-${module}`} className="mt-1">

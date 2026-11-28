@@ -17,9 +17,11 @@ const buttonVariants = cva(
         danger: "border border-line bg-bg text-danger hover:bg-surface",
       },
       size: {
-        md: "h-11 px-3 pointer-fine:md:h-8",
+        // +++===+++ 2026-11-26 13:40 +04 — Hasan Alizada — HAAL-143 (D-127). At least 44 px wide on touch too, when the
+        // label folds into an icon or a letter.
+        md: "h-11 min-w-11 px-3 pointer-fine:md:h-8 pointer-fine:md:min-w-0",
         icon: "size-11 pointer-fine:md:size-10",
-        touch: "h-11 px-3",
+        touch: "h-11 min-w-11 px-3",
       },
     },
     defaultVariants: { variant: "secondary", size: "md" },

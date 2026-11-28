@@ -24,7 +24,7 @@ test("finds a note by its description and a card on its board, from the keyboard
   await page.getByRole("dialog", { name: "New board" }).getByLabel("Name").fill(board);
   await page.keyboard.press("Enter");
   const todo = page.getByRole("region", { name: "To do" });
-  await todo.getByRole("button", { name: "Add a card to To do" }).click();
+  await todo.getByRole("button", { name: "Add card to To do" }).click();
   await todo.getByLabel("Title of the new card in To do").fill(card);
   await page.keyboard.press("Enter");
   await expect(page.getByText(`Card added: ${card}`)).toBeVisible();
@@ -68,14 +68,21 @@ test("finds a note by its description and a card on its board, from the keyboard
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 800 } });
 
-  test("the search field is in the top bar and the window takes the screen", async ({ page }) => {
+  // +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). Without Ctrl+K on a phone, the field opens
+  // the window as the command palette.
+  test("the search field is in the top bar and the window takes the screen, with the commands", async ({ page }) => {
     await page.goto("/calendar?date=2027-08-02");
     await page.getByRole("banner").getByRole("button", { name: "Search" }).click();
-    const window = page.getByRole("dialog", { name: "Search" });
+    const window = page.getByRole("dialog", { name: "Commands and search" });
+    await expect(window.getByRole("group", { name: "Create" }).getByRole("option")).toHaveText([
+      "New event",
+      "New note",
+      "New list",
+    ]);
     // Measured once it has opened out.
     await window.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
     expect(await window.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 800 });
-    await window.getByRole("button", { name: "Close the search" }).click();
+    await window.getByRole("button", { name: "Close the search, Esc" }).click();
     await expect(window).toBeHidden();
   });
 });
@@ -129,4 +136,49 @@ test("filters narrow the search by colour, dates and module, without words too",
   await window.getByRole("button", { name: "Reset" }).click();
   await search.fill(tag);
   await expect(events).toHaveCount(3);
+});
+
+// +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). The command palette: Ctrl+K from any page, a
+// command by its words, "Create …" with the typed title in the editor, and a card added to a board at once.
+test("Ctrl+K goes to a board, creates a note with the typed title and adds a card", async ({ page }) => {
+  const tag = unique("Cmd").split(" ")[1] ?? "";
+  const board = `Garden ${tag}`;
+  await page.goto("/kanban");
+  await page.getByRole("button", { name: "New board" }).first().click();
+  await page.getByRole("dialog", { name: "New board" }).getByLabel("Name").fill(board);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name: "To do" })).toBeVisible();
+
+  await page.goto("/calendar?date=2027-08-02");
+  // The keys work once the app has started.
+  await expect(page.getByRole("heading", { name: "August 2, 2027" })).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+k");
+  const box = page.getByRole("combobox", { name: "Commands and search" });
+  await expect(box).toBeFocused();
+  await box.fill(`garden ${tag}`);
+  await expect(page.getByRole("option").first()).toHaveText(`Board “${board}”`);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/kanban\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { name: board })).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+k");
+  await box.fill(`Seeds ${tag}`);
+  await page.getByRole("option", { name: `Add card “Seeds ${tag}” to ${board}` }).click();
+  await expect(page.getByRole("region", { name: "To do" }).getByText(`Seeds ${tag}`)).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+k");
+  await box.fill(`Buy seeds ${tag}`);
+  await page.getByRole("option", { name: `Create note “Buy seeds ${tag}”` }).click();
+  const editor = page.getByRole("dialog", { name: "New note" });
+  await expect(editor.getByLabel("Title")).toHaveValue(`Buy seeds ${tag}`);
+  await expect(page).toHaveURL(/\/todo$/);
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+  await expect(page.getByRole("article", { name: `Buy seeds ${tag}` })).toBeVisible();
+
+  // Pressed again it closes.
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(box).toBeFocused();
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(box).toBeHidden();
 });

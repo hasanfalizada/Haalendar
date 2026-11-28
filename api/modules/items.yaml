@@ -301,7 +301,7 @@ paths:
     get:
       tags: [items]
       operationId: listComments
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: List comments
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -323,7 +323,7 @@ paths:
     post:
       tags: [items]
       operationId: createComment
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Create comment
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -345,7 +345,7 @@ paths:
     patch:
       tags: [items]
       operationId: updateComment
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       summary: Author only
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
@@ -365,7 +365,7 @@ paths:
     delete:
       tags: [items]
       operationId: deleteComment
-      x-not-implemented: 'Planned: HAAL-114.'
+      x-not-implemented: 'Served through /sync (ADR-0009): the web app reads and writes this through its local database.'
       x-soft-delete: 'Sets deleted_at; restorable.'
       summary: Soft-delete comment
       parameters:
@@ -378,8 +378,13 @@ paths:
     get:
       tags: [items]
       operationId: getItemHistory
-      x-not-implemented: 'Planned: HAAL-114 (activity from the audit log).'
       summary: Audit history of an item, newest first (FR-X-03)
+      # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114 (D-123). Implemented.
+      description: >-
+        The records of the item and of what hangs off it (its event, note or card details, attachments, checklist
+        items, labels on it, assignees, comments, links with either end on it, excluded dates of a series), newest
+        first; personal reminders are left out. Only what the user may read (row-level security); 404 for an item the
+        user does not read.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/Cursor'
@@ -397,12 +402,26 @@ paths:
                     properties:
                       data: { type: array, items: { $ref: '#/components/schemas/AuditRecord' } }
         '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
   item_convert:
     post:
       tags: [items]
       operationId: convertItem
-      x-not-implemented: 'Planned: HAAL-122.'
+      # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122 (D-125). Implemented: in place, the same id.
       summary: Convert note ↔ card ↔ event keeping content, attachments and links (FR-INT-02)
+      description: >-
+        The item becomes another kind in place: the same id, so its links, attachments (the same files) and history
+        stay. The title, description, colour and priority are kept; an event's start becomes a due date and back (a
+        due date without a time makes an all-day event, with a time an event of one hour; none makes it fall on
+        `start_date`, by default today in the user's zone); an event's place goes to the top of the description; a
+        checklist stays between notes and cards and becomes a Markdown list in an event's description. What the new
+        kind has no place for — labels without a label of the same name where it goes, the assignees and comments of a
+        card, the checklist rows of an event, the user's own reminders of another form — is soft-deleted in one batch,
+        answered as `batch_id`. Undo converts back with `undo` set to that batch: the item takes its earlier place and
+        details again (the ones it had there), `title` and `body` as given, and what the batch took comes back.
+        Write access is needed where the item is and where it goes; only the owner's own items become notes, a shared
+        note is not converted, nor a repeating event or a changed occurrence of one. Needs a connection. Converting
+        to the kind it already is answers the item as it is.
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/Id'
         - $ref: '../components/common.yaml#/components/parameters/IdempotencyKey'
@@ -410,31 +429,45 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [target_kind]
-              properties:
-                target_kind: { $ref: '../components/common.yaml#/components/schemas/ItemKind' }
-                keep_original: { type: boolean, default: false, description: false → original soft-deleted }
-                calendar_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                board_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                column_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                start_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+            schema: { $ref: '#/components/schemas/ConvertItem' }
       responses:
-        '201':
-          description: New item created
+        '200':
+          description: Converted
           content:
             application/json:
-              schema:
-                type: object
-                required: [item_id, kind]
-                properties:
-                  item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
-                  kind: { $ref: '../components/common.yaml#/components/schemas/ItemKind' }
+              schema: { $ref: '#/components/schemas/ConvertedItem' }
+        '401': { $ref: '../components/common.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: '../components/common.yaml#/components/responses/Forbidden' }
+        '404': { $ref: '../components/common.yaml#/components/responses/NotFound' }
+        '409': { $ref: '../components/common.yaml#/components/responses/Conflict' }
         '422': { $ref: '../components/common.yaml#/components/responses/ValidationFailed' }
 
 components:
   schemas:
+    # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122 (D-125). Converting an item to another kind.
+    ConvertItem:
+      type: object
+      additionalProperties: false
+      required: [target_kind]
+      properties:
+        target_kind: { $ref: '../components/common.yaml#/components/schemas/ItemKind' }
+        version: { type: integer, description: 'The version the user saw; another one answers 409 version_conflict.' }
+        calendar_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        start_date: { $ref: '../components/common.yaml#/components/schemas/Date' }
+        board_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        column_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        position: { type: string, pattern: '^[0-9A-Za-z]{1,64}$', description: 'Place of the card in its column or of the note among the notes (fractional index).' }
+        undo: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        title: { type: string, maxLength: 200, description: With undo only. }
+        body: { type: [string, 'null'], maxLength: 100000, description: With undo only. }
+    ConvertedItem:
+      type: object
+      required: [item_id, kind, version, batch_id]
+      properties:
+        item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
+        kind: { $ref: '../components/common.yaml#/components/schemas/ItemKind' }
+        version: { type: integer }
+        batch_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
     Attachment:
       allOf:
         - $ref: '../components/common.yaml#/components/schemas/Meta'
@@ -525,7 +558,9 @@ components:
             item_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
             author_id: { $ref: '../components/common.yaml#/components/schemas/Uuid' }
             author_name: { type: string }
-            body: { $ref: '../components/common.yaml#/components/schemas/Markdown' }
+            body: { type: string, minLength: 1, maxLength: 10000, description: 'CommonMark; rendered sanitised (FR-X-20).' }
+            # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114 (D-123). When its text last changed ("edited").
+            edited_at: { oneOf: [{ $ref: '../components/common.yaml#/components/schemas/Timestamp' }, { type: 'null' }] }
     AuditRecord:
       type: object
       required: [id, occurred_at, actor_id, actor_name, action, entity_type, entity_id, before, after]

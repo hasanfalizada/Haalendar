@@ -11,8 +11,8 @@ const boards = [
 const items = [
   { id: "n1", kind: "note", title: "Shopping", body: "milk" },
   { id: "n2", kind: "note", title: "Archived", archived_at: "2026-10-01T00:00:00Z" },
-  { id: "n3", kind: "note", title: "Due later", due_at: "2026-11-12T00:00:00Z" },
-  { id: "n4", kind: "note", title: "Due soon", due_at: "2026-11-01T00:00:00Z" },
+  { id: "n3", kind: "note", title: "Due later", due_date: "2026-11-12" },
+  { id: "n4", kind: "note", title: "Due soon", due_date: "2026-11-01", due_time: "09:00" },
   { id: "c1", kind: "card", title: "Plan", container_id: "b1", due_date: "2026-11-05" },
   { id: "c2", kind: "card", title: "Gone", container_id: "b1", deleted_at: "2026-10-01T00:00:00Z" },
   { id: "c3", kind: "card", title: "On an archived board", container_id: "b2" },

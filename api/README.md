@@ -31,7 +31,7 @@ api/
 | Dates and times | RFC 3339 timestamps in UTC; events use local `start_date`/`start_time` + IANA `tzid` |
 | Rate limits | `429` with `Retry-After` |
 
-Endpoints tagged `sync` follow ADR-0009 (offline sync): pull and push are implemented (HAAL-053); the event stream is marked `x-status: planned` until HAAL-055. <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. -->
+Endpoints tagged `sync` follow ADR-0009 (offline sync): pull and push (HAAL-053) and the live event stream (HAAL-055). <!-- +++===+++ 2026-10-21 — Hasan Alizada — HAAL-050. --> <!-- +++===+++ 2026-11-26 21:50 +04 — Hasan Alizada — HAAL-153: the stream is served since HAAL-055; the text still called it planned. -->
 
 <!-- +++===+++ 2026-10-30 — Hasan Alizada — HAAL-140. -->
 **Conformance.** The backend tests compare the app's routes with this contract both ways and check every response

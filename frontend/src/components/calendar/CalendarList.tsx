@@ -9,8 +9,10 @@
 // Changes go through calendarWrites (sync with undo; hiding, sharing and leaving need a connection).
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-095. "Import .ics…" for calendars the user may write to (own active
 // ones, shared with "edit") and "Export .ics" for every calendar listed, archived ones too (D-83).
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. "Layers" (D-122): the due dates of notes and of cards, a
+// checkbox each, shown by default; hiding one is the user setting `hidden_layers`, saved as the hidden calendars.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { Columns3, ListChecks, MoreHorizontal, Plus } from "lucide-react";
 import { type ReactNode, type SubmitEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,8 +32,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Field, Input } from "@/components/ui/input";
+import { LAYERS } from "@/lib/dueLayers";
 
-import { createCalendar, deleteCalendar, setDefaultCalendar, setHidden, updateCalendar } from "./calendarWrites";
+import {
+  createCalendar,
+  deleteCalendar,
+  setDefaultCalendar,
+  setHidden,
+  setLayerHidden,
+  updateCalendar,
+} from "./calendarWrites";
 import { IcsImportDialog } from "./IcsImportDialog";
 import { downloadIcs } from "./icsDownload";
 import type { CalendarRow, Calendars } from "./useCalendars";
@@ -263,6 +273,33 @@ export function CalendarList({ user, calendars, items }: CalendarListProps) {
           </ul>
         </section>
       ) : null}
+
+      <section aria-labelledby="calendars-layers" className="flex flex-col gap-1">
+        <h2 id="calendars-layers" className={heading}>
+          {t("calendars.layers")}
+        </h2>
+        <ul className="flex flex-col">
+          {LAYERS.map((layer) => {
+            const name = t(layer === "note_due" ? "calendars.noteDue" : "calendars.cardDue");
+            const Icon = layer === "note_due" ? ListChecks : Columns3;
+            return (
+              <li key={layer} className="flex min-h-9 items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="size-4 shrink-0"
+                  checked={!calendars.hiddenLayers.has(layer)}
+                  aria-label={t("calendars.showLayer", { name })}
+                  onChange={(e) => {
+                    void setLayerHidden(client, user, layer, !e.target.checked);
+                  }}
+                />
+                <Icon className="size-3.5 shrink-0 text-muted" aria-hidden />
+                <span className="min-w-0 flex-1 truncate text-[13px]">{name}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       {calendars.archived.length > 0 ? (
         <details className="group">

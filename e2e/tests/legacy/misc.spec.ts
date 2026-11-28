@@ -84,7 +84,31 @@ test("F-32 the sidebar counts events that started before today", async ({ page }
   await expect.poll(count).toBe(counted - 1);
 });
 
-test.fixme("F-33 the history of an event shows its audit records (HAAL-114; the audit log itself: backend tests)", async () => {});
+// +++===+++ 2026-11-25 09:48 +04 — Hasan Alizada — HAAL-114 (D-123). The history is built: F-33 runs. Legacy listed the
+// audit rows of an event; now the event editor's "History" reads them in words, newest first.
+test("F-33 the history of an event shows its audit records (HAAL-114; the audit log itself: backend tests)", async ({
+  page,
+}) => {
+  const title = unique("History");
+  await createEvent(page, { date: "2027-03-10", title });
+  const edit = async () => {
+    await eventRow(page, title).click();
+    await page.getByRole("dialog", { name: "Event details" }).getByRole("button", { name: "Edit" }).click();
+    return page.getByRole("dialog", { name: "Edit event" });
+  };
+  let editor = await edit();
+  await editor.getByLabel("Location").fill("Clinic");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toBeHidden();
+  await written(page, `Event saved: ${title}`);
+
+  editor = await edit();
+  await editor.getByText("History", { exact: true }).click();
+  const history = editor.getByRole("list", { name: "History" }).getByRole("listitem");
+  await expect(history).toHaveCount(2);
+  await expect(history.nth(0)).toContainText("You changed the place");
+  await expect(history.nth(1)).toContainText("You created the event");
+});
 
 test("F-34 About says the app is free and links the author and the repository; Help is there too", async ({ page }) => {
   await page.goto("/calendar");
@@ -112,6 +136,6 @@ test("F-34 About says the app is free and links the author and the repository; H
   const help = page.getByRole("dialog", { name: "Help" });
   await expect(help.getByRole("link", { name: /Documentation/ })).toHaveAttribute(
     "href",
-    "https://github.com/hasanfalizada/Haalendar/tree/master/docs",
+    "https://github.com/hasanfalizada/Haalendar/blob/master/docs/guide/user/README.md",
   );
 });

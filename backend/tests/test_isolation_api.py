@@ -117,6 +117,7 @@ class Ada:
         self.event, self.note, self.gone_note, self.card = (str(uuid.uuid7()) for _ in range(4))
         self.board, self.column, self.label, self.item_label = (str(uuid.uuid7()) for _ in range(4))
         self.reminder, self.checklist_item, self.link, self.assignee = (str(uuid.uuid7()) for _ in range(4))
+        self.comment = str(uuid.uuid7())  # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114.
         made = _push(
             api,
             h,
@@ -186,6 +187,8 @@ class Ada:
                 data={"item_id": self.card, "user_id": people.ids["ada"]},
             ),
             _m("link", self.link, "create", data={"from_item_id": self.event, "to_item_id": self.note}),
+            # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114.
+            _m("comment", self.comment, "create", data={"item_id": self.card, "body": "Ada secret comment"}),
         )
         assert all(r["status"] == "applied" for r in made), made
         self.attachment = self._upload(h, self.note)
@@ -262,6 +265,12 @@ def _probes(ada: Ada, h: dict[str, str]) -> dict[tuple[str, str], Callable[[Test
         ),
         ("get", "/boards/{id}/members"): lambda c: c.get(f"{a}/boards/{ada.board}/members"),
         ("get", "/items/{id}/attachments"): lambda c: c.get(f"{a}/items/{ada.note}/attachments"),
+        # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114.
+        ("get", "/items/{id}/history"): lambda c: c.get(f"{a}/items/{ada.card}/history"),
+        # +++===+++ 2026-11-25 13:10 +04 — Hasan Alizada — HAAL-122.
+        ("post", "/items/{id}/convert"): lambda c: c.post(
+            f"{a}/items/{ada.card}/convert", json={"target_kind": "note", "position": "a"}, headers=h
+        ),
         ("post", "/items/{id}/attachments"): lambda c: c.post(
             f"{a}/items/{ada.note}/attachments", content=png(), headers=upload
         ),
@@ -354,6 +363,9 @@ def _pushes(ada: Ada, cid: str) -> list[dict[str, Any]]:
         _m("item_label", ada.item_label, "delete"),
         _m("card_assignee", ada.assignee, "delete"),
         _m("link", ada.link, "delete"),
+        # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114.
+        _m("comment", ada.comment, "update", base={"body": "Ada secret comment"}, data={"body": "Taken"}),
+        _m("comment", ada.comment, "delete"),
         _m(
             "item",
             str(uuid.uuid7()),
@@ -397,6 +409,7 @@ def _pushes(ada: Ada, cid: str) -> list[dict[str, Any]]:
         _m("card_assignee", str(uuid.uuid7()), "create", data={"item_id": ada.card, "user_id": cid}),
         _m("item", other, "create", data={"kind": "note", "title": "Cid's own", "position": "U"}),
         _m("link", str(uuid.uuid7()), "create", data={"from_item_id": other, "to_item_id": ada.note}),
+        _m("comment", str(uuid.uuid7()), "create", data={"item_id": ada.card, "body": "Planted"}),
     ]
 
 

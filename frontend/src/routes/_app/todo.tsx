@@ -15,10 +15,13 @@ interface TodoSearch {
   priority?: string;
   labels?: string;
   note?: string;
+  // +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). The command palette asks for a new note or list, with its title.
+  new?: "note" | "list";
+  title?: string;
 }
 
 function Todo() {
-  const { tab, priority, labels, note } = Route.useSearch();
+  const { tab, priority, labels, note, new: create, title } = Route.useSearch();
   const notesTab: NotesTab = tab === "archive" ? "archive" : "notes";
   const priorities: Priority[] = parsePriorityParam(priority);
   return (
@@ -27,6 +30,7 @@ function Todo() {
       priorities={priorities}
       labelFilter={parseLabelsParam(labels)}
       {...(note ? { focusNote: note } : {})}
+      {...(create ? { createNote: { list: create === "list", title: title ?? "" } } : {})}
     />
   );
 }
@@ -38,6 +42,8 @@ export const Route = createFileRoute("/_app/todo")({
     priority: formatPriorityParam(parsePriorityParam(search.priority)),
     labels: formatLabelsParam(parseLabelsParam(search.labels)),
     note: typeof search.note === "string" && /^[0-9a-f-]{36}$/i.test(search.note) ? search.note : undefined,
+    new: search.new === "note" || search.new === "list" ? search.new : undefined,
+    title: typeof search.title === "string" ? search.title.slice(0, 500) : undefined,
   }),
   component: Todo,
 });

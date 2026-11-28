@@ -155,7 +155,9 @@ describe("month view", { timeout: 15_000 }, () => {
   it("phones: a day is one button with its event count that opens the day", async () => {
     const { router, user } = await open("/calendar?date=2026-10-14&view=month");
     const day = await screen.findByRole("button", { name: "Open Wednesday, October 14, 2026, 5 events" });
-    expect(day).toHaveTextContent("14+2");
+    // HAAL-143: "+2" is drawn by CSS from data-more; the name gives the count.
+    expect(day).toHaveTextContent(/^14$/);
+    expect(day.querySelector("[data-more]")).toHaveAttribute("data-more", "+2");
     await user.click(day);
     await waitFor(() => {
       expect(router.state.location.search).toMatchObject({ date: "2026-10-14", view: "day" });

@@ -18,6 +18,56 @@ restore the backup made before the upgrade ([roll back](docs/operations/deployme
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-28
+
+Due dates on notes and in the calendar, comments and history, converting an item to another kind, the command palette,
+the day on the hours, swimlanes, and guides for users, operators and API clients. The database gets five new
+migrations that run by themselves on start; nothing in `.env`, `compose.yaml` or the backup format changes, and the
+REST API only grows (one field that was always empty is replaced, see Changed). Upgrade with the
+[usual steps](docs/guide/admin/install.md#3-upgrade). Going back to 1.1.0 needs the backup made before the upgrade
+together with the previous image ([roll back](docs/guide/admin/install.md#roll-back-an-upgrade)).
+
+### Added
+
+- **Due date of a note**, with an optional time, in the note editor; the note shows it with the Overdue and Due soon
+  badges of the cards.
+- **Due dates in the calendar**: the due dates of notes and of cards stand on their day, in the all-day row of the day
+  and the week and in the month and the agenda; a click opens the note or the card. Each of the two layers is switched
+  on and off under the calendars (Layers), for every device.
+- **Comments on cards** (Markdown, written offline too, found by the search; a new comment tells the people assigned to
+  the card) and **Activity**: the history of an event, a note or a card — who changed what and when —, on cards
+  together with the comments ("Comments only" hides the changes). The history needs a connection.
+- **Convert to…** makes an event a note or a card, a note an event or a card, a card an event or a note — the same
+  item with its title, description, colour, priority, images, links and history; before converting it says what
+  changes, and Undo brings everything back.
+- **Command palette**: Ctrl+K (⌘K on a Mac) opens the search window with commands on top — go to a page, a board or
+  today, create an event, a note, a list or a card, also with the words typed as its title.
+- **The day on the hours**: List | Hours in the day view; Hours is the week's grid for one day with the current-time
+  line. The all-day row of the week and of the day folds past three entries ("+N more").
+- **Swimlanes** on a board: the cards grouped into rows by priority, assignee or label; a card dragged into another
+  row takes its priority or assignee, and a card added in a row gets its value.
+- **Guides** in [`docs/guide/`](docs/guide/README.md): a user guide with pictures and every keyboard shortcut (Help →
+  Documentation opens it), an admin guide with every setting and its default, and the API reference written from the
+  contract with an example of calling the API from a script.
+- REST API: `GET /items/{id}/history`, `POST /items/{id}/convert`, comments through sync (`comment`), the settings
+  `hidden_layers` and `day_layout`, and a note's `due_date` and `due_time`.
+
+### Changed
+
+- REST API: a note's `due_at`, which nothing ever set (always empty), is replaced by `due_date` and `due_time`.
+- Accessibility is checked on every screen on a computer and on a touch phone; what it found is fixed: menus no longer
+  hide the page from screen readers, buttons and rows on touch screens are at least 44 px, names of controls contain
+  the words they show, and the text of another month's events keeps its contrast.
+- The first page loads less JavaScript (within 300 KB, about 13 % less): the search window, the command palette, the
+  formatting help and Convert to… load when they are first opened.
+- The operations guide moved to the admin guide ([`docs/guide/admin/`](docs/guide/admin/README.md)); the old page
+  points to it.
+
+### Fixed
+
+- The calendar header keeps one line, or breaks after the date, on every screen width: New event is never left alone
+  on a line of its own.
+
 ## [1.1.0] - 2026-11-23
 
 Search, its filters, personal labels for notes and a set of improvements to the calendar. The database gets three new
@@ -157,7 +207,8 @@ which stays available under the tag [`legacy`](https://github.com/hasanfalizada/
 - The minor findings of the acceptance test are open; they are listed in
   [the acceptance record](docs/requirements/uat.md#6-findings).
 
-[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.1.0...development
+[Unreleased]: https://github.com/hasanfalizada/Haalendar/compare/v1.2.0...development
+[1.2.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.2.0
 [1.1.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.1.0
 [1.0.1]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hasanfalizada/Haalendar/releases/tag/v1.0.0

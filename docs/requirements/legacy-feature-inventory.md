@@ -89,7 +89,7 @@
 | F-20..F-23 | `recurrence.spec.ts` (F-23 seen through the overdue counter, which uses the effective start) | runs |
 | F-30 | `misc.spec.ts` | runs (search, HAAL-039) |
 | F-31, F-32, F-34 | `misc.spec.ts` | runs |
-| F-33 | `misc.spec.ts` | fixme — the history screen is HAAL-114; the audit log itself is covered by the backend tests (`backend/tests/test_audit.py`) |
+| F-33 | `misc.spec.ts` | runs (the History of the event editor, HAAL-114); the audit log itself is covered by the backend tests (`backend/tests/test_audit.py`) |
 
 `inventory.spec.ts` fails when a feature of §2 has no scenario, more than one, or a scenario names a feature that is
 not in §2.

@@ -76,9 +76,14 @@ rm -f "$DEV_DIR/sessions"
 start api.log uv run haalendar-api
 start worker.log uv run haalendar-worker
 cd ../frontend
+# +++===+++ 2026-11-24 18:36 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The API client (src/api/generated, not in
+# git) is generated once, before the dev server starts: in a fresh clone the dev server came up without it, the build
+# below generated it under the running server, and the first page showed "Failed to resolve import
+# @/api/generated/sdk.gen" (the end-to-end setup timed out). The build no longer generates it again.
+pnpm gen:api >"$DEV_DIR/gen-api.log" 2>&1 || { echo "API client generation failed, see $DEV_DIR/gen-api.log"; exit 1; }
 VITE_API_TARGET=http://127.0.0.1:$API_PORT start vite.log pnpm exec vite --host 127.0.0.1 --port 5173 --strictPort
 if [ "$PREVIEW" = 1 ]; then
-  pnpm build >"$DEV_DIR/build.log" 2>&1 || { echo "build failed, see $DEV_DIR/build.log"; exit 1; }
+  { pnpm exec tsc -b && pnpm exec vite build; } >"$DEV_DIR/build.log" 2>&1 || { echo "build failed, see $DEV_DIR/build.log"; exit 1; }
   VITE_API_TARGET=http://127.0.0.1:$API_PORT start preview.log pnpm exec vite preview --host 127.0.0.1 --port 4173 --strictPort
 fi
 

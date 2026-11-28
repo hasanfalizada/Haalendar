@@ -10,6 +10,7 @@ import type { Settings } from "@/api/generated/types.gen";
 import { settingsQueryKey } from "@/api/settings";
 import { runWrite } from "@/api/write";
 import i18n from "@/i18n";
+import type { Layer } from "@/lib/dueLayers";
 import { registerUndo, newStep } from "@/lib/undo";
 import { uuidv7 } from "@/lib/uuid";
 import { localKeys, mutate } from "@/sync";
@@ -146,21 +147,28 @@ export async function deleteCalendar(user: string, row: Row): Promise<boolean> {
 // the calendar is put into or out of the hidden list of the cached settings and of the synced settings row before the
 // request; a refused save takes only this calendar back (another one changed meanwhile stays). Saves run one after
 // another, so quick clicks end on the last state. Still needs a connection (option A; offline it is put back too).
-function markHidden(client: QueryClient, user: string, calendarId: string, hide: boolean): Promise<void> {
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The same for a layer of due dates (`hidden_layers`, D-122): one list of the settings or the other.
+type HiddenList = "hidden_calendars" | "hidden_layers";
+
+function markHidden(
+  client: QueryClient,
+  user: string,
+  calendarId: string,
+  hide: boolean,
+  field: HiddenList = "hidden_calendars",
+): Promise<void> {
   const flip = (list: readonly unknown[]) => {
     const ids = new Set(list.map(String));
     if (hide) ids.add(calendarId);
     else ids.delete(calendarId);
     return [...ids].sort();
   };
-  client.setQueryData<Settings>(settingsQueryKey, (old) =>
-    old ? { ...old, hidden_calendars: flip(old.hidden_calendars) } : old,
-  );
+  client.setQueryData<Settings>(settingsQueryKey, (old) => (old ? { ...old, [field]: flip(old[field]) } : old));
   return localDb(user)
     .then(async (db) => {
       const row = await db.settings.get(user);
-      if (row && Array.isArray(row.hidden_calendars)) {
-        await db.settings.update(user, { hidden_calendars: flip(row.hidden_calendars as unknown[]) });
+      if (row && Array.isArray(row[field])) {
+        await db.settings.update(user, { [field]: flip(row[field] as unknown[]) });
       }
     })
     .then(() => client.invalidateQueries({ queryKey: localKeys.table("settings") }));
@@ -169,29 +177,41 @@ function markHidden(client: QueryClient, user: string, calendarId: string, hide:
 let hiding: Promise<unknown> = Promise.resolve();
 
 /** Shows or hides a calendar in the views (user setting); true when saved. */
-export async function setHidden(
+export function setHidden(client: QueryClient, user: string, calendarId: string, hide: boolean): Promise<boolean> {
+  return setInHidden(client, user, calendarId, hide, "hidden_calendars", hide ? "calendar_hide" : "calendar_show");
+}
+
+/** Shows or hides a layer of due dates in the views (user setting); true when saved. */
+export function setLayerHidden(client: QueryClient, user: string, layer: Layer, hide: boolean): Promise<boolean> {
+  return setInHidden(client, user, layer, hide, "hidden_layers", hide ? "layer_hide" : "layer_show");
+}
+
+async function setInHidden(
   client: QueryClient,
   user: string,
   calendarId: string,
   hide: boolean,
+  field: HiddenList,
+  name: string,
 ): Promise<boolean> {
-  await markHidden(client, user, calendarId, hide);
+  await markHidden(client, user, calendarId, hide, field);
   const send = async () => {
     // The current settings, read anew (another device may have changed them).
     const read = await getSettings();
     if (read.error !== undefined) return read;
     const current = read.data;
-    const list = new Set(current.hidden_calendars);
+    const list = new Set<string>(current[field]);
     if (hide) list.add(calendarId);
     else list.delete(calendarId);
+    const sorted = [...list].sort();
     return updateSettings({
       headers: { "If-Match": `"${String(current.version)}"` },
-      body: { hidden_calendars: [...list].sort() },
+      body: field === "hidden_layers" ? { hidden_layers: sorted as Layer[] } : { hidden_calendars: sorted },
     });
   };
   const save = () =>
     runWrite<Settings>({
-      name: hide ? "calendar_hide" : "calendar_show",
+      name,
       run: async () => {
         const first = await send();
         // Changed meanwhile on another device: once more on the current version.
@@ -201,13 +221,13 @@ export async function setHidden(
       onSuccess: async (saved) => {
         client.setQueryData(settingsQueryKey, saved);
         const db = await localDb(user);
-        await db.settings.update(user, { hidden_calendars: saved.hidden_calendars });
+        await db.settings.update(user, { [field]: saved[field] });
         await client.invalidateQueries({ queryKey: localKeys.table("settings") });
       },
     });
   const turn = hiding.then(save, save);
   hiding = turn;
   const result = await turn;
-  if (!result.ok) await markHidden(client, user, calendarId, !hide);
+  if (!result.ok) await markHidden(client, user, calendarId, !hide, field);
   return result.ok;
 }

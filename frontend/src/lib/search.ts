@@ -6,10 +6,12 @@
 //   and the checklist; ties by title;
 // - deleted items, events of calendars the views do not show and cards of deleted boards are left out;
 // - the folded text of an item is kept per row object, so typing does not fold every item again.
+// +++===+++ 2026-11-25 09:45 +04 — Hasan Alizada — HAAL-114 (D-123). And the comments of cards, ranked last.
+import { fold, queryWords, wordStart } from "./textMatch";
 type Row = Record<string, unknown>;
 
 export type SearchModule = "calendar" | "todo" | "kanban";
-export type SearchField = "title" | "location" | "body" | "checklist";
+export type SearchField = "title" | "location" | "body" | "checklist" | "comments";
 export type OtherField = Exclude<SearchField, "title">;
 
 export interface SearchHit {
@@ -23,6 +25,8 @@ export interface SearchHit {
 export interface SearchInput {
   items: readonly Row[];
   checklistItems: readonly Row[];
+  /** Card comments (none: no comments searched). */
+  comments?: readonly Row[];
   boards: readonly Row[];
   /** The calendar is shown in the views (neither archived nor hidden). */
   calendarShown: (id: unknown) => boolean;
@@ -31,43 +35,10 @@ export interface SearchInput {
 export type SearchResults = Record<SearchModule, SearchHit[]>;
 
 const MODULE_OF: Record<string, SearchModule> = { event: "calendar", note: "todo", card: "kanban" };
-const WEIGHT: Record<SearchField, number> = { title: 8, location: 4, body: 2, checklist: 2 };
-const MARKS = /\p{M}/gu;
-// eslint-disable-next-line no-control-regex -- the whole ASCII range on purpose
-const ASCII = /^[\x00-\x7f]*$/;
-
-/** Lower case without accents: the form both the query and the items are compared in. */
-export function fold(text: string): string {
-  // Plain ASCII has no accents to drop: lower case only, several times faster on a cold search of many items.
-  if (ASCII.test(text)) return text.toLowerCase();
-  return text.normalize("NFKD").replace(MARKS, "").toLocaleLowerCase();
-}
-
-const WORD_CHAR = /[\p{L}\p{N}]/u;
-
-/** The words of a query, folded; punctuation around them dropped. */
-export function queryWords(query: string): string[] {
-  return fold(query)
-    .split(/\s+/)
-    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
-    .filter((word) => word !== "");
-}
-
-/** Where `word` begins a word of `text` (both folded); -1 when it does not. */
-function wordStart(text: string, word: string, from = 0): number {
-  let at = text.indexOf(word, from);
-  while (at !== -1) {
-    if (at === 0 || !WORD_CHAR.test(text[at - 1] ?? "")) return at;
-    at = text.indexOf(word, at + 1);
-  }
-  return -1;
-}
-
-/** Every word of the query begins a word of the text (case and accents ignored); an empty query matches. */
-export function matchesQuery(text: string, query: string): boolean {
-  const folded = fold(text);
-  return queryWords(query).every((word) => wordStart(folded, word) !== -1);
-}
+const WEIGHT: Record<SearchField, number> = { title: 8, location: 4, body: 2, checklist: 2, comments: 1 };
+// HAAL-143 (D-128): the matching of words lives in textMatch, which the start bundle may import without this module's
+// excerpts (Markdown).
+export { fold, matchesQuery, queryWords } from "./textMatch";
 
 /**
  * The parts of `text` to highlight for the query: [start, end) of every place a query word begins a word, merged.
@@ -111,6 +82,7 @@ interface Folded {
   location: string;
   body: string;
   checklist: string;
+  comments: string;
   /** All of them, for the quick check that every word is there at all. */
   all: string;
 }
@@ -118,26 +90,36 @@ interface Folded {
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 let cache = new WeakMap<Row, Folded>();
 let cachedChecklists: readonly Row[] | null = null;
+let cachedComments: readonly Row[] | undefined;
 
-function foldedOf(row: Row, checklist: string): Folded {
+function foldedOf(row: Row, checklist: string, commentText: string): Folded {
   let entry = cache.get(row);
   if (!entry) {
     const title = fold(text(row.title));
     const location = fold(text(row.location));
     const body = fold(text(row.body));
     const list = fold(checklist);
-    entry = { title, location, body, checklist: list, all: `${title}\n${location}\n${body}\n${list}` };
+    const comments = fold(commentText);
+    entry = {
+      title,
+      location,
+      body,
+      checklist: list,
+      comments,
+      all: `${title}\n${location}\n${body}\n${list}\n${comments}`,
+    };
     cache.set(row, entry);
   }
   return entry;
 }
 
-function checklistTexts(rows: readonly Row[]): Map<string, string> {
+/** The live texts (`field`) of the rows belonging to each item, one a line. */
+function textsByItem(rows: readonly Row[], field: string): Map<string, string> {
   const byItem = new Map<string, string>();
   for (const row of rows) {
     if (row.deleted_at) continue;
     const id = String(row.item_id);
-    const line = text(row.text);
+    const line = text(row[field]);
     byItem.set(id, byItem.has(id) ? `${byItem.get(id) ?? ""}\n${line}` : line);
   }
   return byItem;
@@ -149,7 +131,7 @@ function scoreOf(folded: Folded, words: readonly string[]): { score: number; fie
   let field: OtherField | null = null;
   for (const word of words) {
     let best = 0;
-    for (const name of ["title", "location", "body", "checklist"] as const) {
+    for (const name of ["title", "location", "body", "checklist", "comments"] as const) {
       const at = wordStart(folded[name], word);
       if (at === -1) continue;
       const weight = WEIGHT[name] + (name === "title" && at === 0 ? 4 : 0);
@@ -179,12 +161,14 @@ export function searchItems(input: SearchInput, query: string, limit = 20, filte
   const words = queryWords(query);
   const byFilterOnly = words.length === 0;
   if (byFilterOnly && !filter?.active) return results;
-  // Checklist text belongs to its item: a change of the checklists folds the items again.
-  if (cachedChecklists !== input.checklistItems) {
+  // Checklist and comment text belongs to its item: a change of either folds the items again.
+  if (cachedChecklists !== input.checklistItems || cachedComments !== input.comments) {
     cache = new WeakMap();
     cachedChecklists = input.checklistItems;
+    cachedComments = input.comments;
   }
-  const lists = checklistTexts(input.checklistItems);
+  const lists = textsByItem(input.checklistItems, "text");
+  const comments = textsByItem(input.comments ?? [], "body");
   const deletedBoards = new Set(input.boards.filter((board) => board.deleted_at).map((board) => String(board.id)));
   for (const row of input.items) {
     const module = MODULE_OF[text(row.kind)];
@@ -196,7 +180,7 @@ export function searchItems(input: SearchInput, query: string, limit = 20, filte
       results[module].push({ row, module, score: 0, field: null });
       continue;
     }
-    const folded = foldedOf(row, lists.get(String(row.id)) ?? "");
+    const folded = foldedOf(row, lists.get(String(row.id)) ?? "", comments.get(String(row.id)) ?? "");
     if (!words.every((word) => folded.all.includes(word))) continue;
     const found = scoreOf(folded, words);
     if (found) results[module].push({ row, module, score: found.score, field: found.field });
@@ -215,8 +199,19 @@ export function searchItems(input: SearchInput, query: string, limit = 20, filte
   return results;
 }
 
-/** The text of a field of a hit (the checklist: its items, one a line). */
-export function fieldText(row: Row, field: OtherField, checklistItems: readonly Row[]): string {
+/** The text of a field of a hit (the checklist: its items, one a line; the comments: one a paragraph). */
+export function fieldText(
+  row: Row,
+  field: OtherField,
+  checklistItems: readonly Row[],
+  comments: readonly Row[] = [],
+): string {
+  if (field === "comments") {
+    return comments
+      .filter((comment) => comment.item_id === row.id && !comment.deleted_at)
+      .map((comment) => text(comment.body))
+      .join("\n\n");
+  }
   if (field === "checklist") {
     return checklistItems
       .filter((item) => item.item_id === row.id && !item.deleted_at)

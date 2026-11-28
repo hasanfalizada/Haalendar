@@ -32,6 +32,7 @@ import { meQuery } from "@/api/session";
 import { useSettings } from "@/api/settings";
 import { runWrite } from "@/api/write";
 import { Attachments } from "@/components/attachments/Attachments";
+import { ItemActivity } from "@/components/history/ItemActivity";
 import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
@@ -394,7 +395,9 @@ export function EventEditor({
   async function onSubmit(submitted: SubmitEvent<HTMLFormElement>) {
     submitted.preventDefault();
     setTouched(true);
-    if (invalid || busy) return;
+    // +++===+++ 2026-11-24 20:01 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The same check as the Save button: Ctrl+S
+    // and Ctrl+Enter submit the form past a disabled button, and an event without a calendar is rejected by the server.
+    if (invalid || busy || !form.calendar_id) return;
     const found = duplicatesOf();
     if (found.length > 0) {
       setDuplicates(found);
@@ -686,6 +689,9 @@ export function EventEditor({
           ) : (
             <p className="text-xs text-muted">{t("calendar.editor.attachmentsLater")}</p>
           )}
+          {/* +++===+++ 2026-11-25 09:48 +04 — Hasan Alizada — HAAL-114 (F-33, D-123). The event's history, closed until
+              asked for; not for a copy of one date or a split series, which do not exist yet. */}
+          {stored ? <ItemActivity user={user} item={stored} collapsed /> : null}
 
           <DialogFooter>
             <Button onClick={close}>{t("common.cancel")}</Button>

@@ -34,8 +34,8 @@
 // is the month grid (MonthView), whose days open the day view.
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-089. Agenda (FR-CAL-27, D-77): key A; the range is the selected date and
 // the user's agenda days after it, ‹ › and ← / → move by that range; the title is the range; the content is the
-// agenda list (AgendaView), whose day headings open the day view. A header narrower than 64 rem shows New event as an
-// icon, so the four-view switch and range titles stay on one line.
+// agenda list (AgendaView), whose day headings open the day view. A header short of room shows New event as an icon,
+// so the four-view switch and range titles stay on one line (measured since HAAL-196).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-090. Drag and drop in the week and month grids (FR-CAL-28, D-78): only
 // events the user may change; a series first asks "only this occurrence or all?" (this and following: HAAL-093). The
 // move is written like every event change and is one undo step; the notification names the new day and time.
@@ -47,13 +47,24 @@
 // cards" opens a panel (beside the content from tablets on, remembered on this device; a bottom sheet on phones). In
 // the week a note or card dropped on a time column or the all-day row becomes an event at once (one undo step, its card
 // opens); in the day list, which has no hours, a drop and "Schedule…" open the event editor for it, linked on Save.
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, PanelLeft, Plus, StickyNote } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  List,
+  PanelLeft,
+  Plus,
+  StickyNote,
+} from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Color, Priority } from "@/api/generated/types.gen";
+import type { Color, Priority, Settings } from "@/api/generated/types.gen";
+import { setSettingChoice } from "@/api/settingChoice";
 import { useSettings } from "@/api/settings";
 import { meQuery } from "@/api/session";
 import { runWrite } from "@/api/write";
@@ -77,8 +88,10 @@ import { DESKTOP_UP, TABLET_UP, useMediaQuery } from "@/lib/useMediaQuery";
 import { type Selection, useSelection } from "@/lib/useSelection";
 import { useSwipe } from "@/lib/useSwipe";
 import { cn } from "@/lib/utils";
+import { useFitLevel } from "@/lib/useFitLevel";
 import { CALENDAR_VIEWS, type CalendarViewKind, storeView } from "@/lib/calendarView";
 import { agendaDays } from "@/lib/agendaView";
+import { type DueEntry, duesOnDays } from "@/lib/dueLayers";
 import { type DropTarget, type EventTimes, droppedTimes, planDrop, seriesMovable } from "@/lib/eventDrag";
 import { addMonths, monthOf, sameDayIn } from "@/lib/monthGrid";
 import { monthTitle, monthWeeks } from "@/lib/monthView";
@@ -102,16 +115,34 @@ import { EventDetails } from "./EventDetails";
 import { EventRowBody } from "./EventRow";
 import { EventEditor } from "./EventEditor";
 import { CalendarList } from "./CalendarList";
+import { ConvertDialog } from "@/components/convert/ConvertDialogLazy";
+
 import { DuplicateDialog } from "./DuplicateDialog";
 import { MiniMonth } from "./MiniMonth";
 import { moveToNextDay, planSteps, runMoves, writePlan } from "./moveNextDay";
 import { OccurrenceChoice, type OccurrenceScope } from "./OccurrenceChoice";
 import { OverdueCounter } from "./OverdueCounter";
+import { DueChip } from "./DueChip";
 import { useCalendars } from "./useCalendars";
 
 const SIDEBAR_KEY = "haalendar.calendar.sidebar";
 function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (view: CalendarViewKind) => void }) {
   const { t } = useTranslation();
+  // +++===+++ 2026-11-26 18:50 +04 — Hasan Alizada — HAAL-143 (INP, D-128). The chosen view is shown at once and the
+  // calendar changes after that frame is painted: drawing a week or a month took up to 280 ms on a slow phone before
+  // anything answered the tap.
+  // The choice holds while the view it was made from is still shown.
+  const [chosen, setChosen] = useState<{ option: CalendarViewKind; from: CalendarViewKind } | null>(null);
+  const shown = chosen?.from === view ? chosen.option : view;
+  const choose = (option: CalendarViewKind) => {
+    if (option === shown) return;
+    setChosen({ option, from: view });
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        onChange(option);
+      }, 0);
+    });
+  };
   return (
     <div
       role="radiogroup"
@@ -123,16 +154,63 @@ function ViewSwitch({ view, onChange }: { view: CalendarViewKind; onChange: (vie
           key={option}
           type="button"
           role="radio"
-          aria-checked={option === view}
+          aria-checked={option === shown}
           onClick={() => {
-            onChange(option);
+            choose(option);
           }}
           className={cn(
-            "h-11 border-r border-line px-3 text-[13px] last:border-r-0 md:px-2.5 pointer-fine:md:h-8",
-            option === view ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
+            // HAAL-143 (D-127): 44 px wide on touch even as a single letter.
+            "h-11 min-w-11 border-r border-line px-3 text-[13px] last:border-r-0 md:px-2.5 pointer-fine:md:h-8 pointer-fine:md:min-w-0",
+            option === shown ? "bg-primary-tint font-semibold text-primary" : "hover:bg-surface",
+          )}
+          // +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. A header short of room even on two lines shows
+          // the first letter; the name stays for screen readers and on hover.
+          title={t(`calendar.views.${option}`)}
+        >
+          <span className="group-data-[fold-5]/header:sr-only">{t(`calendar.views.${option}`)}</span>
+          <span aria-hidden className="hidden group-data-[fold-5]/header:inline">
+            {t(`calendar.views.${option}`).charAt(0)}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+type DayLayout = Settings["day_layout"];
+
+const DAY_LAYOUTS = [
+  { value: "list", Icon: List },
+  { value: "hours", Icon: Clock },
+] as const satisfies readonly { value: DayLayout; Icon: typeof List }[];
+
+// +++===+++ 2026-11-25 11:40 +04 — Hasan Alizada — HAAL-195. The day view as a list (the legacy day list) or as hours (the week's grid for one day), the user
+// setting `day_layout` for every device (D-124).
+function DayLayoutSwitch({ layout, onChange }: { layout: DayLayout; onChange: (layout: DayLayout) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      role="radiogroup"
+      aria-label={t("calendar.views.layout")}
+      className="inline-flex overflow-hidden rounded-sm border border-line"
+    >
+      {DAY_LAYOUTS.map(({ value, Icon }) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={value === layout}
+          aria-label={t(`calendar.views.${value}`)}
+          title={t(`calendar.views.${value}`)}
+          onClick={() => {
+            if (value !== layout) onChange(value);
+          }}
+          className={cn(
+            "grid h-11 w-11 place-items-center border-r border-line last:border-r-0 pointer-fine:md:h-8 pointer-fine:md:w-8",
+            value === layout ? "bg-primary-tint text-primary" : "hover:bg-surface",
           )}
         >
-          {t(`calendar.views.${option}`)}
+          <Icon className="size-4" aria-hidden />
         </button>
       ))}
     </div>
@@ -192,6 +270,8 @@ interface DayListProps {
   user: string | undefined;
   date: string;
   entries: DayEntry[];
+  /** The due dates of notes and cards on the date (layers, D-122). */
+  dues: readonly DueEntry[];
   /** The open card. */
   open: OpenDetails | null;
   onOpen: (entry: DayEntry, place: string) => void;
@@ -219,6 +299,7 @@ function DayList({
   user,
   date,
   entries,
+  dues,
   open,
   onOpen,
   onClose,
@@ -258,6 +339,21 @@ function DayList({
       },
     },
   );
+  // +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The due dates above the events, a list of their own: not selected, not moved.
+  const dueList =
+    dues.length > 0 ? (
+      <ul
+        aria-label={t("calendar.due.listLabel", { date: label })}
+        className="flex flex-col gap-1.5 px-3 pt-3 pointer-fine:md:gap-0.5 md:px-4 md:pt-4"
+      >
+        {dues.map((due) => (
+          <li key={due.key}>
+            <DueChip entry={due} variant="row" />
+          </li>
+        ))}
+      </ul>
+    ) : null;
+  if (entries.length === 0 && dues.length > 0) return dueList;
   if (entries.length === 0) {
     return (
       <div className="grid h-full place-items-center p-6 text-center">
@@ -273,6 +369,7 @@ function DayList({
   }
   return (
     <>
+      {dueList}
       <BulkBar
         selection={selection}
         total={entries.length}
@@ -333,9 +430,11 @@ function DayList({
                 selected && "ring-2 ring-primary",
               )}
             >
+              {/* +++===+++ 2026-11-26 12:40 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.8, D-127). 4 px between the 16 px box
+                  and the row, so a 24 px circle around the box touches no other target. */}
               <input
                 type="checkbox"
-                className="mt-2.5 ml-3 size-4 shrink-0 pointer-fine:md:mt-1.5"
+                className="mt-2.5 mr-1 ml-3 size-4 shrink-0 pointer-fine:md:mt-1.5"
                 aria-label={t("calendar.day.select", { title: entry.title || t("calendar.day.noTitle") })}
                 checked={selected}
                 // A prevented click on a controlled checkbox leaves the box drawn in its old state; Shift comes from
@@ -373,11 +472,14 @@ export function DayView({
   date,
   view = "day",
   focusEvent,
+  createEvent,
 }: {
   date: string;
   view?: CalendarViewKind;
   /** HAAL-091: an event whose details card opens once it is among the date's events (then leaves the URL). */
   focusEvent?: string;
+  /** HAAL-123: the editor of a new event opens with this title ("" none), then the request leaves the URL. */
+  createEvent?: string;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -389,9 +491,16 @@ export function DayView({
     time_format: timeFormat,
     default_color: defaultColor,
     day_order: dayOrderBy,
+    day_layout: dayLayout,
   } = useSettings();
+  const client = useQueryClient();
   const desktop = useMediaQuery(DESKTOP_UP);
   const tablet = useMediaQuery(TABLET_UP);
+  const headerRef = useRef<HTMLDivElement>(null);
+  // 1: Notes & cards as an icon, 2: New event as an icon too, 3: a shorter search field, 4: search as the magnifier,
+  // 5: the views by their first letter. Past level 4 the header takes two lines, ‹ Today › and the date on the first,
+  // the second folding again from nothing; level 5 only ever on that second line (HAAL-196).
+  useFitLevel(headerRef, 5, { enabled: tablet, oneLine: 4 });
   const { data: me } = useQuery(meQuery);
   const user = me?.id;
   const { data: allRows = [] } = useQuery({
@@ -404,6 +513,18 @@ export function DayView({
   const calendars = useCalendars(user);
   const { shown } = calendars;
   const rows = useMemo(() => allRows.filter((row) => shown(row.container_id)), [allRows, shown]);
+  // +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. The layers of due dates (D-122): notes and cards on given days, the boards to tell live cards.
+  const { data: boardRows = [] } = useQuery({
+    queryKey: [...localKeys.table("board"), user ?? ""],
+    queryFn: () => (user ? localRows(user, "board") : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
+  const { hiddenLayers } = calendars;
+  const duesOn = useCallback(
+    (list: readonly string[]) => duesOnDays(allRows, boardRows, list, hiddenLayers),
+    [allRows, boardRows, hiddenLayers],
+  );
+  const dayDues = useMemo(() => duesOn([date]).get(date) ?? [], [duesOn, date]);
   // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
   const entries = useMemo(() => entriesOn(rows, date, viewerTz, dayOrderBy), [rows, date, viewerTz, dayOrderBy]);
   const today = todayIn(viewerTz);
@@ -411,6 +532,9 @@ export function DayView({
   const week = view === "week";
   const month = view === "month";
   const agenda = view === "agenda";
+  // HAAL-195: the day on the hours (D-124).
+  const hours = view === "day" && dayLayout === "hours";
+  const oneDay = useMemo(() => [date], [date]);
   const days = useMemo(() => weekDays(date, weekStart), [date, weekStart]);
   const weeks = useMemo(() => monthWeeks(monthOf(date), weekStart), [date, weekStart]);
   const agendaRange = useMemo(() => agendaDays(date, agendaLength), [date, agendaLength]);
@@ -478,6 +602,7 @@ export function DayView({
   };
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. The event (and its shown date) being duplicated.
   const [duplicating, setDuplicating] = useState<{ row: Record<string, unknown>; occurrence: string } | null>(null);
+  const [converting, setConverting] = useState<Record<string, unknown> | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-065. The event waiting for the delete confirmation.
   const [deleting, setDeleting] = useState<Record<string, unknown> | null>(null);
   // +++===+++ 2026-10-23 — Hasan Alizada — HAAL-067. The "this occurrence or all?" question waiting for an answer.
@@ -654,8 +779,10 @@ export function DayView({
   }
   const occurrenceOf = (entry: DayEntry) => entry.key.slice(entry.key.lastIndexOf(":") + 1);
   const rowOf = (entry: DayEntry) => rows.find((candidate) => candidate.id === entry.id);
-  const selection = useSelection(view === "day" ? entries.map((entry) => entry.key) : [], {
-    selectAllShortcut: view === "day",
+  // The selection belongs to the day list (its rows carry the checkboxes).
+  const listed = view === "day" && !hours;
+  const selection = useSelection(listed ? entries.map((entry) => entry.key) : [], {
+    selectAllShortcut: listed,
   });
   const { clear: clearSelection } = selection;
   useEffect(() => {
@@ -731,6 +858,10 @@ export function DayView({
           setDetails(null);
           setDuplicating({ row, occurrence: occurrenceOf(entry) });
         }}
+        onConvert={() => {
+          setDetails(null);
+          setConverting(row);
+        }}
       />
     );
   };
@@ -743,6 +874,16 @@ export function DayView({
       setDetails(entry);
     }
   }
+  // +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). The palette's new event: its editor, the title filled in.
+  const [created, setCreated] = useState<string | null>(null);
+  if ((createEvent ?? null) !== created) {
+    setCreated(createEvent ?? null);
+    if (createEvent !== undefined)
+      setEditing({ event: null, ...(createEvent ? { prefill: { title: createEvent } } : {}) });
+  }
+  useEffect(() => {
+    if (createEvent !== undefined) void navigate({ to: "/calendar", search: { date, view }, replace: true });
+  }, [createEvent, navigate, date, view]);
   useEffect(() => {
     if (focusEvent && focused === focusEvent) {
       void navigate({ to: "/calendar", search: { date, view }, replace: true });
@@ -884,6 +1025,7 @@ export function DayView({
       user={user}
       date={date}
       entries={entries}
+      dues={dayDues}
       open={openAt}
       boundary={area}
       inPopover={tablet}
@@ -912,7 +1054,9 @@ export function DayView({
             ? "calendar.timeBlock.phoneHint"
             : view === "week"
               ? "calendar.timeBlock.hint"
-              : "calendar.timeBlock.dayHint",
+              : hours
+                ? "calendar.timeBlock.hoursHint"
+                : "calendar.timeBlock.dayHint",
         )}
         showTitle={tablet}
         onSchedule={(source) => {
@@ -920,6 +1064,15 @@ export function DayView({
         }}
       />
     ) : null;
+
+  const layoutSwitch = (
+    <DayLayoutSwitch
+      layout={dayLayout}
+      onChange={(layout) => {
+        if (user) void setSettingChoice(client, user, "day_layout", layout, dayLayout);
+      }}
+    />
+  );
 
   return (
     <div className="flex h-full min-h-0">
@@ -933,7 +1086,15 @@ export function DayView({
         </aside>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="@container flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 md:px-4">
+        {/* +++===+++ 2026-11-25 18:27 +04 — Hasan Alizada — HAAL-196. From a tablet up the header keeps one line: it
+            measures what fits and folds in turn the label of Notes & cards, the label of New event, the width of the
+            search and its label (useFitLevel) — fixed widths could not, as the date, the view and the sidebar change
+            what it needs. When even that does not fit it breaks after the date, never leaving a button alone below.
+            A phone wraps it by design. */}
+        <div
+          ref={headerRef}
+          className="group/header flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line px-2 py-1.5 md:px-4"
+        >
           {tablet ? (
             <Button
               variant="ghost"
@@ -992,7 +1153,11 @@ export function DayView({
               <Button
                 variant="ghost"
                 className="max-w-full px-2 text-base font-semibold"
-                aria-label={t("calendar.nav.chooseDate", { date: label })}
+                // +++===+++ 2026-11-26 14:00 +04 — Hasan Alizada — HAAL-143 (WCAG 2.5.3, D-127). The name begins with
+                // the words shown ("Jun 13 – 19, 2027"), then the chosen day when they do not already name it.
+                aria-label={t("calendar.nav.chooseDate", {
+                  date: label.includes(title) ? label : `${title}, ${label}`,
+                })}
                 onClick={() => {
                   setPickerOpen(true);
                 }}
@@ -1002,7 +1167,9 @@ export function DayView({
               </Button>
             </h1>
           )}
-          {/* A phone ends the first line after the date: the rest goes to the next lines. */}
+          {/* A phone ends the first line after the date: the rest goes to the next lines. So does a larger header that
+              does not fit even folded (HAAL-196); the rest then keeps to the right of the second line. */}
+          <div aria-hidden data-fold-break className="hidden h-0 basis-full md:group-data-[fold-wrap]/header:block" />
           <div aria-hidden className="h-0 basis-full max-md:order-1 md:hidden" />
           <div className="flex w-full items-center max-md:order-last md:ml-auto md:w-auto">
             {/* +++===+++ 2026-11-22 09:40 +04 — Hasan Alizada — HAAL-191 (D-117). The clock, the week and the day
@@ -1019,6 +1186,8 @@ export function DayView({
               </span>
               {view === "day" ? <DayNumberLabel date={date} /> : null}
             </div>
+            {/* A phone has no room for it beside the views: it ends the line of the clock. */}
+            {view === "day" && !tablet ? <div className="ml-auto">{layoutSwitch}</div> : null}
           </div>
           {timeBlocking ? (
             <Button
@@ -1030,14 +1199,19 @@ export function DayView({
               className="max-md:order-1"
             >
               <StickyNote aria-hidden />
-              {/* A narrow header keeps it on the line as an icon, like New event. */}
-              <span className="@max-[80rem]:sr-only">{t("calendar.timeBlock.toggle")}</span>
+              {/* A header short of room keeps it on the line as an icon, like New event. */}
+              <span className="group-data-[fold-1]/header:sr-only">{t("calendar.timeBlock.toggle")}</span>
             </Button>
           ) : null}
           {/* +++===+++ 2026-11-23 15:00 +04 — Hasan Alizada — HAAL-039 (D-119). The search field; on phones it is in the
               top bar. */}
-          <SearchField className="w-40 max-md:hidden @max-[64rem]:w-28" />
-          <div className="max-md:order-1 max-md:ml-auto">
+          <SearchField
+            className="w-40 max-md:hidden group-data-[fold-3]/header:w-28 group-data-[fold-4]/header:w-auto"
+            labelClassName="group-data-[fold-4]/header:sr-only"
+            keyClassName="group-data-[fold-4]/header:hidden"
+          />
+          <div className="flex items-center gap-2 max-md:order-1 max-md:ml-auto">
+            {view === "day" && tablet ? layoutSwitch : null}
             <ViewSwitch view={view} onChange={switchView} />
           </div>
           {tablet ? (
@@ -1048,8 +1222,8 @@ export function DayView({
               }}
             >
               <Plus aria-hidden />
-              {/* A narrow header (sidebar open, long range title) keeps the button on the line as an icon. */}
-              <span className="@max-[64rem]:sr-only">{t("calendar.editor.newButton")}</span>
+              {/* A header short of room (sidebar open, long range title) keeps the button on the line as an icon. */}
+              <span className="group-data-[fold-2]/header:sr-only">{t("calendar.editor.newButton")}</span>
             </Button>
           ) : null}
         </div>
@@ -1063,6 +1237,7 @@ export function DayView({
                   user={user}
                   days={agendaRange}
                   rows={rows}
+                  duesOn={duesOn}
                   viewerTz={viewerTz}
                   today={today}
                   anchor={{
@@ -1086,6 +1261,7 @@ export function DayView({
                   date={date}
                   today={today}
                   rows={rows}
+                  duesOn={duesOn}
                   viewerTz={viewerTz}
                   anchor={{
                     open: openAt,
@@ -1103,11 +1279,12 @@ export function DayView({
                   onDrop={dropEvent}
                 />
               </div>
-            ) : week ? (
+            ) : week || hours ? (
               <div className="min-h-0 flex-1">
                 <WeekGrid
-                  days={days}
+                  days={week ? days : oneDay}
                   rows={rows}
+                  duesOn={duesOn}
                   viewerTz={viewerTz}
                   today={today}
                   open={openAt}
@@ -1215,6 +1392,19 @@ export function DayView({
           onDone={(id, target) => {
             setDuplicating(null);
             void navigate({ to: "/calendar", search: { date: target, view, event: id }, replace: true });
+          }}
+        />
+      ) : null}
+      {converting && user ? (
+        <ConvertDialog
+          user={user}
+          row={converting}
+          onClose={() => {
+            setConverting(null);
+          }}
+          onDone={(target) => {
+            setConverting(null);
+            void navigate(target);
           }}
         />
       ) : null}

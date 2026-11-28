@@ -12,6 +12,8 @@
 // address; the columns show the cards that pass them.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. The board's members (for assignees, D-97): the cards show their
 // assignees, the editor assigns them, the filters take them.
+// +++===+++ 2026-11-27 — Hasan Alizada — HAAL-115. Swimlanes (D-130): chosen in the filter bar, kept in the address
+// (`?lanes=`), the columns grouped into lanes by priority, assignee or label.
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArrowLeft, Columns3, MoreHorizontal } from "lucide-react";
@@ -39,6 +41,7 @@ import { STANDALONE_LINK } from "@/components/ui/link-styles";
 import { SearchField } from "@/components/search/SearchField";
 import { type BoardFilter, cardMatches, filterCount, formatBoardFilter } from "@/lib/boardFilter";
 import { cardsOf } from "@/lib/cards";
+import { type LaneKind, lanesOf } from "@/lib/lanes";
 import { columnsOf } from "@/lib/columns";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { useAttachmentCounts } from "@/lib/eventRow";
@@ -70,10 +73,12 @@ function useLocal(
 interface BoardPageProps {
   boardId: string;
   filter: BoardFilter;
+  /** The swimlanes (`?lanes=`), null without. */
+  lanes?: LaneKind | null;
   focusCard?: string;
 }
 
-export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
+export function BoardPage({ boardId, filter, lanes = null, focusCard }: BoardPageProps) {
   const { t } = useTranslation();
   const timeZone = useDisplayTimeZone();
   const now = useNow();
@@ -197,6 +202,15 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
       replace: next.text !== filter.text,
     });
   };
+
+  const setLanes = (next: LaneKind | null) => {
+    void navigate({
+      to: "/kanban/$boardId",
+      params: { boardId },
+      search: (previous) => ({ ...previous, lanes: next ?? undefined }),
+    });
+  };
+  const laneContext = { labels: boardLabels, itemLabels: itemLabelRows, members, assignees: assigneeRows };
 
   const back = (
     <Link to="/kanban" className={`${STANDALONE_LINK} gap-1 text-[13px]`}>
@@ -337,7 +351,15 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
         </div>
       ) : (
         <>
-          <BoardFilters filter={filter} labels={boardLabels} members={members} me={user} onChange={setFilter} />
+          <BoardFilters
+            filter={filter}
+            labels={boardLabels}
+            members={members}
+            me={user}
+            onChange={setFilter}
+            lanes={lanes}
+            onLanes={setLanes}
+          />
           {canWrite && shownIds.length > 0 ? (
             <BulkBar
               selection={selection}
@@ -366,6 +388,7 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
             timeZone={timeZone}
             shown={filtering ? shown : undefined}
             assignees={assigneeNames}
+            lanes={lanes ? { list: lanesOf(lanes, laneContext), context: laneContext } : undefined}
             onOpenCard={(card) => {
               setEditing(String(card.id));
             }}
@@ -417,6 +440,7 @@ export function BoardPage({ boardId, filter, focusCard }: BoardPageProps) {
           columns={columns.active}
           items={items}
           canWrite={canWrite}
+          boardOwner={row.owner_id}
           onClose={() => {
             setEditing(null);
             if (focusCard) {

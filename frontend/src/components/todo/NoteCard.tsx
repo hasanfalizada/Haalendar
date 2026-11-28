@@ -14,11 +14,14 @@
 // (`move`), a handle drags it — the mouse after 5 px, a finger after a short hold (a long press on the card still
 // selects) — the card is a drop target of its section, and Alt+arrows on the card move it one place (↑ / ← earlier,
 // ↓ / → later). In the list layout the card is a full-width row with a shorter preview.
+// +++===+++ 2026-11-23 22:10 +04 — Hasan Alizada — HAAL-104. The due date (D-121) as on a board's card: the date (and
+// time), a badge when overdue or due soon (`dueState`), never the colour alone.
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Archive,
   ArchiveRestore,
   Bell,
+  CalendarClock,
   GripVertical,
   Paperclip,
   Palette,
@@ -31,10 +34,13 @@ import { type MouseEvent, type PointerEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Color, Priority } from "@/api/generated/types.gen";
+import { useSettings } from "@/api/settings";
+import { DueBadge } from "@/components/kanban/CardTile";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PriorityBadge } from "@/components/ui/priority";
+import { type DueState, dueText } from "@/lib/cards";
 import { CARD_ITEMS, type ChecklistGroups } from "@/lib/checklist";
 import { toPlainText } from "@/lib/markdown-text";
 import { type NoteAccess, type NoteLayout, type NoteSection, text } from "@/lib/notes";
@@ -63,6 +69,8 @@ interface NoteCardProps {
   checklist: ChecklistGroups | null;
   /** The next reminder still ahead, as text ("Tomorrow, 09:00"), or null. */
   nextReminder: string | null;
+  /** Overdue, due soon or neither (dueState). */
+  dueState?: DueState;
   onOpen: () => void;
   /** The user's right on the note (owner when absent). */
   access?: NoteAccess;
@@ -91,6 +99,7 @@ export function NoteCard({
   attachments,
   checklist,
   nextReminder,
+  dueState = null,
   onOpen,
   access = "owner",
   labels = [],
@@ -99,7 +108,9 @@ export function NoteCard({
   select,
 }: NoteCardProps) {
   const owner = access === "owner";
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { time_format: timeFormat } = useSettings();
+  const due = dueText(row, i18n.language, timeFormat);
   const id = String(row.id);
   const drag = move ? ({ row, section: move.section } satisfies NoteDragData) : undefined;
   const {
@@ -178,7 +189,7 @@ export function NoteCard({
             {preview}
           </p>
         ) : null}
-        {attachments > 0 || text(row.priority) !== "medium" || nextReminder || !owner ? (
+        {attachments > 0 || text(row.priority) !== "medium" || nextReminder || due || !owner ? (
           <span className="flex flex-wrap items-center gap-1.5">
             {owner ? null : (
               <span className="inline-flex items-center gap-1 rounded-sm bg-bg/60 px-1.5 py-0.5 text-xs">
@@ -186,6 +197,25 @@ export function NoteCard({
                 {t(access === "edit" ? "todo.card.sharedEdit" : "todo.card.sharedView")}
               </span>
             )}
+            {due && dueState ? (
+              <span
+                aria-label={t(dueState === "overdue" ? "kanban.cards.dueOverdue" : "kanban.cards.dueSoonAt", {
+                  when: due,
+                })}
+              >
+                <DueBadge state={dueState}>
+                  <span aria-hidden>· {due}</span>
+                </DueBadge>
+              </span>
+            ) : due ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-sm bg-bg/60 px-1.5 py-0.5 text-xs"
+                aria-label={t("kanban.cards.due", { when: due })}
+              >
+                <CalendarClock className="size-3" aria-hidden />
+                {due}
+              </span>
+            ) : null}
             {nextReminder ? (
               <span className="inline-flex items-center gap-1 rounded-sm bg-bg/60 px-1.5 py-0.5 text-xs">
                 <Bell className="size-3" aria-hidden />

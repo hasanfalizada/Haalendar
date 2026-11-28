@@ -26,3 +26,9 @@ class AuditRecordOut(BaseModel):
     entity_id: uuid.UUID
     before: dict[str, Any] | None
     after: dict[str, Any] | None
+
+
+# +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114. A page of an item's history (contract: item_history).
+class HistoryPageOut(BaseModel):
+    data: list[AuditRecordOut]
+    next_cursor: str | None

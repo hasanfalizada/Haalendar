@@ -2,17 +2,41 @@
 // the app shell, opened by the search field of any header or by "/".
 import { useSyncExternalStore } from "react";
 
-import { NO_FILTER, type SearchFilter } from "@/lib/searchFilter";
+import { NO_FILTER, type SearchFilter } from "@/lib/searchFilterShape";
 
 let open = false;
 const listeners = new Set<() => void>();
 
-export function setSearchOpen(next: boolean): void {
-  if (open === next) return;
+// +++===+++ 2026-11-25 22:47 +04 — Hasan Alizada — HAAL-123 (D-126). The same window is the command palette: opened by
+// Ctrl+K (and on phones by the search field) it lists the commands while the field is empty and puts the matching ones
+// and "Create …" with the typed words before the results; opened by "/" or the field of a header it is the search.
+export type SearchMode = "search" | "commands";
+let mode: SearchMode = "search";
+
+export function setSearchOpen(next: boolean, nextMode: SearchMode = "search"): void {
+  if (open === next && (!next || mode === nextMode)) return;
   open = next;
+  if (next) mode = nextMode;
   listeners.forEach((listener) => {
     listener();
   });
+}
+
+export function useSearchMode(): SearchMode {
+  return useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    () => mode,
+  );
+}
+
+/** Whether the window is open as the command palette (for Ctrl+K pressed again). */
+export function searchMode(): SearchMode | null {
+  return open ? mode : null;
 }
 
 export function useSearchOpen(): boolean {

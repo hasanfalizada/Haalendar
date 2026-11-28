@@ -9,8 +9,10 @@
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-084. "Move to next day" between Edit and Delete (FR-CAL-20).
 // +++===+++ 2026-10-28 — Hasan Alizada — HAAL-091. The user's own reminders of the event, under the calendar line.
 // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-096. "Duplicate…" (button and the key D) after "Move to next day".
+// +++===+++ 2026-11-25 17:09 +04 — Hasan Alizada — HAAL-122 (D-125). "Convert to…" after "Duplicate…".
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowLeftRight,
   Bell,
   CalendarArrowUp,
   CalendarDays,
@@ -35,11 +37,11 @@ import { RecordTimestamps } from "@/components/ui/record-timestamps";
 import { useDisplayTimeZone } from "@/lib/datetime";
 import { eventRange } from "@/lib/dayView";
 import { describeRrule } from "@/lib/repeatRule";
-import { toPlainText } from "@/lib/markdown-text";
 import { ItemLinks } from "@/components/links/ItemLinks";
 import { reminderLabel, remindersOf } from "@/lib/reminders";
 import { useShortcut } from "@/lib/shortcuts";
 import { undo } from "@/lib/undo";
+import { usePlainText } from "@/lib/usePlainText";
 import { localKeys, localRows } from "@/sync";
 
 import { EventColor } from "./EventColor";
@@ -62,6 +64,7 @@ interface EventDetailsProps {
   onDelete: () => void;
   onMoveNextDay: () => void;
   onDuplicate: () => void;
+  onConvert: () => void;
 }
 
 function useAttachments(user: string, itemId: string): Attachment[] {
@@ -92,6 +95,7 @@ export function EventDetails({
   onDelete,
   onMoveNextDay,
   onDuplicate,
+  onConvert,
 }: EventDetailsProps) {
   const { t, i18n } = useTranslation();
   const { time_format: timeFormat } = useSettings();
@@ -107,7 +111,7 @@ export function EventDetails({
   });
   const reminders = remindersOf(reminderRows, id);
   const body = text(row.body);
-  const plain = toPlainText(body, { singleLine: true });
+  const plain = usePlainText(body, { singleLine: true });
   // +++===+++ 2026-10-29 — Hasan Alizada — HAAL-092. The whole rule as text ("Every 2 weeks on Mon and Thu, 10 times").
   const repeat = row.rrule
     ? (describeRrule(row.rrule, text(row.start_date), i18n.language) ?? t("calendar.day.repeats"))
@@ -218,7 +222,8 @@ export function EventDetails({
           {plain.length > PREVIEW_CHARS || body !== plain ? (
             <button
               type="button"
-              className="w-fit text-primary underline underline-offset-2"
+              // HAAL-143 (D-127): a 44 px target on touch.
+              className="w-fit text-primary underline underline-offset-2 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center"
               aria-expanded={full}
               onClick={() => {
                 setFull(!full);
@@ -276,6 +281,15 @@ export function EventDetails({
           <Button onClick={onDuplicate}>
             <Copy aria-hidden />
             {t("calendar.details.duplicate")}
+          </Button>
+          <Button
+            // The server converts the event it has: one made here may still be on its way.
+            disabled={!(typeof row.version === "number" && row.version > 0)}
+            title={typeof row.version === "number" && row.version > 0 ? undefined : t("convert.syncing")}
+            onClick={onConvert}
+          >
+            <ArrowLeftRight aria-hidden />
+            {t("convert.open")}
           </Button>
           <Button variant="danger" onClick={onDelete}>
             <Trash2 aria-hidden />

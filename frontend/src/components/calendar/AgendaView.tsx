@@ -5,6 +5,8 @@
 // day view. With no events in the whole range an empty state names the range.
 // Long ranges render in batches: the first BATCH days with events at once, the next ones when the end of the list
 // comes near (365 days of daily series are ~1900 rows); where IntersectionObserver is missing all render at once.
+// +++===+++ 2026-11-24 11:00 +04 — Hasan Alizada — HAAL-121. A day's due dates of notes and cards (layers, D-122) above
+// its events; a day with only those is shown too.
 import { CalendarDays } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,11 +15,13 @@ import { useSettings } from "@/api/settings";
 import { agendaOf } from "@/lib/agendaView";
 import { addDays } from "@/lib/datetime";
 import { dayLabel } from "@/lib/dayView";
+import type { DueEntry } from "@/lib/dueLayers";
 import { useAttachmentCounts, useRowFlags } from "@/lib/eventRow";
 import { itemColorClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
 import { type DetailsAnchor, EventButton } from "./EventButton";
+import { DueChip } from "./DueChip";
 import { EventRowBody } from "./EventRow";
 
 type Row = Record<string, unknown>;
@@ -28,6 +32,8 @@ interface AgendaListProps {
   user: string | undefined;
   days: readonly string[];
   rows: readonly Row[];
+  /** The due dates of notes and cards on the given days (layers, D-122). */
+  duesOn?: (days: readonly string[]) => Map<string, DueEntry[]>;
   viewerTz: string;
   today: string;
   anchor: DetailsAnchor;
@@ -35,13 +41,13 @@ interface AgendaListProps {
   onDay: (date: string) => void;
 }
 
-export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }: AgendaListProps) {
+export function AgendaList({ user, days, rows, duesOn, viewerTz, today, anchor, onDay }: AgendaListProps) {
   const { t, i18n } = useTranslation();
   const attachmentCounts = useAttachmentCounts(user);
   const rowFlags = useRowFlags();
   // +++===+++ 2026-11-18 16:37 +04 — Hasan Alizada — HAAL-185. In the order the user chose (D-111).
   const { day_order: by } = useSettings();
-  const agenda = useMemo(() => agendaOf(rows, days, viewerTz, by), [rows, days, viewerTz, by]);
+  const agenda = useMemo(() => agendaOf(rows, days, viewerTz, by, duesOn?.(days)), [rows, days, viewerTz, by, duesOn]);
   // A new range is a new list (the page keys it by its range), so it starts with one batch again.
   const [shown, setShown] = useState(() =>
     typeof IntersectionObserver === "undefined" ? Number.POSITIVE_INFINITY : BATCH,
@@ -78,7 +84,7 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
   }
   return (
     <div className="flex flex-col gap-4 p-3 md:p-4">
-      {agenda.slice(0, shown).map(({ day, entries }) => {
+      {agenda.slice(0, shown).map(({ day, entries, dues }) => {
         const full = dayLabel(day, i18n.language);
         const relative =
           day === today ? t("calendar.header.today") : day === addDays(today, 1) ? t("calendar.agenda.tomorrow") : null;
@@ -92,7 +98,8 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
                   onDay(day);
                 }}
                 className={cn(
-                  "flex items-baseline gap-2 rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary",
+                  // HAAL-143 (D-127): a 44 px target on touch.
+                  "flex items-baseline gap-2 rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:min-h-11 pointer-coarse:items-center",
                   day === today && "text-primary",
                 )}
               >
@@ -104,29 +111,43 @@ export function AgendaList({ user, days, rows, viewerTz, today, anchor, onDay }:
                 <span className={cn(relative && "font-normal text-muted")}>{full}</span>
               </button>
             </h2>
-            <ol aria-label={full} className="flex flex-col gap-1.5 pointer-fine:md:gap-0.5">
-              {entries.map((entry) => {
-                const attachments = attachmentCounts.get(entry.id) ?? 0;
-                const flags = rowFlags(entry, attachments);
-                const flagsId = `agenda-flags-${day}-${entry.key}`;
-                return (
-                  <li key={entry.key} className={cn("rounded-sm text-[13px]", itemColorClasses(entry.color))}>
-                    <EventButton
-                      entry={entry}
-                      anchor={anchor}
-                      place={day}
-                      // +++===+++ 2026-11-19 11:00 +04 — Hasan Alizada — HAAL-189. Opened from the keyboard, below the row, as in the
-                      // day list: beside a row as wide as the list there is no room (a click opens it at the cursor).
-                      side="bottom"
-                      describedBy={flags.length > 0 ? flagsId : undefined}
-                      className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
-                    >
-                      <EventRowBody entry={entry} attachments={attachments} flags={flags} flagsId={flagsId} />
-                    </EventButton>
+            {dues.length > 0 ? (
+              <ul
+                aria-label={t("calendar.due.listLabel", { date: full })}
+                className="flex flex-col gap-1.5 pointer-fine:md:gap-0.5"
+              >
+                {dues.map((due) => (
+                  <li key={due.key}>
+                    <DueChip entry={due} variant="row" />
                   </li>
-                );
-              })}
-            </ol>
+                ))}
+              </ul>
+            ) : null}
+            {entries.length > 0 ? (
+              <ol aria-label={full} className="flex flex-col gap-1.5 pointer-fine:md:gap-0.5">
+                {entries.map((entry) => {
+                  const attachments = attachmentCounts.get(entry.id) ?? 0;
+                  const flags = rowFlags(entry, attachments);
+                  const flagsId = `agenda-flags-${day}-${entry.key}`;
+                  return (
+                    <li key={entry.key} className={cn("rounded-sm text-[13px]", itemColorClasses(entry.color))}>
+                      <EventButton
+                        entry={entry}
+                        anchor={anchor}
+                        place={day}
+                        // +++===+++ 2026-11-19 11:00 +04 — Hasan Alizada — HAAL-189. Opened from the keyboard, below the row, as in the
+                        // day list: beside a row as wide as the list there is no room (a click opens it at the cursor).
+                        side="bottom"
+                        describedBy={flags.length > 0 ? flagsId : undefined}
+                        className="flex min-h-11 w-full items-start gap-3 rounded-sm py-2 pr-3 pl-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-fine:md:min-h-7 pointer-fine:md:py-1"
+                      >
+                        <EventRowBody entry={entry} attachments={attachments} flags={flags} flagsId={flagsId} />
+                      </EventButton>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : null}
           </section>
         );
       })}

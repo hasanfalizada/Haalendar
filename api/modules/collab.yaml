@@ -449,6 +449,8 @@ components:
       # late.
       # +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119 (D-97). assigned: card_assignee_id, item_id, title, board_id,
       # board_name, by_name.
+      # +++===+++ 2026-11-24 17:41 +04 — Hasan Alizada — HAAL-114 (D-123). comment: comment_id, item_id, title, board_id,
+      # board_name, by_name (no text of the comment).
       type: object
       required: [id, kind, created_at, payload]
       properties:

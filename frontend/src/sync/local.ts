@@ -16,6 +16,21 @@ function now(): string {
   return new Date().toISOString();
 }
 
+// +++===+++ 2026-11-25 09:12 +04 — Hasan Alizada — HAAL-114. A comment written here shows at once with what the server
+// adds to it (D-123): its author, when, and its card's board (the data sent stays the card and the text).
+async function commentFields(db: LocalDb, entry: OutboxEntry): Promise<Record<string, unknown>> {
+  const card = await db.items.get(String(entry.data?.item_id));
+  const at = now();
+  return {
+    author_id: db.user,
+    created_at: at,
+    updated_at: at,
+    edited_at: null,
+    container_kind: "board",
+    container_id: card?.container_id ?? null,
+  };
+}
+
 /** The local effect of one change of the user (inside the caller's transaction). */
 export async function applyLocal(db: LocalDb, entry: OutboxEntry): Promise<void> {
   const table = db[ENTITY_TABLE[entry.entity_type]];
@@ -24,6 +39,7 @@ export async function applyLocal(db: LocalDb, entry: OutboxEntry): Promise<void>
     case "create":
       await table.put({
         ...(OWNED.has(entry.entity_type) ? { owner_id: db.user } : {}),
+        ...(entry.entity_type === "comment" ? await commentFields(db, entry) : {}),
         ...(entry.data ?? {}),
         id: entry.entity_id,
         version: 0,
@@ -32,7 +48,13 @@ export async function applyLocal(db: LocalDb, entry: OutboxEntry): Promise<void>
       return;
     case "update":
     case "move":
-      if (row) await table.put({ ...row, ...(entry.data ?? {}) });
+      if (row)
+        await table.put({
+          ...row,
+          ...(entry.data ?? {}),
+          // +++===+++ 2026-11-25 09:12 +04 — Hasan Alizada — HAAL-114. A changed text marks the comment edited at once.
+          ...(entry.entity_type === "comment" && entry.data?.body !== row.body ? { edited_at: now() } : {}),
+        });
       return;
     case "delete":
       if (row && !row.deleted_at) await table.put({ ...row, deleted_at: now() });
@@ -62,6 +84,8 @@ async function removeContainer(db: LocalDb, kind: string, id: string): Promise<v
   await db.itemLabels.where("[container_kind+container_id]").equals(inside).delete();
   // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And the assignees of its cards.
   await db.cardAssignees.where("[container_kind+container_id]").equals(inside).delete();
+  // +++===+++ 2026-11-25 09:12 +04 — Hasan Alizada — HAAL-114. And the comments on its cards.
+  await db.comments.where("[container_kind+container_id]").equals(inside).delete();
   // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-120. A link with an end there stays while its other end is still on the
   // device (the user reads that one); otherwise it goes too.
   const touching = [

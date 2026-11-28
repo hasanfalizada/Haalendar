@@ -193,11 +193,20 @@
       "month": "Month",
       "monthKey": "Month view",
       "agenda": "Agenda",
-      "agendaKey": "Agenda view"
+      "agendaKey": "Agenda view",
+      "layout": "Day as",
+      "list": "List",
+      "hours": "Hours"
     },
     "week": {
       "allDay": "all day",
-      "allDayOf": "All day, {{date}}"
+      "allDayOf": "All day, {{date}}",
+      "more_one": "+{{count}} more",
+      "more_other": "+{{count}} more",
+      "moreOn_one": "Show {{count}} more all-day on {{date}}",
+      "moreOn_other": "Show {{count}} more all-day on {{date}}",
+      "showAll": "Show all all-day events",
+      "showFewer": "Show fewer all-day events"
     },
     "month": {
       "openDay": "Open {{date}}",
@@ -228,6 +237,7 @@
       "none": "Nothing to schedule here.",
       "hint": "Drag one onto the week to schedule it, or use Schedule…",
       "dayHint": "Drop one on the day, or use Schedule…",
+      "hoursHint": "Drag one onto the hours to schedule it, or use Schedule…",
       "schedule": "Schedule…",
       "scheduleNamed": "Schedule {{title}}",
       "scheduled": "Scheduled already",
@@ -236,6 +246,14 @@
       "done": "Scheduled {{title}}",
       "drag": "Drag {{title}} onto the calendar",
       "phoneHint": "Use Schedule… to put one on the calendar."
+    },
+    "due": {
+      "note": "Open the note {{title}}, due {{when}}",
+      "card": "Open the card {{title}}, due {{when}}",
+      "allDay": "all day",
+      "overdue": "overdue",
+      "soon": "due soon",
+      "listLabel": "Due on {{date}}"
     }
   },
   "pages": {
@@ -676,7 +694,9 @@
       "item_label_one": "{{count}} label on a card",
       "item_label_other": "{{count}} labels on cards",
       "card_assignee_one": "{{count}} assignee",
-      "card_assignee_other": "{{count}} assignees"
+      "card_assignee_other": "{{count}} assignees",
+      "comment_one": "{{count}} comment",
+      "comment_other": "{{count}} comments"
     },
     "select": "Select {{title}}",
     "restore": "Restore",
@@ -762,7 +782,8 @@
       "label": "Label",
       "item_label": "Label on a card",
       "card_assignee": "Assignee of a card",
-      "link": "Link between items"
+      "link": "Link between items",
+      "comment": "Comment"
     },
     "kind": {
       "fields": "Changed here and on another device",
@@ -883,7 +904,11 @@
       "labelDeleted": "deleting the label {{name}}",
       "linked": "linking {{title}}",
       "unlinked": "the link to {{title}}",
-      "timeBlocked": "scheduling {{title}}"
+      "timeBlocked": "scheduling {{title}}",
+      "commented": "the comment on {{title}}",
+      "commentEdited": "the change to the comment",
+      "commentDeleted": "deleting the comment",
+      "itemConverted": "converting {{title}} to {{kind}}"
     }
   },
   "links": {
@@ -975,7 +1000,8 @@
     "listDelete": "Delete the selection (asks first)",
     "listDeleteFocused": "Delete the focused row (asks first)",
     "save": "Save",
-    "search": "Search"
+    "search": "Search",
+    "commands": "Commands and search"
   },
   "unsaved": {
     "title": "Unsaved changes",
@@ -1056,6 +1082,7 @@
   },
   "userMenu": {
     "open": "Account menu of {{name}}",
+    "openPrefix": "Account menu of",
     "profile": "Profile",
     "settings": "Settings",
     "export": "Export your data",
@@ -1071,7 +1098,7 @@
     "shortcuts": "Keyboard shortcuts",
     "shortcutsHint": "The keys that work on the current page. Press ? anywhere.",
     "docs": "Documentation",
-    "docsHint": "How Haalendar works, how to run it and its data formats.",
+    "docsHint": "How to use Haalendar: the calendar, To-Do, Kanban, sync and settings.",
     "issues": "Report a problem",
     "issuesHint": "Describe what happened; please leave out personal data.",
     "newTab": "(opens in a new tab)",
@@ -1182,7 +1209,8 @@
     "reminderCardLate": "Reminder: {{title}} — {{when}} · {{board}} (sent late)",
     "generic": "You have a new notification.",
     "assigned": "{{by}} assigned you: {{title}} · {{board}}",
-    "reminderLate": "Reminder: {{title}} — {{when}} (sent late)"
+    "reminderLate": "Reminder: {{title}} — {{when}} (sent late)",
+    "comment": "{{by}} commented on {{title}} · {{board}}"
   },
   "pwa": {
     "updateReady": "A new version of Haalendar is available.",
@@ -1347,7 +1375,11 @@
       "archive": "Archived {{name}}",
       "unarchive": "Unarchived {{name}}",
       "delete": "Deleted {{name}}"
-    }
+    },
+    "layers": "Layers",
+    "noteDue": "Note due dates",
+    "cardDue": "Card due dates",
+    "showLayer": "Show {{name}}"
   },
   "ics": {
     "importItem": "Import .ics…",
@@ -1579,7 +1611,7 @@
     },
     "cards": {
       "add": "Add card",
-      "addTo": "Add a card to {{column}}",
+      "addTo": "Add card to {{column}}",
       "addButton": "Add",
       "titleIn": "Title of the new card in {{column}}",
       "titlePlaceholder": "Card title",
@@ -1617,7 +1649,24 @@
       "remindersNeedDue": "Reminders need a due date.",
       "reminder": "Reminder set",
       "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}",
+      "movedLane": "{{title}} moved to {{column}} in {{lane}}, position {{position}} of {{total}}",
       "select": "Select {{title}}"
+    },
+    "lanes": {
+      "title": "Swimlanes",
+      "current": "Swimlanes: {{kind}}",
+      "kinds": {
+        "none": "None",
+        "priority": "Priority",
+        "assignee": "Assignee",
+        "label": "Label"
+      },
+      "unassigned": "Unassigned",
+      "noLabel": "No label",
+      "toggle_one": "{{name}}, {{count}} card",
+      "toggle_other": "{{name}}, {{count}} cards",
+      "cell": "{{column}}, {{lane}}",
+      "labelStays": "A card stays in its label's lane; change its labels in the card."
     },
     "assignees": {
       "title": "Assignees",
@@ -1670,12 +1719,28 @@
       }
     }
   },
+  "commands": {
+    "label": "Commands and search",
+    "placeholder": "Type a command or search",
+    "groups": {
+      "go": "Go to",
+      "create": "Create"
+    },
+    "today": "Today in the calendar",
+    "board": "Board “{{name}}”",
+    "newEvent": "New event",
+    "newNote": "New note",
+    "newList": "New list",
+    "createEvent": "Create event “{{title}}”",
+    "createNote": "Create note “{{title}}”",
+    "createCard": "Add card “{{title}}” to {{board}}"
+  },
   "search": {
     "open": "Search",
     "placeholder": "Search events, notes and cards",
     "label": "Search",
     "results": "Search results",
-    "close": "Close the search",
+    "close": "Close the search, Esc",
     "groups": {
       "calendar": "Calendar",
       "todo": "To-Do",
@@ -1683,11 +1748,12 @@
     },
     "goToDate": "Go to {{date}}",
     "none": "Nothing found for “{{query}}”.",
-    "hint": "Type words from a title, place, description or checklist. A date as YYYY-MM-DD opens that day.",
+    "hint": "Type words from a title, place, description, checklist or comment. A date as YYYY-MM-DD opens that day.",
     "fields": {
       "location": "Place",
       "body": "Description",
-      "checklist": "Checklist"
+      "checklist": "Checklist",
+      "comments": "Comments"
     },
     "count_one": "{{count}} result",
     "count_other": "{{count}} results",
@@ -1716,5 +1782,164 @@
     },
     "hintFilters": "Or choose filters below to list what matches them.",
     "noneFiltered": "Nothing matches these filters."
+  },
+  "activity": {
+    "title": "Activity",
+    "history": "History",
+    "commentsOnly": "Comments only",
+    "empty": "No activity yet.",
+    "more": "Show more",
+    "you": "You",
+    "someone": "Someone",
+    "offline": "The history shows when this device is online. Comments are here offline too.",
+    "notOnServer": "The history shows once this has reached the server.",
+    "loadFailed": "The history could not be loaded.",
+    "created": {
+      "card": "created the card",
+      "event": "created the event",
+      "note": "created the note"
+    },
+    "deleted": {
+      "card": "moved the card to the trash",
+      "event": "moved the event to the trash",
+      "note": "moved the note to the trash"
+    },
+    "restored": {
+      "card": "restored the card",
+      "event": "restored the event",
+      "note": "restored the note"
+    },
+    "movedContainer": {
+      "card": "moved the card to another board",
+      "event": "moved the event to another calendar",
+      "note": "moved the note"
+    },
+    "moved": "moved the card",
+    "movedTo": "moved the card to {{column}}",
+    "changed": "changed {{fields}}",
+    "fields": {
+      "title": "the title",
+      "body": "the description",
+      "color": "the colour",
+      "priority": "the priority",
+      "due_date": "the due date",
+      "due_time": "the due time",
+      "location": "the place",
+      "all_day": "all day",
+      "start_date": "the start",
+      "start_time": "the start time",
+      "end_date": "the end",
+      "end_time": "the end time",
+      "tzid": "the time zone",
+      "rrule": "the repeat",
+      "pinned": "pinning",
+      "archived_at": "archiving",
+      "is_checklist": "the checklist view",
+      "other": "other details"
+    },
+    "checklistAdded": "added “{{text}}” to the checklist",
+    "checklistAddedUnnamed": "added a checklist item",
+    "checklistRemoved": "removed “{{text}}” from the checklist",
+    "checklistRemovedUnnamed": "removed a checklist item",
+    "checklistChecked": "checked “{{text}}”",
+    "checklistCheckedUnnamed": "checked a checklist item",
+    "checklistUnchecked": "unchecked “{{text}}”",
+    "checklistUncheckedUnnamed": "unchecked a checklist item",
+    "checklistRenamed": "renamed a checklist item to “{{text}}”",
+    "labelAdded": "added the label {{name}}",
+    "labelAddedUnnamed": "added a label",
+    "labelRemoved": "removed the label {{name}}",
+    "labelRemovedUnnamed": "removed a label",
+    "assigned": "assigned {{name}}",
+    "assignedUnnamed": "assigned someone",
+    "unassigned": "took {{name}} off the card",
+    "unassignedUnnamed": "took someone off the card",
+    "imageAdded": "added the image “{{name}}”",
+    "imageAddedUnnamed": "added an image",
+    "imageRemoved": "removed the image “{{name}}”",
+    "imageRemovedUnnamed": "removed an image",
+    "linked": "linked {{title}}",
+    "linkedUnnamed": "added a link",
+    "unlinked": "removed the link to {{title}}",
+    "unlinkedUnnamed": "removed a link",
+    "commentDeleted": "deleted a comment",
+    "commentRestored": "restored a comment",
+    "dateRemoved": "removed {{date}} from the series",
+    "dateChanged": "changed {{date}} of the series",
+    "dateBack": "put {{date}} back into the series",
+    "dateBackUnnamed": "put a date back into the series",
+    "converted": {
+      "card": "converted it to a card",
+      "event": "converted it to an event",
+      "note": "converted it to a note"
+    }
+  },
+  "comments": {
+    "label": "Comment",
+    "editLabel": "Text of the comment",
+    "placeholder": "Write a comment… (Ctrl+Enter sends)",
+    "send": "Comment",
+    "save": "Save",
+    "edit": "Change the comment",
+    "delete": "Delete the comment",
+    "edited": "edited",
+    "by": "Comment by {{name}}",
+    "none": "No comments yet.",
+    "tooLong": "At most {{max}} characters.",
+    "done": {
+      "create": "Comment added to {{title}}",
+      "update": "Comment changed",
+      "delete": "Comment deleted"
+    }
+  },
+  "convert": {
+    "open": "Convert to…",
+    "title": "Convert {{title}}",
+    "untitled": "(No title)",
+    "to": "Convert to",
+    "kind": {
+      "event": "An event",
+      "note": "A note",
+      "card": "A card"
+    },
+    "calendar": "Calendar",
+    "day": "Day",
+    "dayHint": "It has no due date: the event is all day on this day.",
+    "onDueDate": "The event goes on its due date: all day, or one hour from its time.",
+    "board": "Board",
+    "column": "Column",
+    "toNotes": "It goes on top of your notes, with its due date.",
+    "noCalendar": "There is no calendar you can add events to.",
+    "noBoard": "There is no board you can add cards to.",
+    "noColumn": "This board has no column yet.",
+    "changesTitle": "What changes",
+    "kept": "The title, description, colour, priority, images, links and history stay.",
+    "changes": {
+      "checklist_one": "The checklist ({{count}} item) becomes a list in the description.",
+      "checklist_other": "The checklist ({{count}} items) becomes a list in the description.",
+      "location": "The place “{{place}}” goes into the first line of the description.",
+      "titleCut": "The title is cut to {{count}} characters.",
+      "labels_one": "The label {{names}} is taken off.",
+      "labels_other": "The labels {{names}} are taken off.",
+      "assignees_one": "{{count}} person assigned is taken off.",
+      "assignees_other": "{{count}} people assigned are taken off.",
+      "comments_one": "{{count}} comment is taken off.",
+      "comments_other": "{{count}} comments are taken off.",
+      "reminders_one": "Your {{count}} reminder is taken off: it does not fit the new kind.",
+      "reminders_other": "Your {{count}} reminders are taken off: they do not fit the new kind."
+    },
+    "refused": {
+      "repeating": "A repeating event cannot be converted. Make it a single event first.",
+      "notOwner": "Only the owner can convert this note."
+    },
+    "submit": "Convert",
+    "done": "{{title}} is now {{kind}}.",
+    "kindIs": {
+      "event": "an event",
+      "note": "a note",
+      "card": "a card"
+    },
+    "saveFirst": "Save the changes first.",
+    "syncing": "It can be converted once it has reached the server."
   }
 }

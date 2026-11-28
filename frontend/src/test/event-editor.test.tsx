@@ -162,6 +162,12 @@ describe("editor", { timeout: 15_000 }, () => {
     const dialog = await screen.findByRole("dialog", { name: "New event" });
     await user.type(within(dialog).getByLabelText("Title"), "Dentist");
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+    // +++===+++ 2026-11-24 20:01 +04 — Hasan Alizada — HAAL-114 (CI of PR #84). The keys save no more than the disabled
+    // button: an event without a calendar was sent and rejected ("container_id" empty).
+    await user.keyboard("{Control>}s{/Control}");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.getByRole("dialog", { name: "New event" })).toBeInTheDocument();
+    expect(await outbox()).toEqual([]);
 
     const db = await localDb(USER);
     await db.calendars.put({
@@ -270,6 +276,78 @@ describe("editor", { timeout: 15_000 }, () => {
 
   // +++===+++ 2026-10-31 — Hasan Alizada — HAAL-141. An event made on this device that the server has not received yet
   // (version 0) has no attachments there: the editor waits instead of asking (it got 404 before).
+  // +++===+++ 2026-11-25 09:48 +04 — Hasan Alizada — HAAL-114 (F-33, D-123). The event's history: closed, asked from
+  // the server only once opened, in words, newest first.
+  it("shows the event's history once opened", async () => {
+    const db = await localDb(USER);
+    await db.calendars.put({ id: CAL, name: "Family", owner_id: USER, deleted_at: null, version: 1 });
+    await db.items.put({
+      id: EVENT,
+      kind: "event",
+      container_kind: "calendar",
+      container_id: CAL,
+      title: "Dentist",
+      color: "blue",
+      priority: "medium",
+      all_day: true,
+      start_date: DAY,
+      end_date: DAY,
+      start_time: null,
+      end_time: null,
+      tzid: me().time_zone,
+      rrule: null,
+      location: null,
+      body: null,
+      version: 3,
+      deleted_at: null,
+    });
+    const entry = (action: string, at: string, extra: Record<string, unknown>) => ({
+      id: crypto.randomUUID(),
+      occurred_at: at,
+      actor_id: USER,
+      actor_name: "Ada Admin",
+      action,
+      entity_type: "item",
+      entity_id: EVENT,
+      before: null,
+      after: null,
+      ...extra,
+    });
+    const history = vi.fn(() =>
+      json({
+        data: [
+          entry("update", "2026-11-20T10:00:00Z", {
+            entity_type: "event",
+            before: { location: null, start_date: "2026-11-01", start_utc: "x" },
+            after: { location: "Clinic", start_date: "2026-11-02", start_utc: "y" },
+          }),
+          entry("create", "2026-11-19T10:00:00Z", { after: { title: "Dentist" } }),
+          // The event's details when it was created repeat the item's record: not shown.
+          entry("create", "2026-11-19T10:00:00Z", { entity_type: "event", after: { all_day: true } }),
+        ],
+        next_cursor: null,
+      }),
+    );
+    const { user } = await openApp({ [`GET /items/${EVENT}/history`]: history });
+    await user.click(await screen.findByRole("button", { name: "Details of Dentist" }));
+    await user.click(
+      within(await screen.findByRole("dialog", { name: "Event details" })).getByRole("button", { name: "Edit" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Edit event" });
+    expect(history).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByText("History"));
+    const list = await within(dialog).findByRole("list", { name: "History" });
+    await waitFor(() => {
+      expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    });
+    const texts = within(list)
+      .getAllByRole("listitem")
+      .map((li) => li.textContent);
+    expect(texts[0]).toMatch(/^You changed the place and the start · /);
+    expect(texts[1]).toMatch(/^You created the event · /);
+    expect(history).toHaveBeenCalledTimes(1);
+  });
+
   it("asks for the attachments only once the event is on the server", async () => {
     const db = await localDb(USER);
     await db.calendars.put({ id: CAL, name: "Family", owner_id: USER, deleted_at: null, version: 1 });
