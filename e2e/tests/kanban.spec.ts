@@ -134,3 +134,46 @@ test("converts a note to a card and back", async ({ page }) => {
   await page.reload();
   await expect(page.getByRole("article", { name: title })).toBeVisible();
 });
+
+// +++===+++ 2026-11-27 — Hasan Alizada — HAAL-115 (FR-KAN-06, D-130). Swimlanes by priority: a card dragged with the
+// mouse into the High lane of another column takes that column and priority, and both stay after a reload.
+test("drags a card into another swimlane", async ({ page }) => {
+  const board = unique("Lanes");
+  const card = unique("Fix the roof");
+  await page.goto("/kanban");
+  await page.getByRole("button", { name: "New board" }).first().click();
+  await page.getByRole("dialog", { name: "New board" }).getByLabel("Name").fill(board);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name: "To do" })).toBeVisible();
+
+  // The writes have reached the server before the next step (a reload with a change still to send is held).
+  const sent = () =>
+    page.waitForResponse((r) => r.url().endsWith("/api/v1/sync/push") && r.request().method() === "POST" && r.ok());
+  await page.getByRole("button", { name: "Swimlanes" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Priority" }).click();
+  const medium = page.getByRole("group", { name: "To do, Medium" });
+  await medium.getByRole("button", { name: "Add card to To do, Medium" }).click();
+  await medium.getByLabel("Title of the new card in To do, Medium").fill(card);
+  const created = sent();
+  await page.keyboard.press("Enter");
+  await created;
+  await expect(page.getByText(`Card added: ${card}`)).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  const from = await medium.getByRole("button", { name: `Open ${card}` }).boundingBox();
+  const to = await page.getByRole("group", { name: "In progress, High" }).boundingBox();
+  if (!from || !to) throw new Error("no box to drag");
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  const pushed = sent();
+  await page.mouse.up();
+  await pushed;
+  await expect(page.getByText(new RegExp(`${card} moved to In progress in High`))).toBeAttached();
+
+  await page.reload();
+  const high = page.getByRole("group", { name: "In progress, High" });
+  await expect(high.getByRole("button", { name: `Open ${card}` })).toBeVisible();
+  await high.getByRole("button", { name: `Open ${card}` }).click();
+  await expect(page.getByRole("dialog").getByRole("radio", { name: "High" })).toBeChecked();
+});

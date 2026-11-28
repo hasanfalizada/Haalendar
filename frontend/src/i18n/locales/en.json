@@ -1649,7 +1649,24 @@
       "remindersNeedDue": "Reminders need a due date.",
       "reminder": "Reminder set",
       "moved": "{{title}} moved to {{column}}, position {{position}} of {{total}}",
+      "movedLane": "{{title}} moved to {{column}} in {{lane}}, position {{position}} of {{total}}",
       "select": "Select {{title}}"
+    },
+    "lanes": {
+      "title": "Swimlanes",
+      "current": "Swimlanes: {{kind}}",
+      "kinds": {
+        "none": "None",
+        "priority": "Priority",
+        "assignee": "Assignee",
+        "label": "Label"
+      },
+      "unassigned": "Unassigned",
+      "noLabel": "No label",
+      "toggle_one": "{{name}}, {{count}} card",
+      "toggle_other": "{{name}}, {{count}} cards",
+      "cell": "{{column}}, {{lane}}",
+      "labelStays": "A card stays in its label's lane; change its labels in the card."
     },
     "assignees": {
       "title": "Assignees",
