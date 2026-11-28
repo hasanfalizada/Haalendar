@@ -11,6 +11,8 @@
 // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). Multi-select (FR-X-07): a checkbox in the corner,
 // Ctrl/Cmd+click and Shift+click on the card (`select`); a selected card is ringed. A held finger still picks the card
 // up (no long-press selection on the board).
+// +++===+++ 2026-11-27 — Hasan Alizada — HAAL-115 (D-130). With swimlanes a card can be in two lanes (two assignees or
+// labels): its drag and drop targets carry the lane (`lane`), so each copy is its own.
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { AlertTriangle, Bell, CalendarClock, Clock, ListChecks, Paperclip } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
@@ -39,12 +41,15 @@ const STEPS: Partial<Record<string, CardStep>> = {
 export interface CardDragData {
   type: "card";
   row: Row;
+  /** The swimlane it is picked up from (D-130). */
+  lane?: string | undefined;
 }
 
 export interface CardDropData {
   type: "card";
   columnId: string;
   cardId: string;
+  lane?: string | undefined;
 }
 
 interface CardTileProps {
@@ -60,6 +65,8 @@ interface CardTileProps {
   /** The names of the card's assignees. */
   assignees?: readonly string[];
   onOpen: () => void;
+  /** The swimlane the card is shown in (D-130). */
+  lane?: string | undefined;
   /** Alt+arrow on the card; without it (no right to write) the card is not dragged either. */
   onStep?: (step: CardStep) => void;
   /** Multi-select of the board: whether the card is selected, its toggle and the card's click handler. */
@@ -93,6 +100,7 @@ export function CardTile({
   dueState = null,
   assignees = [],
   onOpen,
+  lane,
   onStep,
   select,
 }: CardTileProps) {
@@ -103,10 +111,14 @@ export function CardTile({
     setNodeRef: dragRef,
     listeners,
     isDragging,
-  } = useDraggable({ id: `card-${id}`, data: { type: "card", row } satisfies CardDragData, disabled: !movable });
+  } = useDraggable({
+    id: lane === undefined ? `card-${id}` : `card-${lane}-${id}`,
+    data: { type: "card", row, lane } satisfies CardDragData,
+    disabled: !movable,
+  });
   const { setNodeRef: dropRef } = useDroppable({
-    id: `over-${id}`,
-    data: { type: "card", columnId: String(row.column_id), cardId: id } satisfies CardDropData,
+    id: lane === undefined ? `over-${id}` : `over-${lane}-${id}`,
+    data: { type: "card", columnId: String(row.column_id), cardId: id, lane } satisfies CardDropData,
     disabled: !movable,
   });
   const { time_format: timeFormat } = useSettings();
@@ -121,6 +133,7 @@ export function CardTile({
         ref={dragRef}
         type="button"
         data-card={id}
+        data-lane={lane}
         onClick={select ? select.onClick : onOpen}
         {...(movable ? listeners : {})}
         onKeyDown={(event) => {

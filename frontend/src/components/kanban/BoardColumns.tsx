@@ -17,6 +17,11 @@
 // count reads "3 of 7"; moves work among the cards shown (lib/cards indexAmongAll) and a card added that the filters
 // hide says so.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. A card shows its assignees' initials (D-97).
+// +++===+++ 2026-11-27 — Hasan Alizada — HAAL-115 (FR-KAN-06, D-130). Swimlanes: with `lanes` the column headers stay
+// on top (sticky) and each lane is a row under them — its name and count fold it — with a cell per column; a card is
+// dragged within its lane and into another one (it takes that lane's priority or assignee; between label lanes it
+// stays), Alt+arrows move it within its lane, "+ Add card" of a cell gives the new card the lane's value. Without
+// `lanes` the board is as before.
 import {
   type Active,
   type CollisionDetection,
@@ -33,7 +38,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -46,6 +51,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Color } from "@/api/generated/types.gen";
+import type { Priority } from "@/atoms/items/priority";
 import { useSettings } from "@/api/settings";
 import {
   type CardPlace,
@@ -61,6 +68,16 @@ import {
 } from "@/lib/cards";
 import { checklistOf } from "@/lib/checklist";
 import { cardCount, newColumnPosition, overLimit, positionAt } from "@/lib/columns";
+import {
+  type Lane,
+  type LaneChange,
+  type LaneContext,
+  canChangeLane,
+  laneChange,
+  laneRows,
+  laneStart,
+} from "@/lib/lanes";
+import { swatchClasses } from "@/lib/palette";
 import { cardReminderAhead } from "@/lib/reminders";
 import { useNow } from "@/lib/useNow";
 import type { Selection } from "@/lib/useSelection";
@@ -93,10 +110,15 @@ const collisions: CollisionDetection = (args) => {
   if (hits.length > 0) return hits;
   const pointer = args.pointerCoordinates;
   if (kind === "card" && pointer) {
-    const lane = columns.droppableContainers.find((container) => {
+    // The lowest one starting above the pointer (with swimlanes: the cell of the lane it is in).
+    let lane: (typeof columns.droppableContainers)[number] | undefined;
+    let top = -Infinity;
+    for (const container of columns.droppableContainers) {
       const rect = args.droppableRects.get(container.id);
-      return rect !== undefined && pointer.x >= rect.left && pointer.x <= rect.right && pointer.y >= rect.top;
-    });
+      if (!rect || pointer.x < rect.left || pointer.x > rect.right || pointer.y < rect.top || rect.top <= top) continue;
+      lane = container;
+      top = rect.top;
+    }
     return lane ? [{ id: lane.id, data: { droppableContainer: lane, value: 0 } }] : [];
   }
   return rectIntersection(columns);
@@ -125,6 +147,8 @@ interface BoardColumnsProps {
   /** Whether a card passes the board filters; undefined without filters. */
   shown?: ((card: Row) => boolean) | undefined;
   onOpenCard: (card: Row) => void;
+  /** Swimlanes (D-130): the lanes in order and what puts a card in one; undefined without. */
+  lanes?: { list: readonly Lane[]; context: LaneContext } | undefined;
   // +++===+++ 2026-11-07 — Hasan Alizada — HAAL-145 (UAT finding F6). The board's multi-select (cards by id).
   selection?: Selection;
 }
@@ -140,7 +164,12 @@ interface ColumnDropData {
   type: "column";
   index: number;
   columnId: string;
+  /** A cell of a swimlane (D-130); undefined: the column itself. */
+  lane?: string | undefined;
 }
+
+/** A place in a column and, with swimlanes, the lane. */
+type LanePlace = CardPlace & { lane?: string | undefined };
 
 type DragData = ColumnDragData | CardDragData;
 type DropData = ColumnDropData | CardDropData;
@@ -163,13 +192,15 @@ export function BoardColumns({
   shown,
   assignees,
   onOpenCard,
+  lanes,
   selection,
 }: BoardColumnsProps) {
   const { t } = useTranslation();
   const { default_color: defaultColor } = useSettings();
   const [dialog, setDialog] = useState<Dialog>(null);
   const [dragging, setDragging] = useState<DragData | null>(null);
-  const [dropAt, setDropAt] = useState<CardPlace | null>(null);
+  const [dropAt, setDropAt] = useState<LanePlace | null>(null);
+  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   const [announcement, setAnnouncement] = useState("");
   // +++===+++ 2026-11-12 00:03 +04 — Hasan Alizada — HAAL-174 (UAT finding F19, decision A). Listed in the "?" overlay; the focused
   // card handles the keys itself (CardTile).
@@ -184,7 +215,7 @@ export function BoardColumns({
   const [current, setCurrent] = useState(0);
   const strip = useRef<HTMLDivElement>(null);
   // The card moved from the keyboard gets the focus back once it is in its new place.
-  const refocus = useRef<{ id: string; position: string } | null>(null);
+  const refocus = useRef<{ id: string; position: string; lane?: string | undefined } | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
@@ -192,9 +223,18 @@ export function BoardColumns({
   const name = (row: Row) => String(row.name);
   // The rows with only the cards shown (places are counted among them).
   const visible = shown ? items.filter((item) => item.kind !== "card" || shown(item)) : items;
-  const toAll = (card: Row, place: CardPlace): CardPlace => ({
+  const laneOf = (key: string | undefined) => (key === undefined ? undefined : lanes?.list.find((l) => l.key === key));
+  // The rows shown in a lane (all shown ones without swimlanes).
+  const rowsOf = (lane: Lane | undefined) => (lane && lanes ? laneRows(visible, lane, lanes.context) : visible);
+  const laneName = (lane: Lane): string =>
+    lane.kind === "priority"
+      ? t(`priority.levels.${lane.value as Priority}`)
+      : lane.value === null
+        ? t(lane.kind === "assignee" ? "kanban.lanes.unassigned" : "kanban.lanes.noLabel")
+        : lane.name;
+  const toAll = (card: Row, place: LanePlace): CardPlace => ({
     columnId: place.columnId,
-    index: indexAmongAll(items, visible, card, place.columnId, place.index),
+    index: indexAmongAll(items, rowsOf(laneOf(place.lane)), card, place.columnId, place.index),
   });
   const titleOf = (row: Row) => (typeof row.title === "string" ? row.title : "");
   const dragName = (data: DragData | undefined) =>
@@ -204,7 +244,8 @@ export function BoardColumns({
     const want = refocus.current;
     if (!want || items.find((item) => item.id === want.id)?.position !== want.position) return;
     refocus.current = null;
-    strip.current?.querySelector<HTMLElement>(`[data-card="${want.id}"]`)?.focus();
+    const lane = want.lane === undefined ? "" : `[data-lane="${want.lane}"]`;
+    strip.current?.querySelector<HTMLElement>(`[data-card="${want.id}"]${lane}`)?.focus();
   }, [items]);
 
   function move(row: Row, index: number) {
@@ -213,59 +254,75 @@ export function BoardColumns({
     void updateColumn(user, row, "move", { position: positionAt(active, row, index) });
   }
 
-  // `place` counts the cards shown.
-  async function moveTo(card: Row, place: CardPlace, keepFocus = false) {
+  // `place` counts the cards shown (in its lane); `from` is the lane the card leaves.
+  async function moveTo(card: Row, place: LanePlace, from?: string, keepFocus = false) {
+    const to = laneOf(place.lane);
+    const left = laneOf(from);
+    let change: LaneChange | undefined;
+    if (lanes && to && left && to.key !== left.key) {
+      const next = laneChange(card, left, to, lanes.context);
+      if (!next) return;
+      change = next;
+    }
     const target = toAll(card, place);
-    if (isCardAt(items, card, target)) return;
+    if (!change && isCardAt(items, card, target)) return;
     const position = cardPositionAt(items, card, target.columnId, target.index);
     const column = active.find((row) => row.id === place.columnId);
-    if (keepFocus) refocus.current = { id: String(card.id), position };
-    const total = cardsOf(visible, place.columnId).filter((row) => row.id !== card.id).length + 1;
-    const ok = await moveCard(user, card, place.columnId, position);
+    if (keepFocus) refocus.current = { id: String(card.id), position, lane: place.lane };
+    const total = cardsOf(rowsOf(to), place.columnId).filter((row) => row.id !== card.id).length + 1;
+    const ok = await moveCard(user, card, place.columnId, position, change);
     if (!ok) {
       refocus.current = null;
       return;
     }
+    const values = { title: titleOf(card), column: column ? name(column) : "", position: place.index + 1, total };
     setAnnouncement(
-      t("kanban.cards.moved", {
-        title: titleOf(card),
-        column: column ? name(column) : "",
-        position: place.index + 1,
-        total,
-      }),
+      to ? t("kanban.cards.movedLane", { ...values, lane: laneName(to) }) : t("kanban.cards.moved", values),
     );
   }
 
-  function step(card: Row, direction: CardStep) {
+  // Alt+arrows: within the card's lane.
+  function step(card: Row, direction: CardStep, lane?: string) {
     const place = cardStepTarget(
-      visible,
+      rowsOf(laneOf(lane)),
       active.map((row) => String(row.id)),
       card,
       direction,
     );
-    if (place) void moveTo(card, place, true);
+    if (place) void moveTo(card, { ...place, lane }, lane, true);
   }
 
   // Where a dragged card would go: before or after the card it is over (by the halves), or the end of a column.
-  function placeOf(event: DragMoveEvent | DragEndEvent): CardPlace | null {
+  function placeOf(event: DragMoveEvent | DragEndEvent): LanePlace | null {
     const data = dragOf(event.active);
     const over = event.over;
     const drop = over?.data.current as DropData | undefined;
     if (data?.type !== "card" || !over || !drop) return null;
-    const others = cardsOf(visible, drop.columnId).filter((row) => row.id !== data.row.id);
-    if (drop.type === "column") return { columnId: drop.columnId, index: others.length };
+    if (lanes) {
+      // Not on a column header, and not into a lane it may not go to (another label).
+      const from = laneOf(data.lane);
+      const to = laneOf(drop.lane);
+      if (!from || !to || !canChangeLane(from, to)) return null;
+    }
+    const others = cardsOf(rowsOf(laneOf(drop.lane)), drop.columnId).filter((row) => row.id !== data.row.id);
+    if (drop.type === "column") return { columnId: drop.columnId, index: others.length, lane: drop.lane };
     const at = others.findIndex((row) => row.id === drop.cardId);
     if (at < 0) return null; // over itself: it stays
     const moving = event.active.rect.current.translated;
     const below = moving !== null && moving.top + moving.height / 2 > over.rect.top + over.rect.height / 2;
-    return { columnId: drop.columnId, index: at + (below ? 1 : 0) };
+    return { columnId: drop.columnId, index: at + (below ? 1 : 0), lane: drop.lane };
   }
 
   function onDragMove(event: DragMoveEvent) {
     const place = placeOf(event);
     const data = dragOf(event.active);
-    const line = place && data?.type === "card" && !isCardAt(items, data.row, toAll(data.row, place)) ? place : null;
-    setDropAt((was) => (was?.columnId === line?.columnId && was?.index === line?.index ? was : line));
+    const line =
+      place && data?.type === "card" && (place.lane !== data.lane || !isCardAt(items, data.row, toAll(data.row, place)))
+        ? place
+        : null;
+    setDropAt((was) =>
+      was?.columnId === line?.columnId && was?.index === line?.index && was?.lane === line?.lane ? was : line,
+    );
   }
 
   function onDragEnd(event: DragEndEvent) {
@@ -275,19 +332,22 @@ export function BoardColumns({
     setDragging(null);
     setDropAt(null);
     if (data?.type === "column" && drop?.type === "column") move(data.row, drop.index);
-    else if (data?.type === "card" && place) void moveTo(data.row, place);
+    else if (data?.type === "card" && place) void moveTo(data.row, place, data.lane);
+    else if (data?.type === "card" && lanes?.list[0]?.kind === "label" && drop?.lane !== undefined) {
+      if (drop.lane !== data.lane) setAnnouncement(t("kanban.lanes.labelStays"));
+    }
   }
 
   // The cards of a column with the drop line where a dragged card would go.
-  function cardList(columnId: string): ReactNode {
+  function cardList(columnId: string, lane?: Lane): ReactNode {
     const moving = dragging?.type === "card" ? dragging.row.id : null;
-    const line = dropAt?.columnId === columnId ? dropAt.index : null;
+    const line = dropAt?.columnId === columnId && dropAt.lane === lane?.key ? dropAt.index : null;
     const nodes: ReactNode[] = [];
     let index = 0;
     const lineAt = (at: number) => {
       if (line === at) nodes.push(<DropLine key="drop-line" />);
     };
-    for (const card of cardsOf(visible, columnId)) {
+    for (const card of cardsOf(rowsOf(lane), columnId)) {
       const cardId = String(card.id);
       if (card.id !== moving) lineAt(index++);
       const list = checklistOf(checklistItems, cardId);
@@ -302,6 +362,7 @@ export function BoardColumns({
           reminder={cardReminderAhead(reminders, card, timeZone, now)}
           dueState={dueState(card, timeZone, now)}
           assignees={assignees?.get(cardId) ?? []}
+          lane={lane?.key}
           onOpen={() => {
             onOpenCard(card);
           }}
@@ -321,7 +382,7 @@ export function BoardColumns({
           onStep={
             canWrite
               ? (direction) => {
-                  step(card, direction);
+                  step(card, direction, lane?.key);
                 }
               : undefined
           }
@@ -332,18 +393,153 @@ export function BoardColumns({
     return nodes.length > 0 ? <ul className="-my-1 flex flex-col">{nodes}</ul> : null;
   }
 
-  // Which column a phone shows (the one whose left edge is nearest the strip's).
+  // Which column a phone shows (the one whose left edge is nearest the strip's; measured on the screen, as with
+  // swimlanes the headers sit in a row of their own).
   function onScroll() {
     const element = strip.current;
     if (!element) return;
+    const left = element.getBoundingClientRect().left;
     const columns = [...element.querySelectorAll<HTMLElement>("[data-column]")];
+    const distances = columns.map((column) => Math.abs(column.getBoundingClientRect().left - left));
     let best = 0;
-    columns.forEach((column, index) => {
-      const distance = Math.abs(column.offsetLeft - element.offsetLeft - element.scrollLeft);
-      const bestDistance = Math.abs((columns[best]?.offsetLeft ?? 0) - element.offsetLeft - element.scrollLeft);
-      if (distance < bestDistance) best = index;
+    distances.forEach((distance, index) => {
+      if (distance < (distances[best] ?? Infinity)) best = index;
     });
     setCurrent(best);
+  }
+
+  // The cards of a column (in a lane) and "+ Add card" — the new card gets the lane's value.
+  function cellContent(row: Row, lane?: Lane): ReactNode {
+    const columnId = String(row.id);
+    const start = lane ? laneStart(lane) : {};
+    return (
+      <>
+        {cardList(columnId, lane)}
+        {canWrite ? (
+          <AddCard
+            columnName={lane ? t("kanban.lanes.cell", { column: name(row), lane: laneName(lane) }) : name(row)}
+            onAdd={(title) =>
+              createCard(
+                user,
+                {
+                  boardId,
+                  columnId,
+                  title,
+                  position: newCardPosition(items, columnId),
+                  color: defaultColor,
+                },
+                // A new card has its title only: the filters may hide it.
+                shown !== undefined &&
+                  !shown({
+                    id: "",
+                    kind: "card",
+                    title,
+                    body: "",
+                    priority: start.priority ?? "medium",
+                    due_date: null,
+                  }),
+                start,
+              )
+            }
+          />
+        ) : null}
+      </>
+    );
+  }
+
+  const columnHeaders = active.map((row, index) => (
+    <Column
+      key={String(row.id)}
+      row={row}
+      index={index}
+      count={cardCount(items, String(row.id))}
+      shownCount={shown ? cardsOf(visible, String(row.id)).length : null}
+      canWrite={canWrite}
+      first={index === 0}
+      last={index === active.length - 1}
+      target={
+        dragging?.type === "card" ? !lanes && dropAt?.columnId === row.id : dragging?.type === "column" ? null : false
+      }
+      cards={lanes ? null : cellContent(row)}
+      onAction={(action) => {
+        if (action === "left") move(row, index - 1);
+        else if (action === "right") move(row, index + 1);
+        else if (action === "archive")
+          void updateColumn(user, row, "archive", { archived_at: new Date().toISOString() });
+        else setDialog({ kind: action, row });
+      }}
+    />
+  ));
+  const addColumn = canWrite ? (
+    <div className="w-[calc(100vw-1.5rem)] shrink-0 snap-start md:w-68">
+      <Button
+        className="w-full justify-start"
+        onClick={() => {
+          setDialog({ kind: "add" });
+        }}
+      >
+        <Plus aria-hidden />
+        {t("kanban.columns.add")}
+      </Button>
+    </div>
+  ) : null;
+
+  function laneRow(lane: Lane): ReactNode {
+    const label = laneName(lane);
+    const count = active.reduce((sum, row) => sum + cardsOf(rowsOf(lane), String(row.id)).length, 0);
+    const open = !folded.has(lane.key);
+    const title = t("kanban.lanes.toggle", { name: label, count });
+    return (
+      <section key={lane.key} aria-label={title} className="flex flex-col gap-1">
+        <h2 className="sticky left-0 w-fit">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={title}
+            onClick={() => {
+              setFolded((was) => {
+                const next = new Set(was);
+                if (open) next.add(lane.key);
+                else next.delete(lane.key);
+                return next;
+              });
+            }}
+            className="flex h-11 items-center gap-1.5 rounded-sm px-1 text-[13px] font-semibold hover:bg-surface focus-visible:outline-2 focus-visible:outline-primary pointer-fine:md:h-8"
+          >
+            <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} aria-hidden />
+            {lane.color ? (
+              <span className={cn("size-2.5 rounded-full", swatchClasses(lane.color as Color))} aria-hidden />
+            ) : null}
+            <span>{label}</span>
+            <span className="text-xs font-normal text-muted tabular-nums" aria-hidden>
+              {count}
+            </span>
+          </button>
+        </h2>
+        {open ? (
+          <div className="flex items-start gap-3">
+            {active.map((row, index) => (
+              <LaneCell
+                key={String(row.id)}
+                lane={lane.key}
+                columnId={String(row.id)}
+                index={index}
+                label={t("kanban.lanes.cell", { column: name(row), lane: label })}
+                target={
+                  dragging?.type === "card"
+                    ? dropAt?.columnId === row.id && dropAt?.lane === lane.key
+                    : dragging?.type === "column"
+                      ? null
+                      : false
+                }
+              >
+                {cellContent(row, lane)}
+              </LaneCell>
+            ))}
+          </div>
+        ) : null}
+      </section>
+    );
   }
 
   function show(index: number) {
@@ -385,71 +581,27 @@ export function BoardColumns({
           ref={strip}
           onScroll={onScroll}
           className={cn(
-            "flex min-h-0 flex-1 scroll-px-3 items-start gap-3 overflow-x-auto p-3 md:snap-none md:p-4",
+            lanes
+              ? "flex min-h-0 flex-1 scroll-px-3 flex-col overflow-auto p-3 md:snap-none md:p-4"
+              : "flex min-h-0 flex-1 scroll-px-3 items-start gap-3 overflow-x-auto p-3 md:snap-none md:p-4",
             // The snap would pull the strip back while a card is carried to the column beside.
             dragging ? "snap-none" : "snap-x snap-mandatory",
           )}
         >
-          {active.map((row, index) => (
-            <Column
-              key={String(row.id)}
-              row={row}
-              index={index}
-              count={cardCount(items, String(row.id))}
-              shownCount={shown ? cardsOf(visible, String(row.id)).length : null}
-              canWrite={canWrite}
-              first={index === 0}
-              last={index === active.length - 1}
-              target={
-                dragging?.type === "card" ? dropAt?.columnId === row.id : dragging?.type === "column" ? null : false
-              }
-              cards={
-                <>
-                  {cardList(String(row.id))}
-                  {canWrite ? (
-                    <AddCard
-                      columnName={name(row)}
-                      onAdd={(title) =>
-                        createCard(
-                          user,
-                          {
-                            boardId,
-                            columnId: String(row.id),
-                            title,
-                            position: newCardPosition(items, String(row.id)),
-                            color: defaultColor,
-                          },
-                          // A new card has its title only: the filters may hide it.
-                          shown !== undefined &&
-                            !shown({ id: "", kind: "card", title, body: "", priority: "medium", due_date: null }),
-                        )
-                      }
-                    />
-                  ) : null}
-                </>
-              }
-              onAction={(action) => {
-                if (action === "left") move(row, index - 1);
-                else if (action === "right") move(row, index + 1);
-                else if (action === "archive")
-                  void updateColumn(user, row, "archive", { archived_at: new Date().toISOString() });
-                else setDialog({ kind: action, row });
-              }}
-            />
-          ))}
-          {canWrite ? (
-            <div className="w-[calc(100vw-1.5rem)] shrink-0 snap-start md:w-68">
-              <Button
-                className="w-full justify-start"
-                onClick={() => {
-                  setDialog({ kind: "add" });
-                }}
-              >
-                <Plus aria-hidden />
-                {t("kanban.columns.add")}
-              </Button>
+          {lanes ? (
+            <div className="flex w-max flex-col gap-3">
+              <div className="sticky top-0 z-10 flex items-start gap-3 bg-bg">
+                {columnHeaders}
+                {addColumn}
+              </div>
+              {lanes.list.map(laneRow)}
             </div>
-          ) : null}
+          ) : (
+            <>
+              {columnHeaders}
+              {addColumn}
+            </>
+          )}
         </div>
         <DragOverlay dropAnimation={null}>
           {dragging?.type === "column" ? (
@@ -558,7 +710,7 @@ interface ColumnProps {
   row: Row;
   /** A card would go into it (true), a column is being dragged (null: marked when over), or neither (false). */
   target: boolean | null;
-  /** The cards and "+ Add card". */
+  /** The cards and "+ Add card"; null with swimlanes (the header only — the cards are in the lanes' cells). */
   cards: ReactNode;
   index: number;
   count: number;
@@ -597,7 +749,8 @@ function Column({ row, target, cards, index, count, shownCount, canWrite, first,
       data-column
       aria-labelledby={headingId}
       className={cn(
-        "flex max-h-full w-[calc(100vw-1.5rem)] shrink-0 snap-start flex-col rounded-md border bg-surface md:w-68",
+        "flex w-[calc(100vw-1.5rem)] shrink-0 snap-start flex-col rounded-md border bg-surface md:w-68",
+        cards !== null && "max-h-full",
         over ? "border-warn-fg" : "border-line",
         (target ?? isOver) && "outline-2 outline-primary",
         isDragging && "opacity-50",
@@ -696,10 +849,44 @@ function Column({ row, target, cards, index, count, shownCount, canWrite, first,
           </DropdownMenu>
         ) : null}
       </div>
-      <div className="relative flex min-h-16 flex-col gap-2 overflow-y-auto px-2 pb-2">
-        {count === 0 && !canWrite ? <p className="px-1 text-xs text-muted">{t("kanban.columns.noCards")}</p> : null}
-        {cards}
-      </div>
+      {cards === null ? null : (
+        <div className="relative flex min-h-16 flex-col gap-2 overflow-y-auto px-2 pb-2">
+          {count === 0 && !canWrite ? <p className="px-1 text-xs text-muted">{t("kanban.columns.noCards")}</p> : null}
+          {cards}
+        </div>
+      )}
     </section>
+  );
+}
+
+interface LaneCellProps {
+  lane: string;
+  columnId: string;
+  index: number;
+  /** "To do, High". */
+  label: string;
+  /** As for a column: a card would go into it, a column is dragged (marked when over), or neither. */
+  target: boolean | null;
+  children: ReactNode;
+}
+
+/** A column's cards in a swimlane (D-130): a drop target of its own. */
+function LaneCell({ lane, columnId, index, label, target, children }: LaneCellProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `drop-${lane}-${columnId}`,
+    data: { type: "column", index, columnId, lane } satisfies ColumnDropData,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      role="group"
+      aria-label={label}
+      className={cn(
+        "flex min-h-16 w-[calc(100vw-1.5rem)] shrink-0 flex-col gap-2 rounded-md border border-line bg-surface px-2 py-2 md:w-68",
+        (target ?? isOver) && "outline-2 outline-primary",
+      )}
+    >
+      {children}
+    </div>
   );
 }

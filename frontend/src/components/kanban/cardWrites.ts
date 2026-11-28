@@ -9,6 +9,9 @@
 // together (they merge as a pair, D-93); undone by moving it back.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-116. Save writes the user's reminders of the card too (D-94).
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. And its assignees (D-97).
+// +++===+++ 2026-11-27 — Hasan Alizada — HAAL-115 (D-130). With swimlanes a move to another lane writes the lane's
+// priority with the column and position, or takes the lane's assignee off and puts the new one on — one undo step; a
+// card added in a lane gets its priority, assignee or label (undone with the card: its delete takes them along).
 import { runWrite } from "@/api/write";
 import type { ReminderChanges } from "@/components/calendar/reminderWrites";
 import i18n from "@/i18n";
@@ -18,6 +21,8 @@ import { uuidv7 } from "@/lib/uuid";
 import { mutate } from "@/sync";
 
 import "@/components/todo/noteWrites";
+
+import type { LaneChange, LaneStart } from "@/lib/lanes";
 
 import { type AssigneeChanges, assigneeTarget } from "./assigneeWrites";
 import type { LabelChanges } from "./labelWrites";
@@ -68,13 +73,13 @@ export interface NewCard {
 }
 
 /** "+ Add card": a card with its title at the end of the column. */
-export async function createCard(user: string, card: NewCard, hidden = false): Promise<boolean> {
+export async function createCard(user: string, card: NewCard, hidden = false, start: LaneStart = {}): Promise<boolean> {
   const id = uuidv7();
   const values = { title: card.title };
   const result = await runWrite({
     name: "card_create",
-    run: () =>
-      mutate(user, {
+    run: async () => {
+      const written = await mutate(user, {
         ...target(id),
         op: "create",
         data: {
@@ -85,9 +90,21 @@ export async function createCard(user: string, card: NewCard, hidden = false): P
           title: card.title,
           position: card.position,
           color: card.color,
-          priority: "medium",
+          priority: start.priority ?? "medium",
         },
-      }),
+      });
+      if (start.label) {
+        await mutate(user, { ...labelTarget(uuidv7()), op: "create", data: { item_id: id, label_id: start.label } });
+      }
+      if (start.assignee) {
+        await mutate(user, {
+          ...assigneeTarget(uuidv7()),
+          op: "create",
+          data: { item_id: id, user_id: start.assignee },
+        });
+      }
+      return written;
+    },
     // A repeat would make a second card.
     retry: false,
     // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-118. Hidden by the board filters: the message says so (D-96).
@@ -178,24 +195,57 @@ export async function saveCard(
   return result.ok;
 }
 
-/** A card moved to `position` in the column `columnId` (the same one or another of its board). */
-export async function moveCard(user: string, row: Row, columnId: string, position: string): Promise<boolean> {
+/**
+ * A card moved to `position` in the column `columnId` (the same one or another of its board); with swimlanes also into
+ * another lane (`lane`: its priority or assignees).
+ */
+export async function moveCard(
+  user: string,
+  row: Row,
+  columnId: string,
+  position: string,
+  lane?: LaneChange,
+): Promise<boolean> {
   const id = String(row.id);
   const values = { title: titleOf(row) };
-  const before = { column_id: row.column_id ?? null, position: row.position ?? null };
-  const after = { column_id: columnId, position };
+  const fields = Object.keys(lane?.data ?? {});
+  const before: Row = {
+    column_id: row.column_id ?? null,
+    position: row.position ?? null,
+    ...Object.fromEntries(fields.map((name) => [name, row[name] ?? null])),
+  };
+  const after: Row = { column_id: columnId, position, ...lane?.data };
+  const assignees = lane?.assignees ?? { add: [], remove: [] };
   const result = await runWrite({
     name: "card_move",
-    run: () =>
-      mutate(user, {
+    run: async () => {
+      const written = await mutate(user, {
         ...target(id),
         op: "update",
         ...(typeof row.version === "number" ? { base_version: row.version } : {}),
         base: before,
         data: after,
-      }),
+      });
+      for (const removed of assignees.remove) await mutate(user, { ...assigneeTarget(removed), op: "delete" });
+      for (const added of assignees.add) {
+        await mutate(user, {
+          ...assigneeTarget(added.id),
+          op: "create",
+          data: { item_id: id, user_id: added.user_id },
+        });
+      }
+      return written;
+    },
     success: i18n.t("kanban.cards.done.move", values),
-    undo: () => newStep("card.update", { key: "undo.labels.cardMoved", values }, { user, id, before, after }),
+    undo: () => {
+      const label = { key: "undo.labels.cardMoved", values };
+      const steps: UndoStep[] = [
+        newStep("card.update", label, { user, id, before, after }),
+        ...assignees.remove.map((removed) => newStep("assignee.delete", label, { user, id: removed })),
+        ...assignees.add.map((added) => newStep("assignee.create", label, { user, id: added.id })),
+      ];
+      return steps.length === 1 && steps[0] ? steps[0] : batchStep(label, steps);
+    },
   });
   return result.ok;
 }

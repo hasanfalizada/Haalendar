@@ -3,7 +3,9 @@
 // none) and Clear filters. On phones they fold behind "Filters (n)". Nothing is written: the page keeps them in the
 // address.
 // +++===+++ 2026-10-30 — Hasan Alizada — HAAL-119. An Assignees menu ("Me" first, then the members) on a shared board.
-import { Filter, Search, X } from "lucide-react";
+// +++===+++ 2026-11-27 — Hasan Alizada — HAAL-115. A Swimlanes menu at the end — None, Priority, Assignee, Label (D-130);
+// Clear filters leaves it.
+import { Filter, Rows3, Search, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -20,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PriorityFilter } from "@/components/ui/priority";
 import { type BoardFilter, DUE_FILTERS, NO_FILTER, filterCount } from "@/lib/boardFilter";
+import { LANE_KINDS, type LaneKind } from "@/lib/lanes";
 import { swatchClasses } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +36,12 @@ interface BoardFiltersProps {
   members: readonly BoardMember[];
   me: string;
   onChange: (next: BoardFilter) => void;
+  /** The swimlanes (D-130) and their change; without onLanes no menu. */
+  lanes?: LaneKind | null;
+  onLanes?: (next: LaneKind | null) => void;
 }
 
-export function BoardFilters({ filter, labels, members, me, onChange }: BoardFiltersProps) {
+export function BoardFilters({ filter, labels, members, me, onChange, lanes = null, onLanes }: BoardFiltersProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const count = filterCount(filter);
@@ -180,6 +186,31 @@ export function BoardFilters({ filter, labels, members, me, onChange }: BoardFil
             <X aria-hidden />
             {t("kanban.filters.clear")}
           </Button>
+        ) : null}
+        {onLanes ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Rows3 aria-hidden />
+                {lanes
+                  ? t("kanban.lanes.current", { kind: t(`kanban.lanes.kinds.${lanes}`) })
+                  : t("kanban.lanes.title")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {[null, ...LANE_KINDS].map((kind) => (
+                <DropdownMenuCheckboxItem
+                  key={kind ?? "none"}
+                  checked={lanes === kind}
+                  onCheckedChange={() => {
+                    onLanes(kind);
+                  }}
+                >
+                  {t(`kanban.lanes.kinds.${kind ?? "none"}`)}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
     </div>

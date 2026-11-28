@@ -41,4 +41,13 @@ the colour, the priority, images, links, a checklist and its **Activity**.
 due date (overdue, today, this week, none). The number of cards shown is next to them; **Clear filters** shows all.
 The dots below a phone's board jump to a column.
 
+## Swimlanes
+
+**Swimlanes** at the end of the filters groups the board into rows: by **Priority**, **Assignee** (one row for each
+person of the board and **Unassigned**) or **Label** (one row for each label and **No label**). A card with two
+assignees or labels is in both rows. A row's name folds it. Dragging a card into another row gives it that row's
+priority or assignee; between label rows a card is not moved — change its labels in the card. **Add card** in a row
+gives the new card the row's priority, assignee or label. The choice is kept in the page's address, so a bookmark keeps
+it too.
+
 Several cards at once: [Across the app](across-the-app.md#selecting-many).
