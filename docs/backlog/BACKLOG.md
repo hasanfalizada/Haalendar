@@ -7,6 +7,11 @@
 
 Statuses: **To do**, **In progress**, **Blocked** (say by what), **Postponed** (by the owner), **Done**, **Closed** (by the owner without implementation; listed under "Closed", never under "Done"). Rows under "Proposed" are not tasks: they wait until the owner turns one into a task. Owner column: who the task is assigned to (— = not assigned).
 
+Priorities: **Must**, **Should**, **Could** — taken in this order; **Later** and **Later+** — kept for a later release and
+taken only when the owner says so.
+<!-- +++===+++ 2026-11-28 — Hasan Alizada — Later and Later+ were named v1.1 and v1.1+ until 2026-11-28, a name from
+before the numbered releases: release 1.1.0 (HAAL-194) shipped without these tasks. -->
+
 ## Deadlines
 
 | Due | What | Where it is enforced |
@@ -18,9 +23,9 @@ Statuses: **To do**, **In progress**, **Blocked** (say by what), **Postponed** (
 
 | ID | Epic | Task | Priority | Depends on | Refs | Status | Owner | Source |
 |---|---|---|---|---|---|---|---|---|
-| HAAL-157 | E11 Delivery | S3-compatible attachment storage adapter (AWS S3, Garage, SeaweedFS, Ceph RGW) | v1.1 | 040 | — | To do | — | owner backlog file |
-| HAAL-158 | E11 Delivery | OpenTelemetry tracing (API, worker, DB) with optional OTLP exporter | v1.1+ | 019 | — | To do | — | owner backlog file |
-| HAAL-168 | E12 Accounts | Optional OIDC/SSO login | Could | 160 | — | To do | — | owner, 2026-10-19 (chat) |
+| HAAL-157 | E11 Delivery | S3-compatible attachment storage adapter (AWS S3, Garage, SeaweedFS, Ceph RGW) | Later | 040 | — | To do | — | owner backlog file |
+| HAAL-158 | E11 Delivery | OpenTelemetry tracing (API, worker, DB) with optional OTLP exporter | Later+ | 019 | — | To do | — | owner backlog file |
+| HAAL-168 | E12 Accounts | Optional OIDC/SSO login | Later | 160 | — | To do | — | owner, 2026-10-19 (chat) |
 
 ## Proposed
 
@@ -204,4 +209,5 @@ Evidence is the commit that names the task (the latest one when several do). Tas
 | HAAL-123 | 2026-11-25 | c06315b | feat(palette): Ctrl+K command palette — go to, create, "Create …" with the typed title (owner backlog file; option A, 2026-11-25; D-126, SRS v2.12) — the search window is the palette: Ctrl/Cmd+K (pressed again closes it, from the search turns it into the palette; on phones the field of the top bar), the modules, today, every board, trash, settings (users for administrators), new event, note and list while nothing is typed; with words the matching commands, then "Create event/note “…”" opening the editor with the title and "Add card “…” to <board>" adding it at once with Undo, then the search results; along the way the month tests of event-drag wait longer for their events on a busy CI runner (failed in CI twice, reproduced on one core) |
 | HAAL-143 | 2026-11-26 | 67dfa9b, e55f419 | test(a11y,perf): accessibility and performance checks (owner backlog file; options A and 1, 2026-11-26; D-127, D-128, SRS v2.13–2.14) — stage 1: axe on every screen in both themes on a computer and a touch phone, 44 px and no sideways scroll on the phone, the fixes it asked for; stage 2: the 300 KB budget of the first page's JavaScript with a gate (315.7 → 274.8 KB), Core Web Vitals of the production build on 4G and a slow network, the view switch answering the tap at once |
 | HAAL-153 | 2026-11-26 | 508e142 | docs(guide): user, admin and API guides in docs/guide/ (owner backlog file; plan and option A, 2026-11-26; D-129, SRS v2.15) — stage 1: the admin guide with every setting and its default (tested), the API reference written from the contract and kept equal to it by a test, calling the API from a script; stage 2: the user guide with screenshots of the app on made-up data, every keyboard shortcut (tested), Help → Documentation opens it |
-| HAAL-115 | 2026-11-27 | (pending) | feat(kanban): swimlanes — the board grouped into rows by priority, assignee or label, kept in the address; a card dragged into another lane takes its priority or assignee, a card added in a lane gets its value (owner backlog file; option C, 2026-11-27; D-130, SRS v2.16; lanes of their own: P18) |
+| HAAL-115 | 2026-11-27 | 40795ea | feat(kanban): swimlanes — the board grouped into rows by priority, assignee or label, kept in the address; a card dragged into another lane takes its priority or assignee, a card added in a lane gets its value (owner backlog file; option C, 2026-11-27; D-130, SRS v2.16; lanes of their own: P18) |
+| HAAL-197 | 2026-11-28 | (pending) | chore(release): 1.2.0 (owner, 2026-11-28, chat) — due dates of notes and in the calendar, card comments and item history, converting items, the command palette, the day on the hours, swimlanes, the accessibility and performance checks, the guides; the later tasks renamed Later / Later+ (were v1.1 / v1.1+), D-32 accordingly |

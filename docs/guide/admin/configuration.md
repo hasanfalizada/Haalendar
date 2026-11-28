@@ -20,7 +20,7 @@ Read by `compose.yaml`; the first nine are in `.env.production.example`.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `HAALENDAR_IMAGE` | `ghcr.io/hasanfalizada/haalendar:latest` | The image to run. Name a release (`…/haalendar:1.1.0`), so that an upgrade happens only when you decide it |
+| `HAALENDAR_IMAGE` | `ghcr.io/hasanfalizada/haalendar:latest` | The image to run. Name a release (`…/haalendar:1.2.0`), so that an upgrade happens only when you decide it |
 | `HAALENDAR_PUBLIC_URL` | `http://localhost:8080` | The address people open, `https://…` (required in production). Its host is the only one accepted besides loopback, its origin the only one that may send changes; HTTPS turns on HSTS and secure cookies |
 | `HAALENDAR_DOMAIN` | — | With the bundled proxy only (`--profile proxy`): the host of the public address; Caddy gets its certificate for it |
 | `HAALENDAR_SECRET_KEY` | — | Required in production, at least 32 random characters (`openssl rand -hex 32`). Encrypts the two-factor and Web Push secrets in the database: keep it with the backups, never change it on a running installation |
