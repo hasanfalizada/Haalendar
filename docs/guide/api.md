@@ -2,7 +2,7 @@
 
 <!-- Generated from api/openapi.yaml by backend/tests/api_reference.py: do not edit by hand. After a change of the contract, run `cd backend && uv run python -m tests.api_reference`. -->
 
-Haalendar API 1.1.0: Calendar, To-Do and Kanban — self-hosted, multi-user, offline-first. The contract is [`api/openapi.yaml`](../../api/openapi.yaml) (OpenAPI 3.1); this page is written from it, and a test fails when the two differ. How to call the API from a script: [api-usage.md](api-usage.md).
+Haalendar API 1.2.0: Calendar, To-Do and Kanban — self-hosted, multi-user, offline-first. The contract is [`api/openapi.yaml`](../../api/openapi.yaml) (OpenAPI 3.1); this page is written from it, and a test fails when the two differ. How to call the API from a script: [api-usage.md](api-usage.md).
 
 Base path: `/api/v1`, on the address of the installation. 122 operations, 66 of them served by the server; the others are described for completeness and say how their data is reached instead (most through offline sync).
 
